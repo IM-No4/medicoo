@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "933505098440",
+    "project_id": "medicoo-9a3cc",
+    "storage_bucket": "medicoo-9a3cc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:933505098440:android:f418a9cbe03aa1fa6d3bfd",
+        "android_client_info": {
+          "package_name": "com.medicoo.consumer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "933505098440-8agi0q2eov2o2m2n6puerjjh5fiq0n4v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.medicoo.consumer",
+            "certificate_hash": "dae5dc544c77e7443b79fdce0c698f0052d18dd0"
+          }
+        },
+        {
+          "client_id": "933505098440-l3h5bg7s9p61dudan6ujpt0ndo4k7uma.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyByMFlzJ2rQ8k-l-ojsMRCbfNgwL6hxufI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "933505098440-l3h5bg7s9p61dudan6ujpt0ndo4k7uma.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

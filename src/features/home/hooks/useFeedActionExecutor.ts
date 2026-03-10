@@ -1,26 +1,45 @@
 import { useNavigation } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { Alert, Linking } from 'react-native';
+import { useDispatch } from 'react-redux';
+import { setPrescriptionModalVisible } from '../../../redux/slices/appSlice';
 import { FeedAction } from '../feed/feed.actions';
 
 export function useFeedActionExecutor() {
     const navigation = useNavigation<any>();
+    const dispatch = useDispatch();
 
     const executeAction = useCallback((action?: FeedAction) => {
         if (!action) return;
 
         switch (action.type) {
             case 'NAVIGATE':
-                if (action.stack) {
-                    // If stack is provided, navigate to stack then screen, or just stack
-                    // Limitations of React Navigation types here often require hacks or specific structures
-                    // Assuming simple navigation for now
-                    navigation.navigate(action.stack, {
-                        screen: action.screen,
-                        params: action.params
+                let stack = action.stack;
+                let screen = action.screen;
+                let params = action.params;
+
+                // Patch legacy/incorrect routes
+                if (stack === 'ProfileStack' || stack === 'Profile') {
+                    if (screen === 'Eligibility' || screen === 'BloodDonation') {
+                        stack = 'BloodDonationStack';
+                        screen = 'BloodDonationDashboard';
+                    } else {
+                        // Profile is a tab name, not a stack name in top-level navigator
+                        navigation.navigate('Tabs', {
+                            screen: 'Profile',
+                            params: { screen, params }
+                        });
+                        return;
+                    }
+                }
+
+                if (stack) {
+                    navigation.navigate(stack, {
+                        screen: screen,
+                        params: params
                     });
                 } else {
-                    navigation.navigate(action.screen, action.params);
+                    navigation.navigate(screen, params);
                 }
                 break;
 
@@ -40,9 +59,9 @@ export function useFeedActionExecutor() {
                 // For now, mapping some known modals to navigation routes if they are screens
                 if (action.modalId === 'REQUEST_APPOINTMENT') {
                     // Logic to open request appointment modal
-                    // If it's a screen in a modal stack:
-                    // navigation.navigate('AppointmentModal', action.data);
                     console.warn('Modal opening not yet fully implemented for:', action.modalId);
+                } else if (action.modalId === 'UPLOAD_RX') {
+                    dispatch(setPrescriptionModalVisible(true));
                 } else {
                     console.warn('Unknown Modal ID:', action.modalId);
                 }
@@ -51,7 +70,7 @@ export function useFeedActionExecutor() {
             default:
                 console.warn('Unknown action type');
         }
-    }, [navigation]);
+    }, [navigation, dispatch]);
 
     return { executeAction };
 }

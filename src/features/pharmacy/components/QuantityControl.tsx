@@ -1,5 +1,5 @@
 import AppIcon from '@/src/components/icons/AppIcon';
-import { updateCartItemQuantity } from '@/src/services/api/cart.api';
+import { updateCartItemQuantity, removeItemFromCart } from '@/src/services/api/cart.api';
 import { updateItemQuantityLocal } from '@/src/redux/slices/cartSlice';
 import React, { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -11,6 +11,7 @@ interface Props {
   quantity: number;
   disabled?: boolean;
   size?: 'small' | 'medium' | 'large';
+  productId: string;
   onQuantityChange?: (newQuantity: number) => void;
 }
 
@@ -20,6 +21,7 @@ export default function QuantityControl({
   quantity,
   disabled = false,
   size = 'medium',
+  productId,
   onQuantityChange,
 }: Props) {
   const dispatch = useDispatch();
@@ -33,7 +35,7 @@ export default function QuantityControl({
     
     try {
       // Update backend
-      await updateCartItemQuantity(storeId, Number(sku), newQuantity);
+      await updateCartItemQuantity(storeId, sku, productId, newQuantity);
       
       // Update Redux
       dispatch(
@@ -53,16 +55,21 @@ export default function QuantityControl({
   };
 
   const handleDecrement = async () => {
-    if (disabled || isUpdating || quantity <= 1) return;
+    if (disabled || isUpdating) return;
     
     const newQuantity = quantity - 1;
     setIsUpdating(true);
     
     try {
-      // Update backend
-      await updateCartItemQuantity(storeId, Number(sku), newQuantity);
+      if (newQuantity <= 0) {
+        // Remove item from backend - REQUIRED productId
+        await removeItemFromCart(storeId, sku, productId);
+      } else {
+        // Update backend
+        await updateCartItemQuantity(storeId, sku, productId, newQuantity);
+      }
       
-      // Update Redux
+      // Update Redux (reducer handles quantity <= 0 by deleting)
       dispatch(
         updateItemQuantityLocal({
           storeId,
@@ -105,15 +112,19 @@ export default function QuantityControl({
   return (
     <View style={[styles.container, currentSize.container, disabled && styles.disabled]}>
       <TouchableOpacity
-        style={[styles.button, currentSize.button, (disabled || isUpdating || quantity <= 1) && styles.buttonDisabled]}
+        style={[styles.button, currentSize.button, (disabled || isUpdating) && styles.buttonDisabled]}
         onPress={handleDecrement}
-        disabled={disabled || isUpdating || quantity <= 1}
+        disabled={disabled || isUpdating}
         activeOpacity={0.7}
       >
         {isUpdating ? (
           <ActivityIndicator size="small" color="#16A34A" />
         ) : (
-          <AppIcon name="minus" size={currentSize.icon} color={disabled || quantity <= 1 ? "#9CA3AF" : "#16A34A"} />
+          <AppIcon 
+            name={quantity > 1 ? "minus" : "trash"} 
+            size={currentSize.icon} 
+            color={disabled ? "#9CA3AF" : (quantity > 1 ? "#16A34A" : "#EF4444")} 
+          />
         )}
       </TouchableOpacity>
       

@@ -1,46 +1,52 @@
-import SkeletonBlock from '@/src/components/loaders/SkeletonBlock';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import AppIcon from '@/src/components/icons/AppIcon';
 
 export default function SearchResultSkeleton() {
   return (
-    <View style={styles.card}>
-      {/* Left icon */}
-      <SkeletonBlock
-        height={40}
-        width={40}
-        borderRadius={12}
-      />
-
-      {/* Text content */}
-      <View style={styles.content}>
-        <SkeletonBlock height={14} width="70%" />
-        <SkeletonBlock
-          height={12}
-          width="90%"
-          style={{ marginTop: 8 }}
-        />
-        <SkeletonBlock
-          height={12}
-          width="40%"
-          style={{ marginTop: 8 }}
-        />
+    <View style={styles.container}>
+      <View style={styles.iconContainer}>
+        <AppIcon name="search" size={48} color="#10B981" />
       </View>
+      <Text style={styles.title}>Searching nearby...</Text>
+      <Text style={styles.subtitle}>Looking for medicines, pharmacies, and tests</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    gap: 12,
-    padding: 14,
-    marginHorizontal: 16,
-    marginTop: 12,
-    borderRadius: 14,
-    backgroundColor: '#F9FAFB',
-  },
-  content: {
+  container: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    marginTop: 60,
+  },
+  iconContainer: {
+    position: 'relative',
+    width: 80,
+    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  spinnerContainer: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

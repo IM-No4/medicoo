@@ -13,7 +13,7 @@ export const getStoreDetails = async ({
   lat: number;
   long: number;
 }) => {
-    // console url
+  console.log('📡 POST /api/user/store-details:', { storeId, lat, long });
   const response = await apiClient.post('/api/user/store-details', {
     storeId,
     lat,
@@ -37,6 +37,7 @@ export const getStoreMedicines = async ({
   page?: number;
   limit?: number;
 }) => {
+  console.log('📡 GET /api/user/list-store-medicines:', { storeId, page, limit });
   const response = await apiClient.get('/api/user/list-store-medicines', {
     params: {
       storeId,
@@ -89,36 +90,55 @@ export const getNearbyPharmacies = async ({
  * Add pharmacy to favorites
  */
 export const addFavoritePharmacy = async (storeId: string) => {
-  const response = await apiClient.post('/api/user/add-favorite-store', {
-    storeId,
-  });
-  return response.data;
+  try {
+    const response = await apiClient.post('/api/user/add-favorite-store', {
+      storeId,
+    });
+    return response.data;
+  } catch (error: any) {
+    console.warn('Failed to add favorite:', error.message);
+    return null;
+  }
 };
 
 /**
  * Remove pharmacy from favorites
  */
 export const removeFavoritePharmacy = async (storeId: string) => {
-  const response = await apiClient.post('/api/user/remove-favorite-store', {
-    storeId,
-  });
-  return response.data;
+  try {
+    const response = await apiClient.post('/api/user/remove-favorite-store', {
+      storeId,
+    });
+    return response.data;
+  } catch (error: any) {
+    console.warn('Failed to remove favorite:', error.message);
+    return null;
+  }
 };
 
 /**
  * Check if pharmacy is in favorites
  */
 export const checkFavoritePharmacy = async (storeId: string) => {
-  const response = await apiClient.get('/api/user/check-favorite-store', {
-    params: { storeId },
-  });
-  return response.data?.isFavorite ?? false;
+  try {
+    const response = await apiClient.get('/api/user/check-favorite-store', {
+      params: { storeId },
+    });
+    return response.data?.isFavorite ?? false;
+  } catch (error: any) {
+    // If route doesn't exist or other error, return false
+    return false;
+  }
 };
 
 /**
  * Get all favorite pharmacies
  */
 export const getFavoritePharmacies = async () => {
-  const response = await apiClient.get('/api/user/favorite-stores');
-  return response.data;
+  try {
+    const response = await apiClient.get('/api/user/favorite-stores');
+    return response.data;
+  } catch (error: any) {
+    return [];
+  }
 };

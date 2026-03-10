@@ -2,6 +2,7 @@ import { saveRecentSearch } from '@/src/features/search/utils/recentSearches';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
+import { RootState } from '@/src/redux/store';
 import { SearchResult } from './search.types';
 import { globalSearch } from './SearchService';
 
@@ -13,12 +14,16 @@ interface SearchState {
   results: SearchResult[];
   error?: string;
   activeRequestId?: string;
+  suggestions: SearchResult[];
+  loadingSuggestions: boolean;
 }
 
 const initialState: SearchState = {
   query: '',
   loading: false,
   results: [],
+  suggestions: [],
+  loadingSuggestions: false,
 };
 
 /**
@@ -28,30 +33,63 @@ const initialState: SearchState = {
  */
 export const executeGlobalSearch = createAsyncThunk<
   SearchResult[],
-  { query: string; category?: string; type?: string },
-  { rejectValue: string }
->('search/execute', async ({ query, category, type }, { rejectWithValue }) => {
+  { query: string; category?: string; type?: string; tags?: string[]; recordRecent?: boolean },
+  { state: RootState, rejectValue: string }
+>('search/execute', async ({ query, category, type, tags, recordRecent = true }, { getState, rejectWithValue }) => {
   try {
     if (!query || query.trim().length < 2) {
       return [];
     }
 
-    const results = await globalSearch(query.trim(), category, type);
+    const state = getState();
+    const { selectedAddress } = state.address;
+    const { currentLocation } = state.location;
 
-    await saveRecentSearch(query.trim());
+    const lat = selectedAddress?.latitude || currentLocation?.latitude;
+    const lng = selectedAddress?.longitude || currentLocation?.longitude;
 
-    // Persist successful search - simplified to just query for now or expand if needed
-    await AsyncStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        query: query.trim(),
-        results,
-      })
-    );
+    const results = await globalSearch(query.trim(), category, type, tags, lat, lng);
+
+    if (recordRecent) {
+      await saveRecentSearch(query.trim());
+
+      // Persist successful search - simplified to just query for now or expand if needed
+      await AsyncStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          query: query.trim(),
+          results,
+        })
+      );
+    }
 
     return results;
   } catch (err: any) {
     return rejectWithValue(err?.message || 'Search failed');
+  }
+});
+
+export const fetchSearchSuggestions = createAsyncThunk<
+  SearchResult[],
+  { query: string },
+  { state: RootState, rejectValue: string }
+>('search/fetchSuggestions', async ({ query }, { getState, rejectWithValue }) => {
+  try {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+    
+    const state = getState();
+    const { selectedAddress } = state.address;
+    const { currentLocation } = state.location;
+
+    const lat = selectedAddress?.latitude || currentLocation?.latitude;
+    const lng = selectedAddress?.longitude || currentLocation?.longitude;
+
+    const results = await globalSearch(query.trim(), undefined, undefined, undefined, lat, lng);
+    return results.slice(0, 6);
+  } catch (err: any) {
+    return rejectWithValue(err?.message || 'Failed to fetch suggestions');
   }
 });
 
@@ -74,6 +112,8 @@ const searchSlice = createSlice({
       state.query = '';
       state.results = [];
       state.loading = false;
+      state.suggestions = [];
+      state.loadingSuggestions = false;
       state.error = undefined;
       state.activeRequestId = undefined;
       AsyncStorage.removeItem(STORAGE_KEY);
@@ -105,6 +145,16 @@ const searchSlice = createSlice({
         state.results = action.payload.results;
         state.loading = false;
         state.error = undefined;
+      })
+      .addCase(fetchSearchSuggestions.pending, (state) => {
+        state.loadingSuggestions = true;
+      })
+      .addCase(fetchSearchSuggestions.fulfilled, (state, action) => {
+        state.loadingSuggestions = false;
+        state.suggestions = action.payload;
+      })
+      .addCase(fetchSearchSuggestions.rejected, (state) => {
+        state.loadingSuggestions = false;
       });
   },
 });

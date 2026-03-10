@@ -54,7 +54,7 @@ export default function StatusModal({
                         <CheckCircle size={48} color="#10B981" />
                         <Text style={styles.titleText}>{title || 'Success'}</Text>
                         <Text style={styles.messageText}>{message || 'Action completed successfully.'}</Text>
-                        <TouchableOpacity style={styles.button} onPress={onClose}>
+                        <TouchableOpacity style={styles.button} onPress={primaryAction || onClose}>
                             <Text style={styles.buttonText}>{primaryActionText || 'Close'}</Text>
                         </TouchableOpacity>
                     </View>

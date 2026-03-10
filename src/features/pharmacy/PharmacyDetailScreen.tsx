@@ -1,31 +1,31 @@
-import { executeAction } from '@/src/actions/ActionExecutor';
-import StickyCartBar from '@/src/components/cart/StickyCartBar';
-import AppIcon from '@/src/components/icons/AppIcon';
-import PrescriptionUploadModal from '@/src/components/modals/PrescriptionUploadModal';
-import { RootState } from '@/src/redux/store';
+import { executeAction } from "@/src/actions/ActionExecutor";
+import StickyCartBar from "@/src/components/cart/StickyCartBar";
+import AppIcon from "@/src/components/icons/AppIcon";
+import PrescriptionUploadModal from "@/src/components/modals/PrescriptionUploadModal";
+import { RootState } from "@/src/redux/store";
 import {
   getStoreDetails,
   getStoreMedicines,
-} from '@/src/services/api/pharmacy.api';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useMemo, useState } from 'react';
+} from "@/src/services/api/pharmacy.api";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { StatusBar } from "expo-status-bar";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  View
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSelector } from "react-redux";
 
-import MedicineDetailBottomSheet from '@/src/components/modals/MedicineDetailBottomSheet';
-import CartItemsHorizontalScroll from './components/CartItemsHorizontalScroll';
-import FilterChips from './components/FilterChips';
-import MedicineRow from './components/MedicineRow';
-import PharmacyHeader from './components/PharmacyHeader';
+import MedicineDetailBottomSheet from "@/src/components/modals/MedicineDetailBottomSheet";
+import CartItemsHorizontalScroll from "./components/CartItemsHorizontalScroll";
+import FilterChips from "./components/FilterChips";
+import MedicineRow from "./components/MedicineRow";
+import PharmacyHeader from "./components/PharmacyHeader";
 
 export default function PharmacyDetailScreen() {
   const route = useRoute<any>();
@@ -36,7 +36,7 @@ export default function PharmacyDetailScreen() {
   const [pharmacy, setPharmacy] = useState<any>(null);
   const [medicines, setMedicines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [isSearchSticky, setIsSearchSticky] = useState(false);
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -46,20 +46,16 @@ export default function PharmacyDetailScreen() {
   /* ------------------ LOCATION (SOURCE OF TRUTH) ------------------ */
 
   const selectedAddress = useSelector(
-    (state: RootState) => state.address.selectedAddress
+    (state: RootState) => state.address.selectedAddress,
   );
 
   const currentLocation = useSelector(
-    (state: RootState) => state.location.currentLocation
+    (state: RootState) => state.location.currentLocation,
   );
 
-  const lat =
-    selectedAddress?.latitude ??
-    currentLocation?.latitude;
+  const lat = selectedAddress?.latitude ?? currentLocation?.latitude;
 
-  const long =
-    selectedAddress?.longitude ??
-    currentLocation?.longitude;
+  const long = selectedAddress?.longitude ?? currentLocation?.longitude;
 
   /* ------------------ API LOAD ------------------ */
 
@@ -73,6 +69,13 @@ export default function PharmacyDetailScreen() {
 
     const load = async () => {
       try {
+        console.log(
+          "🔍 Loading Pharmacy Detail for ID:",
+          pharmacyId,
+          "at",
+          lat,
+          long,
+        );
         setLoading(true);
 
         const store = await getStoreDetails({
@@ -81,6 +84,7 @@ export default function PharmacyDetailScreen() {
           long,
         });
 
+        console.log("Pharmacy details:", store);
         const meds = await getStoreMedicines({
           storeId: pharmacyId,
         });
@@ -90,7 +94,7 @@ export default function PharmacyDetailScreen() {
         setPharmacy(store);
         setMedicines(meds);
       } catch (e) {
-        console.error('Failed to load pharmacy details', e);
+        console.error("Failed to load pharmacy details", e);
       } finally {
         mounted && setLoading(false);
       }
@@ -111,8 +115,7 @@ export default function PharmacyDetailScreen() {
 
     return medicines.filter(
       (m) =>
-        m.name?.toLowerCase().includes(q) ||
-        m.brand?.toLowerCase().includes(q)
+        m.name?.toLowerCase().includes(q) || m.brand?.toLowerCase().includes(q),
     );
   }, [query, medicines]);
 
@@ -134,7 +137,7 @@ export default function PharmacyDetailScreen() {
       // await uploadPrescription(image);
       // console.log('Prescription uploaded:', image);
     } catch (e) {
-      console.error('Failed to upload prescription', e);
+      console.error("Failed to upload prescription", e);
     } finally {
       setIsUploading(false);
       setIsUploadModalVisible(false);
@@ -159,7 +162,9 @@ export default function PharmacyDetailScreen() {
 
       {/* Sticky Search Bar */}
       {isSearchSticky && (
-        <View style={[styles.stickySearchContainer, { paddingTop: insets.top }]}>
+        <View
+          style={[styles.stickySearchContainer, { paddingTop: insets.top }]}
+        >
           <View style={styles.searchWrapper}>
             <View style={styles.searchContainer}>
               <AppIcon name="search" size={20} color="#8A8A8E" />
@@ -171,7 +176,7 @@ export default function PharmacyDetailScreen() {
                 placeholderTextColor="#8A8A8E"
               />
               {query.length > 0 && (
-                <TouchableOpacity onPress={() => setQuery('')}>
+                <TouchableOpacity onPress={() => setQuery("")}>
                   <AppIcon name="x" size={18} color="#8A8A8E" />
                 </TouchableOpacity>
               )}
@@ -189,9 +194,7 @@ export default function PharmacyDetailScreen() {
       <FlatList
         data={filteredMedicines}
         keyExtractor={(item) =>
-          item.inventoryId ||
-          item.medicineId ||
-          String(item.sku)
+          item.inventoryId || item.medicineId || String(item.sku)
         }
         onScroll={handleScroll}
         scrollEventThrottle={16}
@@ -215,7 +218,7 @@ export default function PharmacyDetailScreen() {
                     placeholderTextColor="#8A8A8E"
                   />
                   {query.length > 0 && (
-                    <TouchableOpacity onPress={() => setQuery('')}>
+                    <TouchableOpacity onPress={() => setQuery("")}>
                       <AppIcon name="x" size={18} color="#8A8A8E" />
                     </TouchableOpacity>
                   )}
@@ -237,7 +240,9 @@ export default function PharmacyDetailScreen() {
               onItemPress={(item) => {
                 // Find medicine in list and open detail
                 const medicine = medicines.find(
-                  (m) => String(m.sku || m.inventoryId || m.medicineId) === String(item.sku)
+                  (m) =>
+                    String(m.sku || m.inventoryId || m.medicineId) ===
+                    String(item.sku),
                 );
                 if (medicine) {
                   setSelectedMedicine(medicine);
@@ -250,9 +255,9 @@ export default function PharmacyDetailScreen() {
         renderItem={({ item }) => (
           <MedicineRow
             medicine={item}
-            isStoreOpen={pharmacy?.status === 'online'}
+            isStoreOpen={pharmacy?.status === "online"}
             storeId={pharmacyId}
-            storeName={pharmacy?.storeName || ''}
+            storeName={pharmacy?.storeName || ""}
             onPress={() => {
               setSelectedMedicine(item);
               setIsMedicineDetailVisible(true);
@@ -268,7 +273,7 @@ export default function PharmacyDetailScreen() {
       {/* ------------------ STICKY CART BAR ------------------ */}
       <StickyCartBar
         onPress={(storeId) =>
-          executeAction('OPEN_CART', {
+          executeAction("OPEN_CART", {
             storeID: storeId,
           })
         }
@@ -282,11 +287,11 @@ export default function PharmacyDetailScreen() {
         onImageSelected={handlePrescriptionUpload}
         existingPrescriptions={[
           {
-            id: 'RX001',
-            doctorName: 'Dr. Rajesh Kumar',
-            prescriptionDate: '2025-01-15',
+            id: "RX001",
+            doctorName: "Dr. Rajesh Kumar",
+            prescriptionDate: "2025-01-15",
             items: 3,
-            diagnosis: 'Common Cold & Fever',
+            diagnosis: "Common Cold & Fever",
           },
         ]}
       />
@@ -296,8 +301,8 @@ export default function PharmacyDetailScreen() {
         visible={isMedicineDetailVisible}
         medicine={selectedMedicine}
         storeId={pharmacyId}
-        storeName={pharmacy?.storeName || ''}
-        isStoreOpen={pharmacy?.status === 'online'}
+        storeName={pharmacy?.storeName || ""}
+        isStoreOpen={pharmacy?.status === "online"}
         onClose={() => {
           setIsMedicineDetailVisible(false);
           setSelectedMedicine(null);
@@ -312,20 +317,20 @@ export default function PharmacyDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6F7F9',
+    backgroundColor: "#F6F7F9",
   },
   loader: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F6F7F9',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F6F7F9",
   },
   searchRowWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     gap: 12,
   },
   searchWrapperInline: {
@@ -335,43 +340,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 48,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
     fontSize: 15,
-    color: '#1c1c1e',
+    color: "#1c1c1e",
   },
   scanIconButton: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#F2F2F7',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#F2F2F7",
+    justifyContent: "center",
+    alignItems: "center",
   },
   stickySearchContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     zIndex: 1000,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderBottomColor: "#E5E7EB",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

@@ -1,5 +1,5 @@
-import { executeAction } from '@/src/actions/ActionExecutor';
 import AppIcon from '@/src/components/icons/AppIcon';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
   Image,
@@ -19,6 +19,7 @@ type Props = {
       rating: number;
       isOpen: boolean;
       storeImageUrl?: string | null;
+      deliveryTime?: string;
     };
   };
   onPress: () => void;
@@ -55,45 +56,45 @@ export default function FeaturedMedicineCard({
         )}
       </View>
 
+      {/* Offer Badge */}
+      <View style={styles.offerBadge}>
+        <Text style={styles.offerText}>GET 30% OFF</Text>
+      </View>
+
       {/* Content Overlay */}
-      <View style={styles.overlay}>
-        <Text style={styles.medicineName} numberOfLines={2}>
-          {medicine.name}
+      <LinearGradient
+        colors={['transparent', 'rgba(0, 0, 0, 0.8)']}
+        style={styles.overlay}
+      >
+        <Text style={styles.pharmacyName} numberOfLines={1}>
+          {pharmacy.pharmacyName}
         </Text>
         <View style={styles.metaRow}>
-          {pharmacy.rating > 0 && (
-            <View style={styles.ratingContainer}>
-              <AppIcon name="star" size={12} color="#000000" />
-              <Text style={styles.ratingText}>
-                {pharmacy.rating.toFixed(1)}
-              </Text>
-            </View>
-          )}
+          <View style={styles.ratingContainer}>
+            <AppIcon name="star" size={12} color="#FFFFFF" />
+            <Text style={styles.ratingText}>
+              {pharmacy.rating > 0 ? pharmacy.rating.toFixed(1) : 'New'}
+            </Text>
+          </View>
+          <Text style={styles.dot}>•</Text>
           <Text style={styles.deliveryTime}>
-            {pharmacy.isOpen ? 'Available' : 'Closed'}
+            {pharmacy.deliveryTime || (pharmacy.isOpen ? '20-25 mins' : 'Closed')}
           </Text>
         </View>
-      </View>
+      </LinearGradient>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    width: 280,
+    width: 260,
     height: 180,
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
-    marginRight: 12,
+    marginRight: 16,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    position: 'relative',
   },
   imageContainer: {
     width: '100%',
@@ -111,46 +112,64 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F0F4F8',
   },
+  offerBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 0,
+    backgroundColor: '#EB6E25',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
+    zIndex: 2,
+  },
+  offerText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
   overlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: 14,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
+    padding: 16,
+    paddingTop: 32,
+    justifyContent: 'flex-end',
   },
-  medicineName: {
-    fontSize: 16,
-    fontWeight: '700',
+  pharmacyName: {
+    fontSize: 18,
+    fontWeight: '900',
     color: '#FFFFFF',
-    marginBottom: 8,
-    letterSpacing: 0.2,
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFD700',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    gap: 4,
   },
   ratingText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#000000',
-    marginLeft: 4,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  dot: {
+    color: '#FFFFFF',
+    fontSize: 12,
   },
   deliveryTime: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
 

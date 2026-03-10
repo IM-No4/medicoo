@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient } from "./client";
 
 export type SearchApiResponse = {
   doctors?: Array<{
@@ -29,10 +29,27 @@ export type SearchApiResponse = {
   pharmacies?: Array<{
     id: string;
     name: string;
+    storeStatus?: string;
+    storePhotos?: {
+      insidePhoto?: string | null;
+      outsidePhoto?: string | null;
+    };
+    todayOpenHours?: any;
+    distanceKm?: number;
+    prepTime?: number;
+    deliveryTime?: number;
+    totalDeliveryTime?: number;
   }>;
 };
 
-export async function searchGlobal(query: string, category?: string, type?: string) {
+export async function searchGlobal(
+  query: string,
+  category?: string,
+  type?: string,
+  tags?: string[],
+  pincodeLat?: number,
+  pincodeLng?: number,
+) {
   if (!query || query.length < 2) {
     return {
       doctors: [],
@@ -44,11 +61,14 @@ export async function searchGlobal(query: string, category?: string, type?: stri
   const params: any = { q: query };
   if (category) params.category = category;
   if (type) params.type = type;
+  if (tags && tags.length > 0) params.tags = tags.join(",");
+  if (pincodeLat) params.pincodeLat = pincodeLat;
+  if (pincodeLng) params.pincodeLng = pincodeLng;
 
-  const res = await apiClient.get<SearchApiResponse>(
-    '/api/user/search',
-    { params }
-  );
+  const res = await apiClient.get<SearchApiResponse>("/api/user/search", {
+    params,
+  });
 
+  console.log("Search API Response:", res.data);
   return res.data;
 }

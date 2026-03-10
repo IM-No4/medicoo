@@ -1,103 +1,105 @@
-import { executeAction } from '@/src/actions/ActionExecutor';
-import React, { useMemo } from 'react';
+import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AppIcon from '@/src/components/icons/AppIcon';
+import { SearchResult } from '@/src/search/search.types';
 
 type Props = {
-  query: string;
+  suggestions: SearchResult[];
+  onSelect: (item: SearchResult) => void;
 };
 
-type Suggestion = {
-  label: string;
-  action: () => void;
+const getDomainDesign = (domain: string) => {
+  switch (domain) {
+    case 'medicine':
+      return { icon: 'pill', bg: '#ECFDF5', text: '#059669', label: 'Medicine' };
+    case 'pharmacy':
+      return { icon: 'store', bg: '#FEF3C7', text: '#D97706', label: 'Pharmacy' };
+    case 'doctor':
+      return { icon: 'stethoscope', bg: '#EFF6FF', text: '#2563EB', label: 'Doctor' };
+    default:
+      return { icon: 'search', bg: '#F3F4F6', text: '#6B7280', label: 'Other' };
+  }
 };
 
-function buildSuggestions(query: string): Suggestion[] {
-  const q = query.toLowerCase();
-
-  if (q.includes('doc') || q.includes('derma') || q.includes('cardio')) {
-    return [
-      {
-        label: 'Browse Doctors',
-        action: () => executeAction('OPEN_DOCTOR_LIST'),
-      },
-    ];
-  }
-
-  if (q.includes('med') || q.includes('tab') || q.includes('cap') || q.includes('para')) {
-    return [
-      {
-        label: 'Find Pharmacies',
-        action: () => executeAction('OPEN_PHARMACY_LIST'),
-      },
-    ];
-  }
-
-  if (q.includes('lab') || q.includes('test') || q.includes('blood')) {
-    return [
-      {
-        label: 'Browse Lab Tests',
-        action: () => executeAction('OPEN_LAB_TESTS'),
-      },
-    ];
-  }
-
-  return [
-    {
-      label: 'Browse Doctors',
-      action: () => executeAction('OPEN_DOCTOR_LIST'),
-    },
-    {
-      label: 'Find Pharmacies',
-      action: () => executeAction('OPEN_PHARMACY_LIST'),
-    },
-    {
-      label: 'Browse Lab Tests',
-      action: () => executeAction('OPEN_LAB_TESTS'),
-    },
-  ];
-}
-
-export default function SearchSuggestions({ query }: Props) {
-  const suggestions = useMemo(
-    () => buildSuggestions(query),
-    [query]
-  );
-
-  if (!query.trim()) return null;
+export default function SearchSuggestions({ suggestions, onSelect }: Props) {
+  if (suggestions.length === 0) return null;
 
   return (
-    <View style={styles.wrap}>
-      {suggestions.map((s) => (
-        <TouchableOpacity
-          key={s.label}
-          style={styles.chip}
-          onPress={s.action}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.text}>{s.label}</Text>
-        </TouchableOpacity>
-      ))}
+    <View style={styles.container}>
+      {suggestions.map((item, index) => {
+        const design = getDomainDesign(item.domain as string);
+        return (
+          <TouchableOpacity
+            key={item.id + index}
+            style={styles.suggestionRow}
+            onPress={() => onSelect(item)}
+          >
+            <View style={[styles.iconBox, { backgroundColor: design.bg }]}>
+              <AppIcon name={design.icon as any} size={16} color={design.text} />
+            </View>
+            <Text style={styles.suggestionText} numberOfLines={1}>
+              {item.title}
+            </Text>
+            <View style={[styles.domainBadge, { backgroundColor: design.bg }]}>
+              <Text style={[styles.domainText, { color: design.text }]}>
+                {design.label}
+              </Text>
+            </View>
+            <View style={styles.arrowIcon}>
+              <AppIcon name="chevron-right" size={16} color="#CBD5E1" />
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+      <View style={styles.divider} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  container: {
+    paddingTop: 8,
     paddingHorizontal: 16,
-    marginTop: 8,
   },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: '#F3F4F6',
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
   },
-  text: {
-    fontSize: 12,
+  iconBox: {
+    marginRight: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  suggestionText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1F2937',
     fontWeight: '500',
-    color: '#111827',
+  },
+  domainBadge: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  domainText: {
+    fontSize: 10,
+    color: '#6B7280',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  arrowIcon: {
+    opacity: 0.6,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginTop: 8,
+    marginBottom: 8,
   },
 });

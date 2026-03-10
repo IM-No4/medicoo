@@ -11,6 +11,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { executeAction } from '../../../../actions/ActionExecutor';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
+import { deleteUserAddress, getUserAddresses } from '../../../../services/api/address.api';
+import { useFocusEffect } from '@react-navigation/native';
+import { ActivityIndicator } from 'react-native';
 
 type AddressType = 'Home' | 'Work' | 'Other';
 
@@ -47,32 +50,45 @@ export default function AddressBookScreen() {
 
     const hideStatus = () => setStatus(prev => ({ ...prev, visible: false }));
 
-    // Mock Data
-    const [addresses, setAddresses] = useState<Address[]>([
-        {
-            id: '1',
-            type: 'Home',
-            label: 'Home',
-            address: 'Flat 402, Green Valley Apts, Indiranagar, Bangalore - 560038',
-            isDefault: true,
-        },
-        {
-            id: '2',
-            type: 'Work',
-            label: 'Office',
-            address: 'WeWork Galaxy, Residency Road, Bangalore - 560025',
-            isDefault: false,
-        },
-    ]);
+    // Real Data State
+    const [addresses, setAddresses] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchAddresses();
+        }, [])
+    );
+
+    const fetchAddresses = async () => {
+        setLoading(true);
+        try {
+            const data = await getUserAddresses();
+            setAddresses(data);
+        } catch (error) {
+            showStatus('error', 'Error', 'Failed to fetch addresses');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleDelete = (id: string) => {
         showStatus(
             'warning',
             'Remove Address?',
             'Are you sure you want to delete this address from your book?',
-            () => {
-                setAddresses(prev => prev.filter(a => a.id !== id));
+            async () => {
                 hideStatus();
+                setLoading(true);
+                try {
+                    await deleteUserAddress(id);
+                    await fetchAddresses(); // Refresh the list
+                    showStatus('success', 'Deleted', 'Address deleted successfully.');
+                } catch (error) {
+                    showStatus('error', 'Error', 'Failed to delete address.');
+                } finally {
+                    setLoading(false);
+                }
             },
             'Delete'
         );
@@ -98,7 +114,11 @@ export default function AddressBookScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
-                {addresses.length === 0 ? (
+                {loading ? (
+                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 100 }}>
+                        <ActivityIndicator size="large" color="#2FA561" />
+                    </View>
+                ) : addresses.length === 0 ? (
                     <View style={styles.emptyState}>
                         <View style={styles.emptyIconCircle}>
                             <MapPin size={40} color="#9CA3AF" />
@@ -109,11 +129,11 @@ export default function AddressBookScreen() {
                 ) : (
                     <View style={styles.list}>
                         {addresses.map((item) => (
-                            <View key={item.id} style={styles.card}>
+                            <View key={item._id || item.id} style={styles.card}>
                                 <View style={styles.cardHeader}>
                                     <View style={styles.typeBadge}>
-                                        {getIcon(item.type)}
-                                        <Text style={styles.typeText}>{item.label}</Text>
+                                        {getIcon(item.label || item.type)}
+                                        <Text style={styles.typeText}>{item.label || item.type}</Text>
                                     </View>
                                     {item.isDefault && (
                                         <View style={styles.defaultBadge}>
@@ -121,7 +141,7 @@ export default function AddressBookScreen() {
                                         </View>
                                     )}
                                 </View>
-                                <Text style={styles.addressText}>{item.address}</Text>
+                                <Text style={styles.addressText}>{item.fullAddress || item.address}</Text>
                                 <View style={styles.cardFooter}>
                                     <TouchableOpacity style={styles.actionButton}>
                                         <Text style={styles.actionText}>Edit</Text>
@@ -129,7 +149,7 @@ export default function AddressBookScreen() {
                                     <View style={styles.divider} />
                                     <TouchableOpacity
                                         style={styles.actionButton}
-                                        onPress={() => handleDelete(item.id)}
+                                        onPress={() => handleDelete(item._id || item.id)}
                                     >
                                         <Text style={[styles.actionText, { color: '#EF4444' }]}>Remove</Text>
                                     </TouchableOpacity>

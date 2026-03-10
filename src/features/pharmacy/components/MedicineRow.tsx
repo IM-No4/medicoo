@@ -44,9 +44,9 @@ export default function MedicineRow({
     if (!storeOpen) return;
     
     try {
-      const sku = medicine.sku || medicine.inventoryId || medicine.medicineId;
+      const sku = medicine.sku || medicine.inventoryId || medicine.medicineId || medicine._id || medicine.id;
       const cartItem = {
-        productId: medicine.medicineId || medicine.id,
+        medicineId: medicine.medicineId || medicine._id || medicine.id,
         sku: sku,
         name: medicine.name,
         price: medicine.price ?? 0,
@@ -64,8 +64,11 @@ export default function MedicineRow({
           : medicine.expiryDate ?? null,
       };
 
-      // Backend
-      await addItemToCart(storeId, cartItem);
+      // Backend expects productId in the item argument
+      await addItemToCart(storeId, storeName, {
+        ...cartItem,
+        productId: cartItem.medicineId
+      });
 
       // Redux
       dispatch(
@@ -167,7 +170,8 @@ export default function MedicineRow({
           {isInCart ? (
             <QuantityControl
               storeId={storeId}
-              sku={String(medicine.sku || medicine.inventoryId || medicine.medicineId)}
+              sku={String(medicine.sku || medicine.inventoryId || medicine.medicineId || medicine._id || medicine.id)}
+              productId={medicine.medicineId || medicine._id || medicine.id}
               quantity={cartItem.quantity}
               disabled={!storeOpen}
               size="medium"

@@ -9,6 +9,7 @@ import cartReducer from './slices/cartSlice';
 import locationReducer from './slices/locationSlice';
 import notificationReducer from './slices/notificationSlice';
 
+import bloodDonationReducer from './slices/bloodDonationSlice';
 import deviceReducer from './slices/deviceSlice';
 
 export const store = configureStore({
@@ -23,6 +24,7 @@ export const store = configureStore({
     cart: cartReducer,
     calendar: calendarReducer,
     device: deviceReducer,
+    bloodDonation: bloodDonationReducer,
   },
 });
 

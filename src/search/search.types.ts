@@ -40,6 +40,16 @@ export type MedicineSearchMeta = {
 export type PharmacySearchMeta = {
   id: string;
   name: string;
+  rating?: number;
+  isOpen?: boolean;
+  deliveryTime?: string;
+  storeImageUrl?: string | null;
+  distanceKm?: number;
+  totalDeliveryTime?: number;
+  apiDeliveryTime?: number;
+  prepTime?: number;
+  todayOpenHours?: any;
+  storeStatus?: string;
 };
 
 export type LabTestSearchMeta = {
@@ -51,49 +61,49 @@ export type LabTestSearchMeta = {
 
 export type SearchResult =
   | {
-      id: string;
-      domain: 'doctor';
-      title: string;
-      subtitle?: string;
-      meta: DoctorSearchMeta;
-      action: {
-        key: ActionKey;
-        params?: { doctorId: string };
-      };
-    }
+    id: string;
+    domain: 'doctor';
+    title: string;
+    subtitle?: string;
+    meta: DoctorSearchMeta;
+    action: {
+      key: ActionKey;
+      params?: { doctorId: string };
+    };
+  }
   | {
-      id: string;
-      domain: 'medicine';
-      title: string;
-      subtitle?: string;
-      meta: MedicineSearchMeta;
-      action: {
-        key: ActionKey;
-        params?: {
-          pharmacyId: string;
-          medicineId: string;
-        };
-      };
-    }
-  | {
-      id: string;
-      domain: 'pharmacy';
-      title: string;
-      subtitle?: string;
-      meta: PharmacySearchMeta;
-      action: {
-        key: ActionKey;
-        params?: { pharmacyId: string };
-      };
-    }
-  | {
-      id: string;
-      domain: 'lab_test';
-      title: string;
-      subtitle?: string;
-      meta: LabTestSearchMeta;
-      action: {
-        key: ActionKey;
-        params?: { testId: string };
+    id: string;
+    domain: 'medicine';
+    title: string;
+    subtitle?: string;
+    meta: MedicineSearchMeta;
+    action: {
+      key: ActionKey;
+      params?: {
+        pharmacyId: string;
+        medicineId: string;
       };
     };
+  }
+  | {
+    id: string;
+    domain: 'pharmacy';
+    title: string;
+    subtitle?: string;
+    meta: PharmacySearchMeta;
+    action: {
+      key: ActionKey;
+      params?: { pharmacyId: string };
+    };
+  }
+  | {
+    id: string;
+    domain: 'lab_test';
+    title: string;
+    subtitle?: string;
+    meta: LabTestSearchMeta;
+    action: {
+      key: ActionKey;
+      params?: { testId: string };
+    };
+  };

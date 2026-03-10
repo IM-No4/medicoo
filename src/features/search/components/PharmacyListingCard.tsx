@@ -1,5 +1,6 @@
 import { executeAction } from '@/src/actions/ActionExecutor';
 import AppIcon from '@/src/components/icons/AppIcon';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
   FlatList,
@@ -13,6 +14,14 @@ import {
 type MedicineItem = {
   id: string;
   name: string;
+  sku?: number;
+  price?: number;
+  discountPrice?: number;
+  images?: string[];
+  composition?: string;
+  prescriptionRequired?: boolean;
+  batchNum?: any;
+  expiryDate?: any;
   manufacturer?: string;
   pharmacy: {
     pharmacyId: string;
@@ -33,21 +42,52 @@ type Props = {
     deliveryTime?: string;
     location?: string;
     distance?: string;
+    distanceKm?: number;
     storeImageUrl?: string | null;
+    todayOpenHours?: any;
+    storeStatus?: string;
     medicines: MedicineItem[];
   };
   onPress: () => void;
   onMedicinePress: (medicine: MedicineItem) => void;
+  isLast?: boolean;
+  variant?: 'list' | 'hero';
 };
 
 export default function PharmacyListingCard({
   pharmacy,
   onPress,
   onMedicinePress,
+  isLast,
+  variant = 'list',
 }: Props) {
+  const getUnavailableText = () => {
+    if (pharmacy.todayOpenHours?.openTime && pharmacy.storeStatus === 'offline') {
+      try {
+        const timeStr = pharmacy.todayOpenHours.openTime;
+        const [time, modifier] = timeStr.trim().split(/\s+/);
+        let [hours, minutes] = time.split(':');
+        let h = parseInt(hours, 10);
+        if (modifier?.toUpperCase() === 'PM' && h < 12) h += 12;
+        if (modifier?.toUpperCase() === 'AM' && h === 12) h = 0;
+        
+        const now = new Date();
+        const openTime = new Date();
+        openTime.setHours(h, parseInt(minutes || '0', 10), 0, 0);
+        
+        if (now < openTime) {
+          return `Opens at ${timeStr}`;
+        }
+      } catch (e) {
+        // Fallback to default return
+      }
+    }
+    return 'Currently Unavailable';
+  };
+
   const renderMedicineCard = ({ item }: { item: MedicineItem }) => (
     <TouchableOpacity
-      activeOpacity={0.85}
+      activeOpacity={0.9}
       style={styles.medicineCard}
       onPress={() => onMedicinePress(item)}
     >
@@ -60,151 +100,318 @@ export default function PharmacyListingCard({
           />
         ) : (
           <View style={styles.medicineDefaultImage}>
-            <AppIcon name="pill" size={32} color="#CBD5E1" />
+            <AppIcon name="pill" size={24} color="#CBD5E1" />
           </View>
         )}
+        <TouchableOpacity
+          style={styles.smallAddButton}
+          onPress={() => {
+            executeAction('ADD_MEDICINE_FROM_SEARCH', {
+              pharmacyId: item.pharmacy.pharmacyId,
+              pharmacyName: item.pharmacy.pharmacyName,
+              medicine: item,
+            });
+          }}
+        >
+          <AppIcon name="plus" size={14} color="#10B981" />
+        </TouchableOpacity>
       </View>
-      <Text style={styles.medicineName} numberOfLines={2}>
-        {item.name}
-      </Text>
-      {item.pharmacy.rating > 0 && (
-        <View style={styles.medicineRating}>
-          <AppIcon name="star" size={10} color="#10B981" />
-          <Text style={styles.medicineRatingText}>
-            {item.pharmacy.rating.toFixed(1)}
-          </Text>
-        </View>
-      )}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => {
-          executeAction('ADD_MEDICINE_FROM_SEARCH', {
-            pharmacyId: item.pharmacy.pharmacyId,
-            pharmacyName: item.pharmacy.pharmacyName,
-            medicine: item,
-          });
-        }}
-      >
-        <Text style={styles.addButtonText}>ADD</Text>
-      </TouchableOpacity>
+      <View style={styles.medicineInfo}>
+        <Text style={styles.medicineName} numberOfLines={2}>
+          {item.name}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
       {/* Pharmacy Header */}
-      <TouchableOpacity
-        activeOpacity={0.85}
-        style={styles.pharmacyHeader}
-        onPress={onPress}
-      >
-        {/* Pharmacy Image */}
-        <View style={styles.pharmacyImageContainer}>
-          {pharmacy.storeImageUrl ? (
-            <Image
-              source={{ uri: pharmacy.storeImageUrl }}
-              style={styles.pharmacyImage}
-              resizeMode="cover"
+      {variant === 'hero' ? (
+        <TouchableOpacity
+          activeOpacity={0.9}
+          style={styles.heroCard}
+          onPress={onPress}
+        >
+          <View style={styles.heroImageContainer}>
+            {pharmacy.storeImageUrl ? (
+              <Image
+                source={{ uri: pharmacy.storeImageUrl }}
+                style={styles.heroImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={[styles.heroImage, styles.heroPlaceholder]}>
+                <AppIcon name="store" size={48} color="#CBD5E1" />
+              </View>
+            )}
+
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.85)']}
+              style={styles.heroGradient}
             />
-          ) : (
-            <View style={styles.pharmacyDefaultImage}>
-              <AppIcon name="shopping-bag" size={40} color="#CBD5E1" />
+
+            <View style={styles.heroOfferBadge}>
+              <Text style={styles.heroOfferText}>GET 30% OFF</Text>
+            </View>
+
+            <View style={styles.heroContent}>
+              <Text style={styles.heroName}>{pharmacy.name}</Text>
+              <View style={styles.heroMeta}>
+                <AppIcon name="star" size={14} color="#FFFFFF" />
+                <Text style={styles.heroMetaText}>
+                  {pharmacy.rating > 0 ? pharmacy.rating.toFixed(1) : 'New'}
+                </Text>
+                <View style={styles.heroDot} />
+                <Text style={styles.heroMetaText}>
+                  {pharmacy.deliveryTime || '15-20 mins'}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Closed Overlay hero variant */}
+          {!pharmacy.isOpen && (
+            <View style={styles.closedOverlayHero}>
+              <View style={styles.closedBadge}>
+                <Text style={styles.closedBadgeText}>
+                  {getUnavailableText()}
+                </Text>
+              </View>
             </View>
           )}
-        </View>
-
-        {/* Pharmacy Info */}
-        <View style={styles.pharmacyInfo}>
-          {pharmacy.isOpen && (
-            <View style={styles.fastDeliveryBadge}>
-              <AppIcon name="clock" size={12} color="#EF4444" />
-              <Text style={styles.fastDeliveryText}>
-                {pharmacy.deliveryTime || 'Fast Delivery'}
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={styles.pharmacyHeader}
+          onPress={onPress}
+        >
+          <View style={styles.pharmacyInfo}>
+            <View style={styles.titleRow}>
+              <Text style={styles.pharmacyName} numberOfLines={1}>
+                {pharmacy.name}
               </Text>
             </View>
-          )}
 
-          <Text style={styles.pharmacyName} numberOfLines={1}>
-            {pharmacy.name}
-          </Text>
-
-          <View style={styles.pharmacyMetaRow}>
-            {pharmacy.rating > 0 && (
-              <>
+            <View style={styles.metaRow}>
+              <View style={styles.ratingBox}>
                 <AppIcon name="star" size={14} color="#10B981" />
                 <Text style={styles.ratingText}>
-                  {pharmacy.rating.toFixed(1)}
+                  {pharmacy.rating > 0 ? pharmacy.rating.toFixed(1) : 'New'}
                 </Text>
-              </>
-            )}
-            {pharmacy.deliveryTime && (
-              <Text style={styles.deliveryTime}>
-                {pharmacy.deliveryTime}
+                <Text style={styles.countText}>(200+)</Text>
+              </View>
+              <View style={styles.dot} />
+              <Text style={styles.timeText}>
+                {pharmacy.deliveryTime || '25-30 mins'}
               </Text>
-            )}
-          </View>
+              <View style={styles.dot} />
+              <Text style={styles.timeText}>
+                {pharmacy.distanceKm !== undefined ? `${pharmacy.distanceKm} km` : (pharmacy.distance || '2.5 km')}
+              </Text>
+            </View>
 
-          {pharmacy.location && (
-            <Text style={styles.location} numberOfLines={1}>
-              {pharmacy.location}
-              {pharmacy.distance && ` • ${pharmacy.distance}`}
-            </Text>
-          )}
+            <View style={styles.offersContainer}>
+              <View style={styles.offerRow}>
+                <View style={styles.offerBadge}>
+                  <AppIcon name="tag" size={12} color="#EB6E25" />
+                </View>
+                <Text style={styles.offerText}>Items at ₹59</Text>
+              </View>
+              <View style={styles.offerRow}>
+                <View style={styles.offerBadge}>
+                  <AppIcon name="tag" size={12} color="#EB6E25" />
+                </View>
+                <Text style={styles.offerText}>Free Delivery</Text>
+              </View>
+            </View>
 
-          <View style={styles.badgesRow}>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>Free Delivery</Text>
+            <View style={styles.benefitsRow}>
+              <View style={styles.benefitTag}>
+                <Text style={styles.benefitText}>one</Text>
+              </View>
+              <Text style={styles.benefitDetail}>BENEFITS</Text>
             </View>
           </View>
-        </View>
 
-        {/* Arrow */}
-        <AppIcon
-          name="chevron-right"
-          size={20}
-          color="#9CA3AF"
-        />
-      </TouchableOpacity>
+          <View style={styles.pharmacyImageWrapper}>
+            {pharmacy.storeImageUrl ? (
+              <Image
+                source={{ uri: pharmacy.storeImageUrl }}
+                style={styles.pharmacyImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.pharmacyDefaultImage}>
+                <AppIcon name="store" size={32} color="#CBD5E1" />
+              </View>
+            )}
+            <View style={styles.imageOverlayBadge}>
+              <Text style={styles.overlayBadgeText}>30% OFF</Text>
+            </View>
+          </View>
+
+          {/* Closed Overlay list variant */}
+          {!pharmacy.isOpen && (
+            <View style={styles.closedOverlayList}>
+              <View style={styles.closedBadge}>
+                <Text style={styles.closedBadgeText}>
+                  {getUnavailableText()}
+                </Text>
+              </View>
+            </View>
+          )}
+        </TouchableOpacity>
+      )}
 
       {/* Horizontal Medicine Scroll */}
       {pharmacy.medicines.length > 0 && (
-        <FlatList
-          data={pharmacy.medicines}
-          renderItem={renderMedicineCard}
-          keyExtractor={(item) => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.medicinesList}
-        />
+        <View style={styles.medicinesCarousel}>
+          <FlatList
+            data={pharmacy.medicines}
+            renderItem={renderMedicineCard}
+            keyExtractor={(item) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.medicinesList}
+          />
+        </View>
       )}
+
+      {!isLast && <View style={styles.itemDivider} />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 16,
-    marginBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    paddingBottom: 16,
+    backgroundColor: 'transparent',
   },
   pharmacyHeader: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingBottom: 16,
+    padding: 16,
     gap: 12,
-    backgroundColor: '#FFFFFF',
   },
-  pharmacyImageContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
+  pharmacyInfo: {
+    flex: 1,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 6,
+  },
+  pharmacyName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1F2937',
+    letterSpacing: -0.5,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  ratingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  starCircle: {
+    backgroundColor: '#10B981',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ratingText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1F2937',
+  },
+  countText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
+    marginLeft: 2,
+  },
+  dot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: '#9CA3AF',
+    marginHorizontal: 4,
+  },
+  timeText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  offersContainer: {
+    gap: 4,
+    marginBottom: 8,
+  },
+  offerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  offerBadge: {
+    padding: 2,
+  },
+  offerText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  benefitsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  benefitTag: {
+    backgroundColor: '#EB6E25',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  benefitText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '900',
+    fontStyle: 'italic',
+  },
+  benefitDetail: {
+    fontSize: 10,
+    color: '#EB6E25',
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  pharmacyImageWrapper: {
+    width: 90,
+    height: 90,
+    borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    backgroundColor: '#F3F4F6',
+    position: 'relative',
+  },
+  imageOverlayBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    backgroundColor: '#EB6E25',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  overlayBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '900',
   },
   pharmacyImage: {
     width: '100%',
@@ -215,100 +422,38 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F4F8',
+    backgroundColor: '#F9FAFB',
   },
-  pharmacyInfo: {
-    flex: 1,
-    justifyContent: 'space-between',
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
   },
-  fastDeliveryBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFF5F5',
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginBottom: 6,
-    gap: 4,
+  itemDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginHorizontal: 16,
+    marginTop: 8,
   },
-  fastDeliveryText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#DC2626',
-  },
-  pharmacyName: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  pharmacyMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  ratingText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  deliveryTime: {
-    fontSize: 13,
-    color: '#6B7280',
-  },
-  location: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 6,
-  },
-  badgesRow: {
-    flexDirection: 'row',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
-  badge: {
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#047857',
+  medicinesCarousel: {
+    marginBottom: 8,
   },
   medicinesList: {
-    paddingLeft: 16,
-    paddingRight: 16,
-    paddingTop: 8,
+    padding: 16,
+    gap: 16,
   },
   medicineCard: {
-    width: 140,
-    marginRight: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    width: 130,
   },
   medicineImageContainer: {
-    width: '100%',
+    width: 130,
     height: 100,
-    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#F9FAFB',
+    marginBottom: 8,
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   medicineImage: {
     width: '100%',
@@ -319,46 +464,156 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F4F8',
+  },
+  smallAddButton: {
+    position: 'absolute',
+    right: 6,
+    bottom: 6,
+    backgroundColor: '#FFFFFF',
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  medicineInfo: {
+    paddingHorizontal: 2,
   },
   medicineName: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#111827',
-    padding: 8,
-    paddingBottom: 4,
+    color: '#374151',
+    lineHeight: 18,
   },
-  medicineRating: {
+  // Hero Variant Styles
+  heroCard: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+  },
+  heroImageContainer: {
+    height: 180,
+    width: '100%',
+    position: 'relative',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroPlaceholder: {
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '60%',
+  },
+  heroOfferBadge: {
+    position: 'absolute',
+    top: 16,
+    left: 0,
+    backgroundColor: '#EB6E25',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderTopRightRadius: 6,
+    borderBottomRightRadius: 6,
+  },
+  heroOfferText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  heroContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+  },
+  heroName: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  heroMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    gap: 3,
+    gap: 6,
   },
-  medicineRatingText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#065F46',
-  },
-  addButton: {
-    margin: 8,
-    marginTop: 4,
-    paddingVertical: 9,
-    borderRadius: 8,
-    backgroundColor: '#10B981',
-    alignItems: 'center',
-    shadowColor: '#10B981',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  addButtonText: {
-    fontSize: 12,
+  heroMetaText: {
+    fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  heroDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    marginHorizontal: 2,
+  },
+  closedOverlayHero: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 24,
+  },
+  closedOverlayList: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closedBadge: {
+    backgroundColor: '#1F2937',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  closedBadgeText: {
+    color: '#F9FAFB',
+    fontSize: 13,
+    fontWeight: '800',
     letterSpacing: 0.5,
   },
 });

@@ -327,6 +327,17 @@ export interface Product {
   discount?: string;
   image?: string;
   uom?: string;
+  unit?: string;
+  brand?: string;
+  action?: FeedAction;
+}
+
+export interface ShowcaseSection {
+  id: string;
+  title: string;
+  imageUrl?: string;
+  tags?: string[];
+  displayOrder?: number;
   action?: FeedAction;
 }
 
@@ -334,12 +345,14 @@ export interface ProductShowcaseFeedItem extends HomeFeedItemBase {
   type: 'PRODUCT_SHOWCASE';
   title: string;
   subtitle?: string;
-  products: Product[];
+  products?: Product[];
+  sections?: ShowcaseSection[];
+  showcaseId?: string;
   seeAllAction?: FeedAction;
 }
 
-export interface PromoFeedItem extends HomeFeedItemBase {
-  type: 'PROMO';
+export interface PromoItem {
+  id: string;
   title: string;
   subtitle?: string;
   description?: string;
@@ -347,6 +360,13 @@ export interface PromoFeedItem extends HomeFeedItemBase {
   background?: { start: string; end: string };
   imageUrl?: string;
   icon?: string;
+  action?: FeedAction;
+}
+
+export interface PromoFeedItem extends HomeFeedItemBase {
+  type: 'PROMO';
+  displayMode: 'LIST' | 'CAROUSEL';
+  items: PromoItem[];
 }
 
 export interface HealthTipFeedItem extends HomeFeedItemBase {

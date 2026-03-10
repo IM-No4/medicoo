@@ -6,6 +6,9 @@ export type PharmacyGroup = {
   rating: number;
   isOpen: boolean;
   storeImageUrl?: string | null;
+  todayOpenHours?: any;
+  totalDeliveryTime?: number;
+  storeStatus?: string;
   medicines: SearchResult[];
 };
 
@@ -28,6 +31,9 @@ export function groupMedicinesByPharmacy(
         rating: meta.storeRating ?? 0,
         isOpen: meta.isOpen ?? false,
         storeImageUrl: meta.storeImageUrl,
+        todayOpenHours: meta.todayOpenHours,
+        totalDeliveryTime: meta.totalDeliveryTime,
+        storeStatus: meta.storeStatus,
         medicines: [],
       });
     }

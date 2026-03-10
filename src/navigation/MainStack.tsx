@@ -6,6 +6,7 @@ import DoctorChatScreen from '../features/doctor/DoctorChatScreen';
 import AddFamilyMemberScreen from '../features/profile/screens/FamilyMembers/AddFamilyMemberScreen';
 import FamilyMembersScreen from '../features/profile/screens/FamilyMembers/FamilyMembersScreen';
 import AmbulanceStack from './AmbulanceStack';
+import BloodDonationStack from './BloodDonationStack';
 import CartStack from './CartStack';
 import DoctorStack from './DoctorStack';
 import HomeCareStack from './HomeCareStack';
@@ -75,6 +76,11 @@ export default function MainStack({
       <Stack.Screen
         name="CartStack"
         component={CartStack}
+        options={{ presentation: 'card' }}
+      />
+      <Stack.Screen
+        name="BloodDonationStack"
+        component={BloodDonationStack}
         options={{ presentation: 'card' }}
       />
       <Stack.Screen

@@ -10,70 +10,100 @@ type Props = {
     onAction?: (action: FeedAction) => void;
 };
 
+import { ShowcaseSection } from '../feed.types';
+
 function ProductShowcaseCard({ data, onAction }: Props) {
+    const handleSectionPress = (section: ShowcaseSection) => {
+        console.log('Navigating to Search with query:', section.title, 'and tags:', section.tags);
+        if (onAction) {
+            onAction({
+                type: 'NAVIGATE',
+                stack: 'SearchStack',
+                screen: 'SearchHome',
+                params: {
+                    query: section.title,
+                    tags: section.tags,
+                }
+            });
+        }
+    };
+
     const handleProductPress = (item: Product) => {
         if (item.action && onAction) {
             onAction(item.action);
         }
     };
 
-    const handleSeeAll = () => {
-        if (data.seeAllAction && onAction) {
-            onAction(data.seeAllAction);
+    const renderItem = ({ item }: { item: any }) => {
+        // Handle Section Rendering
+        if (data.sections?.length) {
+            const section = item as ShowcaseSection;
+            return (
+                <TouchableOpacity
+                    style={styles.productCard}
+                    activeOpacity={0.7}
+                    onPress={() => handleSectionPress(section)}
+                >
+                    <View style={styles.imageContainer}>
+                        {!!section.imageUrl ? (
+                            <Image source={{ uri: section.imageUrl }} style={styles.image} resizeMode="cover" />
+                        ) : (
+                            <View style={styles.placeholderImage}>
+                                <AppIcon name="shopping-bag" size={24} color="#9CA3AF" />
+                            </View>
+                        )}
+                    </View>
+
+                    <View style={styles.infoContainer}>
+                        <Text style={styles.productName} numberOfLines={2}>{section.title}</Text>
+                        <View style={styles.footerRow}>
+                            <View style={styles.arrowIcon}>
+                                <AppIcon name="arrow-right" size={14} color="#5a6773ff" />
+                            </View>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            );
         }
-    };
 
-    const renderItem = ({ item }: { item: Product }) => (
-        <TouchableOpacity style={styles.productCard} activeOpacity={0.7} onPress={() => handleProductPress(item)}>
-            <View style={styles.imageContainer}>
-                {/* Placeholder for product image if not provided */}
-                {item.image ? (
-                    <Image source={{ uri: item.image }} style={styles.image} resizeMode="contain" />
-                ) : (
-                    <View style={styles.placeholderImage}>
-                        <AppIcon name="shopping-bag" size={24} color="#9CA3AF" />
+        // Handle Product Rendering (Fallback)
+        const product = item as Product;
+        return (
+            <TouchableOpacity style={styles.productCard} activeOpacity={0.7} onPress={() => handleProductPress(product)}>
+                <View style={styles.imageContainer}>
+                    {!!product.image ? (
+                        <Image source={{ uri: product.image }} style={styles.image} resizeMode="contain" />
+                    ) : (
+                        <View style={styles.placeholderImage}>
+                            <AppIcon name="shopping-bag" size={24} color="#9CA3AF" />
+                        </View>
+                    )}
+                </View>
+
+                <View style={styles.infoContainer}>
+                    <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
+
+                    <View style={styles.footerRow}>
+                        <View style={styles.arrowIcon}>
+                            <AppIcon name="arrow-right" size={14} color="#F9FAFB" />
+                        </View>
                     </View>
-                )}
-
-                {item.discount && (
-                    <View style={styles.discountBadge}>
-                        <Text style={styles.discountText}>{item.discount} OFF</Text>
-                    </View>
-                )}
-            </View>
-
-            <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
-            {item.uom && <Text style={styles.uom}>{item.uom}</Text>}
-
-            <View style={styles.priceRow}>
-                <Text style={styles.price}>₹{item.price}</Text>
-                {item.originalPrice && (
-                    <Text style={styles.originalPrice}>₹{item.originalPrice}</Text>
-                )}
-            </View>
-
-            <TouchableOpacity style={styles.addButton} onPress={() => handleProductPress(item)}>
-                <Text style={styles.addText}>ADD</Text>
+                </View>
             </TouchableOpacity>
-        </TouchableOpacity>
-    );
+        );
+    };
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
                 <View>
                     <Text style={styles.title}>{data.title}</Text>
-                    {data.subtitle && <Text style={styles.subtitle}>{data.subtitle}</Text>}
+                    {!!data.subtitle && <Text style={styles.subtitle}>{data.subtitle}</Text>}
                 </View>
-                {data.seeAllAction && (
-                    <TouchableOpacity onPress={handleSeeAll}>
-                        <Text style={styles.seeAll}>See All</Text>
-                    </TouchableOpacity>
-                )}
             </View>
 
             <FlatList
-                data={data.products}
+                data={data.sections?.length ? data.sections : data.products}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.id}
                 horizontal
@@ -138,64 +168,48 @@ const styles = StyleSheet.create({
     image: {
         width: '100%',
         height: '100%',
+        borderRadius: 12,
     },
     placeholderImage: {
         alignItems: 'center',
         justifyContent: 'center',
         flex: 1
     },
-    discountBadge: {
-        position: 'absolute',
-        top: 6,
-        left: 6,
-        backgroundColor: '#EF4444',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 6,
-    },
-    discountText: {
-        color: '#fff',
-        fontSize: 10,
-        fontWeight: '700',
+    infoContainer: {
+        flex: 1,
     },
     productName: {
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: '600',
         color: '#1F2937',
-        marginBottom: 4,
+        marginBottom: 0,
         height: 36, // Fixed height for alignment
     },
-    uom: {
-        fontSize: 11,
-        color: '#9CA3AF',
-        marginBottom: 8,
-    },
-    priceRow: {
+    footerRow: {
         flexDirection: 'row',
-        alignItems: 'baseline',
-        gap: 6,
-        marginBottom: 12,
+        alignItems: 'flex-end',
+        justifyContent: 'flex-end',
     },
-    price: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#111827',
+    arrowIcon: {
+        backgroundColor: '#ffffffff',
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+        // elevation: 1,
+        // shadowColor: '#000',
+        // shadowOffset: { width: 0, height: 2 },
+        // shadowOpacity: 0.1,
+        // shadowRadius: 4,
     },
-    originalPrice: {
+    detailsContainer: {
+        flex: 1,
+    },
+    tagText: {
         fontSize: 11,
-        color: '#9CA3AF',
-        textDecorationLine: 'line-through',
-    },
-    addButton: {
-        borderWidth: 1,
-        borderColor: '#2563EB',
-        borderRadius: 8,
-        paddingVertical: 6,
-        alignItems: 'center'
-    },
-    addText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#2563EB'
+        color: '#6B7280',
+        fontWeight: '500',
     }
 });

@@ -56,9 +56,9 @@ export default function MedicineDetailBottomSheet({
     if (!isStoreOpen || !medicine) return;
     
     try {
-      const sku = medicine.sku || medicine.inventoryId || medicine.medicineId;
+      const sku = medicine.sku || medicine.inventoryId || medicine.medicineId || medicine._id || medicine.id;
       const cartItem = {
-        productId: medicine.medicineId || medicine.id,
+        medicineId: medicine.medicineId || medicine._id || medicine.id,
         sku: sku,
         name: medicine.name,
         price: medicine.price ?? 0,
@@ -76,7 +76,11 @@ export default function MedicineDetailBottomSheet({
           : medicine.expiryDate ?? null,
       };
 
-      await addItemToCart(storeId, cartItem);
+      // Backend expects productId in the item argument
+      await addItemToCart(storeId, storeName, {
+        ...cartItem,
+        productId: cartItem.medicineId
+      });
 
       dispatch(
         addItemLocal({
@@ -184,7 +188,8 @@ export default function MedicineDetailBottomSheet({
             {isInCart ? (
               <QuantityControl
                 storeId={storeId}
-                sku={String(medicine.sku || medicine.inventoryId || medicine.medicineId)}
+                sku={String(medicine.sku || medicine.inventoryId || medicine.medicineId || medicine._id || medicine.id)}
+                productId={medicine.medicineId || medicine._id || medicine.id}
                 quantity={cartItem.quantity}
                 disabled={!isStoreOpen}
                 size="large"

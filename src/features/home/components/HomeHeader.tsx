@@ -1,9 +1,13 @@
 import { executeAction } from '@/src/actions/ActionExecutor';
 import AppIcon from '@/src/components/icons/AppIcon';
-import PrescriptionUploadModal from '@/src/components/modals/PrescriptionUploadModal';
+import AddressSelectorBottomSheet from '@/src/components/modals/AddressSelectorBottomSheet';
 import NotificationBell from '@/src/components/notification/NotificationBell';
+import { setSelectedAddress } from '@/src/redux/slices/addressSlice';
+import { setPrescriptionModalVisible } from '@/src/redux/slices/appSlice';
 import { setCurrentLocation } from '@/src/redux/slices/locationSlice';
 import { RootState } from '@/src/redux/store';
+import { getUserAddresses } from '@/src/services/api/address.api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -29,16 +33,37 @@ type Props = {
   dynamicConfig?: DynamicHeaderFeedItem;
 };
 
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
+
+
+const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371e3;
+  const p1 = (lat1 * Math.PI) / 180;
+  const p2 = (lat2 * Math.PI) / 180;
+  const dp = ((lat2 - lat1) * Math.PI) / 180;
+  const dl = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+};
+
+let hasInitializedSession = false;
 
 export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, dynamicConfig }: Props) {
   const insets = useSafeAreaInsets();
-  const [uploadVisible, setUploadVisible] = useState(false);
+  const dispatch = useDispatch();
+
+  const [addressSelectorVisible, setAddressSelectorVisible] = useState(false);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+
+  const getAddressIcon = (label?: string) => {
+    switch (label) {
+      case 'Home': return 'home';
+      case 'Work': return 'briefcase';
+      default: return 'map-pin';
+    }
+  };
 
   const headerTranslateY = scrollY.interpolate({
     inputRange: [0, maxHeight],
@@ -68,48 +93,143 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
     android: { x: 0.8, y: 1 },
   });
 
-  const dispatch = useDispatch();
-
   const selectedAddress = useSelector(
     (state: RootState) => state.address.selectedAddress
   );
 
-  const currentLocation = useSelector(
-    (state: RootState) => state.location.currentLocation
-  );
-
   React.useEffect(() => {
     const initLocation = async () => {
-      // If user already selected an address, do nothing
-      if (selectedAddress) return;
+      // Only run auto-selection logic once per app session (cold start)
+      if (hasInitializedSession) return;
+      hasInitializedSession = true;
 
-      // If we already have GPS location, do nothing
-      if (currentLocation) return;
+      setIsFetchingLocation(true);
+      try {
 
-      const { status } =
-        await Location.requestForegroundPermissionsAsync();
+        // First, fetch all saved addresses
+        let savedAddresses: any[] = [];
+        try {
+          savedAddresses = await getUserAddresses();
+        } catch (err) {
+          console.warn('Failed to fetch addresses for proximity check', err);
+        }
 
-      if (status !== 'granted') {
-        console.warn('Location permission denied');
-        return;
+        // If no saved addresses exist, do not prompt for location yet
+        if (!savedAddresses || savedAddresses.length === 0) {
+          return;
+        }
+
+        // Saved addresses exist, so check user's current location
+        const { status } = await Location.requestForegroundPermissionsAsync();
+
+        if (status !== 'granted') {
+          console.warn('Location permission denied');
+          return;
+        }
+
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+
+        const { latitude, longitude } = loc.coords;
+
+        dispatch(
+          setCurrentLocation({
+            latitude,
+            longitude,
+          })
+        );
+
+        // Check for any existing location within 25 meters
+        const nearbyAddress = savedAddresses.find((addr) => {
+          const addrLat = addr.location?.coordinates?.[1] || addr.latitude;
+          const addrLng = addr.location?.coordinates?.[0] || addr.longitude;
+          if (!addrLat || !addrLng) return false;
+          return getDistance(latitude, longitude, addrLat, addrLng) <= 25;
+        });
+
+        if (nearbyAddress) {
+          dispatch(
+            setSelectedAddress({
+              id: nearbyAddress._id || nearbyAddress.id,
+              label: nearbyAddress.label,
+              fullAddress: nearbyAddress.fullAddress,
+              latitude: nearbyAddress.location?.coordinates?.[1] || nearbyAddress.latitude,
+              longitude: nearbyAddress.location?.coordinates?.[0] || nearbyAddress.longitude,
+            })
+          );
+        } else {
+          // 1. Check local storage for cached address within 25m
+          try {
+            const cachedData = await AsyncStorage.getItem('@cached_current_location');
+            if (cachedData) {
+              const parsedCache = JSON.parse(cachedData);
+              if (parsedCache.latitude && parsedCache.longitude) {
+                const dist = getDistance(latitude, longitude, parsedCache.latitude, parsedCache.longitude);
+                if (dist <= 25) {
+                  dispatch(
+                    setSelectedAddress({
+                      label: 'Current Location',
+                      fullAddress: parsedCache.addressStr,
+                      latitude,
+                      longitude,
+                    })
+                  );
+                  return; // Skip the API call completely
+                } else {
+                  // Not valid anymore, clear it
+                  await AsyncStorage.removeItem('@cached_current_location');
+                }
+              }
+            }
+          } catch (err) {
+            console.warn('Failed to read cached location', err);
+          }
+
+          // 2. Reverse geocoding API call using Google Maps API directly (efficient single external request)
+          try {
+            // TODO: Move Api Key securely to process.env and inject globally
+            const GOOGLE_MAPS_API_KEY = 'AIzaSyA4Vzs1VRiOO0Sc4MPFDwgRVcVdmfeJSqQ';
+            const response = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`
+            );
+            const data = await response.json();
+
+            if (data.results && data.results.length > 0) {
+              const addressStr = data.results[0].formatted_address;
+
+              dispatch(
+                setSelectedAddress({
+                  label: 'Current Location',
+                  fullAddress: addressStr,
+                  latitude,
+                  longitude,
+                })
+              );
+
+              // 3. Update the local storage with the new fetched location
+              try {
+                await AsyncStorage.setItem('@cached_current_location', JSON.stringify({
+                  latitude,
+                  longitude,
+                  addressStr
+                }));
+              } catch (err) {
+                console.warn('Failed to save cached location', err);
+              }
+            }
+          } catch (error) {
+            console.warn('Google Maps reverse geocode failed:', error);
+          }
+        }
+      } finally {
+        setIsFetchingLocation(false);
       }
-
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-
-      dispatch(
-        setCurrentLocation({
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-        })
-      );
     };
 
     initLocation();
-  }, [selectedAddress, currentLocation, dispatch]);
-  const userName = dynamicConfig?.userName || 'Amrit';
-  const greeting = dynamicConfig?.greeting || getGreeting();
+  }, [dispatch]); // Run strictly on mount
+
   const headerColors = dynamicConfig?.colors || ['#2FA561', '#0E7439'];
 
   return (
@@ -149,18 +269,20 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
         <Animated.View style={{ opacity: contentOpacity }}>
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => executeAction('OPEN_ADDRESS_SELECTOR')}
+            onPress={() => setAddressSelectorVisible(true)}
           >
             <View style={styles.addressRow}>
-              <AppIcon name="map-pin" size={16} color="#ffffff" />
+              <AppIcon name={getAddressIcon(selectedAddress?.label)} size={20} color="#ffffff" />
 
               <Text
                 style={styles.addressText}
                 numberOfLines={1}
               >
-                {selectedAddress?.label ||
-                  selectedAddress?.fullAddress ||
-                  'Delivering to current location'}
+                {isFetchingLocation
+                  ? 'Fetching location...'
+                  : (selectedAddress?.label ||
+                    selectedAddress?.fullAddress ||
+                    'Delivering to current location')}
               </Text>
 
               <AppIcon
@@ -170,33 +292,39 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
               />
             </View>
 
-            <Text style={styles.addressSub}>
-              Tap to change delivery address
+            <Text style={styles.addressSub} numberOfLines={1}>
+              {isFetchingLocation
+                ? 'Please wait...'
+                : (selectedAddress?.fullAddress && selectedAddress?.label !== selectedAddress?.fullAddress
+                  ? (selectedAddress.fullAddress.length > 50
+                    ? selectedAddress.fullAddress.substring(0, 50) + '...'
+                    : selectedAddress.fullAddress)
+                  : 'Tap to change delivery address')}
             </Text>
           </TouchableOpacity>
 
-          {/* 🔍 GLOBAL SEARCH */}
-          <TouchableOpacity
-            activeOpacity={0.9}
-            style={styles.searchBar}
-            onPress={() => executeAction('OPEN_GLOBAL_SEARCH')}
-          >
-            <View style={styles.searchLeft}>
+          {/* 🔍 SEARCH BAR CONTAINER */}
+          <View style={styles.searchBar}>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              style={styles.searchLeft}
+              onPress={() => executeAction('OPEN_GLOBAL_SEARCH')}
+            >
               <AppIcon name="search" size={18} color="#6B7280" />
               <Text style={styles.searchPlaceholder}>
                 Search medicines, doctors, labs
               </Text>
-            </View>
+            </TouchableOpacity>
 
             {/* 📄 SCAN / UPLOAD RX */}
             <TouchableOpacity
               style={styles.scannerButton}
               activeOpacity={0.8}
-              onPress={() => setUploadVisible(true)}
+              onPress={() => dispatch(setPrescriptionModalVisible(true))}
             >
               <AppIcon name="scan" size={18} color="#1a998e" />
             </TouchableOpacity>
-          </TouchableOpacity>
+          </View>
         </Animated.View>
 
         <View style={styles.iconWrapper}>
@@ -206,19 +334,9 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
         </View>
       </Animated.View>
 
-      {/* 📄 PRESCRIPTION MODAL */}
-      <PrescriptionUploadModal
-        visible={uploadVisible}
-        onClose={() => setUploadVisible(false)}
-        existingPrescriptions={[
-          {
-            id: 'RX001',
-            doctorName: 'Dr. Rajesh Kumar',
-            prescriptionDate: '2025-01-15',
-            items: 3,
-            diagnosis: 'Common Cold & Fever',
-          },
-        ]}
+      <AddressSelectorBottomSheet
+        visible={addressSelectorVisible}
+        onClose={() => setAddressSelectorVisible(false)}
       />
     </>
   );
@@ -262,6 +380,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   searchLeft: {
+    flex: 1,
+    height: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,

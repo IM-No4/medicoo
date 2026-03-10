@@ -55,6 +55,22 @@ export const ActionRegistry: Record<ActionKey, any> = {
     stack: 'HomeCareStack',
     screen: 'HomeCareHome',
   },
+  OPEN_BLOOD_DONATION: {
+    stack: 'BloodDonationStack',
+    screen: 'BloodDonationDashboard',
+  },
+  OPEN_BLOOD_ELIGIBILITY: {
+    stack: 'BloodDonationStack',
+    screen: 'BloodEligibilityForm',
+  },
+  OPEN_BLOOD_APPLICATION: {
+    stack: 'BloodDonationStack',
+    screen: 'BloodDonorApplication',
+  },
+  OPEN_BLOOD_HISTORY: {
+    stack: 'BloodDonationStack',
+    screen: 'BloodDonationHistory',
+  },
 
   OPEN_RECORDS: {
     tab: 'Records',
@@ -173,11 +189,14 @@ export const ActionRegistry: Record<ActionKey, any> = {
     tab: 'Health',
   },
   OPEN_NOTIFICATIONS: {
-    stack: 'HomeStack',
+    tab: 'Home',
     screen: 'Notifications',
   },
   ADD_MEDICINE_FROM_SEARCH: {},
-  OPEN_ADDRESS_SELECTOR: {},
+  OPEN_ADDRESS_SELECTOR: {
+    tab: 'Profile',
+    screen: 'AddressBookModal',
+  },
   INCREMENT_CART_ITEM: {},
   DECREMENT_CART_ITEM: {},
   OPEN_CHECKOUT: {},

@@ -62,5 +62,36 @@ export function normalizeSearchResponse(
     });
   });
 
+  /* ---------- Pharmacies ---------- */
+  data.pharmacies?.forEach((p) => {
+    // If todayOpenHours is present and has isOpenNow, we can use that, else default to storeStatus !== 'offline'
+    const isCurrentlyOpen = p.todayOpenHours?.isOpenNow ?? (p.storeStatus ? p.storeStatus !== 'offline' : true);
+    // Prefer outsidePhoto, then insidePhoto
+    const storeImage = p.storePhotos?.outsidePhoto || p.storePhotos?.insidePhoto || null;
+    
+    results.push({
+      id: p.id,
+      domain: 'pharmacy',
+      title: p.name,
+      meta: {
+        id: p.id,
+        name: p.name,
+        isOpen: isCurrentlyOpen,
+        rating: 0,
+        storeImageUrl: storeImage,
+        distanceKm: p.distanceKm,
+        totalDeliveryTime: p.totalDeliveryTime,
+        apiDeliveryTime: p.deliveryTime,
+        prepTime: p.prepTime,
+        todayOpenHours: p.todayOpenHours,
+        storeStatus: p.storeStatus,
+      },
+      action: {
+        key: 'OPEN_PHARMACY',
+        params: { pharmacyId: p.id },
+      },
+    });
+  });
+
   return results;
 }

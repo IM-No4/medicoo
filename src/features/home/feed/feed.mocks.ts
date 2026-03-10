@@ -87,23 +87,28 @@ export const FULL_FEED: HomeFeedItem[] = [
     {
         id: '1',
         type: 'PROMO',
-        title: 'Full Body Checkup',
-        subtitle: 'Special Offer',
-        description: 'Get 60+ tests including Vitamin D & B12 at 50% off.',
-        ctaText: 'Book Now',
-        background: { start: '#4F46E5', end: '#7C3AED' },
-        icon: 'flask',
-        action: {
-            type: 'NAVIGATE',
-            screen: 'LabTests',
-            stack: 'LabStack',
-            params: {
-                searchQuery: 'Sugar Test',
-                filterCategory: 'Diabetes'
+        displayMode: 'LIST',
+        items: [
+            {
+                id: 'p1_1',
+                title: 'Full Body Checkup',
+                subtitle: 'Special Offer',
+                description: 'Get 60+ tests including Vitamin D & B12 at 50% off.',
+                ctaText: 'Book Now',
+                background: { start: '#4F46E5', end: '#7C3AED' },
+                icon: 'flask',
+                action: {
+                    type: 'NAVIGATE',
+                    screen: 'LabTests',
+                    stack: 'LabStack',
+                    params: {
+                        searchQuery: 'Sugar Test',
+                        filterCategory: 'Diabetes'
+                    }
+                }
             }
-        }
-    },
-    {
+        ]
+    }, {
         id: 'd1',
         type: 'DOCTOR_RECOMMENDATION',
         title: 'Top Rated Doctors',
@@ -152,11 +157,11 @@ export const FULL_FEED: HomeFeedItem[] = [
         type: 'BLOOD_DONATION_AWARENESS',
         title: 'You can save a life today',
         subtitle: 'Become a blood donor in your area. Your one act of kindness can make a difference.',
-        ctaText: 'Check Eligibility',
+        ctaText: 'Donate Now',
         action: {
             type: 'NAVIGATE',
-            stack: 'ProfileStack',
-            screen: 'ProfileHome' // Placeholder for Eligibility check
+            stack: 'BloodDonationStack',
+            screen: 'BloodDonationDashboard'
         },
         learnMoreAction: {
             type: 'OPEN_URL',
@@ -166,14 +171,19 @@ export const FULL_FEED: HomeFeedItem[] = [
     {
         id: '3',
         type: 'PROMO',
-        title: 'Medicine Delivery',
-        subtitle: 'Express',
-        description: 'Get your medicines delivered within 2 hours in your area.',
-        ctaText: 'Order Now',
-        background: { start: '#059669', end: '#10B981' },
-        icon: 'pill',
-    },
-    {
+        displayMode: 'CAROUSEL',
+        items: [
+            {
+                id: 'p3_1',
+                title: 'Medicine Delivery',
+                subtitle: 'Express',
+                description: 'Get your medicines delivered within 2 hours in your area.',
+                ctaText: 'Order Now',
+                background: { start: '#059669', end: '#10B981' },
+                icon: 'pill',
+            }
+        ]
+    }, {
         id: 'lab1',
         type: 'LAB_PACKAGE_SHOWCASE',
         title: 'Popular Health Checks',
@@ -220,11 +230,11 @@ export const FULL_FEED: HomeFeedItem[] = [
         type: 'PRODUCT_SHOWCASE',
         title: 'Baby Care',
         subtitle: 'Gentle care for your little one',
-        products: [
-            { id: 'b1', name: 'Pampers Active Baby', price: 699, originalPrice: 799, discount: '15%', uom: '30 pants' },
-            { id: 'b2', name: 'Johnson Baby Oil', price: 250, uom: '200ml' },
-            { id: 'b3', name: 'Himalaya Baby Lotion', price: 180, originalPrice: 200, discount: '10%', uom: '100ml' },
-            { id: 'b4', name: 'Cerelac Wheat Apple', price: 290, uom: '300g' },
+        showcaseId: '699212eb1d9e5e39de695aec',
+        sections: [
+            { id: 'sec2_1', title: 'Daily Essentials', tags: ['essentials', 'baby'], imageUrl: 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=500' },
+            { id: 'sec2_2', title: 'Diapering', tags: ['diaper', 'hygiene'], imageUrl: 'https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=500' },
+            { id: 'sec2_3', title: 'Feeding', tags: ['feeding', 'baby'], imageUrl: 'https://images.unsplash.com/photo-1555244162-803834f70033?w=500' },
         ]
     },
     {
@@ -232,10 +242,10 @@ export const FULL_FEED: HomeFeedItem[] = [
         type: 'PRODUCT_SHOWCASE',
         title: 'Women\'s Wellness',
         subtitle: 'Hygiene & Self-care',
-        products: [
-            { id: 'w1', name: 'Whisper Ultra Clean', price: 380, originalPrice: 450, discount: '15%', uom: '30 pads' },
-            { id: 'w2', name: 'V-Wash Plus', price: 190, uom: '100ml' },
-            { id: 'w3', name: 'Revital H Woman', price: 280, originalPrice: 310, discount: '10%', uom: '30 caps' },
+        showcaseId: '699215bf1d9e5e39de695b49',
+        sections: [
+            { id: 'sec3_1', title: 'Menstrual Care', tags: ['pads', 'tampons'], imageUrl: 'https://images.unsplash.com/photo-1584362917165-526a96bcd599?w=500' },
+            { id: 'sec3_2', title: 'Intimate Hygiene', tags: ['v-wash', 'hygiene'], imageUrl: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=500' },
         ]
     },
     {
@@ -255,10 +265,10 @@ export const FULL_FEED: HomeFeedItem[] = [
         type: 'PRODUCT_SHOWCASE',
         title: 'Sexual Wellness',
         subtitle: 'Discreet delivery',
-        products: [
-            { id: 'sx1', name: 'Durex Extra Time', price: 180, originalPrice: 200, discount: '10%', uom: '10s', action: { type: 'NAVIGATE', stack: 'PharmacyStack', screen: 'ProductDetail', params: { productId: 'sx1' } } },
-            { id: 'sx2', name: 'Manforce Strawberry', price: 90, uom: '10s', action: { type: 'NAVIGATE', stack: 'PharmacyStack', screen: 'ProductDetail', params: { productId: 'sx2' } } },
-            { id: 'sx3', name: 'Skore Vibrating Ring', price: 450, originalPrice: 500, discount: '10%', action: { type: 'NAVIGATE', stack: 'PharmacyStack', screen: 'ProductDetail', params: { productId: 'sx3' } } },
+        showcaseId: '699215e01d9e5e39de695b5b',
+        sections: [
+            { id: 'sec4_1', title: 'Condoms', tags: ['condoms', 'protection'], imageUrl: 'https://images.unsplash.com/photo-1605371924599-2d0365ca130a?w=500' },
+            { id: 'sec4_2', title: 'Performance', tags: ['delay', 'performance'], imageUrl: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=500' },
         ]
     },
     {

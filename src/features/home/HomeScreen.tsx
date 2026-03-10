@@ -1,4 +1,3 @@
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, {
@@ -8,9 +7,9 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Animated, RefreshControl, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Animated, RefreshControl, View, Platform } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import HomeHeader from './components/HomeHeader';
 import HomeFeedRenderer from './feed/HomeFeedRenderer';
@@ -21,13 +20,13 @@ import QuickActionsSkeleton from './skeletons/QuickActionsSkeleton';
 import ServicesSkeleton from './skeletons/ServicesSkeleton';
 import UpcomingSkeleton from './skeletons/UpcomingSkeleton';
 
-import { useNavigation } from '@react-navigation/native';
-import { setHomeBootstrapped } from '../../redux/slices/appSlice';
+import { setHomeBootstrapped, setPrescriptionModalVisible } from '../../redux/slices/appSlice';
 import { loadCalendarData } from '../../redux/slices/calendarSlice';
 import { AppDispatch, RootState } from '../../redux/store';
 import { DynamicHeaderFeedItem } from './feed/feed.types';
 import { useFeedActionExecutor } from './hooks/useFeedActionExecutor';
 import { useHomeFeed } from './hooks/useHomeFeed';
+import PrescriptionUploadModal from '../../components/modals/PrescriptionUploadModal';
 
 // Skeletons are still used for initial load
 const LoadingSkeletons = () => (
@@ -47,21 +46,18 @@ type Props = {
 };
 
 export default function HomeScreen({ onOpenCommandPalette }: Props) {
-  const navigation = useNavigation<any>();
-  const [uploadVisible, setUploadVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   // Hook for feed actions
   const { executeAction } = useFeedActionExecutor();
 
   // Hook for feed data
-  const { data: feedData, loading: feedLoading, hasMore, loadMore, refresh: refreshFeed } = useHomeFeed();
+  const { data: feedData, loading: feedLoading, loadMore, refresh: refreshFeed } = useHomeFeed();
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const scrollValueRef = useRef(0);
   const contentFade = useRef(new Animated.Value(0)).current;
 
-  const tabBarHeight = useBottomTabBarHeight();
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch<AppDispatch>();
 
@@ -126,9 +122,6 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
     }
   }, [homeBootstrapped, dispatch, contentFade]);
 
-  // Select calendar data
-  const { data: calendarData } = useSelector((state: RootState) => state.calendar);
-
   // Fetch today's data on mount/focus
   useFocusEffect(
     useCallback(() => {
@@ -168,23 +161,28 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
         <StatusBar
           translucent
           style={darkStatusBar ? 'dark' : 'light'}
-          backgroundColor={darkStatusBar ? '#ffffff' : 'transparent'}
+          backgroundColor="transparent"
         />
       )}
 
-      {darkStatusBar && (
-        <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: insets.top,
-            backgroundColor: '#ffffff',
-            zIndex: 20,
-          }}
-        />
-      )}
+      {/* Smooth continuous fading white background behind the status bar */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: insets.top,
+          backgroundColor: '#ffffff',
+          opacity: scrollY.interpolate({
+            inputRange: [HEADER_MAX_HEIGHT - 30, HEADER_MAX_HEIGHT + 10],
+            outputRange: [0, 1],
+            extrapolate: 'clamp',
+          }),
+          zIndex: 20,
+        }}
+      />
 
       <HomeHeader
         scrollY={scrollY}
@@ -203,10 +201,11 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
         ListHeaderComponent={isInitialLoading ? LoadingSkeletons : null}
         ListFooterComponent={renderFooter}
         onEndReached={loadMore}
-        onEndReachedThreshold={0.2}
-        initialNumToRender={6}
-        maxToRenderPerBatch={6}
-        windowSize={11}
+        onEndReachedThreshold={1.5}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={15}
+        decelerationRate={Platform.OS === 'ios' ? 0.992 : 'fast'}
         removeClippedSubviews={true}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -225,6 +224,20 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
             progressViewOffset={HEADER_HEIGHT + 20}
           />
         }
+      />
+
+      <PrescriptionUploadModal
+        visible={useSelector((state: RootState) => state.app.prescriptionModalVisible)}
+        onClose={() => dispatch(setPrescriptionModalVisible(false))}
+        existingPrescriptions={[
+          {
+            id: 'RX001',
+            doctorName: 'Dr. Rajesh Kumar',
+            prescriptionDate: '2025-01-15',
+            items: 3,
+            diagnosis: 'Common Cold & Fever',
+          },
+        ]}
       />
     </View>
   );

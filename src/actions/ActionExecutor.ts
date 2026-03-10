@@ -18,31 +18,52 @@ export async function executeAction(action: ActionKey, params?: any) {
 
   if (action === 'ADD_MEDICINE_FROM_SEARCH') {
     try {
-      const { pharmacyId, pharmacyName, medicine } = params;
+      const { pharmacyId, pharmacyName, medicine, itemId } = params;
+
+      if (!medicine && itemId) {
+        console.warn('ADD_MEDICINE_FROM_SEARCH called with itemId but no medicine object.');
+      }
+
+      const med = medicine || { id: itemId, name: 'Medicine' };
+
+      // Ensure we have a valid batchId
+      let batchId = '';
+      if (med.batchNum) {
+        if (Array.isArray(med.batchNum) && med.batchNum.length > 0) {
+          batchId = String(med.batchNum[0]);
+        } else if (typeof med.batchNum === 'string' || typeof med.batchNum === 'number' || typeof med.batchNum === 'object') {
+          batchId = String(med.batchNum);
+        }
+      }
+
+      // Final fallback to avoid backend 500
+      if (!batchId || batchId === 'undefined' || batchId === 'null') {
+        console.warn(`Missing or invalid batchId for ${med.name}, using med.id as fallback`);
+        batchId = String(med.id);
+      }
 
       const cartItem = {
-        productId: medicine.id,
-        sku: medicine.sku,
-        name: medicine.name,
-        price: medicine.price ?? 0,
-        discountPrice: medicine.discountPrice ?? medicine.price ?? 0,
+        productId: med.id,
+        medicineId: med.id, // Redux expects medicineId
+        sku: med.sku || med.id,
+        name: med.name,
+        price: med.price ?? 0,
+        discountPrice: med.discountPrice ?? med.price ?? 0,
         quantity: 1,
-        brand: medicine.manufacturer,
-        composition: medicine.composition,
-        prescriptionRequired: medicine.prescriptionRequired ?? false,
-        image: medicine.images?.[0] ?? null,
-        batchId: Array.isArray(medicine.batchNum)
-          ? String(medicine.batchNum[0] ?? '')
-          : String(medicine.batchNum ?? ''),
-        expiryDate: Array.isArray(medicine.expiryDate)
-          ? medicine.expiryDate[0] ?? null
-          : medicine.expiryDate ?? null,
+        brand: med.manufacturer || med.brand || '',
+        composition: med.composition || '',
+        prescriptionRequired: med.prescriptionRequired ?? false,
+        image: med.images?.length > 0 ? med.images[0] : (med.image || null),
+        batchId: batchId,
+        expiryDate: Array.isArray(med.expiryDate) ? med.expiryDate[0] : (med.expiryDate || null),
       };
 
-      // backend
-      await addItemToCart(pharmacyId, cartItem);
+      console.log('🛒 Adding to cart:', { pharmacyId, medicineName: med.name, batchId });
 
-      // redux (THIS is what updates StickyCartBar)
+      // backend
+      await addItemToCart(pharmacyId, pharmacyName || 'Pharmacy', cartItem);
+
+      // redux
       store.dispatch(
         addItemLocal({
           storeId: pharmacyId,
@@ -56,11 +77,12 @@ export async function executeAction(action: ActionKey, params?: any) {
         screen: 'PharmacyDetail',
         params: {
           pharmacyId,
-          medicineName: medicine.name,
+          medicineName: med.name,
         },
       });
-    } catch (e) {
-      console.error('ADD_MEDICINE_FROM_SEARCH failed', e);
+    } catch (e: any) {
+      const errorMsg = e?.response?.data?.message || e?.response?.data || e.message;
+      console.error('❌ ADD_MEDICINE_FROM_SEARCH failed:', errorMsg);
     }
     return;
   }

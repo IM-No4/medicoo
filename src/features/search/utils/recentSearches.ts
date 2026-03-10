@@ -20,3 +20,7 @@ export async function saveRecentSearch(query: string) {
 
   await AsyncStorage.setItem(KEY, JSON.stringify(next));
 }
+
+export async function clearRecentSearches() {
+  await AsyncStorage.removeItem(KEY);
+}

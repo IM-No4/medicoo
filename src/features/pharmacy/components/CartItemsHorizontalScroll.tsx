@@ -75,6 +75,7 @@ export default function CartItemsHorizontalScroll({ storeId, onItemPress }: Prop
               <QuantityControl
                 storeId={storeId}
                 sku={item.sku}
+                productId={item.medicineId}
                 quantity={item.quantity}
                 size="small"
               />

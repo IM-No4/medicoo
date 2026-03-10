@@ -3,7 +3,7 @@ import { feedApi } from '../../../services/api/feed.api';
 import { HomeFeedItem } from '../feed/feed.types';
 
 // User requested at least 6 sections initially
-const BATCH_SIZE = 3;
+const BATCH_SIZE = 6;
 const INITIAL_BATCH_SIZE = 14;
 
 export function useHomeFeed() {

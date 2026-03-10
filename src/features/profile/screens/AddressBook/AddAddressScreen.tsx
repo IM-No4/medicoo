@@ -19,6 +19,7 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
+import { addUserAddress } from '../../../../services/api/address.api';
 
 export default function AddAddressScreen() {
     const navigation = useNavigation();
@@ -156,7 +157,7 @@ export default function AddAddressScreen() {
         setStep(2);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!formData.houseNo) {
             showStatus('warning', 'Missing Details', 'Please enter your house or flat number to complete the address.');
             return;
@@ -167,11 +168,30 @@ export default function AddAddressScreen() {
         }
 
         setSaving(true);
-        // Mock API call
-        setTimeout(() => {
-            setSaving(false);
+        // API call
+        try {
+            const payload = {
+                label: formData.tag === 'Other' ? formData.customLabel : formData.tag,
+                customLabelName: formData.customLabel,
+                flatHouseNumber: formData.houseNo,
+                nearBy: formData.landmark,
+                fullAddress: formData.fullAddress,
+                receiverName: formData.receiverName,
+                receiverNumber: formData.receiverPhone,
+                isDefault: false,
+                location: { 
+                    type: "Point", 
+                    coordinates: [region.longitude, region.latitude] 
+                }
+            };
+            await addUserAddress(payload);
+            
             showStatus('success', 'Address Saved', 'Your new delivery address has been added successfully.');
-        }, 1000);
+        } catch (error) {
+            showStatus('error', 'Error', 'Failed to save address. Please try again.');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const renderStep1 = () => (

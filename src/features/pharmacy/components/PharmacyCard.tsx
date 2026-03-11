@@ -1,16 +1,8 @@
-import AppIcon from '@/src/components/icons/AppIcon';
-import React from 'react';
-import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import AppIcon from "@/src/components/icons/AppIcon";
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-export default function PharmacyCard({
-  pharmacy,
-  onPress,
-}: any) {
+export default function PharmacyCard({ pharmacy, onPress }: any) {
   return (
     <TouchableOpacity
       style={styles.card}
@@ -28,48 +20,46 @@ export default function PharmacyCard({
         </Text>
       </View>
 
-      <Text style={styles.rating}>
-        ⭐ {pharmacy.rating}
-      </Text>
+      <Text style={styles.rating}>⭐ {pharmacy.rating}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     padding: 14,
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 14,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: "#F9FAFB",
   },
 
   icon: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#ECFDF5',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#ECFDF5",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   name: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 
   meta: {
     fontSize: 12,
-    color: '#6B7280',
+    color: "#6B7280",
     marginTop: 2,
   },
 
   rating: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: "#374151",
   },
 });

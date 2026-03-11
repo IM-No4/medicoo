@@ -1,18 +1,18 @@
-import { executeAction } from '@/src/actions/ActionExecutor';
-import AppIcon from '@/src/components/icons/AppIcon';
-import AddressSelectorBottomSheet from '@/src/components/modals/AddressSelectorBottomSheet';
-import NotificationBell from '@/src/components/notification/NotificationBell';
-import { setSelectedAddress } from '@/src/redux/slices/addressSlice';
-import { setPrescriptionModalVisible } from '@/src/redux/slices/appSlice';
-import { setCurrentLocation } from '@/src/redux/slices/locationSlice';
-import { RootState } from '@/src/redux/store';
-import { getUserAddresses } from '@/src/services/api/address.api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Location from 'expo-location';
-import { useDispatch, useSelector } from 'react-redux';
+import { executeAction } from "@/src/actions/ActionExecutor";
+import AppIcon from "@/src/components/icons/AppIcon";
+import AddressSelectorBottomSheet from "@/src/components/modals/AddressSelectorBottomSheet";
+import NotificationBell from "@/src/components/notification/NotificationBell";
+import { setSelectedAddress } from "@/src/redux/slices/addressSlice";
+import { setPrescriptionModalVisible } from "@/src/redux/slices/appSlice";
+import { setCurrentLocation } from "@/src/redux/slices/locationSlice";
+import { RootState } from "@/src/redux/store";
+import { getUserAddresses } from "@/src/services/api/address.api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Location from "expo-location";
+import { useDispatch, useSelector } from "react-redux";
 
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useState } from "react";
 import {
   Animated,
   Image,
@@ -21,10 +21,10 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { DynamicHeaderFeedItem } from '../feed/feed.types';
+import { DynamicHeaderFeedItem } from "../feed/feed.types";
 
 type Props = {
   scrollY: Animated.Value;
@@ -33,16 +33,21 @@ type Props = {
   dynamicConfig?: DynamicHeaderFeedItem;
 };
 
-
-
-const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+const getDistance = (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+) => {
   const R = 6371e3;
   const p1 = (lat1 * Math.PI) / 180;
   const p2 = (lat2 * Math.PI) / 180;
   const dp = ((lat2 - lat1) * Math.PI) / 180;
   const dl = ((lon2 - lon1) * Math.PI) / 180;
 
-  const a = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+  const a =
+    Math.sin(dp / 2) * Math.sin(dp / 2) +
+    Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c;
@@ -50,7 +55,12 @@ const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => 
 
 let hasInitializedSession = false;
 
-export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, dynamicConfig }: Props) {
+export default function HomeHeader({
+  scrollY,
+  maxHeight,
+  onOpenCommandPalette,
+  dynamicConfig,
+}: Props) {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
 
@@ -59,28 +69,31 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
 
   const getAddressIcon = (label?: string) => {
     switch (label) {
-      case 'Home': return 'home';
-      case 'Work': return 'briefcase';
-      default: return 'map-pin';
+      case "Home":
+        return "home";
+      case "Work":
+        return "briefcase";
+      default:
+        return "map-pin";
     }
   };
 
   const headerTranslateY = scrollY.interpolate({
     inputRange: [0, maxHeight],
     outputRange: [0, -maxHeight],
-    extrapolate: 'clamp',
+    extrapolate: "clamp",
   });
 
   const contentOpacity = scrollY.interpolate({
     inputRange: [0, maxHeight * 0.6],
     outputRange: [1, 0],
-    extrapolate: 'clamp',
+    extrapolate: "clamp",
   });
 
   const gradientOverlayOpacity = scrollY.interpolate({
     inputRange: [0, maxHeight * 0.6, maxHeight],
     outputRange: [0, 0.18, 0.35],
-    extrapolate: 'clamp',
+    extrapolate: "clamp",
   });
 
   const gradientStart = Platform.select({
@@ -94,7 +107,7 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
   });
 
   const selectedAddress = useSelector(
-    (state: RootState) => state.address.selectedAddress
+    (state: RootState) => state.address.selectedAddress,
   );
 
   React.useEffect(() => {
@@ -105,13 +118,12 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
 
       setIsFetchingLocation(true);
       try {
-
         // First, fetch all saved addresses
         let savedAddresses: any[] = [];
         try {
           savedAddresses = await getUserAddresses();
         } catch (err) {
-          console.warn('Failed to fetch addresses for proximity check', err);
+          console.warn("Failed to fetch addresses for proximity check", err);
         }
 
         // If no saved addresses exist, do not prompt for location yet
@@ -122,8 +134,8 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
         // Saved addresses exist, so check user's current location
         const { status } = await Location.requestForegroundPermissionsAsync();
 
-        if (status !== 'granted') {
-          console.warn('Location permission denied');
+        if (status !== "granted") {
+          console.warn("Location permission denied");
           return;
         }
 
@@ -137,7 +149,7 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
           setCurrentLocation({
             latitude,
             longitude,
-          })
+          }),
         );
 
         // Check for any existing location within 25 meters
@@ -154,44 +166,55 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
               id: nearbyAddress._id || nearbyAddress.id,
               label: nearbyAddress.label,
               fullAddress: nearbyAddress.fullAddress,
-              latitude: nearbyAddress.location?.coordinates?.[1] || nearbyAddress.latitude,
-              longitude: nearbyAddress.location?.coordinates?.[0] || nearbyAddress.longitude,
-            })
+              latitude:
+                nearbyAddress.location?.coordinates?.[1] ||
+                nearbyAddress.latitude,
+              longitude:
+                nearbyAddress.location?.coordinates?.[0] ||
+                nearbyAddress.longitude,
+            }),
           );
         } else {
           // 1. Check local storage for cached address within 25m
           try {
-            const cachedData = await AsyncStorage.getItem('@cached_current_location');
+            const cachedData = await AsyncStorage.getItem(
+              "@cached_current_location",
+            );
             if (cachedData) {
               const parsedCache = JSON.parse(cachedData);
               if (parsedCache.latitude && parsedCache.longitude) {
-                const dist = getDistance(latitude, longitude, parsedCache.latitude, parsedCache.longitude);
+                const dist = getDistance(
+                  latitude,
+                  longitude,
+                  parsedCache.latitude,
+                  parsedCache.longitude,
+                );
                 if (dist <= 25) {
                   dispatch(
                     setSelectedAddress({
-                      label: 'Current Location',
+                      label: "Current Location",
                       fullAddress: parsedCache.addressStr,
                       latitude,
                       longitude,
-                    })
+                    }),
                   );
                   return; // Skip the API call completely
                 } else {
                   // Not valid anymore, clear it
-                  await AsyncStorage.removeItem('@cached_current_location');
+                  await AsyncStorage.removeItem("@cached_current_location");
                 }
               }
             }
           } catch (err) {
-            console.warn('Failed to read cached location', err);
+            console.warn("Failed to read cached location", err);
           }
 
           // 2. Reverse geocoding API call using Google Maps API directly (efficient single external request)
           try {
             // TODO: Move Api Key securely to process.env and inject globally
-            const GOOGLE_MAPS_API_KEY = 'AIzaSyA4Vzs1VRiOO0Sc4MPFDwgRVcVdmfeJSqQ';
+            const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
             const response = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`,
             );
             const data = await response.json();
 
@@ -200,26 +223,29 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
 
               dispatch(
                 setSelectedAddress({
-                  label: 'Current Location',
+                  label: "Current Location",
                   fullAddress: addressStr,
                   latitude,
                   longitude,
-                })
+                }),
               );
 
               // 3. Update the local storage with the new fetched location
               try {
-                await AsyncStorage.setItem('@cached_current_location', JSON.stringify({
-                  latitude,
-                  longitude,
-                  addressStr
-                }));
+                await AsyncStorage.setItem(
+                  "@cached_current_location",
+                  JSON.stringify({
+                    latitude,
+                    longitude,
+                    addressStr,
+                  }),
+                );
               } catch (err) {
-                console.warn('Failed to save cached location', err);
+                console.warn("Failed to save cached location", err);
               }
             }
           } catch (error) {
-            console.warn('Google Maps reverse geocode failed:', error);
+            console.warn("Google Maps reverse geocode failed:", error);
           }
         }
       } finally {
@@ -230,7 +256,7 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
     initLocation();
   }, [dispatch]); // Run strictly on mount
 
-  const headerColors = dynamicConfig?.colors || ['#2FA561', '#0E7439'];
+  const headerColors = dynamicConfig?.colors || ["#2FA561", "#0E7439"];
 
   return (
     <>
@@ -252,7 +278,7 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
         />
 
         <Image
-          source={require('../../../assets/images/noise.png')}
+          source={require("../../../assets/images/noise.png")}
           resizeMode="repeat"
           blurRadius={1}
           style={[StyleSheet.absoluteFill, { opacity: 0.04 }]}
@@ -262,7 +288,7 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
           pointerEvents="none"
           style={[
             StyleSheet.absoluteFill,
-            { backgroundColor: '#ffffff', opacity: gradientOverlayOpacity },
+            { backgroundColor: "#ffffff", opacity: gradientOverlayOpacity },
           ]}
         />
 
@@ -272,34 +298,32 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
             onPress={() => setAddressSelectorVisible(true)}
           >
             <View style={styles.addressRow}>
-              <AppIcon name={getAddressIcon(selectedAddress?.label)} size={20} color="#ffffff" />
-
-              <Text
-                style={styles.addressText}
-                numberOfLines={1}
-              >
-                {isFetchingLocation
-                  ? 'Fetching location...'
-                  : (selectedAddress?.label ||
-                    selectedAddress?.fullAddress ||
-                    'Delivering to current location')}
-              </Text>
-
               <AppIcon
-                name="chevron-down"
-                size={16}
+                name={getAddressIcon(selectedAddress?.label)}
+                size={20}
                 color="#ffffff"
               />
+
+              <Text style={styles.addressText} numberOfLines={1}>
+                {isFetchingLocation
+                  ? "Fetching location..."
+                  : selectedAddress?.label ||
+                    selectedAddress?.fullAddress ||
+                    "Delivering to current location"}
+              </Text>
+
+              <AppIcon name="chevron-down" size={16} color="#ffffff" />
             </View>
 
             <Text style={styles.addressSub} numberOfLines={1}>
               {isFetchingLocation
-                ? 'Please wait...'
-                : (selectedAddress?.fullAddress && selectedAddress?.label !== selectedAddress?.fullAddress
-                  ? (selectedAddress.fullAddress.length > 50
-                    ? selectedAddress.fullAddress.substring(0, 50) + '...'
-                    : selectedAddress.fullAddress)
-                  : 'Tap to change delivery address')}
+                ? "Please wait..."
+                : selectedAddress?.fullAddress &&
+                    selectedAddress?.label !== selectedAddress?.fullAddress
+                  ? selectedAddress.fullAddress.length > 50
+                    ? selectedAddress.fullAddress.substring(0, 50) + "..."
+                    : selectedAddress.fullAddress
+                  : "Tap to change delivery address"}
             </Text>
           </TouchableOpacity>
 
@@ -308,7 +332,7 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
             <TouchableOpacity
               activeOpacity={0.9}
               style={styles.searchLeft}
-              onPress={() => executeAction('OPEN_GLOBAL_SEARCH')}
+              onPress={() => executeAction("OPEN_GLOBAL_SEARCH")}
             >
               <AppIcon name="search" size={18} color="#6B7280" />
               <Text style={styles.searchPlaceholder}>
@@ -329,7 +353,7 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
 
         <View style={styles.iconWrapper}>
           <NotificationBell
-            onPress={() => executeAction('OPEN_NOTIFICATIONS')}
+            onPress={() => executeAction("OPEN_NOTIFICATIONS")}
           />
         </View>
       </Animated.View>
@@ -344,28 +368,28 @@ export default function HomeHeader({ scrollY, maxHeight, onOpenCommandPalette, d
 
 const styles = StyleSheet.create({
   headerContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     paddingHorizontal: 16,
     paddingBottom: 18,
     zIndex: 10,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
     borderBottomLeftRadius: 22,
     borderBottomRightRadius: 22,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   greeting: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   name: {
-    fontWeight: '700',
+    fontWeight: "700",
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.85)',
+    color: "rgba(255,255,255,0.85)",
     fontSize: 13,
     marginTop: 4,
     marginBottom: 12,
@@ -373,52 +397,52 @@ const styles = StyleSheet.create({
   searchBar: {
     height: 54,
     borderRadius: 16,
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: "#ffffff",
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   searchLeft: {
     flex: 1,
-    height: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
+    height: "100%",
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   searchPlaceholder: {
-    color: '#6B7280',
+    color: "#6B7280",
     fontSize: 14,
   },
   scannerButton: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#E6F4F1',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#E6F4F1",
+    alignItems: "center",
+    justifyContent: "center",
   },
   iconWrapper: {
-    position: 'absolute',
+    position: "absolute",
     right: 16,
     top: 52,
   },
   addressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginBottom: 4,
   },
 
   addressText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 16,
-    fontWeight: '700',
-    maxWidth: '80%',
+    fontWeight: "700",
+    maxWidth: "80%",
   },
 
   addressSub: {
-    color: 'rgba(255,255,255,0.85)',
+    color: "rgba(255,255,255,0.85)",
     fontSize: 12,
     marginBottom: 12,
   },

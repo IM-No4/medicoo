@@ -7,11 +7,13 @@ import {
   getStoreDetails,
   getStoreMedicines,
 } from "@/src/services/api/pharmacy.api";
+import { uploadPrescription } from "@/src/services/api/prescription.api";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   StyleSheet,
   TextInput,
@@ -22,6 +24,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 
 import MedicineDetailBottomSheet from "@/src/components/modals/MedicineDetailBottomSheet";
+import StatusModal, { StatusType } from "@/src/components/modals/StatusModal";
 import CartItemsHorizontalScroll from "./components/CartItemsHorizontalScroll";
 import FilterChips from "./components/FilterChips";
 import MedicineRow from "./components/MedicineRow";
@@ -42,6 +45,15 @@ export default function PharmacyDetailScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedMedicine, setSelectedMedicine] = useState<any>(null);
   const [isMedicineDetailVisible, setIsMedicineDetailVisible] = useState(false);
+  const [statusModal, setStatusModal] = useState<{
+    visible: boolean;
+    status: StatusType;
+    title?: string;
+    message?: string;
+  }>({
+    visible: false,
+    status: "idle",
+  });
 
   /* ------------------ LOCATION (SOURCE OF TRUTH) ------------------ */
 
@@ -84,7 +96,6 @@ export default function PharmacyDetailScreen() {
           long,
         });
 
-        console.log("Pharmacy details:", store);
         const meds = await getStoreMedicines({
           storeId: pharmacyId,
         });
@@ -131,13 +142,51 @@ export default function PharmacyDetailScreen() {
   /* ------------------ PRESCRIPTION UPLOAD ------------------ */
 
   const handlePrescriptionUpload = async (image: any) => {
+    // Robustly extract coordinates
+    const finalLat = selectedAddress?.latitude ?? currentLocation?.latitude;
+    const finalLong = selectedAddress?.longitude ?? currentLocation?.longitude;
+
+    console.log("📤 Prescription Upload - Final Coordinates:", { finalLat, finalLong });
+
+    if (finalLat === undefined || finalLong === undefined || finalLat === null || finalLong === null) {
+      setStatusModal({
+        visible: true,
+        status: "error",
+        title: "Location Error",
+        message: "Location not found. Please ensure you have an address selected or location services enabled.",
+      });
+      return;
+    }
+
     setIsUploading(true);
+    setStatusModal({
+      visible: true,
+      status: "loading",
+      message: "Uploading prescription...",
+    });
+
     try {
-      // TODO: Implement actual prescription upload API call
-      // await uploadPrescription(image);
-      // console.log('Prescription uploaded:', image);
+      await uploadPrescription({
+        prescriptionImage: image,
+        storeId: pharmacyId,
+        latitude: finalLat,
+        longitude: finalLong,
+      });
+
+      setStatusModal({
+        visible: true,
+        status: "success",
+        title: "Success",
+        message: "Prescription uploaded successfully!",
+      });
     } catch (e) {
       console.error("Failed to upload prescription", e);
+      setStatusModal({
+        visible: true,
+        status: "error",
+        title: "Upload Failed",
+        message: "Failed to upload prescription. Please try again.",
+      });
     } finally {
       setIsUploading(false);
       setIsUploadModalVisible(false);
@@ -307,6 +356,15 @@ export default function PharmacyDetailScreen() {
           setIsMedicineDetailVisible(false);
           setSelectedMedicine(null);
         }}
+      />
+
+      <StatusModal
+        visible={statusModal.visible}
+        status={statusModal.status}
+        title={statusModal.title}
+        message={statusModal.message}
+        onClose={() => setStatusModal((prev) => ({ ...prev, visible: false }))}
+        autoCloseDelay={statusModal.status === "success" ? 3000 : undefined}
       />
     </View>
   );

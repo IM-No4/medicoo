@@ -20,9 +20,11 @@ import QuickActionsSkeleton from './skeletons/QuickActionsSkeleton';
 import ServicesSkeleton from './skeletons/ServicesSkeleton';
 import UpcomingSkeleton from './skeletons/UpcomingSkeleton';
 
+import { AppDispatch, RootState } from '../../redux/store';
 import { setHomeBootstrapped, setPrescriptionModalVisible } from '../../redux/slices/appSlice';
 import { loadCalendarData } from '../../redux/slices/calendarSlice';
-import { AppDispatch, RootState } from '../../redux/store';
+import { uploadPrescription } from '@/src/services/api/prescription.api';
+import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 import { DynamicHeaderFeedItem } from './feed/feed.types';
 import { useFeedActionExecutor } from './hooks/useFeedActionExecutor';
 import { useHomeFeed } from './hooks/useHomeFeed';
@@ -155,6 +157,83 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
     return feedData.find(item => item.type === 'DYNAMIC_HEADER') as DynamicHeaderFeedItem | undefined;
   }, [feedData]);
 
+  /* ------------------ LOCATION (SOURCE OF TRUTH) ------------------ */
+
+  const selectedAddress = useSelector(
+    (state: RootState) => state.address.selectedAddress,
+  );
+
+  const currentLocation = useSelector(
+    (state: RootState) => state.location.currentLocation,
+  );
+
+  const lat = selectedAddress?.latitude ?? currentLocation?.latitude;
+  const long = selectedAddress?.longitude ?? currentLocation?.longitude;
+
+  /* ------------------ PRESCRIPTION UPLOAD ------------------ */
+
+  const [isUploading, setIsUploading] = useState(false);
+  const [statusModal, setStatusModal] = useState<{
+    visible: boolean;
+    status: StatusType;
+    title?: string;
+    message?: string;
+  }>({
+    visible: false,
+    status: 'idle',
+  });
+
+  const handlePrescriptionUpload = async (image: any) => {
+    // Robustly extract coordinates
+    const finalLat = selectedAddress?.latitude ?? currentLocation?.latitude;
+    const finalLong = selectedAddress?.longitude ?? currentLocation?.longitude;
+
+    console.log("📤 Home Prescription Upload - Final Coordinates:", { finalLat, finalLong });
+
+    if (finalLat === undefined || finalLong === undefined || finalLat === null || finalLong === null) {
+      setStatusModal({
+        visible: true,
+        status: 'error',
+        title: 'Location Error',
+        message: 'Location not found. Please ensure you have an address selected or location services enabled.',
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    setStatusModal({
+      visible: true,
+      status: 'loading',
+      message: 'Uploading prescription...',
+    });
+
+    try {
+      await uploadPrescription({
+        prescriptionImage: image,
+        latitude: finalLat,
+        longitude: finalLong,
+      });
+
+      setStatusModal({
+        visible: true,
+        status: 'success',
+        title: 'Success',
+        message: 'Prescription uploaded successfully!',
+      });
+    } catch (e) {
+      console.error('Failed to upload prescription', e);
+      setStatusModal({
+        visible: true,
+        status: 'error',
+        title: 'Upload Failed',
+        message: 'Failed to upload prescription. Please try again.',
+      });
+    } finally {
+      setIsUploading(false);
+      dispatch(setPrescriptionModalVisible(false));
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
       {isFocused && (
@@ -228,7 +307,9 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
 
       <PrescriptionUploadModal
         visible={useSelector((state: RootState) => state.app.prescriptionModalVisible)}
-        onClose={() => dispatch(setPrescriptionModalVisible(false))}
+        isLoading={isUploading}
+        onClose={() => !isUploading && dispatch(setPrescriptionModalVisible(false))}
+        onImageSelected={handlePrescriptionUpload}
         existingPrescriptions={[
           {
             id: 'RX001',
@@ -238,6 +319,15 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
             diagnosis: 'Common Cold & Fever',
           },
         ]}
+      />
+
+      <StatusModal
+        visible={statusModal.visible}
+        status={statusModal.status}
+        title={statusModal.title}
+        message={statusModal.message}
+        onClose={() => setStatusModal((prev) => ({ ...prev, visible: false }))}
+        autoCloseDelay={statusModal.status === 'success' ? 3000 : undefined}
       />
     </View>
   );

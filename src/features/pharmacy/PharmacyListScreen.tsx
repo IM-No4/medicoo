@@ -4,9 +4,10 @@ import { RootState } from '@/src/redux/store';
 import {
   getNearbyPharmacies
 } from '@/src/services/api/pharmacy.api';
+import { uploadPrescription } from '@/src/services/api/prescription.api';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, memo } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -20,11 +21,14 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import AppIcon from '../../components/icons/AppIcon';
+import AddressSelectorBottomSheet from '@/src/components/modals/AddressSelectorBottomSheet';
+import StatusModal, { StatusType } from '@/src/components/modals/StatusModal';
 import PrescriptionUploadModal from '../../components/modals/PrescriptionUploadModal';
 
 const CATEGORIES = [
@@ -61,6 +65,101 @@ const mapApiPharmacyToUI = (api: any): Pharmacy => ({
   storeImageUrl: null,
 });
 
+const PharmacyCard = memo(({ item, onPress }: { item: Pharmacy; onPress: (id: string) => void }) => (
+  <TouchableOpacity
+    style={styles.card}
+    onPress={() => onPress(item.id)}
+    activeOpacity={0.9}
+  >
+    {/* Left side - Image with overlay badge */}
+    <View style={[styles.cardImageContainer, !item.storeImageUrl && { padding: 12 }]}>
+      <Image
+        source={
+          item.storeImageUrl
+            ? { uri: item.storeImageUrl }
+            : require('../../assets/images/pharmacy-placeholder.png')
+        }
+        style={styles.cardImage}
+      />
+      {/* Flat deal badge overlay on image */}
+      <LinearGradient
+        colors={['rgba(247, 247, 247, 0)', 'rgba(7, 8, 7, 1)']}
+        style={styles.dealBadge}
+      >
+        <Text style={styles.dealBadgeTitle}>FLAT DEAL</Text>
+        <Text style={styles.dealBadgeDiscount}>50% OFF</Text>
+      </LinearGradient>
+      {/* Favorite heart icon on image */}
+      <LinearGradient
+        colors={['rgba(7, 8, 7, 0.3)', 'rgba(247, 247, 247, 0)']}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.favoriteIconOnImage}
+      >
+        <AppIcon name="heart" size={20} color="#FFFFFF" />
+      </LinearGradient>
+    </View>
+
+    {/* Right side - Content */}
+    <View style={styles.cardContent}>
+      {/* Verified tag */}
+      <View style={styles.verifiedTag}>
+        <Text style={styles.verifiedText}>Verified</Text>
+        <View style={styles.verifiedUnderline} />
+      </View>
+
+      {/* Store name */}
+      <Text style={styles.storeName} numberOfLines={1}>
+        {item.storeName}
+      </Text>
+
+      {/* Rating and delivery time */}
+      <View style={styles.ratingRow}>
+        <View style={styles.ratingBadge}>
+          <AppIcon name="star" size={14} color="#ff9900" />
+        </View>
+        <Text style={styles.ratingText}>
+          {item.storeRating.toFixed(1)}
+        </Text>
+        <Text style={styles.reviewCount}>
+          ({item.storeReviews}K+)
+        </Text>
+        <Text style={styles.deliveryTimeDot}>•</Text>
+        <Text style={styles.deliveryTimeText}>
+          {item.deliveryTime}
+        </Text>
+      </View>
+
+      {/* Categories */}
+      <Text style={styles.categoriesText} numberOfLines={1}>
+        {item.fullAddress}
+      </Text>
+
+      {/* Location */}
+      <View style={styles.locationRow}>
+        <Text style={styles.locationText} numberOfLines={1}>
+          {item.city}
+        </Text>
+        <Text style={styles.distanceDot}>•</Text>
+        <Text style={styles.distanceText}>{item.distance} km</Text>
+      </View>
+
+      {/* Currently Offline Badge - Shows when store is closed */}
+      {!item.isOpen && (
+        <LinearGradient
+          colors={['rgba(239, 68, 68, 0.9)', 'rgba(220, 38, 38, 0.7)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.offlineBadge}
+        >
+          <AppIcon name="alarm-clock-off" size={12} color="#FFFFFF" />
+          <Text style={styles.offlineBadgeText}>Currently Offline</Text>
+        </LinearGradient>
+      )}
+    </View>
+  </TouchableOpacity>
+));
+
 export default function PharmacyListScreen() {
   const navigation = useNavigation();
   const [activeCategory, setActiveCategory] = useState('All');
@@ -68,7 +167,15 @@ export default function PharmacyListScreen() {
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [showToast, setShowToast] = useState(false);
+  const [statusModal, setStatusModal] = useState<{
+    visible: boolean;
+    status: StatusType;
+    title?: string;
+    message?: string;
+  }>({
+    visible: false,
+    status: 'idle',
+  });
   const [isLocationVisible, setIsLocationVisible] = useState(false);
   const [sortBy, setSortBy] = useState('default');
   const [isLoading, setIsLoading] = useState(false);
@@ -178,7 +285,53 @@ export default function PharmacyListScreen() {
   }, [searchQuery, sortBy, activeCategory, allPharmacies]);
 
   const handlePrescriptionUpload = async (image: any) => {
+    // Robustly extract coordinates
+    const finalLat = selectedAddress?.latitude ?? currentLocation?.latitude;
+    const finalLong = selectedAddress?.longitude ?? currentLocation?.longitude;
+
+    console.log("📤 Pharmacy List Prescription Upload - Final Coordinates:", { finalLat, finalLong });
+
+    if (finalLat === undefined || finalLong === undefined || finalLat === null || finalLong === null) {
+      setStatusModal({
+        visible: true,
+        status: 'error',
+        title: 'Location Error',
+        message: 'Location not found. Please ensure you have an address selected or location services enabled.',
+      });
+      return;
+    }
+
     setIsUploading(true);
+    setStatusModal({
+      visible: true,
+      status: 'loading',
+      message: 'Uploading prescription...',
+    });
+
+    try {
+      await uploadPrescription({
+        prescriptionImage: image,
+        latitude: finalLat,
+        longitude: finalLong,
+      });
+      setStatusModal({
+        visible: true,
+        status: 'success',
+        title: 'Success',
+        message: 'Prescription uploaded successfully!',
+      });
+    } catch (e) {
+      console.error("Failed to upload prescription", e);
+      setStatusModal({
+        visible: true,
+        status: 'error',
+        title: 'Upload Failed',
+        message: 'Failed to upload prescription. Please try again.',
+      });
+    } finally {
+      setIsUploading(false);
+      setIsUploadModalVisible(false);
+    }
   };
 
   const renderHeader = () => (
@@ -187,7 +340,11 @@ export default function PharmacyListScreen() {
         <Text style={styles.headerSubtitle}>Delivering to</Text>
         <TouchableOpacity style={styles.locationButton} onPress={() => setIsLocationVisible(true)}>
           <AppIcon name="map-pin" size={16} color="#0E7439" />
-          <Text style={styles.locationTextHeader}>New York, NY 10001</Text>
+          <Text style={styles.locationTextHeader} numberOfLines={1}>
+            {selectedAddress?.label || 
+             selectedAddress?.fullAddress || 
+             'Current Location'}
+          </Text>
           <AppIcon name="chevron-down" size={14} color="#1c1c1e" />
         </TouchableOpacity>
       </View>
@@ -292,15 +449,10 @@ export default function PharmacyListScreen() {
   );
 
   const renderLocationModal = () => (
-    <Modal
+    <AddressSelectorBottomSheet
       visible={isLocationVisible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setIsLocationVisible(false)}
-    >
-      <View style={styles.modalOverlay}>
-      </View>
-    </Modal>
+      onClose={() => setIsLocationVisible(false)}
+    />
   );
 
   const renderSkeleton = () => (
@@ -362,109 +514,19 @@ export default function PharmacyListScreen() {
     return renderEndOfList();
   };
 
-  const renderPharmacyCard = ({ item }: { item: Pharmacy }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() =>
-        executeAction('OPEN_PHARMACY', { pharmacyId: item.id })
-      }
-      activeOpacity={0.9}
-    >
-      {/* Left side - Image with overlay badge */}
-      <View style={[styles.cardImageContainer, !item.storeImageUrl && {padding: 12}]}>
-        <Image
-          source={
-            item.storeImageUrl
-              ? { uri: item.storeImageUrl }
-              : require('../../assets/images/pharmacy-placeholder.png')
-          }
-          style={styles.cardImage}
-        />
-        {/* Flat deal badge overlay on image */}
-        <LinearGradient
-          colors={['rgba(247, 247, 247, 0)', 'rgba(7, 8, 7, 1)']}
-          style={styles.dealBadge}
-        >
-          <Text style={styles.dealBadgeTitle}>FLAT DEAL</Text>
-          <Text style={styles.dealBadgeDiscount}>50% OFF</Text>
-        </LinearGradient>
-        {/* Favorite heart icon on image */}
-        <LinearGradient
-          colors={['rgba(7, 8, 7, 0.3)', 'rgba(247, 247, 247, 0)']}
-          start={{ x: 1, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.favoriteIconOnImage}
-        >
-          <AppIcon name="heart" size={20} color="#FFFFFF" />
-        </LinearGradient>
-      </View>
+  const handlePharmacyPress = useCallback((pharmacyId: string) => {
+    executeAction('OPEN_PHARMACY', { pharmacyId });
+  }, []);
 
-      {/* Right side - Content */}
-      <View style={styles.cardContent}>
-        {/* Verified tag */}
-        <View style={styles.verifiedTag}>
-          <Text style={styles.verifiedText}>Verified</Text>
-          <View style={styles.verifiedUnderline} />
-        </View>
+  const renderPharmacyItem = useCallback(({ item }: { item: Pharmacy }) => (
+    <PharmacyCard item={item} onPress={handlePharmacyPress} />
+  ), [handlePharmacyPress]);
 
-        {/* Store name */}
-        <Text style={styles.storeName} numberOfLines={1}>
-          {item.storeName}
-        </Text>
+  const renderSkeletonItem = useCallback(({ item }: { item: any }) => (
+    renderSkeleton()
+  ), []);
 
-        {/* Rating and delivery time */}
-        <View style={styles.ratingRow}>
-          <View style={styles.ratingBadge}>
-            <AppIcon name="star" size={14} color="#ff9900" />
-          </View>
-          <Text style={styles.ratingText}>
-            {item.storeRating.toFixed(1)}
-          </Text>
-          <Text style={styles.reviewCount}>
-            ({item.storeReviews}K+)
-          </Text>
-          <Text style={styles.deliveryTimeDot}>•</Text>
-          <Text style={styles.deliveryTimeText}>
-            {item.deliveryTime}
-          </Text>
-        </View>
-
-        {/* Categories */}
-        <Text style={styles.categoriesText} numberOfLines={1}>
-          {item.fullAddress}
-        </Text>
-
-        {/* Location */}
-        <View style={styles.locationRow}>
-          <Text style={styles.locationText} numberOfLines={1}>
-            {item.city}
-          </Text>
-          <Text style={styles.distanceDot}>•</Text>
-          <Text style={styles.distanceText}>{item.distance} km</Text>
-        </View>
-
-        {/* Currently Offline Badge - Shows when store is closed */}
-        {!item.isOpen && (
-          <LinearGradient
-            colors={['rgba(239, 68, 68, 0.9)', 'rgba(220, 38, 38, 0.7)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.offlineBadge}
-          >
-            <AppIcon name="alarm-clock-off" size={12} color="#FFFFFF" />
-            <Text style={styles.offlineBadgeText}>Currently Offline</Text>
-          </LinearGradient>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-
-  const renderToast = () => (
-    <View style={styles.toastContainer}>
-      <AppIcon name="check-circle" size={24} color="#fff" />
-      <Text style={styles.toastText}>Prescription uploaded successfully</Text>
-    </View>
-  );
+  const renderToast = () => null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -476,7 +538,7 @@ export default function PharmacyListScreen() {
         
         <FlatList
           data={isLoading ? ([{ id: 's1' }, { id: 's2' }, { id: 's3' }] as any) : sortedPharmacies}
-          renderItem={isLoading ? renderSkeleton : renderPharmacyCard}
+          renderItem={isLoading ? renderSkeletonItem : renderPharmacyItem}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="on-drag"
@@ -484,6 +546,14 @@ export default function PharmacyListScreen() {
           onRefresh={onRefresh}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
+          initialNumToRender={5}
+          maxToRenderPerBatch={5}
+          windowSize={5}
+          getItemLayout={(_, index) => ({
+            length: 148 + 16, // height (148) + separator height (16)
+            offset: (148 + 16) * index,
+            index,
+          })}
           ListFooterComponent={renderFooter}
           ListEmptyComponent={renderEmptyState}
           contentContainerStyle={styles.pharmacyList}
@@ -515,8 +585,15 @@ export default function PharmacyListScreen() {
           },
         ]}
       />
-      {showToast && renderToast()}
       <MultiStoreCartBar />
+      <StatusModal
+        visible={statusModal.visible}
+        status={statusModal.status}
+        title={statusModal.title}
+        message={statusModal.message}
+        onClose={() => setStatusModal((prev) => ({ ...prev, visible: false }))}
+        autoCloseDelay={statusModal.status === 'success' ? 3000 : undefined}
+      />
     </SafeAreaView>
   );
 }

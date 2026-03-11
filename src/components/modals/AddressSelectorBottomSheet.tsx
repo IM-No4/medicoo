@@ -94,8 +94,8 @@ export default function AddressSelectorBottomSheet({ visible, onClose }: Props) 
         id: item._id || item.id,
         label: item.label,
         fullAddress: item.fullAddress,
-        latitude: item.location?.coordinates?.[1] || item.latitude || 0,
-        longitude: item.location?.coordinates?.[0] || item.longitude || 0,
+        latitude: item.location?.coordinates?.[1] || item.latitude,
+        longitude: item.location?.coordinates?.[0] || item.longitude,
       })
     );
     onClose();

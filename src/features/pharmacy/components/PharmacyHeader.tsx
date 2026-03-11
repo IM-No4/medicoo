@@ -1,11 +1,11 @@
-import AppIcon from '@/src/components/icons/AppIcon';
+import AppIcon from "@/src/components/icons/AppIcon";
 import {
   addFavoritePharmacy,
   checkFavoritePharmacy,
   removeFavoritePharmacy,
-} from '@/src/services/api/pharmacy.api';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef, useState } from 'react';
+} from "@/src/services/api/pharmacy.api";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -16,29 +16,29 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
-} from 'react-native';
+  View,
+} from "react-native";
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const DEALS = [
   {
-    id: '1',
-    title: 'FLAT DEAL',
-    discount: '50% OFF',
-    description: 'On orders above ₹499',
+    id: "1",
+    title: "FLAT DEAL",
+    discount: "50% OFF",
+    description: "On orders above ₹499",
   },
   {
-    id: '2',
-    title: 'SUPER SAVER',
-    discount: '30% OFF',
-    description: 'On select medicines',
+    id: "2",
+    title: "SUPER SAVER",
+    discount: "30% OFF",
+    description: "On select medicines",
   },
   {
-    id: '3',
-    title: 'FREE DELIVERY',
-    discount: '₹0',
-    description: 'On orders above ₹299',
+    id: "3",
+    title: "FREE DELIVERY",
+    discount: "₹0",
+    description: "On orders above ₹299",
   },
 ];
 
@@ -51,12 +51,12 @@ export default function PharmacyHeader({
   pharmacy: any;
   onBack: () => void;
 }) {
-  const isOpen = pharmacy?.status === 'online';
+  const isOpen = pharmacy?.status === "online";
   const rating = pharmacy?.rating || 0;
   const reviewCount = pharmacy?.reviewCount || 0;
-  const deliveryTime = pharmacy?.deliveryTime || '30-35 mins';
-  const distance = pharmacy?.distance || '0.0';
-  
+  const deliveryTime = pharmacy?.deliveryTime || "30-35 mins";
+  const distance = pharmacy?.distance || "0.0";
+
   const scrollViewRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -89,11 +89,11 @@ export default function PharmacyHeader({
     try {
       const storeId = pharmacy?.storeId || pharmacy?.id;
       if (!storeId) return;
-      
+
       const favorite = await checkFavoritePharmacy(storeId);
       setIsFavorite(favorite);
     } catch (e) {
-      console.error('Failed to check favorite status', e);
+      console.error("Failed to check favorite status", e);
     }
   };
 
@@ -111,7 +111,7 @@ export default function PharmacyHeader({
         setIsFavorite(true);
       }
     } catch (e) {
-      console.error('Failed to toggle favorite', e);
+      console.error("Failed to toggle favorite", e);
     } finally {
       setIsFavoriteLoading(false);
     }
@@ -135,15 +135,15 @@ export default function PharmacyHeader({
         ) : (
           <View style={styles.placeholderImage}>
             <Image
-              source={require('../../../assets/images/pharmacy-placeholder.png')}
+              source={require("../../../assets/images/pharmacy-placeholder.png")}
               style={styles.storeImage}
             />
           </View>
         )}
-        
+
         {/* Top gradient overlay for buttons */}
         <LinearGradient
-          colors={['rgba(7, 8, 7, 0.4)', 'rgba(247, 247, 247, 0)']}
+          colors={["rgba(7, 8, 7, 0.4)", "rgba(247, 247, 247, 0)"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={styles.topGradient}
@@ -151,43 +151,54 @@ export default function PharmacyHeader({
           <View style={styles.topBar}>
             <TouchableOpacity onPress={onBack}>
               <LinearGradient
-                colors={['rgba(255, 255, 255, 0.9)', 'rgba(255, 255, 255, 0.7)']}
+                colors={[
+                  "rgba(255, 255, 255, 0.9)",
+                  "rgba(255, 255, 255, 0.7)",
+                ]}
                 style={styles.backButton}
               >
                 <AppIcon name="arrow-left" size={24} color="#1c1c1e" />
               </LinearGradient>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleToggleFavorite} disabled={isFavoriteLoading}>
+            <TouchableOpacity
+              onPress={handleToggleFavorite}
+              disabled={isFavoriteLoading}
+            >
               <LinearGradient
-                colors={['rgba(255, 255, 255, 0.9)', 'rgba(255, 255, 255, 0.7)']}
+                colors={[
+                  "rgba(255, 255, 255, 0.9)",
+                  "rgba(255, 255, 255, 0.7)",
+                ]}
                 style={styles.favoriteButton}
               >
                 {isFavoriteLoading ? (
-                  <ActivityIndicator size="small" color="#EF4444" />
+                  <ActivityIndicator size="small" color="#13701c" />
                 ) : (
-                  <AppIcon 
-                    name="heart" 
-                    size={24} 
-                    color={isFavorite ? "#EF4444" : "#1c1c1e"} 
+                  <AppIcon
+                    name="heart"
+                    size={24}
+                    color={isFavorite ? "#EF4444" : "#1c1c1e"}
                   />
                 )}
               </LinearGradient>
             </TouchableOpacity>
           </View>
         </LinearGradient>
-        
+
         {/* Deals Carousel or Offline Badge at bottom */}
         {!isOpen ? (
           <View style={styles.offlineTagContainer}>
             <LinearGradient
-              colors={['rgba(247, 247, 247, 0)', 'rgba(239, 68, 68, 0.95)']}
+              colors={["rgba(247, 247, 247, 0)", "rgba(5, 2, 2, 0.95)"]}
               style={styles.offlineTagGradient}
             >
               <View style={styles.offlineTagContent}>
                 <AppIcon name="alarm-clock-off" size={20} color="#FFFFFF" />
                 <View style={styles.offlineTagTextContainer}>
                   <Text style={styles.offlineTagTitle}>Currently Offline</Text>
-                  <Text style={styles.offlineTagSubtitle}>Store is closed. Check back later.</Text>
+                  <Text style={styles.offlineTagSubtitle}>
+                    Store is closed. Check back later.
+                  </Text>
                 </View>
               </View>
             </LinearGradient>
@@ -195,7 +206,7 @@ export default function PharmacyHeader({
         ) : (
           <View style={styles.dealsCarouselContainer}>
             <LinearGradient
-              colors={['rgba(247, 247, 247, 0)', 'rgba(7, 8, 7, 0.95)']}
+              colors={["rgba(247, 247, 247, 0)", "rgba(7, 8, 7, 0.95)"]}
               style={styles.dealsGradient}
             >
               <ScrollView
@@ -210,12 +221,16 @@ export default function PharmacyHeader({
                 {DEALS.map((deal) => (
                   <View key={deal.id} style={styles.dealSlide}>
                     <Text style={styles.dealBadgeTitle}>{deal.title}</Text>
-                    <Text style={styles.dealBadgeDiscount}>{deal.discount}</Text>
-                    <Text style={styles.dealDescription}>{deal.description}</Text>
+                    <Text style={styles.dealBadgeDiscount}>
+                      {deal.discount}
+                    </Text>
+                    <Text style={styles.dealDescription}>
+                      {deal.description}
+                    </Text>
                   </View>
                 ))}
               </ScrollView>
-              
+
               {/* Pagination Dots */}
               <View style={styles.paginationContainer}>
                 {DEALS.map((_, index) => (
@@ -242,14 +257,18 @@ export default function PharmacyHeader({
         </View>
 
         {/* Store Name */}
-        <Text style={styles.storeName}>{pharmacy?.storeName || 'Pharmacy Name'}</Text>
+        <Text style={styles.storeName}>
+          {pharmacy?.storeName || "Pharmacy Name"}
+        </Text>
 
         {/* Rating and Delivery Time */}
         <View style={styles.ratingRow}>
           <View style={styles.ratingBadge}>
             <AppIcon name="star" size={14} color="#ff9900" />
           </View>
-          <Text style={styles.ratingText}>{rating > 0 ? rating.toFixed(1) : '0.0'}</Text>
+          <Text style={styles.ratingText}>
+            {rating > 0 ? rating.toFixed(1) : "0.0"}
+          </Text>
           <Text style={styles.reviewCountText}>({reviewCount}K+)</Text>
           <Text style={styles.deliveryTimeDot}>•</Text>
           <Text style={styles.deliveryTimeText}>{deliveryTime}</Text>
@@ -263,12 +282,11 @@ export default function PharmacyHeader({
         {/* Location and Distance */}
         <View style={styles.locationRow}>
           <Text style={styles.locationText}>
-            {pharmacy?.fullAddress || 'Location'}
+            {pharmacy?.fullAddress || "Location"}
           </Text>
           <Text style={styles.distanceDot}>•</Text>
           <Text style={styles.distanceText}>{distance} km</Text>
         </View>
-
       </View>
     </View>
   );
@@ -276,31 +294,31 @@ export default function PharmacyHeader({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     marginBottom: 12,
     paddingBottom: 20,
   },
   imageContainer: {
-    width: '100%',
+    width: "100%",
     height: 280,
-    position: 'relative',
-    backgroundColor: '#F2F2F7',
+    position: "relative",
+    backgroundColor: "#F2F2F7",
   },
   storeImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   placeholderImage: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 40,
   },
   topGradient: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -308,27 +326,27 @@ const styles = StyleSheet.create({
     paddingBottom: 60,
   },
   topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   favoriteButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   dealsCarouselContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
@@ -346,28 +364,28 @@ const styles = StyleSheet.create({
   },
   dealBadgeTitle: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: "700",
+    color: "#FFFFFF",
     letterSpacing: 0.5,
     marginBottom: 2,
   },
   dealBadgeDiscount: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: "800",
+    color: "#FFFFFF",
     letterSpacing: 0.5,
     marginBottom: 2,
   },
   dealDescription: {
     fontSize: 13,
-    fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: "500",
+    color: "rgba(255, 255, 255, 0.85)",
     letterSpacing: 0.3,
   },
   paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 10,
     gap: 6,
   },
@@ -375,11 +393,11 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: "rgba(255, 255, 255, 0.4)",
   },
   paginationDotActive: {
     width: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   storeInfo: {
     paddingHorizontal: 16,
@@ -387,97 +405,97 @@ const styles = StyleSheet.create({
   },
   verifiedTag: {
     marginBottom: 4,
-    display: 'none', // Hidden like list screen
+    display: "none", // Hidden like list screen
   },
   verifiedText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#FF6B35',
+    fontWeight: "600",
+    color: "#FF6B35",
     letterSpacing: 0.3,
   },
   verifiedUnderline: {
     width: 42,
     height: 2,
-    backgroundColor: '#FF6B35',
+    backgroundColor: "#FF6B35",
     marginTop: 1,
     borderRadius: 1,
   },
   storeName: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#1C1C1E',
+    fontWeight: "700",
+    color: "#1C1C1E",
     marginBottom: 8,
     letterSpacing: 0.3,
   },
   ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 6,
   },
   ratingBadge: {
     width: 16,
     height: 16,
     borderRadius: 9,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 4,
   },
   ratingText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#1C1C1E',
+    fontWeight: "700",
+    color: "#1C1C1E",
     marginRight: 3,
   },
   reviewCountText: {
     fontSize: 14,
-    fontWeight: '400',
-    color: '#1C1C1E',
+    fontWeight: "400",
+    color: "#1C1C1E",
     marginRight: 6,
   },
   deliveryTimeDot: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#1C1C1E',
+    fontWeight: "700",
+    color: "#1C1C1E",
     marginRight: 6,
   },
   deliveryTimeText: {
     fontSize: 14,
-    fontWeight: '400',
-    color: '#1C1C1E',
+    fontWeight: "400",
+    color: "#1C1C1E",
   },
   categoriesText: {
     fontSize: 13,
-    fontWeight: '400',
-    color: '#6B7280',
+    fontWeight: "400",
+    color: "#6B7280",
     marginBottom: 6,
     letterSpacing: 0.2,
   },
   locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 8,
   },
   locationText: {
     fontSize: 13,
-    fontWeight: '400',
-    color: '#6B7280',
+    fontWeight: "400",
+    color: "#6B7280",
     flex: 1,
   },
   distanceDot: {
     fontSize: 13,
-    fontWeight: '400',
-    color: '#6B7280',
+    fontWeight: "400",
+    color: "#6B7280",
     marginHorizontal: 6,
   },
   distanceText: {
     fontSize: 13,
-    fontWeight: '400',
-    color: '#6B7280',
+    fontWeight: "400",
+    color: "#6B7280",
   },
   offlineBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
@@ -485,13 +503,13 @@ const styles = StyleSheet.create({
   },
   offlineBadgeText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
     marginLeft: 4,
     letterSpacing: 0.2,
   },
   offlineTagContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
@@ -502,8 +520,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   offlineTagContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   offlineTagTextContainer: {
@@ -511,15 +529,15 @@ const styles = StyleSheet.create({
   },
   offlineTagTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: "700",
+    color: "#FFFFFF",
     letterSpacing: 0.5,
     marginBottom: 2,
   },
   offlineTagSubtitle: {
     fontSize: 13,
-    fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: "500",
+    color: "rgba(255, 255, 255, 0.9)",
     letterSpacing: 0.3,
   },
 });

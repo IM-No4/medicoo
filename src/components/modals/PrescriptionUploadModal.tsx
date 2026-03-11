@@ -1,5 +1,6 @@
 import AppIcon from '@/src/components/icons/AppIcon';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -78,14 +79,50 @@ export default function PrescriptionUploadModal({
     },
   });
 
-  const handleCameraUpload = () => {
-    // Handle camera upload
-    console.log('Camera upload');
+  const handleCameraUpload = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Sorry, we need camera permissions to make this work!');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 1,
+      });
+
+      if (!result.canceled && onImageSelected) {
+        onImageSelected(result.assets[0]);
+        onClose();
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+    }
   };
 
-  const handleGalleryUpload = () => {
-    // Handle gallery upload
-    console.log('Gallery upload');
+  const handleGalleryUpload = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Sorry, we need camera roll permissions to make this work!');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 1,
+      });
+
+      if (!result.canceled && onImageSelected) {
+        onImageSelected(result.assets[0]);
+        onClose();
+      }
+    } catch (error) {
+      console.error('Gallery error:', error);
+    }
   };
 
   const handleSelectPrescription = (prescriptionId: string) => {

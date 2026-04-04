@@ -70,7 +70,7 @@ export default function TermsPrivacyScreen() {
 
                 <View style={styles.footerNote}>
                     <Text style={styles.noteTitle}>Questions?</Text>
-                    <Text style={styles.noteText}>If you have any questions regarding our terms, please contact our legal team at legal@medicoo.com</Text>
+                    <Text style={styles.noteText}>If you have any questions regarding our terms, please contact our legal team at legal@medicoo.in</Text>
                 </View>
 
                 <TouchableOpacity style={styles.acceptButton}>

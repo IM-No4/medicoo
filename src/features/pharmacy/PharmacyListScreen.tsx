@@ -172,6 +172,8 @@ export default function PharmacyListScreen() {
     status: StatusType;
     title?: string;
     message?: string;
+    primaryAction?: () => void;
+    primaryActionText?: string;
   }>({
     visible: false,
     status: 'idle',
@@ -289,8 +291,6 @@ export default function PharmacyListScreen() {
     const finalLat = selectedAddress?.latitude ?? currentLocation?.latitude;
     const finalLong = selectedAddress?.longitude ?? currentLocation?.longitude;
 
-    console.log("📤 Pharmacy List Prescription Upload - Final Coordinates:", { finalLat, finalLong });
-
     if (finalLat === undefined || finalLong === undefined || finalLat === null || finalLong === null) {
       setStatusModal({
         visible: true,
@@ -301,37 +301,13 @@ export default function PharmacyListScreen() {
       return;
     }
 
-    setIsUploading(true);
-    setStatusModal({
-      visible: true,
-      status: 'loading',
-      message: 'Uploading prescription...',
+    // Immediately navigate to Analysis screen
+    setIsUploadModalVisible(false);
+    (navigation as any).navigate('PrescriptionResult', { 
+      image: image,
+      latitude: finalLat,
+      longitude: finalLong
     });
-
-    try {
-      await uploadPrescription({
-        prescriptionImage: image,
-        latitude: finalLat,
-        longitude: finalLong,
-      });
-      setStatusModal({
-        visible: true,
-        status: 'success',
-        title: 'Success',
-        message: 'Prescription uploaded successfully!',
-      });
-    } catch (e) {
-      console.error("Failed to upload prescription", e);
-      setStatusModal({
-        visible: true,
-        status: 'error',
-        title: 'Upload Failed',
-        message: 'Failed to upload prescription. Please try again.',
-      });
-    } finally {
-      setIsUploading(false);
-      setIsUploadModalVisible(false);
-    }
   };
 
   const renderHeader = () => (
@@ -592,7 +568,9 @@ export default function PharmacyListScreen() {
         title={statusModal.title}
         message={statusModal.message}
         onClose={() => setStatusModal((prev) => ({ ...prev, visible: false }))}
-        autoCloseDelay={statusModal.status === 'success' ? 3000 : undefined}
+        primaryAction={statusModal.primaryAction}
+        primaryActionText={statusModal.primaryActionText}
+        autoCloseDelay={statusModal.status === 'success' && !statusModal.primaryAction ? 3000 : undefined}
       />
     </SafeAreaView>
   );

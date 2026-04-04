@@ -1,4 +1,6 @@
 
+import { BLOG_URL, DONATE_BLOOD_URL } from '@/src/config/env';
+
 import { HomeFeedItem } from './feed.types';
 
 export const FULL_FEED: HomeFeedItem[] = [
@@ -165,7 +167,7 @@ export const FULL_FEED: HomeFeedItem[] = [
         },
         learnMoreAction: {
             type: 'OPEN_URL',
-            url: 'https://medicoo.com/donate-blood'
+            url: DONATE_BLOOD_URL
         }
     },
     {
@@ -253,11 +255,11 @@ export const FULL_FEED: HomeFeedItem[] = [
         type: 'HEALTH_ARTICLE_SHOWCASE',
         title: 'Health Knowledge Hub',
         subtitle: 'Trending health insights',
-        seeAllAction: { type: 'OPEN_URL', url: 'https://medicoo.com/blog' },
+        seeAllAction: { type: 'OPEN_URL', url: BLOG_URL },
         articles: [
-            { id: 'a1', title: 'Start your Keto Diet', category: 'Nutrition', readTime: '5 min read', author: 'Dr. A. Gupta', action: { type: 'OPEN_URL', url: 'https://medicoo.com/blog/keto-diet' } },
-            { id: 'a2', title: 'Best Exercises for Back Pain', category: 'Physiotherapy', readTime: '4 min read', author: 'Dr. S. Khan', action: { type: 'OPEN_URL', url: 'https://medicoo.com/blog/back-pain' } },
-            { id: 'a3', title: 'Understanding Diabetes Types', category: 'Disease', readTime: '7 min read', author: 'Dr. M. Roy', action: { type: 'OPEN_URL', url: 'https://medicoo.com/blog/diabetes-types' } },
+            { id: 'a1', title: 'Start your Keto Diet', category: 'Nutrition', readTime: '5 min read', author: 'Dr. A. Gupta', action: { type: 'OPEN_URL', url: `${BLOG_URL}/keto-diet` } },
+            { id: 'a2', title: 'Best Exercises for Back Pain', category: 'Physiotherapy', readTime: '4 min read', author: 'Dr. S. Khan', action: { type: 'OPEN_URL', url: `${BLOG_URL}/back-pain` } },
+            { id: 'a3', title: 'Understanding Diabetes Types', category: 'Disease', readTime: '7 min read', author: 'Dr. M. Roy', action: { type: 'OPEN_URL', url: `${BLOG_URL}/diabetes-types` } },
         ]
     },
     {

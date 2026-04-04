@@ -1,7 +1,8 @@
 import { LinkingOptions } from '@react-navigation/native';
+import { WEB_APP_URL } from '../config/env';
 
 export const linking: LinkingOptions<any> = {
-  prefixes: ['medicoo://', 'https://medicoo.app'],
+  prefixes: ['medicoo://', WEB_APP_URL],
   config: {
     screens: {
       Tabs: {

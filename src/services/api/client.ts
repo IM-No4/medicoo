@@ -1,11 +1,8 @@
 import axios from 'axios';
 import { getToken } from '../../utils/tokenManagement';
+import { API_BASE_URL } from '../../config/env';
 
-// const API_BASE_URL = 'http://10.5.48.109:5000'; 
-// const API_BASE_URL = 'http://172.20.10.3:5000'; 
-export const API_BASE_URL = 'http://localhost:5000';
-// use this for Android emulator
-// change later via env
+export { API_BASE_URL };
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

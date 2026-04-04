@@ -28,12 +28,7 @@
         "ACCESS_NETWORK_STATE",
         "ACCESS_WIFI_STATE"
       ],
-      "googleServicesFile": "./firebase/google-services.json",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyA4Vzs1VRiOO0Sc4MPFDwgRVcVdmfeJSqQ"
-        }
-      }
+      "googleServicesFile": "./firebase/google-services.json"
     },
     "web": {
       "output": "static",

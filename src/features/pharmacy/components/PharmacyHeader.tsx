@@ -52,7 +52,7 @@ export default function PharmacyHeader({
   onBack: () => void;
 }) {
   const isOpen = pharmacy?.status === "online";
-  const rating = pharmacy?.rating || 0;
+  const rating = Number(pharmacy?.rating) || 0;
   const reviewCount = pharmacy?.reviewCount || 0;
   const deliveryTime = pharmacy?.deliveryTime || "30-35 mins";
   const distance = pharmacy?.distance || "0.0";
@@ -64,18 +64,27 @@ export default function PharmacyHeader({
 
   // Auto-scroll carousel
   useEffect(() => {
+    let isMounted = true;
     const interval = setInterval(() => {
+      if (!isMounted) return;
       setActiveIndex((prevIndex) => {
         const nextIndex = (prevIndex + 1) % DEALS.length;
-        scrollViewRef.current?.scrollTo({
-          x: nextIndex * SCREEN_WIDTH,
-          animated: true,
-        });
+        try {
+          scrollViewRef.current?.scrollTo({
+            x: nextIndex * SCREEN_WIDTH,
+            animated: true,
+          });
+        } catch (e) {
+          // Silently ignore if ScrollView is detached
+        }
         return nextIndex;
       });
     }, AUTO_SCROLL_INTERVAL);
 
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   // Check favorite status on mount

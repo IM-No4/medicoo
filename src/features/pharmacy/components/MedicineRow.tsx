@@ -32,9 +32,10 @@ export default function MedicineRow({
     return storeCart.items[String(sku)] || null;
   }, [storeCart, medicine]);
 
-  const price = medicine.discountPrice > 0 ? medicine.discountPrice : medicine.price;
-  const originalPrice = medicine.discountPrice > 0 ? medicine.price : null;
-  const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
+  const rawPrice = medicine.discountPrice > 0 ? medicine.discountPrice : medicine.price;
+  const price = rawPrice ?? 0;
+  const originalPrice = medicine.discountPrice > 0 ? (medicine.price ?? null) : null;
+  const discount = originalPrice && originalPrice > 0 ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
   const rating = medicine.rating || 4.8;
   const ratingCount = medicine.ratingCount || 36;
   const storeOpen = isStoreOpen ?? true; // Default to open if not provided

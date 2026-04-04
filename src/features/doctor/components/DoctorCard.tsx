@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../components/icons/AppIcon';
+import { API_BASE_URL } from '../../../config/env';
 
 interface Props {
   doctor: any;
@@ -17,7 +18,7 @@ export default function DoctorCard({ doctor, onBook, onPress, isFavorite, onTogg
         <View style={styles.imageContainer}>
           {doctor.image ? (
             <Image
-              source={{ uri: doctor.image.startsWith('http') ? doctor.image : `http://localhost:5000/${doctor.image}` }}
+              source={{ uri: doctor.image.startsWith('http') ? doctor.image : `${API_BASE_URL}/${doctor.image}` }}
               style={styles.doctorImage}
             />
           ) : (

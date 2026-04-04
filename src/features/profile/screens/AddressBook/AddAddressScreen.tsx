@@ -2,7 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as Contacts from 'expo-contacts';
 import * as Location from 'expo-location';
 import { Briefcase, Check, ChevronLeft, Contact, Crosshair, Home, MapPin } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Animated,
@@ -20,6 +20,73 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
 import { addUserAddress } from '../../../../services/api/address.api';
+
+type FloatingLabelInputProps = {
+    label: string;
+    value: string;
+    onChangeText: (text: string) => void;
+    rightIcon?: React.ReactNode;
+} & React.ComponentProps<typeof TextInput>;
+
+function FloatingLabelInput({
+    label,
+    value,
+    onChangeText,
+    rightIcon,
+    ...props
+}: FloatingLabelInputProps) {
+    const [isFocused, setIsFocused] = useState(false);
+    const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
+
+    useEffect(() => {
+        Animated.timing(animatedValue, {
+            toValue: (isFocused || value) ? 1 : 0,
+            duration: 200,
+            useNativeDriver: false,
+        }).start();
+    }, [animatedValue, isFocused, value]);
+
+    const labelStyle = {
+        position: 'absolute' as const,
+        left: 16,
+        top: animatedValue.interpolate({
+            inputRange: [0, 1],
+            outputRange: [14, -10],
+        }),
+        fontSize: animatedValue.interpolate({
+            inputRange: [0, 1],
+            outputRange: [16, 12],
+        }),
+        color: animatedValue.interpolate({
+            inputRange: [0, 1],
+            outputRange: ['#6B7280', '#2FA561'],
+        }),
+        backgroundColor: '#fff',
+        paddingHorizontal: 4,
+        zIndex: 1,
+    };
+
+    const borderColor = isFocused ? '#2FA561' : '#E5E7EB';
+
+    return (
+        <View style={{ paddingTop: 0, marginBottom: 20 }}>
+            <Animated.Text style={labelStyle}>
+                {label}
+            </Animated.Text>
+            <View style={[styles.floatingInputContainer, { borderColor }]}>
+                <TextInput
+                    {...props}
+                    value={value}
+                    onChangeText={onChangeText}
+                    style={styles.floatingInput}
+                    onFocus={() => setIsFocused(true)}
+                    onBlur={() => setIsFocused(false)}
+                />
+                {rightIcon}
+            </View>
+        </View>
+    );
+}
 
 export default function AddAddressScreen() {
     const navigation = useNavigation();
@@ -42,9 +109,9 @@ export default function AddAddressScreen() {
         message: ''
     });
 
-    const showStatus = (type: StatusType, title: string, message: string) => {
+    const showStatus = useCallback((type: StatusType, title: string, message: string) => {
         setStatus({ visible: true, type, title, message });
-    };
+    }, []);
 
     const hideStatus = () => setStatus(prev => ({ ...prev, visible: false }));
 
@@ -68,11 +135,7 @@ export default function AddAddressScreen() {
         longitudeDelta: 0.005,
     });
 
-    useEffect(() => {
-        handleUseCurrentLocation();
-    }, []);
-
-    const handleUseCurrentLocation = async () => {
+    const handleUseCurrentLocation = useCallback(async () => {
         setLoadingLocation(true);
         try {
             const { status: locStatus } = await Location.requestForegroundPermissionsAsync();
@@ -115,12 +178,16 @@ export default function AddAddressScreen() {
                 setRegion(newRegion);
                 mapRef.current?.animateToRegion(newRegion, 1000);
             }
-        } catch (error) {
+        } catch {
             showStatus('error', 'Location Error', 'We couldn\'t fetch your current location. Please search for your address manually.');
         } finally {
             setLoadingLocation(false);
         }
-    };
+    }, [showStatus]);
+
+    useEffect(() => {
+        void handleUseCurrentLocation();
+    }, [handleUseCurrentLocation]);
 
     const handleContactPick = async () => {
         try {
@@ -144,7 +211,7 @@ export default function AddAddressScreen() {
             } else {
                 showStatus('warning', 'Permission Denied', 'Contacts permission is required to pick a receiver from your address book.');
             }
-        } catch (e) {
+        } catch {
             // console.log(e);
         }
     };
@@ -187,10 +254,10 @@ export default function AddAddressScreen() {
             await addUserAddress(payload);
             
             showStatus('success', 'Address Saved', 'Your new delivery address has been added successfully.');
-        } catch (error) {
-            showStatus('error', 'Error', 'Failed to save address. Please try again.');
-        } finally {
-            setSaving(false);
+                        } catch {
+                            showStatus('error', 'Error', 'Failed to save address. Please try again.');
+                        } finally {
+                            setSaving(false);
         }
     };
 
@@ -223,7 +290,7 @@ export default function AddAddressScreen() {
                                 ].filter(Boolean);
                                 setFormData(prev => ({ ...prev, fullAddress: parts.join(', ') }));
                             }
-                        } catch (err) {
+                        } catch {
                             // Reverse geocode error
                         }
                     }}
@@ -308,60 +375,6 @@ export default function AddAddressScreen() {
             </View>
         </View>
     );
-
-    const FloatingLabelInput = ({ label, value, onChangeText, rightIcon, ...props }: any) => {
-        const [isFocused, setIsFocused] = useState(false);
-        const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
-
-        useEffect(() => {
-            Animated.timing(animatedValue, {
-                toValue: (isFocused || value) ? 1 : 0,
-                duration: 200,
-                useNativeDriver: false,
-            }).start();
-        }, [isFocused, value]);
-
-        const labelStyle = {
-            position: 'absolute' as 'absolute',
-            left: 16,
-            top: animatedValue.interpolate({
-                inputRange: [0, 1],
-                outputRange: [14, -10],
-            }),
-            fontSize: animatedValue.interpolate({
-                inputRange: [0, 1],
-                outputRange: [16, 12],
-            }),
-            color: animatedValue.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['#6B7280', '#2FA561'],
-            }),
-            backgroundColor: '#fff',
-            paddingHorizontal: 4,
-            zIndex: 1,
-        };
-
-        const borderColor = isFocused ? '#2FA561' : '#E5E7EB';
-
-        return (
-            <View style={{ paddingTop: 0, marginBottom: 20 }}>
-                <Animated.Text style={labelStyle}>
-                    {label}
-                </Animated.Text>
-                <View style={[styles.floatingInputContainer, { borderColor }]}>
-                    <TextInput
-                        {...props}
-                        value={value}
-                        onChangeText={onChangeText}
-                        style={styles.floatingInput}
-                        onFocus={() => setIsFocused(true)}
-                        onBlur={() => setIsFocused(false)}
-                    />
-                    {rightIcon}
-                </View>
-            </View>
-        );
-    };
 
     const renderStep2 = () => (
         <View style={styles.form}>
@@ -476,7 +489,11 @@ export default function AddAddressScreen() {
 
             <View style={styles.contentContainer}>
                 {step === 1 ? renderStep1() : (
-                    <ScrollView contentContainerStyle={styles.scrollContent}>
+                    <ScrollView
+                        contentContainerStyle={styles.scrollContent}
+                        keyboardShouldPersistTaps="handled"
+                        keyboardDismissMode="on-drag"
+                    >
                         {renderStep2()}
                     </ScrollView>
                 )}

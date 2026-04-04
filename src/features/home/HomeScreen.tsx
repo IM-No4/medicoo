@@ -1,4 +1,4 @@
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, {
   useCallback,
@@ -48,6 +48,7 @@ type Props = {
 };
 
 export default function HomeScreen({ onOpenCommandPalette }: Props) {
+  const navigation = useNavigation<any>();
   const [refreshing, setRefreshing] = useState(false);
 
   // Hook for feed actions
@@ -178,6 +179,8 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
     status: StatusType;
     title?: string;
     message?: string;
+    primaryAction?: () => void;
+    primaryActionText?: string;
   }>({
     visible: false,
     status: 'idle',
@@ -187,8 +190,6 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
     // Robustly extract coordinates
     const finalLat = selectedAddress?.latitude ?? currentLocation?.latitude;
     const finalLong = selectedAddress?.longitude ?? currentLocation?.longitude;
-
-    console.log("📤 Home Prescription Upload - Final Coordinates:", { finalLat, finalLong });
 
     if (finalLat === undefined || finalLong === undefined || finalLat === null || finalLong === null) {
       setStatusModal({
@@ -200,38 +201,16 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
       return;
     }
 
-    setIsUploading(true);
-    setStatusModal({
-      visible: true,
-      status: 'loading',
-      message: 'Uploading prescription...',
-    });
-
-    try {
-      await uploadPrescription({
-        prescriptionImage: image,
+    // Immediately navigate to Analysis screen which will handle the upload and display results/loading
+    dispatch(setPrescriptionModalVisible(false));
+    navigation.navigate('PharmacyStack', {
+      screen: 'PrescriptionResult',
+      params: { 
+        image: image,
         latitude: finalLat,
-        longitude: finalLong,
-      });
-
-      setStatusModal({
-        visible: true,
-        status: 'success',
-        title: 'Success',
-        message: 'Prescription uploaded successfully!',
-      });
-    } catch (e) {
-      console.error('Failed to upload prescription', e);
-      setStatusModal({
-        visible: true,
-        status: 'error',
-        title: 'Upload Failed',
-        message: 'Failed to upload prescription. Please try again.',
-      });
-    } finally {
-      setIsUploading(false);
-      dispatch(setPrescriptionModalVisible(false));
-    }
+        longitude: finalLong
+      }
+    });
   };
 
   return (
@@ -327,7 +306,9 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
         title={statusModal.title}
         message={statusModal.message}
         onClose={() => setStatusModal((prev) => ({ ...prev, visible: false }))}
-        autoCloseDelay={statusModal.status === 'success' ? 3000 : undefined}
+        primaryAction={statusModal.primaryAction}
+        primaryActionText={statusModal.primaryActionText}
+        autoCloseDelay={statusModal.status === 'success' && !statusModal.primaryAction ? 3000 : undefined}
       />
     </View>
   );

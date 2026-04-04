@@ -42,5 +42,6 @@ export const uploadPrescription = async ({
     },
   );
 
+  console.log("Upload Prescription Response", response.data);
   return response.data;
 };

@@ -99,7 +99,7 @@ Educational/Motivational card.
   "subtitle": "You can save 3 lives.",
   "ctaText": "Check Eligibility",
   "action": { "type": "NAVIGATE", "stack": "ProfileStack", "screen": "Eligibility" },
-  "learnMoreAction": { "type": "OPEN_URL", "url": "https://medicoo.com/donate" }
+  "learnMoreAction": { "type": "OPEN_URL", "url": "https://medicoo.in/donate-blood" }
 }
 ```
 
@@ -206,14 +206,14 @@ Blog content.
   "id": "art_sec_1",
   "type": "HEALTH_ARTICLE_SHOWCASE",
   "title": "Health Tips",
-  "seeAllAction": { "type": "OPEN_URL", "url": "https://medicoo.com/blog" },
+  "seeAllAction": { "type": "OPEN_URL", "url": "https://medicoo.in/blog" },
   "articles": [
     {
       "id": "a1",
       "title": "Keto Diet 101",
       "category": "Diet",
       "readTime": "5 min",
-      "action": { "type": "OPEN_URL", "url": "https://medicoo.com/blog/keto" }
+      "action": { "type": "OPEN_URL", "url": "https://medicoo.in/blog/keto-diet" }
     }
   ]
 }

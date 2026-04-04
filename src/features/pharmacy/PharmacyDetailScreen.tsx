@@ -50,6 +50,8 @@ export default function PharmacyDetailScreen() {
     status: StatusType;
     title?: string;
     message?: string;
+    primaryAction?: () => void;
+    primaryActionText?: string;
   }>({
     visible: false,
     status: "idle",
@@ -100,10 +102,17 @@ export default function PharmacyDetailScreen() {
           storeId: pharmacyId,
         });
 
+        // DEBUG: Dump ALL medicine data
+        if (Array.isArray(meds)) {
+          meds.forEach((med: any, idx: number) => {
+            console.log(`💊 MED[${idx}]:`, JSON.stringify(med));
+          });
+        }
+
         if (!mounted) return;
 
         setPharmacy(store);
-        setMedicines(meds);
+        setMedicines(Array.isArray(meds) ? meds : []);
       } catch (e) {
         console.error("Failed to load pharmacy details", e);
       } finally {
@@ -146,8 +155,6 @@ export default function PharmacyDetailScreen() {
     const finalLat = selectedAddress?.latitude ?? currentLocation?.latitude;
     const finalLong = selectedAddress?.longitude ?? currentLocation?.longitude;
 
-    console.log("📤 Prescription Upload - Final Coordinates:", { finalLat, finalLong });
-
     if (finalLat === undefined || finalLong === undefined || finalLat === null || finalLong === null) {
       setStatusModal({
         visible: true,
@@ -158,39 +165,14 @@ export default function PharmacyDetailScreen() {
       return;
     }
 
-    setIsUploading(true);
-    setStatusModal({
-      visible: true,
-      status: "loading",
-      message: "Uploading prescription...",
+    // Immediately navigate to Analysis screen
+    setIsUploadModalVisible(false);
+    navigation.navigate("PrescriptionResult", { 
+      image: image,
+      latitude: finalLat,
+      longitude: finalLong,
+      storeId: pharmacyId
     });
-
-    try {
-      await uploadPrescription({
-        prescriptionImage: image,
-        storeId: pharmacyId,
-        latitude: finalLat,
-        longitude: finalLong,
-      });
-
-      setStatusModal({
-        visible: true,
-        status: "success",
-        title: "Success",
-        message: "Prescription uploaded successfully!",
-      });
-    } catch (e) {
-      console.error("Failed to upload prescription", e);
-      setStatusModal({
-        visible: true,
-        status: "error",
-        title: "Upload Failed",
-        message: "Failed to upload prescription. Please try again.",
-      });
-    } finally {
-      setIsUploading(false);
-      setIsUploadModalVisible(false);
-    }
   };
 
   /* ------------------ LOADING ------------------ */
@@ -242,11 +224,15 @@ export default function PharmacyDetailScreen() {
 
       <FlatList
         data={filteredMedicines}
-        keyExtractor={(item) =>
-          item.inventoryId || item.medicineId || String(item.sku)
-        }
+        keyExtractor={(item, index) => {
+          const key = item.inventoryId || item.medicineId || item.sku || item._id || item.id;
+          return key ? `${String(key)}-${index}` : `med-${index}`;
+        }}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         ListHeaderComponent={
           <>
             <PharmacyHeader
@@ -287,7 +273,6 @@ export default function PharmacyDetailScreen() {
             <CartItemsHorizontalScroll
               storeId={pharmacyId}
               onItemPress={(item) => {
-                // Find medicine in list and open detail
                 const medicine = medicines.find(
                   (m) =>
                     String(m.sku || m.inventoryId || m.medicineId) ===
@@ -364,7 +349,9 @@ export default function PharmacyDetailScreen() {
         title={statusModal.title}
         message={statusModal.message}
         onClose={() => setStatusModal((prev) => ({ ...prev, visible: false }))}
-        autoCloseDelay={statusModal.status === "success" ? 3000 : undefined}
+        primaryAction={statusModal.primaryAction}
+        primaryActionText={statusModal.primaryActionText}
+        autoCloseDelay={statusModal.status === "success" && !statusModal.primaryAction ? 3000 : undefined}
       />
     </View>
   );

@@ -5,8 +5,10 @@ import NotificationBell from "@/src/components/notification/NotificationBell";
 import { setSelectedAddress } from "@/src/redux/slices/addressSlice";
 import { setPrescriptionModalVisible } from "@/src/redux/slices/appSlice";
 import { setCurrentLocation } from "@/src/redux/slices/locationSlice";
+import { setUnreadCount } from "@/src/redux/slices/notificationSlice";
 import { RootState } from "@/src/redux/store";
 import { getUserAddresses } from "@/src/services/api/address.api";
+import { getUnreadCustomerNotificationCount } from "@/src/services/api/notification.api";
 import { GOOGLE_MAPS_API_KEY } from "@/src/config/env";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
@@ -258,6 +260,19 @@ export default function HomeHeader({
 
     initLocation();
   }, [dispatch]); // Run strictly on mount
+
+  React.useEffect(() => {
+    const loadUnreadCount = async () => {
+      try {
+        const response = await getUnreadCustomerNotificationCount();
+        dispatch(setUnreadCount(response?.data?.unreadCount || 0));
+      } catch {
+        // Ignore unread count errors; the bell can still work on screen open
+      }
+    };
+
+    void loadUnreadCount();
+  }, [dispatch]);
 
   const headerColors = dynamicConfig?.colors || ["#2FA561", "#0E7439"];
 

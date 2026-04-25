@@ -2,27 +2,60 @@ import * as DocumentPicker from 'expo-document-picker';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
+    ActivityIndicator,
+    Alert,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
 import AppIcon from '../../components/icons/AppIcon';
+import { uploadDocument } from '../../services/api/document.api';
 
 type RecordType = 'prescription' | 'lab' | 'imaging' | 'other';
 
 export default function UploadRecordScreen() {
-  const [file, setFile] = useState<any>(null);
+  const [file, setFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [type, setType] = useState<RecordType>('prescription');
+  const [saving, setSaving] = useState(false);
 
   const pickFile = async () => {
-    const result =
-      await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/*'],
-      });
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/pdf', 'image/*'],
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
 
-    if (!result.canceled) {
+    if (!result.canceled && result.assets?.[0]) {
       setFile(result.assets[0]);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+
+    try {
+      setSaving(true);
+
+      const formData = new FormData();
+      formData.append('file', {
+        uri: file.uri,
+        name: file.name || `record.${(file.mimeType || '').includes('pdf') ? 'pdf' : 'jpg'}`,
+        type: file.mimeType || 'application/octet-stream',
+      } as any);
+      formData.append('name', file.name || 'Medical Record');
+      formData.append('documentType', type);
+      formData.append('sourceName', 'mobile_app');
+
+      await uploadDocument(formData);
+
+      Alert.alert('Success', 'Your record has been uploaded successfully.');
+      setFile(null);
+      setType('prescription');
+    } catch {
+      Alert.alert('Upload failed', 'We could not upload the record right now. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -32,18 +65,20 @@ export default function UploadRecordScreen() {
 
       <Text style={styles.title}>Upload Record</Text>
 
-      {/* File picker */}
       <TouchableOpacity
         style={styles.pickBox}
         onPress={pickFile}
+        disabled={saving}
       >
         <AppIcon name="upload" size={28} />
         <Text style={styles.pickText}>
           {file ? file.name : 'Select PDF or Image'}
         </Text>
+        <Text style={styles.pickHint}>
+          {file ? 'Tap to replace the selected file' : 'PDF, JPG, PNG, or WebP'}
+        </Text>
       </TouchableOpacity>
 
-      {/* Type selector */}
       <View style={styles.types}>
         {[
           { key: 'prescription', label: 'Prescription' },
@@ -57,36 +92,32 @@ export default function UploadRecordScreen() {
               styles.typeChip,
               type === t.key && styles.typeActive,
             ]}
-            onPress={() =>
-              setType(t.key as RecordType)
-            }
+            onPress={() => setType(t.key as RecordType)}
+            disabled={saving}
           >
-            <Text>{t.label}</Text>
+            <Text style={[styles.typeText, type === t.key && styles.typeTextActive]}>{t.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Save */}
       <TouchableOpacity
         style={[
           styles.saveBtn,
-          !file && { opacity: 0.4 },
+          (!file || saving) && { opacity: 0.5 },
         ]}
-        disabled={!file}
-        onPress={() => {
-          // TODO: dispatch saveRecord()
-          alert('Record saved (mock)');
-        }}
+        disabled={!file || saving}
+        onPress={handleUpload}
       >
-        <Text style={styles.saveText}>
-          Save Record
-        </Text>
+        {saving ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.saveText}>Upload Record</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
 }
 
-/* styles */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -110,6 +141,13 @@ const styles = StyleSheet.create({
   pickText: {
     fontSize: 13,
     color: '#374151',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  pickHint: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
   },
   types: {
     flexDirection: 'row',
@@ -118,13 +156,21 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   typeChip: {
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 999,
     backgroundColor: '#F3F4F6',
   },
   typeActive: {
     backgroundColor: '#D1FAE5',
+  },
+  typeText: {
+    color: '#374151',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  typeTextActive: {
+    color: '#065F46',
   },
   saveBtn: {
     marginTop: 'auto',
@@ -135,6 +181,6 @@ const styles = StyleSheet.create({
   },
   saveText: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

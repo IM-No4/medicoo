@@ -30,6 +30,27 @@ export const submitDoctorFeedback = async (data: {
     return res.data;
 };
 
+export const respondToAppointmentRequest = async (data: {
+    requestId: string;
+    status: 'approved' | 'rejected';
+    remarks?: string;
+}) => {
+    const res = await apiClient.post(`/api/doctor/appointment-requests/${data.requestId}/respond`, {
+        status: data.status,
+        remarks: data.remarks,
+    });
+    return res.data;
+};
+
+export const getDoctorAppointmentRequests = async (params?: {
+    status?: 'all' | 'requests' | 'upcoming' | 'history' | 'pending' | 'approved' | 'rejected' | 'cancelled' | 'completed';
+    page?: number;
+    limit?: number;
+}) => {
+    const res = await apiClient.get('/api/doctor/appointment-requests', { params });
+    return res.data;
+};
+
 // --- New Call & Consultation APIs ---
 
 export const storePatientChannel = async (patientId: string, doctorId: string, channelName: string, slotId: string) => {

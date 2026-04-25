@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getProfileDetails } from '../services/api/user.api';
 import { clearToken, getToken } from '../utils/tokenManagement';
-import { bootFail, bootStart, bootSuccess } from './boot.slice';
+import { bootStart, bootSuccess } from './boot.slice';
 
 export const runBootSequence = async (dispatch: any) => {
   try {
@@ -52,7 +52,7 @@ export const runBootSequence = async (dispatch: any) => {
           initialRoute: 'MainTabs',
         })
       );
-    } catch (error: any) {
+    } catch {
       // Token is invalid (401) or other error
       // Clear invalid token
       await clearToken('access_token');
@@ -76,6 +76,13 @@ export const runBootSequence = async (dispatch: any) => {
     }
   } catch (e) {
     console.error('Boot sequence failed:', e);
-    dispatch(bootFail());
+    // Never leave the app stuck on the splash screen.
+    dispatch(
+      bootSuccess({
+        isAuthenticated: false,
+        onboardingCompleted: false,
+        initialRoute: 'Login',
+      })
+    );
   }
 };

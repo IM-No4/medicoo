@@ -1,6 +1,8 @@
-import { useNavigation } from '@react-navigation/native';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -13,11 +15,16 @@ import { useDispatch } from 'react-redux';
 
 import AppIcon from '@/src/components/icons/AppIcon';
 import { executeAction } from '@/src/actions/ActionExecutor';
-import { clearUnread } from '../../redux/slices/notificationSlice';
+import { clearUnread, setUnreadCount } from '../../redux/slices/notificationSlice';
+import {
+  CustomerNotification,
+  getCustomerNotifications,
+  markAllCustomerNotificationsAsRead,
+} from '../../services/api/notification.api';
 
 type NotificationItem = {
   id: string;
-  type: 'order' | 'promotion' | 'health_reminder' | 'appointment';
+  type: CustomerNotification['type'];
   title: string;
   subtitle: string;
   time: string;
@@ -28,56 +35,21 @@ type NotificationItem = {
   };
 };
 
-const MOCK_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: '1',
-    type: 'order',
-    title: 'Order Confirmed! 🎉',
-    subtitle: 'Your payment for Order #MED-84920 has been processed successfully. We will notify you when it is out for delivery.',
-    time: '2 mins ago',
-    read: false,
-    action: {
-      label: 'Track Order',
-      onPress: () => executeAction('OPEN_MEDICINE_ORDER_DETAIL', { orderId: 'MED-84920' }),
-    },
-  },
-  {
-    id: '5',
-    type: 'appointment',
-    title: 'Dr. Appointment Booked',
-    subtitle: 'Your consultation with Dr. Sarah Smith is confirmed for tomorrow at 10:00 AM.',
-    time: '15 mins ago',
-    read: false,
-    action: {
-      label: 'View Appointment',
-      onPress: () => executeAction('OPEN_CONSULTATION_DETAIL', { appointmentId: 'APT-102' }),
-    },
-  },
-  {
-    id: '2',
-    type: 'health_reminder',
-    title: 'Time for your Vitamin C',
-    subtitle: 'Don\'t forget to take your daily dose of 1x Vitamin C (500mg). Stay healthy!',
-    time: '1 hr ago',
-    read: false,
-  },
-  {
-    id: '3',
-    type: 'promotion',
-    title: 'Flat 30% OFF on all Skincare ✨',
-    subtitle: 'Self-care weekend is here! Dive into our curated skincare collection and grab exclusive deals before they vanish.',
-    time: 'Yesterday',
-    read: true,
-  },
-  {
-    id: '4',
-    type: 'order',
-    title: 'Order Delivered 📦',
-    subtitle: 'Your recent order of Dolo 650mg has been handed over safely. Rate your delivery experience!',
-    time: 'Yesterday',
-    read: true,
-  },
-];
+const formatRelativeTime = (dateValue?: string) => {
+  if (!dateValue) return 'Just now';
+
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return 'Just now';
+
+  const diffMs = Date.now() - date.getTime();
+  const diffMins = Math.max(1, Math.floor(diffMs / 60000));
+
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+};
 
 export default function NotificationsScreen() {
   const dispatch = useDispatch();
@@ -85,42 +57,79 @@ export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  const loadNotifications = useCallback(async () => {
+    try {
+      const response = await getCustomerNotifications({ limit: 50 });
+      const items = (response?.data?.notifications || []).map((item: CustomerNotification) => ({
+        id: item._id,
+        type: item.type,
+        title: item.title,
+        subtitle: item.message,
+        time: formatRelativeTime(item.createdOn),
+        read: item.isRead,
+        action: item.actionText && item.actionUrl ? {
+          label: item.actionText,
+          onPress: () => executeAction('OPEN_URL', { url: item.actionUrl }),
+        } : undefined,
+      }));
+
+      setNotifications(items);
+      dispatch(setUnreadCount(response?.data?.unreadCount || 0));
+
+      if (items.length > 0) {
+        await markAllCustomerNotificationsAsRead();
+        dispatch(clearUnread());
+        setNotifications(prev => prev.map(item => ({ ...item, read: true })));
+      }
+    } catch {
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [dispatch]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadNotifications();
+    }, [loadNotifications])
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    // Simulate API fetch delay
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
-  }, []);
+    void loadNotifications();
+  }, [loadNotifications]);
 
-  useEffect(() => {
-    // Clear badge when screen opens
-    dispatch(clearUnread());
-  }, [dispatch]);
-
-  const getNotificationIcon = (type: NotificationItem['type']) => {
+  const getNotificationIcon = useCallback((type: NotificationItem['type']) => {
     switch (type) {
       case 'order':
         return { name: 'package', color: '#3B82F6', bgColor: '#DBEAFE' };
       case 'appointment':
+      case 'consultation':
         return { name: 'calendar', color: '#8B5CF6', bgColor: '#EDE9FE' };
       case 'promotion':
         return { name: 'tag', color: '#EB6E25', bgColor: '#FFEDD5' };
       case 'health_reminder':
+      case 'reminder':
         return { name: 'heart', color: '#EC4899', bgColor: '#FCE7F3' };
+      case 'review':
+        return { name: 'star', color: '#F59E0B', bgColor: '#FEF3C7' };
       default:
         return { name: 'bell', color: '#2FA561', bgColor: '#F0FDF4' };
     }
-  };
+  }, []);
 
-  const renderItem = ({ item }: { item: NotificationItem }) => {
+  const renderItem = useCallback(({ item }: { item: NotificationItem }) => {
     const { name, color, bgColor } = getNotificationIcon(item.type);
 
     return (
       <TouchableOpacity
         activeOpacity={0.7}
         style={[styles.card, !item.read && styles.unreadCard]}
+        onPress={item.action?.onPress}
       >
         <View style={[styles.iconContainer, { backgroundColor: bgColor }]}>
           <AppIcon name={name} size={18} color={color} />
@@ -146,11 +155,31 @@ export default function NotificationsScreen() {
         {!item.read && <View style={styles.unreadDot} />}
       </TouchableOpacity>
     );
-  };
+  }, [getNotificationIcon]);
+
+  const emptyState = useMemo(() => {
+    if (loading) {
+      return (
+        <View style={styles.centerState}>
+          <ActivityIndicator color="#2FA561" />
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.emptyState}>
+        <View style={styles.emptyIcon}>
+          <AppIcon name="bell" size={28} color="#2FA561" />
+        </View>
+        <Text style={styles.emptyTitle}>No notifications yet</Text>
+        <Text style={styles.emptyText}>We’ll show appointment updates, reminders, and important account alerts here.</Text>
+      </View>
+    );
+  }, [loading]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
+      <StatusBar style="dark" backgroundColor="#F9FAFB" />
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -162,13 +191,13 @@ export default function NotificationsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      {/* List */}
       <FlatList
-        data={MOCK_NOTIFICATIONS}
+        data={notifications}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={notifications.length === 0 ? styles.emptyListContent : styles.listContent}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={emptyState}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -211,6 +240,10 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
     gap: 12,
+  },
+  emptyListContent: {
+    flexGrow: 1,
+    padding: 16,
   },
   card: {
     flexDirection: 'row',
@@ -260,26 +293,56 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#9CA3AF',
   },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10B981',
-    marginTop: 6,
-  },
   actionButton: {
-    marginTop: 12,
-    backgroundColor: '#F0FDF4',
+    marginTop: 10,
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1FAE5',
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#F0FDF4',
   },
   actionButtonText: {
-    color: '#2FA561',
-    fontWeight: '700',
     fontSize: 12,
+    fontWeight: '700',
+    color: '#2FA561',
+  },
+  unreadDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#2FA561',
+    marginTop: 6,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ECFDF5',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  centerState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

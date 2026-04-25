@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     })
   },
   greeting: { fontSize: 13, fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 1 },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: '#111827', marginTop: 4 },
+  headerTitle: { fontSize: 24, fontWeight: '600', color: '#111827', marginTop: 4 },
   headerActions: { flexDirection: 'row', gap: 12 },
   headerIconBtn: {
     width: 44,

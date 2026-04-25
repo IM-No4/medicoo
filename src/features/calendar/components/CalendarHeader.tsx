@@ -21,7 +21,7 @@ export default function CalendarHeader({ onOpenCalendar, selectedDate }: Props) 
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
-        <Text style={styles.appTitle}>Schedule</Text>
+        {/* <Text style={styles.appTitle}>Schedule</Text> */}
 
       </View>
 

@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { ChevronLeft, ChevronRight, Eye, FileText, Moon, Sun, UserCog } from 'lucide-react-native';
+import { CalendarCheck, ChevronLeft, ChevronRight, Eye, FileText, Moon, Sun, UserCog } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
@@ -134,7 +134,7 @@ export default function DoctorSettingsScreen() {
             await updateDoctorSettings(payload);
             showStatus('success', 'Settings Saved', 'Your practice availability and consultation fees have been updated successfully.');
             setInitialSettings({ isOnline, fees, currency });
-        } catch (error) {
+        } catch {
             showStatus('error', 'Update Failed', 'We couldn\'t save your settings. Please check your internet connection and try again.');
         } finally {
             setSaving(false);
@@ -283,6 +283,21 @@ export default function DoctorSettingsScreen() {
                                         <Eye size={20} color="#4B5563" />
                                     </View>
                                     <Text style={styles.actionText}>Preview Public Profile</Text>
+                                </View>
+                                <ChevronRight size={20} color="#D1D5DB" />
+                            </TouchableOpacity>
+
+                            <View style={styles.divider} />
+
+                            <TouchableOpacity
+                                style={styles.actionRow}
+                                onPress={() => executeAction('OPEN_MANAGE_APPOINTMENTS')}
+                            >
+                                <View style={styles.actionLeft}>
+                                    <View style={styles.iconBox}>
+                                        <CalendarCheck size={20} color="#4B5563" />
+                                    </View>
+                                    <Text style={styles.actionText}>Manage Appointments</Text>
                                 </View>
                                 <ChevronRight size={20} color="#D1D5DB" />
                             </TouchableOpacity>

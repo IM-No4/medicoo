@@ -11,6 +11,8 @@ import {
   View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../redux/store';
 import { DeviceConnectCard } from './components/DeviceConnectCard';
 import { GoalsCard } from './components/GoalsCard';
 import { HealthHighlights } from './components/HealthHighlights';
@@ -28,6 +30,14 @@ export default function HealthScreen() {
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
+  const { connectedDevice } = useSelector((state: RootState) => state.device);
+  const { records } = useSelector((state: RootState) => state.vitals);
+
+  const latestManual = records[0];
+  const heartRate = latestManual?.heartRate ?? connectedDevice?.data?.heartRate ?? '--';
+  const steps = connectedDevice?.data?.steps !== undefined ? connectedDevice.data.steps.toLocaleString() : '--';
+  const calories = connectedDevice?.data?.calories !== undefined ? `${connectedDevice.data.calories}` : '--';
+
   useFocusEffect(
     useCallback(() => {
       setIsFocused(true);
@@ -43,7 +53,7 @@ export default function HealthScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.greeting}>Daily Check-in</Text>
           <Text style={styles.headerTitle}>My Health</Text>
         </View>
@@ -67,24 +77,24 @@ export default function HealthScreen() {
         <View style={styles.activitySummary}>
           <SummaryCard
             icon={<Flame size={18} color="#EF4444" />}
-            value="450"
+            value={calories}
             unit="kcal"
             label="Burned"
             color="#FEF2F2"
           />
           <SummaryCard
             icon={<Activity size={18} color="#2FA561" />}
-            value="8,432"
+            value={steps}
             unit="steps"
             label="Steps"
             color="#F0FDF4"
           />
           <SummaryCard
-            icon={<Heart size={18} color="#3B82F6" />}
-            value="72"
+            icon={<Heart size={18} color="#EF4444" />}
+            value={heartRate !== '--' ? `${heartRate}` : '--'}
             unit="bpm"
             label="Heart Rate"
-            color="#EFF6FF"
+            color="#FEF2F2"
           />
         </View>
 

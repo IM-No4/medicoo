@@ -7,15 +7,14 @@ import {
   getStoreDetails,
   getStoreMedicines,
 } from "@/src/services/api/pharmacy.api";
-import { uploadPrescription } from "@/src/services/api/prescription.api";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -41,6 +40,7 @@ export default function PharmacyDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [isSearchSticky, setIsSearchSticky] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(160);
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedMedicine, setSelectedMedicine] = useState<any>(null);
@@ -102,17 +102,14 @@ export default function PharmacyDetailScreen() {
           storeId: pharmacyId,
         });
 
-        // DEBUG: Dump ALL medicine data
-        if (Array.isArray(meds)) {
-          meds.forEach((med: any, idx: number) => {
-            console.log(`💊 MED[${idx}]:`, JSON.stringify(med));
-          });
-        }
+        const medsList = Array.isArray(meds)
+          ? meds
+          : meds?.data || meds?.medicines || [];
 
         if (!mounted) return;
 
         setPharmacy(store);
-        setMedicines(Array.isArray(meds) ? meds : []);
+        setMedicines(medsList);
       } catch (e) {
         console.error("Failed to load pharmacy details", e);
       } finally {
@@ -143,9 +140,7 @@ export default function PharmacyDetailScreen() {
 
   const handleScroll = (event: any) => {
     const offsetY = event.nativeEvent.contentOffset.y;
-    // Sticky threshold - adjust based on your header height
-    const stickyThreshold = 280; // Height of image container
-    setIsSearchSticky(offsetY > stickyThreshold);
+    setIsSearchSticky(offsetY > headerHeight - 94);
   };
 
   /* ------------------ PRESCRIPTION UPLOAD ------------------ */
@@ -155,23 +150,29 @@ export default function PharmacyDetailScreen() {
     const finalLat = selectedAddress?.latitude ?? currentLocation?.latitude;
     const finalLong = selectedAddress?.longitude ?? currentLocation?.longitude;
 
-    if (finalLat === undefined || finalLong === undefined || finalLat === null || finalLong === null) {
+    if (
+      finalLat === undefined ||
+      finalLong === undefined ||
+      finalLat === null ||
+      finalLong === null
+    ) {
       setStatusModal({
         visible: true,
         status: "error",
         title: "Location Error",
-        message: "Location not found. Please ensure you have an address selected or location services enabled.",
+        message:
+          "Location not found. Please ensure you have an address selected or location services enabled.",
       });
       return;
     }
 
     // Immediately navigate to Analysis screen
     setIsUploadModalVisible(false);
-    navigation.navigate("PrescriptionResult", { 
+    navigation.navigate("PrescriptionResult", {
       image: image,
       latitude: finalLat,
       longitude: finalLong,
-      storeId: pharmacyId
+      storeId: pharmacyId,
     });
   };
 
@@ -189,12 +190,18 @@ export default function PharmacyDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style={isSearchSticky ? "dark" : "light"} />
+      <StatusBar style="dark" />
+
+      {/* Solid White Status Bar Background (prevents scroll overlap) */}
+      <View style={[styles.statusBarBackground, { height: insets.top }]} />
 
       {/* Sticky Search Bar */}
       {isSearchSticky && (
         <View
-          style={[styles.stickySearchContainer, { paddingTop: insets.top }]}
+          style={[
+            styles.stickySearchContainer,
+            { paddingTop: insets.top + 12 },
+          ]}
         >
           <View style={styles.searchWrapper}>
             <View style={styles.searchContainer}>
@@ -217,7 +224,7 @@ export default function PharmacyDetailScreen() {
             style={styles.scanIconButton}
             onPress={() => setIsUploadModalVisible(true)}
           >
-            <AppIcon name="scan-text-icon" size={24} color="#1c1c1e" />
+            <AppIcon name="scan-text-icon" size={24} color="#8A8A8E" />
           </TouchableOpacity>
         </View>
       )}
@@ -225,7 +232,12 @@ export default function PharmacyDetailScreen() {
       <FlatList
         data={filteredMedicines}
         keyExtractor={(item, index) => {
-          const key = item.inventoryId || item.medicineId || item.sku || item._id || item.id;
+          const key =
+            item.inventoryId ||
+            item.medicineId ||
+            item.sku ||
+            item._id ||
+            item.id;
           return key ? `${String(key)}-${index}` : `med-${index}`;
         }}
         onScroll={handleScroll}
@@ -233,39 +245,64 @@ export default function PharmacyDetailScreen() {
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={5}
+        ListEmptyComponent={
+          !loading ? (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconCircle}>
+                <AppIcon
+                  name={query.trim() ? "search" : "pill"}
+                  size={40}
+                  color="#9CA3AF"
+                />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {query.trim() ? "No Medicines Found" : "No Medicines Available"}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {query.trim()
+                  ? `We couldn't find any medicines matching "${query}". Try searching for something else.`
+                  : "This pharmacy doesn't have any medicines listed yet."}
+              </Text>
+            </View>
+          ) : null
+        }
         ListHeaderComponent={
           <>
             <PharmacyHeader
               pharmacy={pharmacy}
               onBack={() => navigation.goBack()}
-            />
-
-            {/* SEARCH BAR */}
-            <View style={styles.searchRowWrapper}>
-              <View style={styles.searchWrapperInline}>
-                <View style={styles.searchContainer}>
-                  <AppIcon name="search" size={20} color="#8A8A8E" />
-                  <TextInput
-                    placeholder="Search medicines..."
-                    value={query}
-                    onChangeText={setQuery}
-                    style={styles.searchInput}
-                    placeholderTextColor="#8A8A8E"
-                  />
-                  {query.length > 0 && (
-                    <TouchableOpacity onPress={() => setQuery("")}>
-                      <AppIcon name="x" size={18} color="#8A8A8E" />
-                    </TouchableOpacity>
-                  )}
+              onLayout={(e) => {
+                const { height } = e.nativeEvent.layout;
+                setHeaderHeight(height);
+              }}
+            >
+              {/* SEARCH BAR */}
+              <View style={styles.searchRowWrapper}>
+                <View style={styles.searchWrapperInline}>
+                  <View style={styles.searchContainer}>
+                    <AppIcon name="search" size={20} color="#8A8A8E" />
+                    <TextInput
+                      placeholder="Search medicines..."
+                      value={query}
+                      onChangeText={setQuery}
+                      style={styles.searchInput}
+                      placeholderTextColor="#8A8A8E"
+                    />
+                    {query.length > 0 && (
+                      <TouchableOpacity onPress={() => setQuery("")}>
+                        <AppIcon name="x" size={18} color="#8A8A8E" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
+                <TouchableOpacity
+                  style={styles.scanIconButton}
+                  onPress={() => setIsUploadModalVisible(true)}
+                >
+                  <AppIcon name="scan-text-icon" size={24} color="#8A8A8E" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={styles.scanIconButton}
-                onPress={() => setIsUploadModalVisible(true)}
-              >
-                <AppIcon name="scan-text-icon" size={24} color="#1c1c1e" />
-              </TouchableOpacity>
-            </View>
+            </PharmacyHeader>
 
             {/* FILTERS */}
             <FilterChips />
@@ -286,12 +323,14 @@ export default function PharmacyDetailScreen() {
             />
           </>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <MedicineRow
             medicine={item}
             isStoreOpen={pharmacy?.status === "online"}
             storeId={pharmacyId}
             storeName={pharmacy?.storeName || ""}
+            isFirst={index === 0}
+            isLast={index === filteredMedicines.length - 1}
             onPress={() => {
               setSelectedMedicine(item);
               setIsMedicineDetailVisible(true);
@@ -299,7 +338,7 @@ export default function PharmacyDetailScreen() {
           />
         )}
         contentContainerStyle={{
-          paddingBottom: 160,
+          paddingBottom: 220,
         }}
         showsVerticalScrollIndicator={false}
       />
@@ -351,7 +390,11 @@ export default function PharmacyDetailScreen() {
         onClose={() => setStatusModal((prev) => ({ ...prev, visible: false }))}
         primaryAction={statusModal.primaryAction}
         primaryActionText={statusModal.primaryActionText}
-        autoCloseDelay={statusModal.status === "success" && !statusModal.primaryAction ? 3000 : undefined}
+        autoCloseDelay={
+          statusModal.status === "success" && !statusModal.primaryAction
+            ? 3000
+            : undefined
+        }
       />
     </View>
   );
@@ -375,7 +418,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#fff",
+    paddingBottom: 0,
+    backgroundColor: "transparent",
     gap: 12,
   },
   searchWrapperInline: {
@@ -387,7 +431,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 48,
@@ -404,9 +448,11 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: "#F2F2F7",
+    backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   stickySearchContainer: {
     position: "absolute",
@@ -421,11 +467,49 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
     gap: 12,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 60,
+    paddingHorizontal: 32,
+  },
+  emptyIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1C1C1E",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: "#8A8A8E",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  statusBarBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#FFFFFF",
+    zIndex: 999,
   },
 });

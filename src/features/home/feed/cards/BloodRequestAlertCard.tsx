@@ -66,14 +66,13 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         marginBottom: 28,
         marginHorizontal: 24,
-        // Strong shadow/elevation
-        shadowColor: '#EF4444',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 4,
         borderWidth: 1,
-        borderColor: '#FECACA', // Light red border
+        borderColor: '#FEE2E2', // Subtle, premium soft red border
+        shadowColor: '#EF4444',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.02,
+        shadowRadius: 4,
+        elevation: 0, // Clean, zero elevation to avoid harsh Android shadows
         overflow: 'hidden'
     },
     header: {

@@ -1,17 +1,23 @@
-import AppIcon from '@/src/components/icons/AppIcon';
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AppIcon from "@/src/components/icons/AppIcon";
+import React, { useState } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const FILTERS = [
-  { id: 'all', label: 'All' },
-  { id: 'prescription', label: 'Prescription', icon: 'file-text' },
-  { id: 'otc', label: 'OTC', icon: 'package' },
-  { id: 'bestseller', label: 'Bestseller', icon: 'trending-up' },
-  { id: 'offer', label: 'Offers', icon: 'tag' },
+  { id: "all", label: "All" },
+  { id: "prescription", label: "Prescription", icon: "file-text" },
+  { id: "otc", label: "OTC", icon: "package" },
+  { id: "bestseller", label: "Bestseller", icon: "trending-up" },
+  { id: "offer", label: "Offers", icon: "tag" },
 ];
 
 export default function FilterChips() {
-  const [selected, setSelected] = useState<string>('all');
+  const [selected, setSelected] = useState<string>("all");
 
   return (
     <View style={styles.container}>
@@ -32,7 +38,7 @@ export default function FilterChips() {
                 <AppIcon
                   name={filter.icon as any}
                   size={14}
-                  color={isSelected ? '#fff' : '#8A8A8E'}
+                  color={isSelected ? "#fff" : "#8A8A8E"}
                 />
               )}
               <Text style={[styles.text, isSelected && styles.textSelected]}>
@@ -48,35 +54,33 @@ export default function FilterChips() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   scrollContent: {
     paddingHorizontal: 16,
     gap: 8,
   },
   chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
   },
   chipSelected: {
-    backgroundColor: '#0E7439',
-    borderColor: '#0E7439',
+    backgroundColor: "#0E7439",
+    borderColor: "#0E7439",
   },
   text: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#8A8A8E',
+    fontWeight: "600",
+    color: "#8A8A8E",
   },
   textSelected: {
-    color: '#fff',
+    color: "#fff",
   },
 });

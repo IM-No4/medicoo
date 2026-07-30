@@ -1,8 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Image,
     Modal,
     ScrollView,
     StatusBar,
@@ -116,6 +118,14 @@ export default function DoctorListScreen() {
 
         setFavorites(updated);
         await AsyncStorage.setItem('favorites', JSON.stringify(updated));
+    };
+
+    // ---------------- Reset All Filters ----------------
+    const resetAllFilters = () => {
+        setSearchQuery('');
+        setSelectedSpecialty('All');
+        setShowFavoritesOnly(false);
+        setSortBy('rating_high_to_low');
     };
 
     // ---------------- Sorting Label ----------------
@@ -245,11 +255,76 @@ export default function DoctorListScreen() {
                     />
                 ))}
 
-                {filteredDoctors.length === 0 && (
-                    <View style={styles.emptyState}>
-                        <Text style={styles.emptyText}>No doctors match your filters.</Text>
-                    </View>
-                )}
+                {filteredDoctors.length === 0 && (() => {
+                    const hasActiveFilters = searchQuery.trim() !== '' || selectedSpecialty !== 'All' || showFavoritesOnly || sortBy !== 'rating_high_to_low';
+
+                    return (
+                        <View style={styles.emptyContainer}>
+                            {/* Graphic Illustration */}
+                            <View style={styles.illustrationWrapper}>
+                                <LinearGradient
+                                    colors={showFavoritesOnly ? ['#FEF2F2', '#FFF1F2', '#FEE2E2'] : ['#EFF6FF', '#F0F9FF', '#E0F2FE']}
+                                    style={styles.illustrationAura}
+                                />
+                                <Image
+                                    source={require('../../assets/images/empty-doctors.png')}
+                                    style={styles.emptyGraphicImage}
+                                    resizeMode="contain"
+                                />
+                            </View>
+
+                            <Text style={styles.emptyTitle}>
+                                {showFavoritesOnly
+                                    ? 'No Favorite Doctors Yet'
+                                    : searchQuery.trim() !== ''
+                                    ? 'No Doctors Found'
+                                    : selectedSpecialty !== 'All'
+                                    ? `No ${selectedSpecialty} Specialists`
+                                    : "We couldn't find any doctors"}
+                            </Text>
+
+                            <Text style={styles.emptySubtitle}>
+                                {showFavoritesOnly
+                                    ? 'Tap the heart icon on any doctor card to bookmark them for quick access.'
+                                    : searchQuery.trim() !== ''
+                                    ? `We couldn't find any doctors matching "${searchQuery}". Check for typos or try searching another term.`
+                                    : selectedSpecialty !== 'All'
+                                    ? `No doctors available under "${selectedSpecialty}" right now. Try clearing filters to see all available doctors.`
+                                    : 'We couldn\'t find any doctors in your area at this time. Please check back later.'}
+                            </Text>
+
+                            {hasActiveFilters && (
+                                <View style={styles.emptyActionsRow}>
+                                    <TouchableOpacity
+                                        style={styles.resetFilterButton}
+                                        onPress={resetAllFilters}
+                                        activeOpacity={0.8}
+                                    >
+                                        <LinearGradient
+                                            colors={['#1C6ED5', '#1557B0']}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 0 }}
+                                            style={styles.resetFilterGradient}
+                                        >
+                                            <AppIcon name="rotate-ccw" size={16} color="#FFFFFF" />
+                                            <Text style={styles.resetFilterText}>Reset All Filters</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+
+                                    {searchQuery !== '' && (
+                                        <TouchableOpacity
+                                            style={styles.clearSearchButton}
+                                            onPress={() => setSearchQuery('')}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Text style={styles.clearSearchText}>Clear Search</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            )}
+                        </View>
+                    );
+                })()}
             </ScrollView>
 
             {/* Filter Modal */}
@@ -356,7 +431,7 @@ export default function DoctorListScreen() {
     );
 }
 
-// ---------------- STYLES ----------------
+// ---------------- STYLES SYSTEM ----------------
 
 const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: '#F2F2F7' },
@@ -461,9 +536,91 @@ const styles = StyleSheet.create({
 
     listContent: { padding: 20, paddingBottom: 40 },
 
-    emptyState: { padding: 40, alignItems: 'center' },
-
-    emptyText: { color: '#8e8e93', fontSize: 15 },
+    emptyContainer: {
+        paddingVertical: 32,
+        paddingHorizontal: 20,
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 24,
+        marginTop: 8,
+        borderWidth: 1,
+        borderColor: '#F2F4F7',
+        shadowColor: '#101828',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 12,
+        elevation: 2,
+    },
+    illustrationWrapper: {
+        width: 180,
+        height: 160,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+        position: 'relative',
+    },
+    illustrationAura: {
+        position: 'absolute',
+        width: 140,
+        height: 140,
+        borderRadius: 70,
+        opacity: 0.85,
+    },
+    emptyGraphicImage: {
+        width: 170,
+        height: 150,
+    },
+    emptyTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#101828',
+        textAlign: 'center',
+        marginBottom: 6,
+    },
+    emptySubtitle: {
+        fontSize: 13,
+        color: '#667085',
+        textAlign: 'center',
+        lineHeight: 19,
+        marginBottom: 20,
+        paddingHorizontal: 12,
+    },
+    emptyActionsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        flexWrap: 'wrap',
+    },
+    resetFilterButton: {
+        borderRadius: 14,
+        overflow: 'hidden',
+    },
+    resetFilterGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 18,
+        paddingVertical: 12,
+        gap: 8,
+    },
+    resetFilterText: {
+        color: '#FFFFFF',
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    clearSearchButton: {
+        paddingHorizontal: 18,
+        paddingVertical: 12,
+        borderRadius: 14,
+        backgroundColor: '#F2F4F7',
+        borderWidth: 1,
+        borderColor: '#E4E7EC',
+    },
+    clearSearchText: {
+        color: '#344054',
+        fontSize: 13,
+        fontWeight: '600',
+    },
 
     modalOverlay: { flex: 1, justifyContent: 'flex-end' },
 

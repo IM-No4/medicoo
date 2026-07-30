@@ -24,6 +24,7 @@ import {
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   InteractionManager,
   ScrollView,
   StyleSheet,
@@ -37,6 +38,7 @@ import { executeAction } from '../../actions/ActionExecutor';
 import { bootSuccess } from '../../bootstrap/boot.slice';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 import { logout as logoutRedux } from '../../redux/slices/authSlice';
+import { clearActiveOrder } from '../../redux/slices/orderSlice';
 import { getProfileDetails, logoutApi } from '../../services/api';
 import { API_BASE_URL } from '../../services/api/client';
 import ProfileHeader from './components/ProfileHeader';
@@ -57,6 +59,7 @@ export default function ProfileScreen() {
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [canReapply, setCanReapply] = useState(false);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
+  const [copiedId, setCopiedId] = useState(false);
 
   // Status Modal State
   const [status, setStatus] = useState<{
@@ -127,35 +130,47 @@ export default function ProfileScreen() {
     }, [fetchProfile])
   );
 
-  const handleLogout = async () => {
-    showStatus(
-      'warning',
-      'Logout?',
-      'Are you sure you want to log out of your account? You will need to sign in again to access your records.',
-      async () => {
-        try {
-          hideStatus();
-          // 1. Call API
-          await logoutApi();
-          // 2. Clear Redux Auth State
-          dispatch(logoutRedux());
-          // 3. Update Boot State (Force RootNavigator switch)
-          dispatch(bootSuccess({ isAuthenticated: false }));
-        } catch (error) {
-          console.error('Logout failed:', error);
-          // Fallback: force logout anyway
-          dispatch(logoutRedux());
-          dispatch(bootSuccess({ isAuthenticated: false }));
-        }
-      },
-      'Logout'
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to log out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // 1. Call API
+              await logoutApi();
+              // 2. Clear Active Order Tracking
+              dispatch(clearActiveOrder());
+              // 3. Clear Redux Auth State
+              dispatch(logoutRedux());
+              // 4. Update Boot State (Force RootNavigator switch)
+              dispatch(bootSuccess({ isAuthenticated: false }));
+            } catch (error) {
+              console.error('Logout failed:', error);
+              // Fallback: force logout anyway
+              dispatch(clearActiveOrder());
+              dispatch(logoutRedux());
+              dispatch(bootSuccess({ isAuthenticated: false }));
+            }
+          },
+        },
+      ],
+      { cancelable: true }
     );
   };
 
   const handleCopyMedId = async () => {
     if (medId) {
       await Clipboard.setStringAsync(medId);
-      showStatus('success', 'Copied!', 'Member ID has been copied to your clipboard.');
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2000);
     }
   };
 
@@ -237,12 +252,13 @@ export default function ProfileScreen() {
       </View>
 
       {medId && (
-        <View style={styles.medIdSection}>
+      <View style={styles.medIdSection}>
           <Text style={styles.medIdLabel}>Member ID: </Text>
           <Text style={styles.medIdValue}>{medId}</Text>
           <TouchableOpacity onPress={handleCopyMedId} style={styles.copyButton}>
             <Copy size={16} color="#2FA561" />
           </TouchableOpacity>
+          {copiedId && <Text style={styles.copiedText}>Copied</Text>}
         </View>
       )}
 
@@ -480,6 +496,12 @@ const styles = StyleSheet.create({
     padding: 4,
     backgroundColor: 'transparent',
     borderRadius: 6,
+  },
+  copiedText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#2FA561',
+    marginLeft: 4,
   },
 
   // Sections

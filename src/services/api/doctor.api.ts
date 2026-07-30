@@ -1,7 +1,7 @@
 import { apiClient } from './client';
 
 export const getConsultations = async () => {
-    const res = await apiClient.get('/api/user/consultations');
+    const res = await apiClient.get('/api/user/consultation-history');
     return res.data;
 };
 
@@ -54,7 +54,6 @@ export const getDoctorAppointmentRequests = async (params?: {
 // --- New Call & Consultation APIs ---
 
 export const storePatientChannel = async (patientId: string, doctorId: string, channelName: string, slotId: string) => {
-    // This endpoint should be implemented on backend to store the active call channel
     const res = await apiClient.post('/api/doctor/store-channel', { patientId, doctorId, channelName, slotId });
     return res.data;
 };

@@ -9,6 +9,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
@@ -72,7 +73,7 @@ export default function NotificationsScreen() {
         read: item.isRead,
         action: item.actionText && item.actionUrl ? {
           label: item.actionText,
-          onPress: () => executeAction('OPEN_URL', { url: item.actionUrl }),
+          onPress: () => Linking.openURL(item.actionUrl!).catch(e => console.warn(e)),
         } : undefined,
       }));
 
@@ -106,19 +107,19 @@ export default function NotificationsScreen() {
   const getNotificationIcon = useCallback((type: NotificationItem['type']) => {
     switch (type) {
       case 'order':
-        return { name: 'package', color: '#3B82F6', bgColor: '#DBEAFE' };
+        return { name: 'shopping-bag', color: '#089643', bgColor: '#E8F5E9' };
       case 'appointment':
       case 'consultation':
-        return { name: 'calendar', color: '#8B5CF6', bgColor: '#EDE9FE' };
+        return { name: 'calendar', color: '#3B82F6', bgColor: '#EFF6FF' };
       case 'promotion':
-        return { name: 'tag', color: '#EB6E25', bgColor: '#FFEDD5' };
+        return { name: 'tag', color: '#F59E0B', bgColor: '#FEF3C7' };
       case 'health_reminder':
       case 'reminder':
         return { name: 'heart', color: '#EC4899', bgColor: '#FCE7F3' };
       case 'review':
-        return { name: 'star', color: '#F59E0B', bgColor: '#FEF3C7' };
+        return { name: 'star', color: '#10B981', bgColor: '#D1FAE5' };
       default:
-        return { name: 'bell', color: '#2FA561', bgColor: '#F0FDF4' };
+        return { name: 'bell', color: '#64748B', bgColor: '#F1F5F9' };
     }
   }, []);
 
@@ -132,7 +133,7 @@ export default function NotificationsScreen() {
         onPress={item.action?.onPress}
       >
         <View style={[styles.iconContainer, { backgroundColor: bgColor }]}>
-          <AppIcon name={name} size={18} color={color} />
+          <AppIcon name={name as any} size={18} color={color} />
         </View>
         <View style={styles.content}>
           <Text style={[styles.title, !item.read && styles.unreadTitle]}>
@@ -249,19 +250,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9', // Subtle, premium light border
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 0, // Clean, zero elevation to avoid harsh Android shadows
     alignItems: 'flex-start',
     gap: 14,
   },
   unreadCard: {
-    backgroundColor: '#F4FBF7',
+    backgroundColor: '#F0FDF4', // Premium light green background for unread notifications
     borderWidth: 1,
-    borderColor: '#E8F5EE',
+    borderColor: '#DCFCE7', // Soft matching border
   },
   iconContainer: {
     width: 44,

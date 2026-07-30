@@ -39,6 +39,8 @@ export const addItemToCart = async (
   const payload = {
     storeId,
     storeName,
+    productId: item.productId, // Root field required by validation middleware
+    quantity: item.quantity,   // Root field required by validation middleware
     item: {
       sku: item.sku,
       medicineId: item.productId,

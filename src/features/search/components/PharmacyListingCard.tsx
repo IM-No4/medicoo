@@ -271,7 +271,7 @@ export default function PharmacyListingCard({
           <FlatList
             data={pharmacy.medicines}
             renderItem={renderMedicineCard}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item, index) => item.id ? `${item.id}-${index}` : `med-${index}`}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.medicinesList}

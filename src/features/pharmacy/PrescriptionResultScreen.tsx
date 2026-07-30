@@ -396,7 +396,7 @@ export default function PrescriptionResultScreen() {
             {stores && stores.length > 0 ? (
               stores.map((store: any, idx: number) => (
                 <TouchableOpacity
-                  key={store.storeId || idx}
+                  key={store.storeId ? `${store.storeId}-${idx}` : idx}
                   style={styles.storeCard}
                   onPress={() =>
                     navigation.navigate("PharmacyDetail", {

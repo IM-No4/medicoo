@@ -6,8 +6,9 @@ export function useSystemUI() {
   useEffect(() => {
     if (Platform.OS !== 'android') return;
 
-    // White navigation bar
-    NavigationBar.setBackgroundColorAsync('#ffffff');
+    // With edge-to-edge enabled on Android (configured in app.json),
+    // setBackgroundColorAsync is not supported and triggers a warning.
+    // NavigationBar.setBackgroundColorAsync('#ffffff');
 
     // Dark icons (or gray depending on system)
     NavigationBar.setButtonStyleAsync('dark');

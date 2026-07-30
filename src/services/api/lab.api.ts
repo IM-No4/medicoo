@@ -1,8 +1,15 @@
 import { apiClient } from './client';
 
 export const getMyLabTests = async () => {
-    const res = await apiClient.get('/api/user/lab-tests');
-    return res.data;
+    try {
+        const res = await apiClient.get('/api/user/lab-tests');
+        return res.data;
+    } catch (error: any) {
+        if (error.response?.status === 404) {
+            return []; // Endpoint not yet available — show empty state
+        }
+        throw error;
+    }
 };
 
 export const getLabTestDetail = async (id: string) => {

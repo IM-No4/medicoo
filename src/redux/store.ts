@@ -11,6 +11,10 @@ import notificationReducer from './slices/notificationSlice';
 
 import bloodDonationReducer from './slices/bloodDonationSlice';
 import deviceReducer from './slices/deviceSlice';
+import vitalsReducer from './slices/vitalsSlice';
+import goalsReducer from './slices/goalsSlice';
+import activityReducer from './slices/activitySlice';
+import orderReducer from './slices/orderSlice';
 
 export const store = configureStore({
   reducer: {
@@ -25,6 +29,10 @@ export const store = configureStore({
     calendar: calendarReducer,
     device: deviceReducer,
     bloodDonation: bloodDonationReducer,
+    vitals: vitalsReducer,
+    goals: goalsReducer,
+    activity: activityReducer,
+    order: orderReducer,
   },
 });
 

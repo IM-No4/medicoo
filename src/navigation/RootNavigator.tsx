@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 
 import { useSystemUI } from '../bootstrap/useSystemUI';
 import CommandPalette from '../command/CommandPalette';
+import GlobalTrackingBanner from '../features/cart/GlobalTrackingBanner';
 import OnboardingStack from '../features/onboarding/OnboardingStack';
 import SplashScreen from '../features/splash/SplashScreen';
 import { RootState } from '../redux/store';
@@ -65,6 +66,11 @@ export default function RootNavigator() {
         visible={paletteOpen}
         onClose={() => setPaletteOpen(false)}
       />
+
+      {/* 📦 GLOBAL ORDER TRACKING BANNER (floats above bottom nav when order is active) */}
+      {boot.isAuthenticated && boot.onboardingCompleted && (
+        <GlobalTrackingBanner />
+      )}
     </>
   );
 }

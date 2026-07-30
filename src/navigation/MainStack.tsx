@@ -15,6 +15,9 @@ import LabStack from './LabStack';
 import MainTabs from './MainTabs';
 import PharmacyStack from './PharmacyStack';
 import SearchStack from './SearchStack';
+import ComingSoonScreen from '../features/home/ComingSoonScreen';
+import ManageGoalsScreen from '../features/health/ManageGoalsScreen';
+import ManageMedicationsScreen from '../features/calendar/ManageMedicationsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -91,7 +94,7 @@ export default function MainStack({
       <Stack.Screen
         name="AddFamilyMember"
         component={AddFamilyMemberScreen}
-        options={{ presentation: 'card' }}
+        options={{ presentation: 'transparentModal', animation: 'slide_from_bottom' }}
       />
       <Stack.Screen
         name="DoctorCall"
@@ -101,6 +104,21 @@ export default function MainStack({
       <Stack.Screen
         name="DoctorChat"
         component={DoctorChatScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="ComingSoon"
+        component={ComingSoonScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="ManageGoals"
+        component={ManageGoalsScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="ManageMedications"
+        component={ManageMedicationsScreen}
         options={{ presentation: 'card', headerShown: false }}
       />
     </Stack.Navigator>

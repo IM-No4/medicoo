@@ -49,8 +49,8 @@ export default function CartItemsHorizontalScroll({ storeId, onItemPress }: Prop
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {cartItems.map((item) => (
-          <View key={String(item.sku)} style={styles.itemCard}>
+        {cartItems.map((item, index) => (
+          <View key={item.sku ? `${String(item.sku)}-${index}` : `cart-item-${index}`} style={styles.itemCard}>
             <TouchableOpacity
               onPress={() => handleItemPress(item)}
               activeOpacity={0.7}

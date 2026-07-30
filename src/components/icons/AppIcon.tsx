@@ -87,15 +87,17 @@ import {
 
 interface AppIconProps {
   name: 'alert-triangle' | 'home' | 'calendar' | 'records' | 'health' | 'profile' | 'bell' | 'shopping-bag' | 'map-pin' | 'chevron-left' | 'chevron-right' | 'chevron-down' | 'chevron-up' | 'search' | 'scan-text' | 'camera' | 'image' | 'pill' | 'stethoscope' | 'notepad-text' | 'calendar-days' | 'video' | 'clipboard-clock' | 'test-tube' | 'hospital' | 'ambulance' | 'home-heart' | 'clock' | 'star' | 'rotate-ccw' | 'plus' | 'minus' | 'arrow-left' | 'filter' | 'share' | 'check-circle' | 'users' | 'mic' | 'mic-off' | 'video-off' | 'phone-off' | 'message-square' | 'heart' | 'x' | 'sun' | 'baby' | 'bone' | 'brain' | 'apple' | 'wind' | 'droplet' | 'flask-conical' | 'brain-circuit' | 'flower-2' | 'eye' | 'briefcase-medical' | 'smile' | 'check' | 'sliders' | 'locate-fixed' | 'briefcase' | 'scan' | 'phone' | 'flask' | 'shield-check' | 'route' | 'navigation' | 'scan-text-icon' | 'store' | 'shopping-cart' | 'alarm-clock-off' | 'map-pin-off' | 'file-text' | 'arrow-right' | 'bug' | 'cloud-rain' | 'snowflake' | 'thermometer' | 'milk' | 'flashlight' | 'award' | 'info' | 'history' | 'clipboard-check' | 'percent' | 'tag' | 'crosshair' | 'trash';
-  stroke?: number
+  stroke?: number;
   color: string;
   size?: number;
+  fill?: string;
 }
 
 export default function AppIcon({
   name,
   color,
   size = 24,
+  fill,
 }: AppIconProps) {
   switch (name) {
     case 'alert-triangle':
@@ -183,7 +185,7 @@ export default function AppIcon({
     case 'message-square':
       return <MessageSquare color={color} size={size} strokeWidth={1.8} />;
     case 'heart':
-      return <Heart color={color} size={size} strokeWidth={1.8} />;
+      return <Heart color={color} size={size} strokeWidth={1.8} fill={fill || 'none'} />;
     case 'x':
       return <X color={color} size={size} strokeWidth={1.8} />;
     case 'sun':

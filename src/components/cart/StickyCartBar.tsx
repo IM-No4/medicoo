@@ -32,19 +32,22 @@ export default function StickyCartBar({ onPress }: Props) {
     return carts[storeId] ?? null;
   }, [carts]);
 
-  if (!activeCart) return null;
-
-  const { storeId, storeName, items } = activeCart;
-
   /** 🔹 Convert items map → array */
-  const itemList = Object.values(items);
-
-  if (itemList.length === 0) return null;
+  const itemList = useMemo(() => {
+    if (!activeCart) return [];
+    return Object.values(activeCart.items);
+  }, [activeCart]);
 
   /** 🔹 Compute item count */
   const itemCount = useMemo(() => {
-    return itemList.reduce((sum, item) => sum + item.quantity, 0);
+    return itemList.length;
   }, [itemList]);
+
+  if (!activeCart) return null;
+
+  const { storeId, storeName } = activeCart;
+
+  if (itemList.length === 0) return null;
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {

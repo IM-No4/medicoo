@@ -1,66 +1,118 @@
-import { Activity, Heart, TrendingUp, Weight } from 'lucide-react-native';
-import React from 'react';
+import { Activity, Heart, TrendingUp, Weight, PlusCircle } from 'lucide-react-native';
+import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
+import { RootState } from '../../../redux/store';
+import HealthHistoryModal from '../../../components/modals/HealthHistoryModal';
 
 interface Props {
   title?: string;
 }
 
 function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
+  const navigation = useNavigation<any>();
+  const [historyVisible, setHistoryVisible] = useState(false);
+
+  const { records } = useSelector((state: RootState) => state.vitals);
+  const { connectedDevice } = useSelector((state: RootState) => state.device);
+
+  const latestManual = records[0];
+  const latestHeartRate = latestManual?.heartRate ?? connectedDevice?.data?.heartRate;
+  const latestSystolic = latestManual?.systolic;
+  const latestDiastolic = latestManual?.diastolic;
+  const latestWeight = latestManual?.weight;
+
+  const hasVitals = latestHeartRate !== undefined || latestSystolic !== undefined || latestWeight !== undefined;
+
+  const handleNavigateToHealth = () => {
+    navigation.navigate('Tabs', { screen: 'Health' });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>{title.toUpperCase()}</Text>
-        <TouchableOpacity>
-          <Text style={styles.seeAll}>History</Text>
+        {hasVitals && (
+          <TouchableOpacity onPress={() => setHistoryVisible(true)}>
+            <Text style={styles.seeAll}>History</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {!hasVitals ? (
+        <TouchableOpacity 
+          style={styles.emptyPlaceholder}
+          onPress={handleNavigateToHealth}
+          activeOpacity={0.8}
+        >
+          <View style={styles.placeholderIconWrapper}>
+            <PlusCircle size={28} color="#2FA561" />
+          </View>
+          <View style={styles.placeholderTextWrapper}>
+            <Text style={styles.placeholderTitle}>Record Vitals</Text>
+            <Text style={styles.placeholderDesc}>
+              Log your heart rate, pressure, and weight to unlock trends and smart health insights.
+            </Text>
+          </View>
         </TouchableOpacity>
-      </View>
+      ) : (
+        <View style={styles.row}>
+          {/* Heart Rate */}
+          <HealthCard
+            info={{
+              label: 'Heart Rate',
+              value: latestHeartRate !== undefined ? `${latestHeartRate}` : '--',
+              unit: 'bpm',
+              color: '#EF4444',
+              bgColor: '#FEF2F2',
+              icon: Heart
+            }}
+            onPress={() => setHistoryVisible(true)}
+          />
 
-      <View style={styles.row}>
-        {/* Heart Rate */}
-        <HealthCard
-          info={{
-            label: 'Heart Rate',
-            value: '72',
-            unit: 'bpm',
-            color: '#EF4444',
-            bgColor: '#FEF2F2',
-            icon: Heart
-          }}
-        />
+          {/* BP */}
+          <HealthCard
+            info={{
+              label: 'Blood Pressure',
+              value: latestSystolic !== undefined && latestDiastolic !== undefined ? `${latestSystolic}/${latestDiastolic}` : '--',
+              unit: 'mmHg',
+              color: '#3B82F6',
+              bgColor: '#EFF6FF',
+              icon: Activity
+            }}
+            onPress={() => setHistoryVisible(true)}
+          />
 
-        {/* BP */}
-        <HealthCard
-          info={{
-            label: 'Blood Pressure',
-            value: '118/76',
-            unit: 'mmHg',
-            color: '#3B82F6',
-            bgColor: '#EFF6FF',
-            icon: Activity
-          }}
-        />
+          {/* Weight */}
+          <HealthCard
+            info={{
+              label: 'Weight',
+              value: latestWeight !== undefined ? `${latestWeight}` : '--',
+              unit: 'kg',
+              color: '#8B5CF6',
+              bgColor: '#F5F3FF',
+              icon: Weight
+            }}
+            onPress={() => setHistoryVisible(true)}
+          />
+        </View>
+      )}
 
-        {/* Weight */}
-        <HealthCard
-          info={{
-            label: 'Weight',
-            value: '72.5',
-            unit: 'kg',
-            color: '#10B981',
-            bgColor: '#ECFDF5',
-            icon: Weight
-          }}
-        />
-      </View>
+      <HealthHistoryModal
+        visible={historyVisible}
+        onClose={() => setHistoryVisible(false)}
+        records={records}
+        connectedDeviceHeartRate={connectedDevice?.data?.heartRate}
+      />
     </View>
   );
 }
 
-function HealthCard({ info }: any) {
+function HealthCard({ info, onPress }: any) {
   const Icon = info.icon;
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={onPress}>
       <View style={[styles.iconBox, { backgroundColor: info.bgColor }]}>
         <Icon size={18} color={info.color} />
       </View>
@@ -102,7 +154,7 @@ const styles = StyleSheet.create({
   seeAll: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#3B82F6',
+    color: '#2FA561',
   },
   row: {
     flexDirection: 'row',
@@ -115,14 +167,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 12,
     paddingBottom: 16,
-    // Soft shadow
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#F1F5F9', // Clean light border
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 0, // Clean, zero elevation to avoid harsh Android shadows
     position: 'relative'
   },
   iconBox: {
@@ -142,7 +193,7 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#1e293b',
   },
   unit: {
@@ -154,7 +205,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     color: '#64748b',
-    fontWeight: '500',
+    fontWeight: '600',
     marginTop: 2,
   },
   trendIcon: {
@@ -162,5 +213,47 @@ const styles = StyleSheet.create({
     top: 12,
     right: 12,
     opacity: 0.8
-  }
+  },
+  /* Placeholder Empty State */
+  emptyPlaceholder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    marginHorizontal: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9', // Subtle slate border
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 0, // Clean, zero elevation to avoid harsh Android shadows
+  },
+  placeholderIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+  },
+  placeholderTextWrapper: {
+    flex: 1,
+  },
+  placeholderTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 3,
+  },
+  placeholderDesc: {
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 18,
+  },
 });

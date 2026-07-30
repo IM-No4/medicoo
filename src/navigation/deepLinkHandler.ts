@@ -1,6 +1,30 @@
 import { executeAction } from '@/src/actions/ActionExecutor';
 
 export function handleDeepLink(url: string) {
+  if (url.includes('/add-address') || url.includes('://add-address')) {
+    try {
+      const parsedUrl = new URL(url);
+      const params: Record<string, string> = {};
+      parsedUrl.searchParams.forEach((value, key) => {
+        params[key] = value;
+      });
+
+      executeAction('OPEN_ADD_ADDRESS', {
+        fullAddress: params.fullAddress,
+        houseNo: params.houseNo,
+        landmark: params.landmark,
+        tag: params.tag || params.label,
+        receiverName: params.receiverName,
+        receiverPhone: params.receiverPhone,
+        latitude: params.latitude,
+        longitude: params.longitude,
+      });
+    } catch (e) {
+      console.warn('Failed to parse add-address deep link query params:', e);
+    }
+    return;
+  }
+
   if (url.includes('/search')) {
     const q = new URL(url).searchParams.get('q');
     if (q) {

@@ -192,6 +192,10 @@ export const ActionRegistry: Record<ActionKey, any> = {
     tab: 'Home',
     screen: 'Notifications',
   },
+  OPEN_RECENT_ACTIVITY: {
+    tab: 'Home',
+    screen: 'RecentActivity',
+  },
   ADD_MEDICINE_FROM_SEARCH: {},
   OPEN_ADDRESS_SELECTOR: {
     tab: 'Profile',
@@ -199,6 +203,9 @@ export const ActionRegistry: Record<ActionKey, any> = {
   },
   INCREMENT_CART_ITEM: {},
   DECREMENT_CART_ITEM: {},
-  OPEN_CHECKOUT: {},
+  OPEN_CHECKOUT: {
+    stack: 'CartStack',
+    screen: 'PaymentScreen',
+  },
   GO_BACK: {},
 };

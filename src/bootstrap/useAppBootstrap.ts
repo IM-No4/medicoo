@@ -4,6 +4,8 @@ import { useDispatch } from 'react-redux';
 
 import { setAppReady } from '../redux/slices/appSlice';
 import { loginSuccess, logout } from '../redux/slices/authSlice';
+import { loadActivityFromStorage } from '../redux/slices/activitySlice';
+import { setActiveOrder } from '../redux/slices/orderSlice';
 
 export function useAppBootstrap() {
   const dispatch = useDispatch();
@@ -22,13 +24,29 @@ export function useAppBootstrap() {
               onboardingComplete,
             })
           );
+
+          // Restore persisted active order (if any) only for authenticated user
+          const rawOrder = await AsyncStorage.getItem('@active_order');
+          if (rawOrder) {
+            try {
+              const parsedOrder = JSON.parse(rawOrder);
+              if (parsedOrder && parsedOrder.status !== 'delivered') {
+                dispatch(setActiveOrder(parsedOrder));
+              }
+            } catch (jsonErr) {
+              console.warn('Failed parsing active order from AsyncStorage:', jsonErr);
+            }
+          }
         } else {
           dispatch(logout());
+          await AsyncStorage.removeItem('@active_order');
         }
       } catch {
         dispatch(logout());
       } finally {
         dispatch(setAppReady(true));
+        // Load persisted in-progress activity
+        dispatch(loadActivityFromStorage() as any);
       }
     };
 

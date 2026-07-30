@@ -3,10 +3,12 @@ import React from 'react';
 
 import HomeScreen from '../features/home/HomeScreen';
 import NotificationsScreen from '../features/notifications/NotificationsScreen';
+import RecentActivityScreen from '../features/home/screens/RecentActivityScreen';
 
 export type HomeStackParamList = {
   HomeMain: undefined;
   Notifications: undefined;
+  RecentActivity: { activities?: any[] } | undefined;
 };
 
 type Props = {
@@ -30,6 +32,11 @@ export default function HomeStack({ onOpenCommandPalette }: Props) {
       <Stack.Screen
         name="Notifications"
         component={NotificationsScreen}
+      />
+
+      <Stack.Screen
+        name="RecentActivity"
+        component={RecentActivityScreen}
       />
     </Stack.Navigator>
   );

@@ -10,6 +10,8 @@ export type Address = {
   fullAddress?: string;
   area?: string;
   city?: string;
+  receiverName?: string;
+  receiverPhone?: string;
 };
 
 type AddressState = {

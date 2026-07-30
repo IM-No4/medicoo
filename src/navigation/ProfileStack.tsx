@@ -22,6 +22,7 @@ import MedicineOrderDetailScreen from '../features/profile/screens/Medicines/Med
 import MedicineOrdersScreen from '../features/profile/screens/Medicines/MedicineOrdersScreen';
 import HelpSupportScreen from '../features/profile/screens/Support/HelpSupportScreen';
 import TermsPrivacyScreen from '../features/profile/screens/Support/TermsPrivacyScreen';
+import OrderSupportScreen from '../features/profile/screens/Support/OrderSupportScreen';
 import EditProfileScreen from '../features/profile/screens/UserDetails/EditProfileScreen';
 import ProfileDetailsScreen from '../features/profile/screens/UserDetails/ProfileDetailsScreen';
 
@@ -32,7 +33,16 @@ export type ProfileStackParamList = {
   DoctorOnboarding: undefined;
   DoctorSettings: undefined;
   AddressBookModal: undefined;
-  AddAddress: undefined;
+  AddAddress: {
+    fullAddress?: string;
+    houseNo?: string;
+    landmark?: string;
+    tag?: string;
+    receiverName?: string;
+    receiverPhone?: string;
+    latitude?: string | number;
+    longitude?: string | number;
+  } | undefined;
   FamilyMembersModal: undefined;
   AddFamilyMember: { member?: any, isEditing?: boolean } | undefined;
   ConsultationModal: undefined;
@@ -101,7 +111,7 @@ export default function ProfileStack() {
       <Stack.Screen
         name="AddFamilyMember"
         component={AddFamilyMemberScreen}
-        options={{ presentation: 'card' }}
+        options={{ presentation: 'transparentModal', animation: 'slide_from_bottom' }}
       />
       {/* Consultations */}
       <Stack.Screen
@@ -151,6 +161,11 @@ export default function ProfileStack() {
         name="TermsModal"
         component={TermsPrivacyScreen}
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+      />
+      <Stack.Screen
+        name="OrderSupport"
+        component={OrderSupportScreen}
+        options={{ presentation: 'card' }}
       />
       <Stack.Screen
         name="ManageAvailability"

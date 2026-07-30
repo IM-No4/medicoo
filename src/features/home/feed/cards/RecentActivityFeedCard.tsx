@@ -2,24 +2,71 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { RecentActivityFeedItem } from '../feed.types';
+import { FeedAction } from '../feed.actions';
 
 type Props = {
     data: RecentActivityFeedItem;
+    onAction?: (action: FeedAction) => void;
 };
 
-function RecentActivityFeedCard({ data }: Props) {
+function RecentActivityFeedCard({ data, onAction }: Props) {
+    const handleViewHistory = () => {
+        if (onAction) {
+            onAction({
+                type: 'NAVIGATE',
+                stack: 'HomeStack',
+                screen: 'RecentActivity',
+                params: { activities: data.activities }
+            });
+        }
+    };
+
+    const handleItemPress = (type: string, id: string) => {
+        if (!onAction) return;
+
+        if (type === 'consultation') {
+            const consultationId = id === 'act1' ? '1' : (id === 'act4' ? '2' : id);
+            onAction({
+                type: 'NAVIGATE',
+                stack: 'ProfileStack',
+                screen: 'ConsultationDetail',
+                params: { consultationId },
+            });
+        } else if (type === 'medicine') {
+            const orderId = id === 'act2' ? 'ord1' : (id === 'act5' ? 'ord2' : id);
+            onAction({
+                type: 'NAVIGATE',
+                stack: 'ProfileStack',
+                screen: 'MedicineOrderDetail',
+                params: { orderId },
+            });
+        } else if (type === 'lab') {
+            const testId = id === 'act3' ? 'lt1' : (id === 'act6' ? 'lt2' : id);
+            onAction({
+                type: 'NAVIGATE',
+                stack: 'ProfileStack',
+                screen: 'LabTestDetail',
+                params: { testId },
+            });
+        }
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>{data.title}</Text>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={handleViewHistory}>
                     <Text style={styles.viewAll}>View History</Text>
                 </TouchableOpacity>
             </View>
 
             <View style={styles.card}>
                 {data.activities.slice(0, 3).map((activity, index) => (
-                    <TouchableOpacity key={activity.id} style={[styles.item, index !== data.activities.length - 1 && styles.borderBottom]}>
+                    <TouchableOpacity
+                        key={activity.id}
+                        style={[styles.item, index !== 2 && styles.borderBottom]}
+                        onPress={() => handleItemPress(activity.type, activity.id)}
+                    >
                         <View style={[styles.iconBox, { backgroundColor: getActivityColor(activity.type).bg }]}>
                             <AppIcon
                                 name={getActivityIcon(activity.type)}
@@ -51,7 +98,7 @@ function getActivityIcon(type: string): any {
         case 'consultation': return 'stethoscope';
         case 'medicine': return 'shopping-bag';
         case 'lab': return 'flask';
-        default: return 'activity';
+        default: return 'info';
     }
 }
 

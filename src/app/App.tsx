@@ -12,6 +12,7 @@ import { store } from '../redux/store';
 
 import { syncCartOnBoot } from '../bootstrap/syncCartOnBoot';
 import { useBoot } from '../bootstrap/useBoot';
+import { usePostLoginEffects } from '../features/auth/usePostLoginEffects';
 import SplashScreen from '../features/splash/SplashScreen';
 
 function AppSplash() {
@@ -20,6 +21,7 @@ function AppSplash() {
 
 function AppContent() {
   const boot = useBoot();
+  usePostLoginEffects();
 
   useEffect(() => {
     if (boot.status !== 'ready') return;

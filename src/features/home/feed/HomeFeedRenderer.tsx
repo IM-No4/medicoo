@@ -1,7 +1,9 @@
 import React from 'react';
+import { View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../redux/store';
 import HealthSummary from '../components/HealthSummary';
+import { GoalsCard } from '../../health/components/GoalsCard';
 import HomeFeedFooter from '../components/HomeFeedFooter';
 import QuickActions from '../components/QuickActions';
 import ServicesSection from '../components/ServicesSection';
@@ -31,6 +33,14 @@ type Props = {
 
 export default function HomeFeedRenderer({ item, onAction }: Props) {
   const { data: calendarData } = useSelector((state: RootState) => state.calendar);
+
+  if ((item.type as any) === 'GOALS_SECTION') {
+    return (
+      <View style={{ marginBottom: 24 }}>
+        <GoalsCard onAddGoal={() => onAction?.({ type: 'NAVIGATE', stack: 'Tabs', screen: 'Health' } as any)} />
+      </View>
+    );
+  }
 
   switch (item.type) {
     case 'DYNAMIC_HEADER':
@@ -76,7 +86,7 @@ export default function HomeFeedRenderer({ item, onAction }: Props) {
     case 'FAMILY_OVERVIEW':
       return <FamilyOverviewCard data={item as any} onAction={onAction} />;
     case 'RECENT_ACTIVITY':
-      return <RecentActivityFeedCard data={item as any} />;
+      return <RecentActivityFeedCard data={item as any} onAction={onAction} />;
     case 'TRUST_SIGNAL':
       return <TrustSignalCard data={item as any} />;
     case 'BLOOD_DONATION_AWARENESS':

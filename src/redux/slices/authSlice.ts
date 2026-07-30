@@ -4,12 +4,14 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   onboardingComplete: boolean;
+  mobile: string | null;
 }
 
 const initialState: AuthState = {
   token: null,
   isAuthenticated: false,
   onboardingComplete: false,
+  mobile: null,
 };
 
 const authSlice = createSlice({
@@ -20,6 +22,7 @@ const authSlice = createSlice({
       state.token = action.payload.token;
       state.isAuthenticated = true;
       state.onboardingComplete = action.payload.onboardingComplete ?? false;
+      if (action.payload.mobile) state.mobile = action.payload.mobile;
     },
     completeOnboarding(state) {
       state.onboardingComplete = true;

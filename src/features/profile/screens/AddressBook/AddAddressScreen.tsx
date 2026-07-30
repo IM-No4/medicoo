@@ -1,4 +1,4 @@
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Contacts from 'expo-contacts';
 import * as Location from 'expo-location';
 import { Briefcase, Check, ChevronLeft, Contact, Crosshair, Home, MapPin } from 'lucide-react-native';
@@ -19,7 +19,7 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
-import { addUserAddress } from '../../../../services/api/address.api';
+import { addUserAddress, updateUserAddress } from '../../../../services/api/address.api';
 
 type FloatingLabelInputProps = {
     label: string;
@@ -90,11 +90,12 @@ function FloatingLabelInput({
 
 export default function AddAddressScreen() {
     const navigation = useNavigation();
+    const route = useRoute<any>();
     const insets = useSafeAreaInsets();
 
     const [loadingLocation, setLoadingLocation] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [step, setStep] = useState(1); // 1: Location, 2: Details & Receiver
+    const [step, setStep] = useState(route.params?.fullAddress ? 2 : 1); // 1: Location, 2: Details & Receiver
 
     // Status Modal State
     const [status, setStatus] = useState<{
@@ -134,6 +135,46 @@ export default function AddAddressScreen() {
         latitudeDelta: 0.005,
         longitudeDelta: 0.005,
     });
+
+    useEffect(() => {
+        if (route.params) {
+            const {
+                fullAddress,
+                houseNo,
+                landmark,
+                tag,
+                receiverName,
+                receiverPhone,
+                latitude,
+                longitude,
+            } = route.params;
+
+            setFormData(prev => ({
+                ...prev,
+                fullAddress: fullAddress || prev.fullAddress,
+                houseNo: houseNo || prev.houseNo,
+                landmark: landmark || prev.landmark,
+                tag: tag || prev.tag,
+                receiverName: receiverName || prev.receiverName,
+                receiverPhone: receiverPhone || prev.receiverPhone,
+                isMyAddress: !receiverName && !receiverPhone,
+            }));
+
+            if (latitude && longitude) {
+                const newRegion = {
+                    latitude: parseFloat(latitude),
+                    longitude: parseFloat(longitude),
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                };
+                setRegion(newRegion);
+            }
+
+            if (fullAddress) {
+                setStep(2);
+            }
+        }
+    }, [route.params]);
 
     const handleUseCurrentLocation = useCallback(async () => {
         setLoadingLocation(true);
@@ -186,8 +227,10 @@ export default function AddAddressScreen() {
     }, [showStatus]);
 
     useEffect(() => {
-        void handleUseCurrentLocation();
-    }, [handleUseCurrentLocation]);
+        if (!route.params?.fullAddress && !route.params?.latitude) {
+            void handleUseCurrentLocation();
+        }
+    }, [handleUseCurrentLocation, route.params]);
 
     const handleContactPick = async () => {
         try {
@@ -235,7 +278,6 @@ export default function AddAddressScreen() {
         }
 
         setSaving(true);
-        // API call
         try {
             const payload = {
                 label: formData.tag === 'Other' ? formData.customLabel : formData.tag,
@@ -244,26 +286,29 @@ export default function AddAddressScreen() {
                 nearBy: formData.landmark,
                 fullAddress: formData.fullAddress,
                 receiverName: formData.receiverName,
-                receiverNumber: formData.receiverPhone,
+                receiverPhone: formData.receiverPhone,
                 isDefault: false,
                 location: { 
                     type: "Point", 
                     coordinates: [region.longitude, region.latitude] 
                 }
             };
-            await addUserAddress(payload);
-            
-            showStatus('success', 'Address Saved', 'Your new delivery address has been added successfully.');
-                        } catch {
-                            showStatus('error', 'Error', 'Failed to save address. Please try again.');
-                        } finally {
-                            setSaving(false);
+            if (route.params?.id || route.params?._id) {
+                await updateUserAddress(route.params.id || route.params._id, payload);
+                showStatus('success', 'Address Saved', 'Your delivery address has been updated successfully.');
+            } else {
+                await addUserAddress(payload);
+                showStatus('success', 'Address Saved', 'Your new delivery address has been added successfully.');
+            }
+        } catch {
+            showStatus('error', 'Error', 'Failed to save address. Please try again.');
+        } finally {
+            setSaving(false);
         }
     };
 
     const renderStep1 = () => (
         <View style={{ flex: 1 }}>
-
             <View style={styles.mapContainer}>
                 <MapView
                     ref={mapRef}

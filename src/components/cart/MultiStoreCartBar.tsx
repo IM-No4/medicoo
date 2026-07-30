@@ -79,7 +79,7 @@ export default function MultiStoreCartBar() {
         snapToInterval={CARD_WIDTH + CARD_SPACING}
         snapToAlignment="start"
         onMomentumScrollEnd={onMomentumScrollEnd}
-        keyExtractor={(item) => item.storeId}
+        keyExtractor={(item, index) => item.storeId ? `${item.storeId}-${index}` : `cart-${index}`}
         contentContainerStyle={styles.listContent}
         getItemLayout={(data, index) => ({
           length: CARD_WIDTH + CARD_SPACING,
@@ -87,10 +87,7 @@ export default function MultiStoreCartBar() {
           index,
         })}
         renderItem={({ item: cart }) => {
-          const itemCount: number = Object.values(cart.items).reduce(
-            (sum: number, item: any) => sum + item.quantity,
-            0
-          );
+          const itemCount: number = Object.keys(cart.items).length;
 
           return (
             <View style={[styles.cardWrapper, { width: CARD_WIDTH }]}>

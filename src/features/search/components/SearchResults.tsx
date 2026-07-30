@@ -219,7 +219,7 @@ export default function SearchResults({ results, activeTab }: Props) {
         <FlatList
           horizontal
           data={featuredMedicines}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => item.id ? `${item.id}-${index}` : `feat-${index}`}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.horizontalList}
           renderItem={({ item }) => (
@@ -293,7 +293,7 @@ export default function SearchResults({ results, activeTab }: Props) {
           <View style={styles.pharmacyListContainer}>
             {mergedPharmacyGroups.map((group, index) => (
               <PharmacyListingCard
-                key={group.pharmacyId}
+                key={`${group.pharmacyId}-${index}`}
                 pharmacy={{
                   id: group.pharmacyId,
                   name: group.pharmacyName,

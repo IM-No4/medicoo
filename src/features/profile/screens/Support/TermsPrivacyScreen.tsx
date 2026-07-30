@@ -73,7 +73,7 @@ export default function TermsPrivacyScreen() {
                     <Text style={styles.noteText}>If you have any questions regarding our terms, please contact our legal team at legal@medicoo.in</Text>
                 </View>
 
-                <TouchableOpacity style={styles.acceptButton}>
+                <TouchableOpacity style={styles.acceptButton} onPress={() => navigation.goBack()}>
                     <Text style={styles.acceptButtonText}>I Understand</Text>
                 </TouchableOpacity>
             </ScrollView>

@@ -44,6 +44,12 @@ function ServicesSection({ title, services, onAction }: Props) {
     ).length;
   }, [carts]);
 
+  const visibleServices = useMemo(() => {
+    return services.filter(
+      (item) => item.id !== 'ambulance' && item.id !== 'homecare'
+    );
+  }, [services]);
+
   const onPressService = useCallback(
     (item: ServiceItem) => {
       if (item.enabled === false) return;
@@ -111,7 +117,7 @@ function ServicesSection({ title, services, onAction }: Props) {
       <Text style={styles.title}>{title}</Text>
 
       <FlatList
-        data={services}
+        data={visibleServices}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         horizontal

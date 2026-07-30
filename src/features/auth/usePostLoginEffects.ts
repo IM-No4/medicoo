@@ -7,19 +7,21 @@ import {
 } from '../../services/socketService';
 
 export function usePostLoginEffects() {
-  const { isAuthenticated, onboardingComplete } = useSelector(
-    (state: RootState) => state.auth
-  );
+  const boot = useSelector((state: RootState) => state.boot);
+  const auth = useSelector((state: RootState) => state.auth);
+
+  const isReady =
+    (boot.status === 'ready' && boot.isAuthenticated && boot.onboardingCompleted) ||
+    (auth.isAuthenticated && auth.onboardingComplete);
 
   useEffect(() => {
     // User is fully ready → start services
-    if (isAuthenticated && onboardingComplete) {
+    if (isReady) {
       initializeSocket();
-      // syncCartFromServer(); ← later
       return;
     }
 
     // User logged out OR not onboarded → clean up
     resetSocketState();
-  }, [isAuthenticated, onboardingComplete]);
+  }, [isReady]);
 }

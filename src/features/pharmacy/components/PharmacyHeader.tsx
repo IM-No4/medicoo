@@ -4,22 +4,17 @@ import {
   checkFavoritePharmacy,
   removeFavoritePharmacy,
 } from "@/src/services/api/pharmacy.api";
+import { getToken } from "@/src/utils/tokenManagement";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
-  Image,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const DEALS = [
   {
@@ -42,43 +37,41 @@ const DEALS = [
   },
 ];
 
-const AUTO_SCROLL_INTERVAL = 3000; // 3 seconds
+const AUTO_SCROLL_INTERVAL = 4000;
 
 export default function PharmacyHeader({
   pharmacy,
   onBack,
+  children,
+  onLayout,
 }: {
   pharmacy: any;
   onBack: () => void;
+  children?: React.ReactNode;
+  onLayout?: (event: any) => void;
 }) {
+  const insets = useSafeAreaInsets();
   const isOpen = pharmacy?.status === "online";
   const rating = Number(pharmacy?.rating) || 0;
   const reviewCount = pharmacy?.reviewCount || 0;
   const deliveryTime = pharmacy?.deliveryTime || "30-35 mins";
   const distance = pharmacy?.distance || "0.0";
 
-  const scrollViewRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
-  // Auto-scroll carousel
+  useEffect(() => {
+    getToken("access_token").then(setAuthToken).catch(console.error);
+  }, []);
+
+  // Auto-scroll deals banner
   useEffect(() => {
     let isMounted = true;
     const interval = setInterval(() => {
       if (!isMounted) return;
-      setActiveIndex((prevIndex) => {
-        const nextIndex = (prevIndex + 1) % DEALS.length;
-        try {
-          scrollViewRef.current?.scrollTo({
-            x: nextIndex * SCREEN_WIDTH,
-            animated: true,
-          });
-        } catch (e) {
-          // Silently ignore if ScrollView is detached
-        }
-        return nextIndex;
-      });
+      setActiveIndex((prevIndex) => (prevIndex + 1) % DEALS.length);
     }, AUTO_SCROLL_INTERVAL);
 
     return () => {
@@ -87,16 +80,15 @@ export default function PharmacyHeader({
     };
   }, []);
 
-  // Check favorite status on mount
   useEffect(() => {
-    if (pharmacy?.storeId || pharmacy?.id) {
+    if (pharmacy?.storeId || pharmacy?.id || pharmacy?._id) {
       checkFavoriteStatus();
     }
-  }, [pharmacy?.storeId, pharmacy?.id]);
+  }, [pharmacy?.storeId, pharmacy?.id, pharmacy?._id]);
 
   const checkFavoriteStatus = async () => {
     try {
-      const storeId = pharmacy?.storeId || pharmacy?.id;
+      const storeId = pharmacy?.storeId || pharmacy?.id || pharmacy?._id;
       if (!storeId) return;
 
       const favorite = await checkFavoritePharmacy(storeId);
@@ -107,7 +99,7 @@ export default function PharmacyHeader({
   };
 
   const handleToggleFavorite = async () => {
-    const storeId = pharmacy?.storeId || pharmacy?.id;
+    const storeId = pharmacy?.storeId || pharmacy?.id || pharmacy?._id;
     if (!storeId || isFavoriteLoading) return;
 
     setIsFavoriteLoading(true);
@@ -126,219 +118,119 @@ export default function PharmacyHeader({
     }
   };
 
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const scrollPosition = event.nativeEvent.contentOffset.x;
-    const index = Math.round(scrollPosition / SCREEN_WIDTH);
-    setActiveIndex(index);
-  };
-
   return (
-    <View style={styles.container}>
-      {/* Store Image with overlaid buttons and badges */}
-      <View style={styles.imageContainer}>
-        {pharmacy?.storeOutsideImg ? (
-          <Image
-            source={{ uri: pharmacy.storeOutsideImg }}
-            style={styles.storeImage}
-          />
-        ) : (
-          <View style={styles.placeholderImage}>
-            <Image
-              source={require("../../../assets/images/pharmacy-placeholder.png")}
-              style={styles.storeImage}
-            />
-          </View>
-        )}
-
-        {/* Top gradient overlay for buttons */}
+    <View style={styles.container} onLayout={onLayout}>
+      {/* Dark Green Header Background (fully contains the info card) */}
+      <View style={[styles.darkHeader, { paddingTop: insets.top + 8 }]}>
         <LinearGradient
-          colors={["rgba(7, 8, 7, 0.4)", "rgba(247, 247, 247, 0)"]}
+          colors={["#FFF", "#FFF"]}
           start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.topGradient}
-        >
-          <View style={styles.topBar}>
-            <TouchableOpacity onPress={onBack}>
-              <LinearGradient
-                colors={[
-                  "rgba(255, 255, 255, 0.9)",
-                  "rgba(255, 255, 255, 0.7)",
-                ]}
-                style={styles.backButton}
-              >
-                <AppIcon name="arrow-left" size={24} color="#1c1c1e" />
-              </LinearGradient>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleToggleFavorite}
-              disabled={isFavoriteLoading}
-            >
-              <LinearGradient
-                colors={[
-                  "rgba(255, 255, 255, 0.9)",
-                  "rgba(255, 255, 255, 0.7)",
-                ]}
-                style={styles.favoriteButton}
-              >
-                {isFavoriteLoading ? (
-                  <ActivityIndicator size="small" color="#13701c" />
-                ) : (
-                  <AppIcon
-                    name="heart"
-                    size={24}
-                    color={isFavorite ? "#EF4444" : "#1c1c1e"}
-                  />
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.headerBar}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <AppIcon name="arrow-left" size={24} color="#1c1c1e" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleToggleFavorite}
+            disabled={isFavoriteLoading}
+            style={styles.favoriteButton}
+          >
+            {isFavoriteLoading ? (
+              <ActivityIndicator size="small" color="#1c1c1e" />
+            ) : (
+              <AppIcon
+                name="heart"
+                size={24}
+                color={isFavorite ? "#EF4444" : "#828282ff"}
+                fill={isFavorite ? "#EF4444" : "none"}
+              />
+            )}
+          </TouchableOpacity>
+        </View>
 
-        {/* Deals Carousel or Offline Badge at bottom */}
-        {!isOpen ? (
-          <View style={styles.offlineTagContainer}>
-            <LinearGradient
-              colors={["rgba(247, 247, 247, 0)", "rgba(5, 2, 2, 0.95)"]}
-              style={styles.offlineTagGradient}
-            >
-              <View style={styles.offlineTagContent}>
-                <AppIcon name="alarm-clock-off" size={20} color="#FFFFFF" />
-                <View style={styles.offlineTagTextContainer}>
-                  <Text style={styles.offlineTagTitle}>Currently Offline</Text>
-                  <Text style={styles.offlineTagSubtitle}>
-                    Store is closed. Check back later.
-                  </Text>
-                </View>
-              </View>
-            </LinearGradient>
-          </View>
-        ) : (
-          <View style={styles.dealsCarouselContainer}>
-            <LinearGradient
-              colors={["rgba(247, 247, 247, 0)", "rgba(7, 8, 7, 0.95)"]}
-              style={styles.dealsGradient}
-            >
-              <ScrollView
-                ref={scrollViewRef}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onScroll={handleScroll}
-                scrollEventThrottle={16}
-                style={styles.dealsScrollView}
-              >
-                {DEALS.map((deal) => (
-                  <View key={deal.id} style={styles.dealSlide}>
-                    <Text style={styles.dealBadgeTitle}>{deal.title}</Text>
-                    <Text style={styles.dealBadgeDiscount}>
-                      {deal.discount}
-                    </Text>
-                    <Text style={styles.dealDescription}>
-                      {deal.description}
-                    </Text>
-                  </View>
-                ))}
-              </ScrollView>
+        {/* Floating White Card */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoRow}>
+            <View style={styles.nameContainer}>
+              <Text style={styles.storeName} numberOfLines={1}>
+                {pharmacy?.storeName || "Pharmacy Name"}
+              </Text>
+              <Text style={styles.categoriesText}>
+                Medicines, Healthcare, Wellness Products
+              </Text>
+            </View>
 
-              {/* Pagination Dots */}
-              <View style={styles.paginationContainer}>
-                {DEALS.map((_, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.paginationDot,
-                      index === activeIndex && styles.paginationDotActive,
-                    ]}
-                  />
-                ))}
+            {/* Rating Badge */}
+            <View style={styles.ratingBadgeContainer}>
+              <View style={styles.ratingBadge}>
+                <Text style={styles.ratingText}>
+                  {rating > 0 ? rating.toFixed(1) : "0.0"}
+                </Text>
+                <AppIcon name="star" size={12} color="#4B5563" />
               </View>
-            </LinearGradient>
+              <Text style={styles.reviewCountText}>
+                {reviewCount}K+ ratings
+              </Text>
+            </View>
           </View>
-        )}
+
+          {/* Time and Distance */}
+          <View style={styles.detailsRow}>
+            <AppIcon name="clock" size={14} color="#6B7280" />
+            <Text style={styles.detailsText}>{deliveryTime}</Text>
+            <Text style={styles.bullet}>•</Text>
+            <AppIcon name="map-pin" size={14} color="#6B7280" />
+            <Text style={styles.detailsText}>{distance} km</Text>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Status / Offers */}
+          {!isOpen ? (
+            <View style={styles.offlineBadge}>
+              <AppIcon name="alarm-clock-off" size={14} color="#6B7280" />
+              <Text style={styles.offlineBadgeText}>Currently Unavailable</Text>
+            </View>
+          ) : (
+            <View style={styles.dealBanner}>
+              <AppIcon name="percent" size={16} color="#0E7439" />
+              <Text style={styles.dealBannerText} numberOfLines={1}>
+                {DEALS[activeIndex].title}: {DEALS[activeIndex].discount} |{" "}
+                {DEALS[activeIndex].description}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
-      {/* Store Info */}
-      <View style={styles.storeInfo}>
-        {/* Verified Tag - Hidden by default like list screen */}
-        <View style={styles.verifiedTag}>
-          <Text style={styles.verifiedText}>Verified</Text>
-          <View style={styles.verifiedUnderline} />
-        </View>
-
-        {/* Store Name */}
-        <Text style={styles.storeName}>
-          {pharmacy?.storeName || "Pharmacy Name"}
-        </Text>
-
-        {/* Rating and Delivery Time */}
-        <View style={styles.ratingRow}>
-          <View style={styles.ratingBadge}>
-            <AppIcon name="star" size={14} color="#ff9900" />
-          </View>
-          <Text style={styles.ratingText}>
-            {rating > 0 ? rating.toFixed(1) : "0.0"}
-          </Text>
-          <Text style={styles.reviewCountText}>({reviewCount}K+)</Text>
-          <Text style={styles.deliveryTimeDot}>•</Text>
-          <Text style={styles.deliveryTimeText}>{deliveryTime}</Text>
-        </View>
-
-        {/* Categories */}
-        <Text style={styles.categoriesText}>
-          Medicines, Healthcare, Wellness Products
-        </Text>
-
-        {/* Location and Distance */}
-        <View style={styles.locationRow}>
-          <Text style={styles.locationText}>
-            {pharmacy?.fullAddress || "Location"}
-          </Text>
-          <Text style={styles.distanceDot}>•</Text>
-          <Text style={styles.distanceText}>{distance} km</Text>
-        </View>
-      </View>
+      {/* Search Bar / children outside the top card */}
+      {children && <View style={styles.childrenContainer}>{children}</View>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#ffffff",
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    backgroundColor: "#F6F7F9",
     marginBottom: 12,
-    paddingBottom: 20,
   },
-  imageContainer: {
-    width: "100%",
-    height: 280,
+  darkHeader: {
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    paddingBottom: 4,
+    overflow: "hidden",
     position: "relative",
-    backgroundColor: "#F2F2F7",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
-  storeImage: {
-    width: "100%",
-    height: "100%",
-  },
-  placeholderImage: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  topGradient: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    paddingTop: 50,
-    paddingBottom: 60,
-  },
-  topBar: {
+  headerBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
+    paddingBottom: 0,
   },
   backButton: {
     width: 40,
@@ -348,205 +240,120 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   favoriteButton: {
-    width: 40,
-    height: 40,
+    width: 35,
+    height: 35,
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
   },
-  dealsCarouselContainer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  dealsGradient: {
-    paddingTop: 40,
-    paddingBottom: 12,
-  },
-  dealsScrollView: {
-    width: SCREEN_WIDTH,
-  },
-  dealSlide: {
-    width: SCREEN_WIDTH,
-    paddingHorizontal: 16,
-  },
-  dealBadgeTitle: {
-    fontSize: 11,
+  headerTitle: {
+    fontSize: 16,
     fontWeight: "700",
     color: "#FFFFFF",
-    letterSpacing: 0.5,
-    marginBottom: 2,
   },
-  dealBadgeDiscount: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    letterSpacing: 0.5,
-    marginBottom: 2,
+  infoCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    marginHorizontal: 16,
+    padding: 16,
   },
-  dealDescription: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "rgba(255, 255, 255, 0.85)",
-    letterSpacing: 0.3,
-  },
-  paginationContainer: {
+  infoRow: {
     flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 10,
-    gap: 6,
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
-  paginationDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "rgba(255, 255, 255, 0.4)",
-  },
-  paginationDotActive: {
-    width: 20,
-    backgroundColor: "#FFFFFF",
-  },
-  storeInfo: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  verifiedTag: {
-    marginBottom: 4,
-    display: "none", // Hidden like list screen
-  },
-  verifiedText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#FF6B35",
-    letterSpacing: 0.3,
-  },
-  verifiedUnderline: {
-    width: 42,
-    height: 2,
-    backgroundColor: "#FF6B35",
-    marginTop: 1,
-    borderRadius: 1,
+  nameContainer: {
+    flex: 1,
+    paddingRight: 8,
   },
   storeName: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "700",
     color: "#1C1C1E",
-    marginBottom: 8,
+    marginBottom: 4,
     letterSpacing: 0.3,
   },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  ratingBadge: {
-    width: 16,
-    height: 16,
-    borderRadius: 9,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 4,
-  },
-  ratingText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#1C1C1E",
-    marginRight: 3,
-  },
-  reviewCountText: {
-    fontSize: 14,
-    fontWeight: "400",
-    color: "#1C1C1E",
-    marginRight: 6,
-  },
-  deliveryTimeDot: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#1C1C1E",
-    marginRight: 6,
-  },
-  deliveryTimeText: {
-    fontSize: 14,
-    fontWeight: "400",
-    color: "#1C1C1E",
-  },
   categoriesText: {
-    fontSize: 13,
-    fontWeight: "400",
+    fontSize: 12,
+    fontWeight: "500",
     color: "#6B7280",
-    marginBottom: 6,
-    letterSpacing: 0.2,
-  },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
     marginBottom: 8,
   },
-  locationText: {
-    fontSize: 13,
-    fontWeight: "400",
-    color: "#6B7280",
-    flex: 1,
+  ratingBadgeContainer: {
+    alignItems: "center",
   },
-  distanceDot: {
-    fontSize: 13,
-    fontWeight: "400",
-    color: "#6B7280",
-    marginHorizontal: 6,
+  ratingBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F6F7F9",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
   },
-  distanceText: {
+  ratingText: {
     fontSize: 13,
-    fontWeight: "400",
+    fontWeight: "800",
+    color: "#4B5563",
+  },
+  reviewCountText: {
+    fontSize: 11,
+    fontWeight: "500",
     color: "#6B7280",
+    marginTop: 4,
+  },
+  detailsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    gap: 6,
+  },
+  detailsText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#4B5563",
+  },
+  bullet: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#9CA3AF",
+  },
+  divider: {
+    borderTopWidth: 1,
+    borderTopColor: "#F2F2F7",
+    marginVertical: 12,
   },
   offlineBadge: {
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    marginTop: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: "#F3F4F6",
+    gap: 6,
   },
   offlineBadgeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
-    color: "#FFFFFF",
-    marginLeft: 4,
+    color: "#6B7280",
     letterSpacing: 0.2,
   },
-  offlineTagContainer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  offlineTagGradient: {
-    paddingTop: 40,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-  },
-  offlineTagContent: {
+  dealBanner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
   },
-  offlineTagTextContainer: {
+  dealBannerText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#4B5563",
     flex: 1,
   },
-  offlineTagTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  offlineTagSubtitle: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "rgba(255, 255, 255, 0.9)",
-    letterSpacing: 0.3,
+  cardChildrenContainer: {
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F2F2F7",
+    paddingTop: 12,
   },
 });

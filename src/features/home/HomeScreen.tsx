@@ -23,6 +23,7 @@ import UpcomingSkeleton from './skeletons/UpcomingSkeleton';
 import { AppDispatch, RootState } from '../../redux/store';
 import { setHomeBootstrapped, setPrescriptionModalVisible } from '../../redux/slices/appSlice';
 import { loadCalendarData } from '../../redux/slices/calendarSlice';
+import { selectActiveGoals } from '../../redux/slices/goalsSlice';
 import { uploadPrescription } from '@/src/services/api/prescription.api';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 import { DynamicHeaderFeedItem } from './feed/feed.types';
@@ -56,6 +57,62 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
 
   // Hook for feed data
   const { data: feedData, loading: feedLoading, loadMore, refresh: refreshFeed } = useHomeFeed();
+
+  // Only show goals section if there are active goals
+  const activeGoals = useSelector(selectActiveGoals);
+  const hasActiveGoals = activeGoals.length > 0;
+
+  // Load tracked in-progress activity from Redux (backed by AsyncStorage)
+  const trackedActivity = useSelector((state: RootState) => state.activity?.activity ?? null);
+
+  // Filter out showcases of features not in area yet (Lab, Hospital, Home Care showcases)
+  const visibleFeedData = useMemo(() => {
+    const filtered = feedData.filter(
+      (item) =>
+        item.type !== 'LAB_PACKAGE_SHOWCASE' &&
+        item.type !== 'HOSPITAL_SHOWCASE' &&
+        item.type !== 'HOME_CARE_SHOWCASE' &&
+        item.type !== 'CONTINUE_ACTIVITY' // always exclude any static mock
+    );
+
+    // Dynamically inject CONTINUE_ACTIVITY right after QUICK_ACTIONS when there's a tracked activity
+    let result = [...filtered];
+    if (trackedActivity) {
+      const quickActionsIndex = result.findIndex(item => item.type === 'QUICK_ACTIONS');
+      const insertAt = quickActionsIndex !== -1 ? quickActionsIndex + 1 : 0;
+      result.splice(insertAt, 0, {
+        id: 'dynamic_continue_activity',
+        type: 'CONTINUE_ACTIVITY',
+        title: trackedActivity.title,
+        subtitle: trackedActivity.subtitle,
+        ctaText: 'Resume',
+        icon: trackedActivity.icon,
+        progress: trackedActivity.progress,
+        actionIdentifier: trackedActivity.id,
+        // Pass navigation target via action field
+        action: {
+          type: 'NAVIGATE',
+          stack: trackedActivity.stack,
+          screen: trackedActivity.screen,
+          params: trackedActivity.params,
+        },
+      } as any);
+    }
+
+    // Only inject Goals section when user has created active goals
+    if (hasActiveGoals) {
+      const summaryIndex = result.findIndex(item => item.type === 'HEALTH_SUMMARY');
+      if (summaryIndex !== -1) {
+        const insertIndex = Math.min(result.length, summaryIndex + 2);
+        result.splice(insertIndex, 0, {
+          id: 'virtual_goals_card',
+          type: 'GOALS_SECTION'
+        } as any);
+      }
+    }
+
+    return result;
+  }, [feedData, hasActiveGoals, trackedActivity]);
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const scrollValueRef = useRef(0);
@@ -250,7 +307,7 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
       />
 
       <Animated.FlatList
-        data={isInitialLoading ? [] : feedData}
+        data={isInitialLoading ? [] : visibleFeedData}
         extraData={useSelector((state: RootState) => state.cart)}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (

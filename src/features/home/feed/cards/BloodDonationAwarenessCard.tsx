@@ -56,13 +56,12 @@ const styles = StyleSheet.create({
         marginBottom: 28,
         marginHorizontal: 24,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
-        // Subtle shadow
-        shadowColor: '#000',
+        borderColor: '#F1F5F9', // Subtle premium border
+        shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
+        shadowOpacity: 0.02,
+        shadowRadius: 4,
+        elevation: 0, // Clean, zero elevation to avoid harsh Android shadows
     },
     content: {
         flexDirection: 'row',

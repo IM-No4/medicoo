@@ -44,43 +44,12 @@ export default function LabTestsHistoryScreen() {
             setTests(data || []);
         } catch (error) {
             console.error('Error fetching lab tests:', error);
-            // Fallback mock data
-            if (tests.length === 0) {
-                setTests([
-                    {
-                        _id: 'lt1',
-                        testName: 'Complete Blood Count (CBC)',
-                        labName: 'Dr. Lal PathLabs',
-                        patientName: 'John Doe',
-                        date: '2026-01-15',
-                        status: 'Completed',
-                        reportAvailable: true
-                    },
-                    {
-                        _id: 'lt2',
-                        testName: 'Lipid Profile',
-                        labName: 'Metropolis Healthcare',
-                        patientName: 'John Doe',
-                        date: '2026-01-22',
-                        status: 'Processing',
-                        reportAvailable: false
-                    },
-                    {
-                        _id: 'lt3',
-                        testName: 'Thyroid Profile (T3 T4 TSH)',
-                        labName: 'Dr. Lal PathLabs',
-                        patientName: 'Jane Doe',
-                        date: '2026-01-28',
-                        status: 'Scheduled',
-                        reportAvailable: false
-                    }
-                ]);
-            }
+            setTests([]);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [tests.length]);
+    }, []);
 
     useFocusEffect(
         useCallback(() => {
@@ -181,9 +150,6 @@ export default function LabTestsHistoryScreen() {
                             </View>
                             <Text style={styles.emptyTitle}>No Test Results</Text>
                             <Text style={styles.emptySubtitle}>Your lab test history and reports will appear here once you book a test.</Text>
-                            <TouchableOpacity style={styles.bookButton} onPress={() => executeAction('OPEN_LABS')}>
-                                <Text style={styles.bookButtonText}>Book a Test</Text>
-                            </TouchableOpacity>
                         </View>
                     ) : (
                         <View style={styles.loadingContainer}>
@@ -351,8 +317,8 @@ const styles = StyleSheet.create({
     },
     emptyTitle: {
         fontSize: 18,
-        fontWeight: '800',
-        color: '#111827',
+        fontWeight: '700',
+        color: '#1F2937',
         marginBottom: 8,
     },
     emptySubtitle: {
@@ -360,19 +326,6 @@ const styles = StyleSheet.create({
         color: '#6B7280',
         textAlign: 'center',
         paddingHorizontal: 40,
-        lineHeight: 20,
-        marginBottom: 24,
-    },
-    bookButton: {
-        backgroundColor: '#6366F1',
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 14,
-    },
-    bookButtonText: {
-        color: '#fff',
-        fontWeight: '700',
-        fontSize: 14,
     },
     loadingContainer: {
         marginTop: 100,

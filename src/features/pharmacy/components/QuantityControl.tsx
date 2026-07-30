@@ -1,16 +1,19 @@
-import AppIcon from '@/src/components/icons/AppIcon';
-import { updateCartItemQuantity, removeItemFromCart } from '@/src/services/api/cart.api';
-import { updateItemQuantityLocal } from '@/src/redux/slices/cartSlice';
-import React, { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useDispatch } from 'react-redux';
+import AppIcon from "@/src/components/icons/AppIcon";
+import { updateItemQuantityLocal } from "@/src/redux/slices/cartSlice";
+import {
+  removeItemFromCart,
+  updateCartItemQuantity,
+} from "@/src/services/api/cart.api";
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useDispatch } from "react-redux";
 
 interface Props {
   storeId: string;
   sku: string | number;
   quantity: number;
   disabled?: boolean;
-  size?: 'small' | 'medium' | 'large';
+  size?: "small" | "medium" | "large";
   productId: string;
   onQuantityChange?: (newQuantity: number) => void;
 }
@@ -20,46 +23,43 @@ export default function QuantityControl({
   sku,
   quantity,
   disabled = false,
-  size = 'medium',
+  size = "medium",
   productId,
   onQuantityChange,
 }: Props) {
   const dispatch = useDispatch();
-  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleIncrement = async () => {
-    if (disabled || isUpdating) return;
-    
+    if (disabled) return;
+
     const newQuantity = quantity + 1;
-    setIsUpdating(true);
-    
+
     try {
       // Update backend
       await updateCartItemQuantity(storeId, sku, productId, newQuantity);
-      
+
       // Update Redux
       dispatch(
         updateItemQuantityLocal({
           storeId,
           sku,
           quantity: newQuantity,
-        })
+        }),
       );
-      
+
       onQuantityChange?.(newQuantity);
     } catch (e) {
-      console.error('Failed to update quantity', e);
+      console.error("Failed to update quantity", e);
     } finally {
-      setIsUpdating(false);
+      // setIsUpdating(false);
     }
   };
 
   const handleDecrement = async () => {
-    if (disabled || isUpdating) return;
-    
+    if (disabled) return;
+
     const newQuantity = quantity - 1;
-    setIsUpdating(true);
-    
+
     try {
       if (newQuantity <= 0) {
         // Remove item from backend - REQUIRED productId
@@ -68,21 +68,21 @@ export default function QuantityControl({
         // Update backend
         await updateCartItemQuantity(storeId, sku, productId, newQuantity);
       }
-      
+
       // Update Redux (reducer handles quantity <= 0 by deleting)
       dispatch(
         updateItemQuantityLocal({
           storeId,
           sku,
           quantity: newQuantity,
-        })
+        }),
       );
-      
+
       onQuantityChange?.(newQuantity);
     } catch (e) {
-      console.error('Failed to update quantity', e);
+      console.error("Failed to update quantity", e);
     } finally {
-      setIsUpdating(false);
+      // setIsUpdating(false);
     }
   };
 
@@ -110,39 +110,47 @@ export default function QuantityControl({
   const currentSize = sizeStyles[size];
 
   return (
-    <View style={[styles.container, currentSize.container, disabled && styles.disabled]}>
+    <View
+      style={[
+        styles.container,
+        currentSize.container,
+        disabled && styles.disabled,
+      ]}
+    >
       <TouchableOpacity
-        style={[styles.button, currentSize.button, (disabled || isUpdating) && styles.buttonDisabled]}
+        style={[
+          styles.button,
+          currentSize.button,
+          disabled && styles.buttonDisabled,
+        ]}
         onPress={handleDecrement}
-        disabled={disabled || isUpdating}
+        disabled={disabled}
         activeOpacity={0.7}
       >
-        {isUpdating ? (
-          <ActivityIndicator size="small" color="#16A34A" />
-        ) : (
-          <AppIcon 
-            name={quantity > 1 ? "minus" : "trash"} 
-            size={currentSize.icon} 
-            color={disabled ? "#9CA3AF" : (quantity > 1 ? "#16A34A" : "#EF4444")} 
-          />
-        )}
+        <AppIcon
+          name="minus"
+          size={currentSize.icon}
+          color={disabled ? "#9CA3AF" : "#16A34A"}
+        />
       </TouchableOpacity>
-      
-      <Text style={[currentSize.text, styles.quantityText]}>
-        {quantity}
-      </Text>
-      
+
+      <Text style={[currentSize.text, styles.quantityText]}>{quantity}</Text>
+
       <TouchableOpacity
-        style={[styles.button, currentSize.button, (disabled || isUpdating) && styles.buttonDisabled]}
+        style={[
+          styles.button,
+          currentSize.button,
+          disabled && styles.buttonDisabled,
+        ]}
         onPress={handleIncrement}
-        disabled={disabled || isUpdating}
+        disabled={disabled}
         activeOpacity={0.7}
       >
-        {isUpdating ? (
-          <ActivityIndicator size="small" color="#16A34A" />
-        ) : (
-          <AppIcon name="plus" size={currentSize.icon} color={disabled ? "#9CA3AF" : "#16A34A"} />
-        )}
+        <AppIcon
+          name="plus"
+          size={currentSize.icon}
+          color={disabled ? "#9CA3AF" : "#16A34A"}
+        />
       </TouchableOpacity>
     </View>
   );
@@ -150,30 +158,29 @@ export default function QuantityControl({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#16A34A',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#16A34A",
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   disabled: {
     opacity: 0.6,
   },
   button: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F0FDF4',
+    justifyContent: "center",
+    alignItems: "center",
   },
   buttonDisabled: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
   },
   quantityText: {
     minWidth: 32,
-    textAlign: 'center',
-    fontWeight: '700',
-    color: '#1C1C1E',
+    textAlign: "center",
+    fontWeight: "700",
+    color: "#1C1C1E",
   },
   // Small size
   smallContainer: {

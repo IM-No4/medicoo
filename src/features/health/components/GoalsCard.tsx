@@ -1,56 +1,141 @@
-import { Droplets, Footprints, Plus, Target } from 'lucide-react-native';
+import { Droplets, Footprints, Moon, Activity, Target, Plus, Settings, Salad, Brain, Heart } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
+import { RootState } from '../../../redux/store';
 import { HealthSection } from './HealthSection';
-
-const GOALS = [
-    { id: '1', title: 'Hydration', progress: 0.6, current: '1.2L', target: '2.0L', icon: Droplets, color: '#3B82F6' },
-    { id: '2', title: 'Daily Steps', progress: 0.8, current: '8,432', target: '10,000', icon: Footprints, color: '#2FA561' },
-];
+import { updateGoalProgress } from '../../../redux/slices/goalsSlice';
 
 interface GoalsCardProps {
     onAddGoal?: () => void;
 }
 
 export function GoalsCard({ onAddGoal }: GoalsCardProps) {
+    const dispatch = useDispatch();
+    const navigation = useNavigation<any>();
+    const { goals } = useSelector((state: RootState) => state.goals);
+    const { connectedDevice } = useSelector((state: RootState) => state.device);
+
+    const stepsVal = connectedDevice?.data?.steps ?? 0;
+
+    // Filter to only display enabled/active goals on the summary cards
+    const activeGoalsList = goals.filter(g => g.enabled === true || g.enabled === undefined);
+
+    const processedGoals = activeGoalsList.map(goal => {
+        let current = goal.current;
+        
+        // Auto-sync steps goal from wearable device if connected
+        if (goal.type === 'steps') {
+            current = stepsVal;
+        }
+
+        const progress = Math.min(1, current / (goal.target || 1));
+
+        return {
+            ...goal,
+            current,
+            progress
+        };
+    });
+
+    const getGoalIcon = (type: string) => {
+        switch (type) {
+            case 'hydration': return Droplets;
+            case 'steps': return Footprints;
+            case 'sleep': return Moon;
+            case 'activity': return Activity;
+            case 'nutrition': return Salad;
+            case 'meditation': return Brain;
+            case 'heartrate': return Heart;
+            default: return Target;
+        }
+    };
+
+    const handleGoalPress = (goal: any) => {
+        // Quick progress helper for manual metrics (tap to increment)
+        if (goal.type === 'steps') return; // Managed by wearable device sync
+
+        let increment = 1;
+        if (goal.type === 'hydration') increment = 0.25;
+        if (goal.type === 'activity') increment = 10;
+
+        const nextVal = parseFloat((goal.current + increment).toFixed(2));
+        const finalVal = Math.min(goal.target, nextVal);
+
+        dispatch(updateGoalProgress({ id: goal.id, current: finalVal }));
+    };
+
+    const handleManageNavigation = () => {
+        navigation.navigate('ManageGoals');
+    };
+
     return (
-        <HealthSection title="Active Goals" icon={<Target size={14} color="#3B82F6" />}>
+        <HealthSection 
+            title="Active Goals" 
+            icon={
+                <TouchableOpacity
+                    style={styles.manageHeaderBtn}
+                    onPress={handleManageNavigation}
+                    activeOpacity={0.7}
+                >
+                    <Settings size={12} color="#3B82F6" style={{ marginRight: 4 }} />
+                    <Text style={styles.manageHeaderBtnText}>Manage</Text>
+                </TouchableOpacity>
+            }
+        >
             <View style={styles.card}>
-                {GOALS.map((goal, index) => {
-                    const Icon = goal.icon;
-                    return (
-                        <View
-                            key={goal.id}
-                            style={[index !== GOALS.length - 1 && styles.divider]}
-                        >
-                            <View style={styles.goalInfo}>
-                                <View style={[styles.goalIcon, { backgroundColor: goal.color + '10' }]}>
-                                    <Icon size={18} color={goal.color} />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <View style={styles.goalHeader}>
-                                        <Text style={styles.goalTitle}>{goal.title}</Text>
-                                        <Text style={styles.goalValue}>
-                                            {goal.current} / {goal.target}
-                                        </Text>
+                {processedGoals.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyTitle}>No Active Goals</Text>
+                        <Text style={styles.emptySubtitle}>
+                            Configure your custom daily steps, hydration, sleep, or activity targets.
+                        </Text>
+                    </View>
+                ) : (
+                    processedGoals.map((goal, index) => {
+                        const Icon = getGoalIcon(goal.type);
+                        const progressPercent = `${Math.round(goal.progress * 100)}%` as any;
+
+                        return (
+                            <View
+                                key={goal.id}
+                                style={[styles.goalItem, index !== processedGoals.length - 1 && styles.divider]}
+                            >
+                                <TouchableOpacity 
+                                    style={styles.goalInfo}
+                                    onPress={() => handleGoalPress(goal)}
+                                    activeOpacity={goal.type === 'steps' ? 1 : 0.7}
+                                >
+                                    <View style={[styles.goalIcon, { backgroundColor: goal.color + '15' }]}>
+                                        <Icon size={18} color={goal.color} />
                                     </View>
-                                    <View style={styles.goalBarBg}>
-                                        <View
-                                            style={[
-                                                styles.goalBarFill,
-                                                { width: `${goal.progress * 100}%`, backgroundColor: goal.color }
-                                            ]}
-                                        />
+                                    <View style={{ flex: 1 }}>
+                                        <View style={styles.goalHeader}>
+                                            <Text style={styles.goalTitle}>{goal.title}</Text>
+                                            <Text style={styles.goalValue}>
+                                                {goal.current} / {goal.target} {goal.unit}
+                                            </Text>
+                                        </View>
+                                        <View style={styles.goalBarBg}>
+                                            <View
+                                                style={[
+                                                    styles.goalBarFill,
+                                                    { width: progressPercent, backgroundColor: goal.color }
+                                                ]}
+                                            />
+                                        </View>
                                     </View>
-                                </View>
+                                </TouchableOpacity>
                             </View>
-                        </View>
-                    );
-                })}
+                        );
+                    })
+                )}
 
                 <TouchableOpacity
                     style={styles.addGoal}
                     onPress={onAddGoal}
+                    activeOpacity={0.7}
                 >
                     <Plus size={16} color="#2FA561" />
                     <Text style={styles.addGoalText}>Set New Goal</Text>
@@ -68,13 +153,22 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#F3F4F6'
     },
+    goalItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     divider: {
         borderBottomWidth: 1,
         borderBottomColor: '#F9FAFB',
         paddingBottom: 16,
         marginBottom: 16
     },
-    goalInfo: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+    goalInfo: { 
+        flex: 1,
+        flexDirection: 'row', 
+        gap: 12, 
+        alignItems: 'center',
+    },
     goalIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
     goalHeader: {
         flexDirection: 'row',
@@ -108,4 +202,40 @@ const styles = StyleSheet.create({
         borderStyle: 'dashed'
     },
     addGoalText: { fontSize: 13, color: '#2FA561', fontWeight: '700' },
+    /* Empty State styles */
+    emptyContainer: {
+        paddingVertical: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F9FAFB',
+        marginBottom: 16,
+    },
+    emptyTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#475569',
+        marginBottom: 4,
+    },
+    emptySubtitle: {
+        fontSize: 12,
+        color: '#64748B',
+        textAlign: 'center',
+        lineHeight: 18,
+        paddingHorizontal: 20,
+    },
+    /* Manage Header Button */
+    manageHeaderBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 6,
+        backgroundColor: '#EFF6FF',
+    },
+    manageHeaderBtnText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#3B82F6',
+    },
 });

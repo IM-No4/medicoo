@@ -84,7 +84,7 @@ export default function OtpVerificationScreen() {
                     }
                 }
 
-                dispatch(loginSuccess({ token: res.access_token, onboardingComplete: isProfileComplete }));
+                dispatch(loginSuccess({ token: res.access_token, onboardingComplete: isProfileComplete, mobile: phone }));
                 dispatch(bootSuccess({ isAuthenticated: true, onboardingCompleted: isProfileComplete }));
             }
         } catch (error: any) {

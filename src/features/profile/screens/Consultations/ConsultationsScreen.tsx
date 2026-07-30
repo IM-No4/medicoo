@@ -40,49 +40,20 @@ export default function ConsultationsScreen() {
 
     const fetchConsultations = useCallback(async () => {
         try {
-            const data = await getConsultations();
-            setConsultations(data || []);
+            const responseData = await getConsultations();
+            // Handle both direct array and wrapped array structures
+            const list = Array.isArray(responseData)
+                ? responseData
+                : (responseData?.consultations || responseData?.data || []);
+            setConsultations(list);
         } catch (error) {
             console.error('Error fetching consultations:', error);
-            // Fallback mock data for development if API fails or returns empty
-            if (consultations.length === 0) {
-                setConsultations([
-                    {
-                        _id: '1',
-                        doctorId: { _id: 'd1', name: 'Dr. Sarah Wilson', specialty: 'Cardiologist' },
-                        date: '2026-01-20',
-                        time: '10:30 AM',
-                        status: 'Completed',
-                        type: 'Video',
-                        fee: 500,
-                        hasFeedback: false
-                    },
-                    {
-                        _id: '2',
-                        doctorId: { _id: 'd2', name: 'Dr. James Miller', specialty: 'Dermatologist' },
-                        date: '2026-01-15',
-                        time: '04:15 PM',
-                        status: 'Completed',
-                        type: 'Clinic',
-                        fee: 800,
-                        hasFeedback: true
-                    },
-                    {
-                        _id: '3',
-                        doctorId: { _id: 'd3', name: 'Dr. Robert Chen', specialty: 'General Physician' },
-                        date: '2026-01-25',
-                        time: '11:00 AM',
-                        status: 'Upcoming',
-                        type: 'Video',
-                        fee: 400
-                    }
-                ]);
-            }
+            // No fallback mocks to display only actual backend data
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [consultations.length]);
+    }, []);
 
     useFocusEffect(
         useCallback(() => {

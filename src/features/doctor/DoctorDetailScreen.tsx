@@ -11,6 +11,7 @@ import { RootState } from '../../redux/store';
 import { API_BASE_URL } from '../../services/api/client';
 import { getPublicDoctorProfile } from '../../services/api/doctor.api';
 import RequestAppointmentModal from './components/RequestAppointmentModal';
+import { useTrackActivity } from '../../hooks/useTrackActivity';
 
 // Define useAppSelector locally since hooks file is missing
 const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
@@ -41,6 +42,19 @@ export default function DoctorDetailsScreen() {
   // Normalize user ID comparison - convert to string to be safe
   const isOwnProfile = user?.id && data?.id && String(user.id) === String(data.id);
   const isActionDisabled = isOwnProfile || preview;
+
+  // Track this as a resumable activity (only when not preview mode)
+  const resolvedDoctorId = doctor?.id || doctor?._id || doctorId;
+  useTrackActivity({
+    id: `doctor-${resolvedDoctorId}`,
+    title: `Booking ${data?.name || 'Doctor'}`,
+    subtitle: 'Continue from where you left',
+    icon: 'stethoscope',
+    stack: 'DoctorStack',
+    screen: 'DoctorDetail',
+    params: { doctorId: resolvedDoctorId },
+    progress: 0.3,
+  });
 
   useEffect(() => {
     checkFavoriteStatus();

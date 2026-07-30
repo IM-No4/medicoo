@@ -1,4 +1,3 @@
-
 import { BLOG_URL, DONATE_BLOOD_URL } from '@/src/config/env';
 
 import { HomeFeedItem } from './feed.types';
@@ -32,8 +31,6 @@ export const FULL_FEED: HomeFeedItem[] = [
             { id: 'pharmacy', title: 'Pharmacy', icon: 'pill', enabled: true, accentColor: '#ffffff', background: { start: '#34d399', end: '#059669' }, action: { type: 'NAVIGATE', stack: 'PharmacyStack', screen: 'PharmacyList' } },
             { id: 'labs', title: 'Path Labs', icon: 'flask', enabled: true, accentColor: '#ffffff', background: { start: '#fbbf24', end: '#f59e0b' }, action: { type: 'NAVIGATE', stack: 'LabStack', screen: 'LabList' } },
             { id: 'hospitals', title: 'Hospitals', icon: 'hospital', enabled: true, accentColor: '#ffffff', background: { start: '#a78bfa', end: '#7c3aed' }, action: { type: 'NAVIGATE', stack: 'HospitalStack', screen: 'HospitalFeed' } },
-            { id: 'ambulance', title: 'Ambulance', icon: 'ambulance', enabled: true, accentColor: '#ffffff', background: { start: '#fb7185', end: '#e11d48' }, action: { type: 'NAVIGATE', stack: 'AmbulanceStack', screen: 'AmbulanceHome' } },
-            { id: 'homecare', title: 'Home Care', icon: 'heart', enabled: true, accentColor: '#ffffff', background: { start: '#9ca3af', end: '#6b7280' }, action: { type: 'NAVIGATE', stack: 'HomeCareStack', screen: 'ServiceList' } },
         ]
     },
     {
@@ -65,16 +62,6 @@ export const FULL_FEED: HomeFeedItem[] = [
             message: 'Response recorded. Thank you.',
             variant: 'info'
         }
-    },
-    {
-        id: 'continue1',
-        type: 'CONTINUE_ACTIVITY',
-        title: 'Booking Dr. Sharma',
-        subtitle: 'Continue from where you left',
-        ctaText: 'Resume',
-        icon: 'calendar',
-        progress: 0.8,
-        actionIdentifier: 'RESUME_BOOKING'
     },
     {
         id: 'family1',
@@ -147,7 +134,7 @@ export const FULL_FEED: HomeFeedItem[] = [
             { id: 'c6', name: 'After Sun', tags: ['after-sun', 'aloe'], icon: 'thermometer', iconColor: '#F43F5E', iconBackgroundColor: '#FFE4E6', action: { type: 'NAVIGATE', stack: 'SearchStack', screen: 'SearchHome', params: { query: 'after sun' } } },
         ],
         theme: {
-            backgroundColor: '#FFF7ED', // Light Peach solid color
+            backgroundColor: '#FFF7ED',
             accentColor: '#EA580C',
             textColor: '#7C2D12',
             sparkleColor: '#F97316',
@@ -184,47 +171,6 @@ export const FULL_FEED: HomeFeedItem[] = [
                 background: { start: '#059669', end: '#10B981' },
                 icon: 'pill',
             }
-        ]
-    }, {
-        id: 'lab1',
-        type: 'LAB_PACKAGE_SHOWCASE',
-        title: 'Popular Health Checks',
-        subtitle: 'Comprehensive packages for you',
-        seeAllAction: { type: 'NAVIGATE', stack: 'LabStack', screen: 'LabTests' },
-        packages: [
-            {
-                id: 'pkg1',
-                title: 'Comprehensive Full Body Checkup',
-                testCount: 89,
-                includes: ['Vitamin D', 'B12', 'Thyroid', 'Liver', 'Kidney', 'CBC'],
-                price: 1499,
-                originalPrice: 3999,
-                discount: '62%',
-                tat: '24 hrs',
-                action: { type: 'NAVIGATE', stack: 'LabStack', screen: 'LabPackageDetail', params: { packageId: 'pkg1' } }
-            },
-            {
-                id: 'pkg2',
-                title: 'Diabetes Screening Package',
-                testCount: 45,
-                includes: ['HbA1c', 'Fasting Blood Sugar', 'Lipid Profile'],
-                price: 799,
-                originalPrice: 1999,
-                discount: '60%',
-                tat: '12 hrs',
-                action: { type: 'NAVIGATE', stack: 'LabStack', screen: 'LabPackageDetail', params: { packageId: 'pkg2' } }
-            },
-            {
-                id: 'pkg3',
-                title: 'Women Health Advanced',
-                testCount: 65,
-                includes: ['Thyroid', 'Hormones', 'CBC', 'Calcium'],
-                price: 1999,
-                originalPrice: 4200,
-                discount: '52%',
-                tat: '36 hrs',
-                action: { type: 'NAVIGATE', stack: 'LabStack', screen: 'LabPackageDetail', params: { packageId: 'pkg3' } }
-            },
         ]
     },
     {
@@ -274,30 +220,6 @@ export const FULL_FEED: HomeFeedItem[] = [
         ]
     },
     {
-        id: 'hosp1',
-        type: 'HOSPITAL_SHOWCASE',
-        title: 'Hospitals Near You',
-        subtitle: 'Emergency & Specialized Care',
-        seeAllAction: { type: 'NAVIGATE', stack: 'HospitalStack', screen: 'HospitalFeed' },
-        hospitals: [
-            { id: 'h1', name: 'City Care Hospital', address: 'Sector 62, Noida', distance: '2.5 km', rating: 4.5, facilities: ['ICU', 'Emergency', 'X-Ray'], action: { type: 'NAVIGATE', stack: 'HospitalStack', screen: 'HospitalDetail', params: { hospitalId: 'h1' } } },
-            { id: 'h2', name: 'Max Super Specialty', address: 'Patparganj, Delhi', distance: '5.2 km', rating: 4.8, facilities: ['Multi-Specialty', 'MRI', 'Blood Bank'], action: { type: 'NAVIGATE', stack: 'HospitalStack', screen: 'HospitalDetail', params: { hospitalId: 'h2' } } },
-            { id: 'h3', name: 'Apollo Clinic', address: 'Indirapuram', distance: '3.0 km', rating: 4.2, facilities: ['OPD', 'Pharmacy', 'Lab'], action: { type: 'NAVIGATE', stack: 'HospitalStack', screen: 'HospitalDetail', params: { hospitalId: 'h3' } } },
-        ]
-    },
-    {
-        id: 'hc1',
-        type: 'HOME_CARE_SHOWCASE',
-        title: 'Home Care & Nursing',
-        subtitle: 'Expert care at your doorstep',
-        seeAllAction: { type: 'NAVIGATE', stack: 'HomeCareStack', screen: 'ServiceList' },
-        services: [
-            { id: 'srv1', title: 'Physiotherapy at Home', provider: 'Portea Medical', rating: 4.7, price: 499, duration: '45 mins', features: ['Certified Physio', 'Post-surgery Rehab'], action: { type: 'NAVIGATE', stack: 'HomeCareStack', screen: 'ServiceDetail', params: { serviceId: 'srv1' } } },
-            { id: 'srv2', title: 'Nursing Care - 12 Hrs', provider: 'Care24', rating: 4.6, price: 1200, duration: '12 hrs', features: ['Vital Monitoring', 'Medication Admin'], action: { type: 'NAVIGATE', stack: 'HomeCareStack', screen: 'ServiceDetail', params: { serviceId: 'srv2' } } },
-            { id: 'srv3', title: 'Elderly Companion', provider: 'Emoha Elder Care', rating: 4.8, price: 800, duration: '4 hrs', features: ['Daily Assistance', 'Companionship'], action: { type: 'NAVIGATE', stack: 'HomeCareStack', screen: 'ServiceDetail', params: { serviceId: 'srv3' } } },
-        ]
-    },
-    {
         id: 'recent1',
         type: 'RECENT_ACTIVITY',
         title: 'Quick History',
@@ -305,6 +227,9 @@ export const FULL_FEED: HomeFeedItem[] = [
             { id: 'act1', type: 'consultation', title: 'Dr. Sarah Wilson', date: 'Yesterday', status: 'Completed', statusColor: '#10B981' },
             { id: 'act2', type: 'medicine', title: 'Order #40239', date: '2 days ago', status: 'In Transit', statusColor: '#F59E0B' },
             { id: 'act3', type: 'lab', title: 'Blood Test Report', date: '4 days ago', status: 'View Report', statusColor: '#3B82F6' },
+            { id: 'act4', type: 'consultation', title: 'Dr. James Miller', date: '1 week ago', status: 'Completed', statusColor: '#10B981' },
+            { id: 'act5', type: 'medicine', title: 'Order #40102', date: '2 weeks ago', status: 'Delivered', statusColor: '#10B981' },
+            { id: 'act6', type: 'lab', title: 'Lipid Profile Report', date: '3 weeks ago', status: 'View Report', statusColor: '#3B82F6' },
         ]
     },
     {

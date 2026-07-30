@@ -15,13 +15,17 @@ import ProgressCard from './components/ProgressCard';
 
 import AddActionModal from '../../components/modals/AddActionModal';
 import AddMedicationModal from '../../components/modals/AddMedicationModal/AddMedicationModal';
+import ManageRemindersSheet from '../../components/modals/ManageRemindersSheet';
 
 import { loadCalendarCache, loadCalendarData, markMedicineIntake } from '@/src/redux/slices/calendarSlice';
+import { selectActiveGoals } from '@/src/redux/slices/goalsSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import EmptyState from '../../components/layout/EmptyState';
 import ErrorState from '../../components/layout/ErrorState';
 import AddGoalModal from '../../components/modals/AddGoalModal/AddGoalModal';
+import { GoalsCard } from '../health/components/GoalsCard';
 import { AppDispatch, RootState } from '../../redux/store';
+import { useNavigation } from '@react-navigation/native';
 
 export default function CalendarScreen() {
     const [isFocused, setIsFocused] = useState(false);
@@ -34,15 +38,21 @@ export default function CalendarScreen() {
     );
 
     const dispatch = useDispatch<AppDispatch>();
+    const navigation = useNavigation<any>();
 
     const { data, loading, error } = useSelector(
         (state: RootState) => state.calendar
     );
 
+    // Read active goals to conditionally show goals card
+    const activeGoals = useSelector(selectActiveGoals);
+    const hasActiveGoals = activeGoals.length > 0;
+
     const [isCalendarVisible, setCalendarVisible] = useState(false);
     const [showAddAction, setShowAddAction] = useState(false);
     const [showAddMedication, setShowAddMedication] = useState(false);
     const [showAddGoal, setShowAddGoal] = useState(false);
+    const [showManageSheet, setShowManageSheet] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
 
     useEffect(() => {
@@ -154,14 +164,12 @@ export default function CalendarScreen() {
                         {/* Reminders Header */}
                         <View style={styles.sectionHeaderRow}>
                             <Text style={styles.sectionTitle}>My reminders</Text>
-                            {!isPast && (
-                                <TouchableOpacity
-                                    style={styles.addButton}
-                                    onPress={() => setShowAddAction(true)}
-                                >
-                                    <Text style={styles.addButtonText}>+ Add</Text>
-                                </TouchableOpacity>
-                            )}
+                            <TouchableOpacity
+                                style={styles.addButton}
+                                onPress={() => setShowManageSheet(true)}
+                            >
+                                <Text style={styles.addButtonText}>Manage</Text>
+                            </TouchableOpacity>
                         </View>
 
                         <View style={{ marginHorizontal: 24 }}>
@@ -191,6 +199,11 @@ export default function CalendarScreen() {
                                 />
                             ))}
                         </View>
+
+                        {/* Only show Goals Card when there are active goals */}
+                        {hasActiveGoals && (
+                            <GoalsCard onAddGoal={() => navigation.navigate('ManageGoals')} />
+                        )}
 
                         {/* Empty State */}
                         {medicines.length === 0 && appointments.length === 0 && (
@@ -240,6 +253,14 @@ export default function CalendarScreen() {
             <AddGoalModal
                 visible={showAddGoal}
                 onClose={() => setShowAddGoal(false)}
+            />
+
+            {/* Manage Reminders Bottom Sheet */}
+            <ManageRemindersSheet
+                visible={showManageSheet}
+                onClose={() => setShowManageSheet(false)}
+                onGoToMedications={() => navigation.navigate('ManageMedications' as never)}
+                onGoToGoals={() => navigation.navigate('ManageGoals' as never)}
             />
         </View>
     );

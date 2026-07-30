@@ -10,8 +10,11 @@ const isLocalFile = (uri: string) =>
     uri && (uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('data:'));
 
 export const updateProfile = async (formData: any) => {
-    // We use 'multipart/form-data' which axios handles if we pass FormData
-    const res = await apiClient.put('/api/user/save-profile', formData);
+    const res = await apiClient.put('/api/user/save-profile', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
     return res.data;
 };
 

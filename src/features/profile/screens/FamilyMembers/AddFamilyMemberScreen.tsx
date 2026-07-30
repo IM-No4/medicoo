@@ -2,12 +2,14 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Calendar, Camera, ChevronDown, ChevronLeft, User, X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
     ActivityIndicator,
+    Animated,
     Image,
     KeyboardAvoidingView,
     Modal,
+    PanResponder,
     Platform,
     ScrollView,
     StyleSheet,
@@ -50,6 +52,40 @@ export default function AddFamilyMemberScreen() {
     const isEditing = route.params?.isEditing || false;
     const existingMember = route.params?.member;
 
+    const translateY = useRef(new Animated.Value(0)).current;
+
+    /* ---------- Swipe Down with Animation ---------- */
+    const panResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 5,
+            onPanResponderMove: (_, gestureState) => {
+                if (gestureState.dy > 0) {
+                    translateY.setValue(gestureState.dy);
+                }
+            },
+            onPanResponderRelease: (_, gestureState) => {
+                if (gestureState.dy > 100) {
+                    Animated.timing(translateY, {
+                        toValue: 1000,
+                        duration: 300,
+                        useNativeDriver: true,
+                    }).start(() => {
+                        navigation.goBack();
+                        setTimeout(() => {
+                            translateY.setValue(0);
+                        }, 100);
+                    });
+                } else {
+                    Animated.spring(translateY, {
+                        toValue: 0,
+                        useNativeDriver: true,
+                    }).start();
+                }
+            },
+        })
+    ).current;
+
     const [saving, setSaving] = useState(false);
     const [mode, setMode] = useState<'create' | 'link'>('create');
 
@@ -62,6 +98,7 @@ export default function AddFamilyMemberScreen() {
     });
 
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [isGenderDropdownOpen, setIsGenderDropdownOpen] = useState(false);
 
     // Link Mode State
     const [linkId, setLinkId] = useState('');
@@ -278,48 +315,70 @@ export default function AddFamilyMemberScreen() {
     };
 
     return (
-        <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.container}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        >
-            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ChevronLeft size={24} color="#1F2937" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>{isEditing ? 'Edit Details' : 'Add Family Member'}</Text>
-                <View style={{ width: 40 }} />
-            </View>
+        <View style={styles.modalBackdrop}>
+            <TouchableOpacity
+                style={styles.backdropTouchable}
+                activeOpacity={1}
+                onPress={() => navigation.goBack()}
+            />
 
-            {!isEditing && (
-                <View style={styles.tabsWrapper}>
-                    <View style={styles.tabContainer}>
-                        <TouchableOpacity
-                            style={[styles.tab, mode === 'create' && styles.activeTab]}
-                            onPress={() => setMode('create')}
-                            activeOpacity={0.7}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                            <Text style={[styles.tabText, mode === 'create' && styles.activeTabText]}>Create New</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.tab, mode === 'link' && styles.activeTab]}
-                            onPress={() => setMode('link')}
-                            activeOpacity={0.7}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                            <Text style={[styles.tabText, mode === 'link' && styles.activeTabText]}>Link Existing</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            )}
-
-            <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={styles.content}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
+            <Animated.View
+                style={[
+                    styles.modalContainer,
+                    {
+                        transform: [{ translateY }],
+                        paddingBottom: Math.max(insets.bottom, 20),
+                    },
+                ]}
             >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    style={{ flex: 1 }}
+                >
+                    {/* Handle & Header Area with pan handlers */}
+                    <View style={styles.modalHeader} {...panResponder.panHandlers}>
+                        <View style={styles.dragIndicator} />
+
+                        <View style={styles.headerBar}>
+                            <View style={{ width: 36 }} />
+
+                            <Text style={styles.headerTitle}>{isEditing ? 'Edit Details' : 'Add Family Member'}</Text>
+
+                            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
+                                <X size={20} color="#64748B" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    {!isEditing && (
+                        <View style={styles.tabsWrapper}>
+                            <View style={styles.tabContainer}>
+                                <TouchableOpacity
+                                    style={[styles.tab, mode === 'create' && styles.activeTab]}
+                                    onPress={() => setMode('create')}
+                                    activeOpacity={0.7}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                    <Text style={[styles.tabText, mode === 'create' && styles.activeTabText]}>Create New</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.tab, mode === 'link' && styles.activeTab]}
+                                    onPress={() => setMode('link')}
+                                    activeOpacity={0.7}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                    <Text style={[styles.tabText, mode === 'link' && styles.activeTabText]}>Link Existing</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
+
+                    <ScrollView
+                        style={{ flex: 1 }}
+                        contentContainerStyle={styles.content}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                    >
 
                 {mode === 'create' ? (
                     <>
@@ -387,17 +446,48 @@ export default function AddFamilyMemberScreen() {
                                 </TouchableOpacity>
                             </View>
 
-                            <View style={styles.inputGroup}>
+                            <View style={[styles.inputGroup, { zIndex: 50 }]}>
                                 <Text style={styles.label}>Gender *</Text>
                                 <TouchableOpacity
-                                    style={styles.dropdownTrigger}
-                                    onPress={() => openSelection('gender')}
+                                    style={[styles.dropdownTrigger, isGenderDropdownOpen && styles.dropdownTriggerActive]}
+                                    onPress={() => setIsGenderDropdownOpen(!isGenderDropdownOpen)}
+                                    activeOpacity={0.7}
                                 >
                                     <Text style={[styles.dropdownText, !formData.gender && styles.placeholderText]}>
                                         {GENDERS.find(g => g.value === formData.gender)?.label || 'Select Gender'}
                                     </Text>
-                                    <ChevronDown size={20} color="#9CA3AF" />
+                                    <ChevronDown
+                                        size={20}
+                                        color="#9CA3AF"
+                                        style={{ transform: [{ rotate: isGenderDropdownOpen ? '180deg' : '0deg' }] }}
+                                    />
                                 </TouchableOpacity>
+
+                                {isGenderDropdownOpen && (
+                                    <View style={styles.dropdownContainer}>
+                                        {GENDERS.map((g) => (
+                                            <TouchableOpacity
+                                                key={g.value}
+                                                style={[
+                                                    styles.dropdownOption,
+                                                    formData.gender === g.value && styles.dropdownOptionActive
+                                                ]}
+                                                onPress={() => {
+                                                    setFormData({ ...formData, gender: g.value });
+                                                    setIsGenderDropdownOpen(false);
+                                                }}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Text style={[
+                                                    styles.dropdownOptionText,
+                                                    formData.gender === g.value && styles.dropdownOptionTextActive
+                                                ]}>
+                                                    {g.label}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                )}
                             </View>
                         </View>
                     </>
@@ -495,7 +585,7 @@ export default function AddFamilyMemberScreen() {
                 >
                     <TouchableWithoutFeedback>
                         <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
-                            <View style={styles.modalHeader}>
+                            <View style={styles.pickerModalHeader}>
                                 <Text style={styles.modalTitle}>{selectionModal?.title}</Text>
                                 <TouchableOpacity onPress={() => setSelectionModal(null)}>
                                     <X size={24} color="#6B7280" />
@@ -544,33 +634,66 @@ export default function AddFamilyMemberScreen() {
                 onGallerySelect={launchLibrary}
                 title="Change Photo"
             />
-        </KeyboardAvoidingView>
+                </KeyboardAvoidingView>
+            </Animated.View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    modalBackdrop: {
         flex: 1,
-        backgroundColor: '#F8F9FE',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
     },
-    header: {
+    backdropTouchable: {
+        flex: 1,
+    },
+    modalContainer: {
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        height: '95%',
+        overflow: 'hidden',
+    },
+    modalHeader: {
+        paddingTop: 24,
+        paddingBottom: 16,
+        paddingHorizontal: 24,
+        zIndex: 10,
+    },
+    dragIndicator: {
+        width: 40,
+        height: 5,
+        backgroundColor: '#E5E7EB',
+        borderRadius: 3,
+        alignSelf: 'center',
+        marginTop: 4,
+        marginBottom: 20,
+    },
+    headerBar: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingBottom: 16,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        width: '100%',
     },
-    backButton: {
-        padding: 8,
-        marginLeft: -8,
+    headerCenter: {
+        flex: 1,
+        alignItems: 'center',
+        gap: 2,
+    },
+    iconBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 12,
+        backgroundColor: '#F8FAFC',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     headerTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#111827',
+        fontSize: 17,
+        fontWeight: '800',
+        color: '#0F172A',
     },
     content: {
         padding: 20,
@@ -709,9 +832,9 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     chip: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
         backgroundColor: '#fff',
         borderWidth: 1,
         borderColor: '#E5E7EB',
@@ -721,11 +844,43 @@ const styles = StyleSheet.create({
         borderColor: '#2FA561',
     },
     chipText: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#6B7280',
         fontWeight: '500',
     },
     chipTextActive: {
+        color: '#2FA561',
+        fontWeight: '600',
+    },
+    dropdownTriggerActive: {
+        borderColor: '#2FA561',
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
+    },
+    dropdownContainer: {
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderTopWidth: 0,
+        borderBottomLeftRadius: 12,
+        borderBottomRightRadius: 12,
+        overflow: 'hidden',
+        marginTop: -1,
+    },
+    dropdownOption: {
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+    },
+    dropdownOptionActive: {
+        backgroundColor: '#F0FDF4',
+    },
+    dropdownOptionText: {
+        fontSize: 15,
+        color: '#4B5563',
+    },
+    dropdownOptionTextActive: {
         color: '#2FA561',
         fontWeight: '600',
     },
@@ -771,7 +926,7 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 24,
         padding: 24,
     },
-    modalHeader: {
+    pickerModalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',

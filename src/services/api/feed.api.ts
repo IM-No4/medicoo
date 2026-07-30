@@ -44,7 +44,7 @@ export const feedApi = {
         }
 
         // Actual API Call
-        const response = await apiClient.get<any>('api/home/feed', {
+        const response = await apiClient.get<any>('/api/v1/home/feed', {
             params: { limit, cursor }
         });
 

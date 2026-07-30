@@ -3,6 +3,7 @@ import { Calendar, ChevronLeft, Droplet, Edit2, Mail, MapPin, Phone, Ruler, User
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
 import { executeAction } from '../../../../actions/ActionExecutor';
 import { getProfileDetails } from '../../../../services/api';
 import { formatDateForDisplay, formatGenderForDisplay } from '../../../../utils/formatters';
@@ -12,6 +13,7 @@ export default function ProfileDetailsScreen() {
     const insets = useSafeAreaInsets();
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState<any>(null);
+    const authMobile = useSelector((state: any) => state.auth.mobile);
 
     useFocusEffect(
         useCallback(() => {
@@ -88,7 +90,7 @@ export default function ProfileDetailsScreen() {
                 {/* Details Section */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Contact Information</Text>
-                    {renderDetailRow(Phone, 'Phone Number', profile?.phone, true)}
+                    {renderDetailRow(Phone, 'Phone Number', profile?.mobile || profile?.phone || authMobile, true)}
                     {renderDetailRow(Mail, 'Email', profile?.email, !!profile?.email)}
                 </View>
 

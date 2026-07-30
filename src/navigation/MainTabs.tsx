@@ -81,7 +81,18 @@ export default function MainTabs({ onOpenCommandPalette }: Props) {
       <Tab.Screen name="Calendar" component={CalendarStack} />
       <Tab.Screen name="Records" component={RecordsStack} />
       <Tab.Screen name="Health" component={HealthStack} />
-      <Tab.Screen name="Profile" component={ProfileStack} />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileStack}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('Profile', {
+              screen: 'ProfileMain',
+            });
+          },
+        })}
+      />
     </Tab.Navigator>
   );
 }

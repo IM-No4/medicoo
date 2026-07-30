@@ -46,8 +46,7 @@ export const getStoreMedicines = async ({
     },
   });
 
-  // backend returns array directly
-  return response.data;
+  return response.data?.data ?? response.data?.medicines ?? response.data;
 };
 
 /**
@@ -86,6 +85,8 @@ export const getNearbyPharmacies = async ({
   return response.data;
 };
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 /**
  * Add pharmacy to favorites
  */
@@ -96,7 +97,20 @@ export const addFavoritePharmacy = async (storeId: string) => {
     });
     return response.data;
   } catch (error: any) {
-    console.warn('Failed to add favorite:', error.message);
+    if (error.response?.status === 404) {
+      try {
+        const stored = await AsyncStorage.getItem('favorite_pharmacies');
+        const list = stored ? JSON.parse(stored) : [];
+        if (!list.includes(storeId)) {
+          list.push(storeId);
+          await AsyncStorage.setItem('favorite_pharmacies', JSON.stringify(list));
+        }
+      } catch (storageError) {
+        console.error('Failed to save favorite in storage', storageError);
+      }
+    } else {
+      console.warn('Failed to add favorite:', error.message);
+    }
     return null;
   }
 };
@@ -111,7 +125,18 @@ export const removeFavoritePharmacy = async (storeId: string) => {
     });
     return response.data;
   } catch (error: any) {
-    console.warn('Failed to remove favorite:', error.message);
+    if (error.response?.status === 404) {
+      try {
+        const stored = await AsyncStorage.getItem('favorite_pharmacies');
+        const list = stored ? JSON.parse(stored) : [];
+        const updated = list.filter((id: string) => id !== storeId);
+        await AsyncStorage.setItem('favorite_pharmacies', JSON.stringify(updated));
+      } catch (storageError) {
+        console.error('Failed to remove favorite in storage', storageError);
+      }
+    } else {
+      console.warn('Failed to remove favorite:', error.message);
+    }
     return null;
   }
 };
@@ -126,7 +151,15 @@ export const checkFavoritePharmacy = async (storeId: string) => {
     });
     return response.data?.isFavorite ?? false;
   } catch (error: any) {
-    // If route doesn't exist or other error, return false
+    if (error.response?.status === 404) {
+      try {
+        const stored = await AsyncStorage.getItem('favorite_pharmacies');
+        const list = stored ? JSON.parse(stored) : [];
+        return list.includes(storeId);
+      } catch {
+        return false;
+      }
+    }
     return false;
   }
 };
@@ -139,6 +172,15 @@ export const getFavoritePharmacies = async () => {
     const response = await apiClient.get('/api/user/favorite-stores');
     return response.data;
   } catch (error: any) {
+    if (error.response?.status === 404) {
+      try {
+        const stored = await AsyncStorage.getItem('favorite_pharmacies');
+        const list = stored ? JSON.parse(stored) : [];
+        return list.map((id: string) => ({ storeId: id, id }));
+      } catch {
+        return [];
+      }
+    }
     return [];
   }
 };

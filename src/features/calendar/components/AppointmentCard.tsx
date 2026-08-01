@@ -1,16 +1,17 @@
 import AppIcon from '@/src/components/icons/AppIcon';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS } from '../styles';
 
 interface Props {
     doctorName: string;
     specialty: string;
     time: string;
+    onPress?: () => void;
 }
 
-export default function AppointmentCard({ doctorName, specialty, time }: Props) {
+export default function AppointmentCard({ doctorName, specialty, time, onPress }: Props) {
     return (
-        <View style={styles.card}>
+        <TouchableOpacity style={styles.card} activeOpacity={onPress ? 0.7 : 1} onPress={onPress} disabled={!onPress}>
             {/* Top Row: Avatar + Info + Arrow */}
             <View style={styles.header}>
                 <View style={styles.avatarContainer}>
@@ -30,7 +31,7 @@ export default function AppointmentCard({ doctorName, specialty, time }: Props) 
             <View style={styles.timeBlock}>
                 <Text style={styles.timeText}>{time}</Text>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 }
 

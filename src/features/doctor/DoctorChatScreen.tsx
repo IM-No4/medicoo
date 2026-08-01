@@ -1,65 +1,159 @@
-import { useRoute } from '@react-navigation/native';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { ChevronLeft, MoreVertical, Paperclip, Phone, Send, Video } from 'lucide-react-native';
-import React, { useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ChevronLeft, MoreVertical, Send } from 'lucide-react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { executeAction } from '../../actions/ActionExecutor';
-// Force change to trigger re-bundle 2026-02-03 19:15 
+import StatusModal, { StatusType } from '../../components/modals/StatusModal';
+import { API_BASE_URL } from '../../services/api/client';
+import { ConsultationChatMessage, getConsultationMessages, sendConsultationMessage } from '../../services/api/consultationChat.api';
+import { completeAppointmentRequest, ConsultationDetailsInput, getDoctorAppointmentRequestDetail } from '../../services/api/doctor.api';
+import { onConsultationChatMessage } from '../../services/socketService';
+import ConsultationDetailsModal, { ConsultationDraft } from './components/ConsultationDetailsModal';
+import InCallToolsSheet from './components/InCallToolsSheet';
+import PatientReportsModal from './components/PatientReportsModal';
 
+const EMPTY_DRAFT: ConsultationDraft = { notes: '', prescribedMedicines: [], prescribedLabTests: [] };
 
 export default function DoctorChatScreen() {
     const insets = useSafeAreaInsets();
     const route = useRoute<any>();
-    const { appointment } = route.params || {};
+    const { requestId, title, image } = route.params || {};
     const flatListRef = useRef<FlatList>(null);
 
     const [message, setMessage] = useState('');
-    const [messages, setMessages] = useState([
-        { id: '1', text: 'Hello, I have a severe headache.', sender: 'patient', time: '10:00 AM' },
-        { id: '2', text: 'Hi, how long have you been feeling this way?', sender: 'doctor', time: '10:01 AM' },
-        { id: '3', text: 'For about 2 days now. It gets worse with light.', sender: 'patient', time: '10:02 AM' },
-    ]);
+    const [messages, setMessages] = useState<ConsultationChatMessage[]>([]);
+    const [viewerRole, setViewerRole] = useState<'customer' | 'doctor' | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
+    const [sending, setSending] = useState(false);
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
+    const [showCompleteModal, setShowCompleteModal] = useState(false);
+    const [customerId, setCustomerId] = useState<string | null>(null);
+    const [showToolsSheet, setShowToolsSheet] = useState(false);
+    const [showNotesModal, setShowNotesModal] = useState(false);
+    const [showReportsModal, setShowReportsModal] = useState(false);
+    const [consultationDraft, setConsultationDraft] = useState<ConsultationDraft>(EMPTY_DRAFT);
+    const [status, setStatus] = useState<{
+        visible: boolean;
+        type: StatusType;
+        title: string;
+        message: string;
+        primaryAction?: () => void;
+        primaryActionText?: string;
+    }>({ visible: false, type: 'idle', title: '', message: '' });
 
-    const patientName = appointment?.patientName || 'Patient';
+    const showStatus = (type: StatusType, title: string, message: string, primaryAction?: () => void, primaryActionText?: string) => {
+        setStatus({ visible: true, type, title, message, primaryAction, primaryActionText });
+    };
+    const hideStatus = () => setStatus(prev => ({ ...prev, visible: false }));
 
-    const sendMessage = () => {
-        if (!message.trim()) return;
+    const displayName = title || 'Chat';
 
-        const newMessage = {
-            id: Date.now().toString(),
-            text: message,
-            sender: 'doctor',
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    // The keyboard already covers the home-indicator safe area, so the extra
+    // insets.bottom padding below (needed when the keyboard is closed) would
+    // otherwise stack with the keyboard's own space and leave a gap above it.
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+        const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+        const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+        return () => {
+            showSub.remove();
+            hideSub.remove();
         };
+    }, []);
 
-        setMessages(prev => [...prev, newMessage]);
-        setMessage('');
+    const loadMessages = useCallback(async (showSpinner: boolean) => {
+        if (!requestId) return;
+        if (showSpinner) setLoading(true);
+        try {
+            const data = await getConsultationMessages(requestId);
+            setMessages(data.messages);
+            setViewerRole(data.viewerRole);
+            setLoadError(false);
+        } catch (error) {
+            console.warn('Failed to load consultation chat:', error);
+            if (showSpinner) setLoadError(true);
+        } finally {
+            if (showSpinner) setLoading(false);
+        }
+    }, [requestId]);
 
-        // Scroll to bottom
-        setTimeout(() => {
-            flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
+    useFocusEffect(
+        useCallback(() => {
+            loadMessages(true);
+        }, [loadMessages])
+    );
+
+    // Needed for the in-call "Patient Reports" tool - the chat's own message
+    // API doesn't carry the patient's customerId, so fetch it once from the
+    // appointment detail, same as the call screen already receives it via
+    // navigation params.
+    useEffect(() => {
+        if (viewerRole !== 'doctor' || !requestId) return;
+        getDoctorAppointmentRequestDetail(requestId)
+            .then((data) => setCustomerId(data?.data?.customerId || null))
+            .catch(() => { });
+    }, [viewerRole, requestId]);
+
+    useEffect(() => {
+        const unsubscribe = onConsultationChatMessage(({ requestId: incomingRequestId, message: incoming }) => {
+            if (incomingRequestId !== requestId) return;
+            setMessages(prev => (prev.some(m => m._id === incoming._id) ? prev : [...prev, incoming]));
+        });
+        return unsubscribe;
+    }, [requestId]);
+
+    useEffect(() => {
+        if (messages.length > 0) {
+            setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
+        }
+    }, [messages.length]);
+
+    const handleCompleteConsultation = async (details: ConsultationDetailsInput) => {
+        setShowCompleteModal(false);
+        if (!requestId) return;
+        try {
+            await completeAppointmentRequest(requestId, details);
+            showStatus('success', 'Consultation Completed', 'This consultation has been marked as completed.', () => {
+                hideStatus();
+                executeAction('GO_BACK');
+            }, 'Done');
+        } catch (error: any) {
+            showStatus('error', 'Could Not Complete', error?.response?.data?.message || 'Please try again.');
+        }
     };
 
-    const renderMessageItem = ({ item }: { item: any }) => {
-        const isDoctor = item.sender === 'doctor';
+    const sendMessage = async () => {
+        const text = message.trim();
+        if (!text || sending || !requestId) return;
+
+        setSending(true);
+        setMessage('');
+        try {
+            const { message: sent } = await sendConsultationMessage(requestId, text);
+            setMessages(prev => [...prev, sent]);
+        } catch (error) {
+            console.warn('Failed to send message:', error);
+            setMessage(text);
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const renderMessageItem = ({ item }: { item: ConsultationChatMessage }) => {
+        const isMine = viewerRole !== null && item.senderRole === viewerRole;
+        const time = new Date(item.createdOn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         return (
-            <View style={[styles.messageRow, isDoctor ? styles.messageRowRight : styles.messageRowLeft]}>
-                {!isDoctor && (
-                    <View style={styles.avatarSmall}>
-                        <Text style={styles.avatarTextSmall}>{patientName.charAt(0)}</Text>
-                    </View>
-                )}
-                <View style={[
-                    styles.messageBubble,
-                    isDoctor ? styles.bubbleRight : styles.bubbleLeft
-                ]}>
-                    <Text style={[styles.messageText, isDoctor ? styles.textRight : styles.textLeft]}>
+            <View style={[styles.messageRow, isMine ? styles.messageRowRight : styles.messageRowLeft]}>
+                <View style={[styles.messageBubble, isMine ? styles.bubbleRight : styles.bubbleLeft]}>
+                    <Text style={[styles.messageText, isMine ? styles.textRight : styles.textLeft]}>
                         {item.text}
                     </Text>
-                    <Text style={[styles.timeText, isDoctor ? styles.timeRight : styles.timeLeft]}>
-                        {item.time}
+                    <Text style={[styles.timeText, isMine ? styles.timeRight : styles.timeLeft]}>
+                        {time}
                     </Text>
                 </View>
             </View>
@@ -77,48 +171,65 @@ export default function DoctorChatScreen() {
                 </TouchableOpacity>
 
                 <View style={styles.headerInfo}>
-                    <View style={styles.avatarHeader}>
-                        <Text style={styles.avatarTextHeader}>{patientName.charAt(0)}</Text>
-                    </View>
-                    <View>
-                        <Text style={styles.headerTitle}>{patientName}</Text>
-                        <Text style={styles.headerStatus}>Online</Text>
-                    </View>
+                    {image ? (
+                        <Image
+                            source={{ uri: image.startsWith('http') ? image : `${API_BASE_URL}/${image}` }}
+                            style={styles.avatarHeader}
+                        />
+                    ) : (
+                        <View style={styles.avatarHeader}>
+                            <Text style={styles.avatarTextHeader}>{displayName.charAt(0)}</Text>
+                        </View>
+                    )}
+                    <Text style={styles.headerTitle}>{displayName}</Text>
                 </View>
 
-                <View style={styles.headerActions}>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <Phone size={20} color="#4B5563" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <Video size={20} color="#4B5563" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconButton}>
+                {viewerRole === 'doctor' ? (
+                    <TouchableOpacity style={styles.iconButton} onPress={() => setShowToolsSheet(true)}>
                         <MoreVertical size={20} color="#4B5563" />
                     </TouchableOpacity>
-                </View>
+                ) : (
+                    <View style={styles.iconButton} />
+                )}
             </View>
 
-            {/* Chat Area */}
-            <FlatList
-                ref={flatListRef}
-                data={messages}
-                renderItem={renderMessageItem}
-                keyExtractor={item => item.id}
-                contentContainerStyle={styles.chatContent}
-                onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-            />
-
-            {/* Input Area */}
+            {/* Chat Area + Input. AndroidManifest.xml's windowSoftInputMode=
+                "adjustResize" turned out not to reach this screen on its own
+                (react-native-screens' native-Fragment-based navigation
+                doesn't always propagate window resize the way a plain
+                Activity does), so the input needs KeyboardAvoidingView's own
+                compensation on both platforms after all - matching the
+                'padding'/'height' split every other screen in this app
+                already uses for the same reason. */}
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+                style={styles.flexOne}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             >
-                <View style={[styles.inputContainer, { paddingBottom: insets.bottom + 12 }]}>
-                    <TouchableOpacity style={styles.attachButton}>
-                        <Paperclip size={20} color="#6B7280" />
-                    </TouchableOpacity>
+                {loading ? (
+                    <View style={styles.center}>
+                        <ActivityIndicator size="large" color="#2FA561" />
+                    </View>
+                ) : loadError ? (
+                    <View style={styles.center}>
+                        <Text style={styles.errorText}>Couldn't load this conversation.</Text>
+                    </View>
+                ) : (
+                    <FlatList
+                        ref={flatListRef}
+                        style={styles.flexOne}
+                        data={messages}
+                        renderItem={renderMessageItem}
+                        keyExtractor={item => item._id}
+                        contentContainerStyle={styles.chatContent}
+                        ListEmptyComponent={
+                            <View style={styles.center}>
+                                <Text style={styles.errorText}>No messages yet. Say hello!</Text>
+                            </View>
+                        }
+                    />
+                )}
 
+                <View style={[styles.inputContainer, { paddingBottom: (keyboardVisible ? 0 : insets.bottom) + 12 }]}>
                     <TextInput
                         style={styles.input}
                         placeholder="Type a message..."
@@ -131,18 +242,61 @@ export default function DoctorChatScreen() {
                     <TouchableOpacity
                         style={[styles.sendButton, !message.trim() && styles.sendButtonDisabled]}
                         onPress={sendMessage}
-                        disabled={!message.trim()}
+                        disabled={!message.trim() || sending}
                     >
                         <Send size={18} color="#fff" />
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
+
+            <ConsultationDetailsModal
+                visible={showCompleteModal}
+                onClose={() => setShowCompleteModal(false)}
+                onSubmit={handleCompleteConsultation}
+                initialData={consultationDraft}
+            />
+
+            <InCallToolsSheet
+                visible={showToolsSheet}
+                onClose={() => setShowToolsSheet(false)}
+                onOpenNotes={() => { setShowToolsSheet(false); setShowNotesModal(true); }}
+                onOpenReports={() => { setShowToolsSheet(false); setShowReportsModal(true); }}
+                onComplete={() => { setShowToolsSheet(false); setShowCompleteModal(true); }}
+            />
+
+            <ConsultationDetailsModal
+                visible={showNotesModal}
+                mode="draft"
+                onClose={() => setShowNotesModal(false)}
+                onSubmit={async () => { }}
+                initialData={consultationDraft}
+                onSaveDraft={setConsultationDraft}
+            />
+
+            <PatientReportsModal
+                visible={showReportsModal}
+                onClose={() => setShowReportsModal(false)}
+                customerId={customerId || undefined}
+            />
+
+            <StatusModal
+                visible={status.visible}
+                status={status.type}
+                title={status.title}
+                message={status.message}
+                onClose={hideStatus}
+                primaryAction={status.primaryAction}
+                primaryActionText={status.primaryActionText}
+            />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F3F4F6' },
+    flexOne: { flex: 1 },
+    center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+    errorText: { fontSize: 14, color: '#6B7280', textAlign: 'center' },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -161,22 +315,14 @@ const styles = StyleSheet.create({
     },
     avatarTextHeader: { fontSize: 14, fontWeight: '700', color: '#4F46E5' },
     headerTitle: { fontSize: 16, fontWeight: '600', color: '#111827' },
-    headerStatus: { fontSize: 12, color: '#2FA561', fontWeight: '500' },
-    headerActions: { flexDirection: 'row', gap: 16 },
     iconButton: { padding: 4 },
 
-    chatContent: { padding: 16, paddingBottom: 24, gap: 16 },
+    chatContent: { padding: 16, paddingBottom: 24, gap: 16, flexGrow: 1 },
 
     // Messages
-    messageRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, maxWidth: '80%' },
+    messageRow: { flexDirection: 'row', alignItems: 'flex-end', maxWidth: '80%' },
     messageRowLeft: { alignSelf: 'flex-start' },
-    messageRowRight: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
-
-    avatarSmall: {
-        width: 28, height: 28, borderRadius: 14, backgroundColor: '#E0E7FF',
-        alignItems: 'center', justifyContent: 'center', marginBottom: 2
-    },
-    avatarTextSmall: { fontSize: 10, fontWeight: '700', color: '#4F46E5' },
+    messageRowRight: { alignSelf: 'flex-end' },
 
     messageBubble: {
         borderRadius: 16,
@@ -211,14 +357,13 @@ const styles = StyleSheet.create({
         borderTopColor: '#E5E7EB',
         gap: 10
     },
-    attachButton: { padding: 10, marginBottom: 4 },
     input: {
         flex: 1,
         backgroundColor: '#F9FAFB',
         borderRadius: 20,
         paddingHorizontal: 16,
         paddingVertical: 10,
-        paddingTop: 10, // For multiline vertical centering
+        paddingTop: 10,
         fontSize: 15,
         color: '#1F2937',
         maxHeight: 100

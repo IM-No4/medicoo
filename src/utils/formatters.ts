@@ -73,3 +73,15 @@ export const formatDateForDisplay = (dateString: string | null | undefined): str
 export const formatDateForApi = (date: Date): string => {
     return date.toISOString().split('T')[0];
 };
+
+/**
+ * Prefixes a doctor's name with "Dr." for display, unless it already has one
+ * (case-insensitive, with or without the trailing period) - stored names are
+ * inconsistent about whether the doctor typed "Dr." themselves at signup.
+ */
+export const formatDoctorName = (name: string | null | undefined): string => {
+    if (!name) return '';
+    const trimmed = name.trim();
+    if (/^dr\.?\s/i.test(trimmed)) return trimmed;
+    return `Dr. ${trimmed}`;
+};

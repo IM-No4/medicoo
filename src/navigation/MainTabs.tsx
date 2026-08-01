@@ -1,4 +1,5 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { getFocusedRouteNameFromRoute, RouteProp } from '@react-navigation/native';
 import React from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,21 +20,36 @@ type Props = {
   onOpenCommandPalette: () => void;
 };
 
+const PROFILE_ROOT_SCREEN = 'ProfileMain';
+
+// Only the Profile tab has been asked to hide the bar on its sub-screens -
+// other tabs keep their existing always-visible behavior.
+const isNestedStackOnSubScreen = (route: RouteProp<any, any>) => {
+  if (route.name !== 'Profile') return false;
+  const focusedRouteName = getFocusedRouteNameFromRoute(route) ?? PROFILE_ROOT_SCREEN;
+  return focusedRouteName !== PROFILE_ROOT_SCREEN;
+};
+
 export default function MainTabs({ onOpenCommandPalette }: Props) {
   const insets = useSafeAreaInsets();
+
+  const baseTabBarStyle = {
+    backgroundColor: '#ffffff',
+    borderTopWidth: 0,
+    height: 64 + insets.bottom,
+    paddingBottom: insets.bottom,
+    paddingTop: 8,
+  };
 
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 0,
-          height: 64 + insets.bottom,
-          paddingBottom: insets.bottom,
-          paddingTop: 8,
-        },
+        // Only the tab's own root screen keeps the bar - anything pushed on
+        // top within a nested stack (e.g. Profile's sub-screens) hides it,
+        // since those are drill-down detail views, not tab destinations.
+        tabBarStyle: isNestedStackOnSubScreen(route) ? { display: 'none' } : baseTabBarStyle,
         tabBarIcon: ({ focused }) => {
           const color = focused ? ACTIVE_COLOR : INACTIVE_COLOR;
           const opacity = focused ? 1 : 0.45;

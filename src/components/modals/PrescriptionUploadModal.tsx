@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { formatDoctorName } from '../../utils/formatters';
 
 interface Prescription {
   id: string;
@@ -273,7 +274,7 @@ export default function PrescriptionUploadModal({
                             <AppIcon name="stethoscope" size={16} color="#6B7280" />
                             <Text style={styles.prescriptionLabel}>Doctor:</Text>
                             <Text style={styles.prescriptionValue}>
-                              {prescription.doctorName}
+                              {formatDoctorName(prescription.doctorName)}
                             </Text>
                           </View>
 

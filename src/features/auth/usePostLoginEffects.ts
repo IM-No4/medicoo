@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { syncPushToken } from '../../bootstrap/pushNotifications';
 import { RootState } from '../../redux/store';
 import {
     initializeSocket,
@@ -18,6 +19,7 @@ export function usePostLoginEffects() {
     // User is fully ready → start services
     if (isReady) {
       initializeSocket();
+      syncPushToken();
       return;
     }
 

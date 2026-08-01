@@ -1,24 +1,37 @@
 import { StatusBar } from 'expo-status-bar';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Calendar, ChevronLeft, Landmark, ShieldCheck, TrendingUp, Wallet, X } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { executeAction } from '../../../../actions/ActionExecutor';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
+import {
+    addBankAccount,
+    DoctorEarningsSummary,
+    DoctorEarningsTransaction,
+    DoctorPayoutMethod,
+    getDoctorEarnings,
+    getDoctorPayoutMethods,
+    requestDoctorPayout,
+} from '../../../../services/api/doctor.api';
 
-const MOCK_TRANSACTIONS = [
-    { id: '1', type: 'Consultation', sub: 'Patient: John Doe', amount: 500, date: 'Feb 04, 2026', status: 'Completed' },
-    { id: '2', type: 'Follow-up', sub: 'Patient: Alice Smith', amount: 300, date: 'Feb 03, 2026', status: 'Completed' },
-    { id: '3', type: 'Withdrawal', sub: 'To Bank: **** 4532', amount: -2500, date: 'Feb 01, 2026', status: 'Pending' },
-    { id: '4', type: 'Consultation', sub: 'Patient: Robert Wilson', amount: 500, date: 'Jan 30, 2026', status: 'Completed' },
-];
+type Filter = 'All' | 'Credit' | 'Debit';
+
+const formatTxDate = (date: string) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
 export default function DoctorEarningsScreen() {
     const insets = useSafeAreaInsets();
-    const [activeFilter, setActiveFilter] = useState('All');
-    const [hasPaymentProfile, setHasPaymentProfile] = useState(false);
+    const [activeFilter, setActiveFilter] = useState<Filter>('All');
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [summary, setSummary] = useState<DoctorEarningsSummary | null>(null);
+    const [payoutMethods, setPayoutMethods] = useState<DoctorPayoutMethod[]>([]);
+
     const [isSetupModalVisible, setIsSetupModalVisible] = useState(false);
+    const [isWithdrawModalVisible, setIsWithdrawModalVisible] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [withdrawing, setWithdrawing] = useState(false);
+    const [withdrawAmount, setWithdrawAmount] = useState('');
 
     // Status Modal State
     const [status, setStatus] = useState<{
@@ -40,34 +53,114 @@ export default function DoctorEarningsScreen() {
     // Form State
     const [formData, setFormData] = useState({
         accountName: '',
+        bankName: '',
         accountNumber: '',
         ifsc: '',
     });
 
-    const filters = ['All', 'Credit', 'Debit'];
+    const filters: Filter[] = ['All', 'Credit', 'Debit'];
+
+    const fetchData = useCallback(async () => {
+        try {
+            const [earnings, methods] = await Promise.all([getDoctorEarnings(), getDoctorPayoutMethods()]);
+            setSummary(earnings);
+            setPayoutMethods(methods.payoutMethods || []);
+        } catch (error) {
+            console.error('Error fetching earnings:', error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchData();
+    };
+
+    const hasPaymentProfile = payoutMethods.length > 0;
+    const defaultAccount = payoutMethods.find((pm) => pm.isDefault) || payoutMethods[0];
+
+    const accountLabel = defaultAccount
+        ? (defaultAccount.account_type === 'vpa' ? defaultAccount.vpa?.address : defaultAccount.bank_account?.name)
+        : undefined;
+    const accountSubLabel = defaultAccount
+        ? (defaultAccount.account_type === 'vpa' ? 'UPI' : `**** ${defaultAccount.bank_account?.account_number?.slice(-4) || ''}`)
+        : undefined;
+
+    const now = new Date();
+    const thisMonthEarnings = (summary?.transactions || [])
+        .filter((tx) => {
+            const d = new Date(tx.date);
+            return tx.type === 'credit' && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        })
+        .reduce((sum, tx) => sum + tx.amount, 0);
+
+    const filteredTransactions = (summary?.transactions || []).filter((tx: DoctorEarningsTransaction) => {
+        if (activeFilter === 'Credit') return tx.type === 'credit';
+        if (activeFilter === 'Debit') return tx.type === 'debit';
+        return true;
+    });
 
     const handleWithdraw = () => {
         if (!hasPaymentProfile) {
             setIsSetupModalVisible(true);
-        } else {
-            executeAction('OPEN_REDEEM');
+            return;
         }
+        setWithdrawAmount(summary?.amountAvailableToWithdraw ? String(summary.amountAvailableToWithdraw) : '');
+        setIsWithdrawModalVisible(true);
     };
 
     const handleSaveProfile = async () => {
-        if (!formData.accountName || !formData.accountNumber || !formData.ifsc) {
+        if (!formData.accountName || !formData.bankName || !formData.accountNumber || !formData.ifsc) {
             showStatus('error', 'Incomplete Details', 'Please fill all bank details to continue.');
             return;
         }
 
         setSaving(true);
-        // Simulate API call to Razorpay through our backend
-        setTimeout(() => {
-            setSaving(false);
-            setHasPaymentProfile(true);
+        try {
+            await addBankAccount({
+                accountHolderName: formData.accountName,
+                accountNumber: formData.accountNumber,
+                bankName: formData.bankName,
+                ifsc: formData.ifsc,
+            });
+            await fetchData();
             setIsSetupModalVisible(false);
             showStatus('success', 'Profile Created', 'Your details are securely stored. You can now withdraw your earnings.');
-        }, 2000);
+        } catch (error: any) {
+            showStatus('error', 'Could Not Save', error?.response?.data?.error || 'Please try again.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleConfirmWithdraw = async () => {
+        const amount = parseFloat(withdrawAmount);
+        if (!amount || amount <= 0) {
+            showStatus('error', 'Invalid Amount', 'Enter a valid amount to withdraw.');
+            return;
+        }
+        if (!defaultAccount) {
+            showStatus('error', 'No Account', 'Add a payout account first.');
+            return;
+        }
+
+        setWithdrawing(true);
+        try {
+            await requestDoctorPayout(amount, defaultAccount.id);
+            setIsWithdrawModalVisible(false);
+            await fetchData();
+            showStatus('success', 'Withdrawal Initiated', 'Your payout has been initiated and should reflect in your account shortly.');
+        } catch (error: any) {
+            showStatus('error', 'Withdrawal Failed', error?.response?.data?.error || 'Please try again.');
+        } finally {
+            setWithdrawing(false);
+        }
     };
 
     return (
@@ -81,7 +174,11 @@ export default function DoctorEarningsScreen() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2FA561']} />}
+            >
                 {/* Main Balance Card */}
                 <View style={styles.balanceContainer}>
                     <View style={styles.balanceCard}>
@@ -91,12 +188,16 @@ export default function DoctorEarningsScreen() {
                             </View>
                             <Text style={styles.balanceLabel}>Available Balance</Text>
                         </View>
-                        <Text style={styles.balanceValue}>₹12,450.00</Text>
+                        {loading ? (
+                            <ActivityIndicator color="#fff" style={{ marginBottom: 24, alignSelf: 'flex-start' }} />
+                        ) : (
+                            <Text style={styles.balanceValue}>₹{(summary?.amountAvailableToWithdraw ?? 0).toLocaleString()}</Text>
+                        )}
 
                         <View style={styles.balanceFooter}>
                             <View style={styles.upcomingInfo}>
-                                <Text style={styles.upcomingLabel}>Upcoming Settlement</Text>
-                                <Text style={styles.upcomingValue}>₹3,200 (Scheduled for Friday)</Text>
+                                <Text style={styles.upcomingLabel}>On Hold (48h)</Text>
+                                <Text style={styles.upcomingValue}>₹{(summary?.holdAmount ?? 0).toLocaleString()}</Text>
                             </View>
                             <TouchableOpacity
                                 style={styles.withdrawBtn}
@@ -116,7 +217,7 @@ export default function DoctorEarningsScreen() {
                         </View>
                         <View>
                             <Text style={styles.statBoxLabel}>This Month</Text>
-                            <Text style={styles.statBoxValue}>+₹4,200</Text>
+                            <Text style={styles.statBoxValue}>+₹{thisMonthEarnings.toLocaleString()}</Text>
                         </View>
                     </View>
                     <View style={styles.statBox}>
@@ -124,8 +225,8 @@ export default function DoctorEarningsScreen() {
                             <Calendar size={16} color="#2563EB" />
                         </View>
                         <View>
-                            <Text style={styles.statBoxLabel}>Settled</Text>
-                            <Text style={styles.statBoxValue}>₹8,250</Text>
+                            <Text style={styles.statBoxLabel}>Total Earned</Text>
+                            <Text style={styles.statBoxValue}>₹{(summary?.totalEarnings ?? 0).toLocaleString()}</Text>
                         </View>
                     </View>
                 </View>
@@ -133,15 +234,15 @@ export default function DoctorEarningsScreen() {
                 {/* Bank Account Shortcut */}
                 <TouchableOpacity
                     style={styles.bankShortcut}
-                    onPress={() => !hasPaymentProfile && setIsSetupModalVisible(true)}
+                    onPress={() => setIsSetupModalVisible(true)}
                 >
                     <View style={styles.bankInfo}>
                         <View style={styles.bankCircle}>
-                            {hasPaymentProfile ? <Text style={styles.bankInitial}>H</Text> : <Landmark size={20} color="#6B7280" />}
+                            {hasPaymentProfile ? <Text style={styles.bankInitial}>{(accountLabel || 'A').charAt(0).toUpperCase()}</Text> : <Landmark size={20} color="#6B7280" />}
                         </View>
                         <View>
-                            <Text style={styles.bankName}>{hasPaymentProfile ? 'HDFC Bank Primary' : 'Setup Bank Account'}</Text>
-                            <Text style={styles.bankAccount}>{hasPaymentProfile ? '**** 4532' : 'To receive payments'}</Text>
+                            <Text style={styles.bankName}>{hasPaymentProfile ? accountLabel : 'Setup Bank Account'}</Text>
+                            <Text style={styles.bankAccount}>{hasPaymentProfile ? accountSubLabel : 'To receive payments'}</Text>
                         </View>
                     </View>
                     <ArrowRight size={18} color="#9CA3AF" />
@@ -164,25 +265,31 @@ export default function DoctorEarningsScreen() {
                 </View>
 
                 <View style={styles.transactionList}>
-                    {MOCK_TRANSACTIONS.map((tx) => (
-                        <View key={tx.id} style={styles.transactionItem}>
-                            <View style={styles.txLeft}>
-                                <View style={[styles.txIcon, tx.amount > 0 ? styles.creditIcon : styles.debitIcon]}>
-                                    {tx.amount > 0 ? <ArrowUpRight size={18} color="#16A34A" /> : <ArrowDownRight size={18} color="#DC2626" />}
+                    {loading ? (
+                        <ActivityIndicator color="#2FA561" style={{ marginTop: 20 }} />
+                    ) : filteredTransactions.length === 0 ? (
+                        <Text style={styles.emptyText}>No transactions yet.</Text>
+                    ) : (
+                        filteredTransactions.map((tx) => (
+                            <View key={tx.id} style={styles.transactionItem}>
+                                <View style={styles.txLeft}>
+                                    <View style={[styles.txIcon, tx.type === 'credit' ? styles.creditIcon : styles.debitIcon]}>
+                                        {tx.type === 'credit' ? <ArrowUpRight size={18} color="#16A34A" /> : <ArrowDownRight size={18} color="#DC2626" />}
+                                    </View>
+                                    <View>
+                                        <Text style={styles.txType}>{tx.label}</Text>
+                                        {!!tx.sub && <Text style={styles.txSub}>{tx.sub}</Text>}
+                                    </View>
                                 </View>
-                                <View>
-                                    <Text style={styles.txType}>{tx.type}</Text>
-                                    <Text style={styles.txSub}>{tx.sub}</Text>
+                                <View style={styles.txRight}>
+                                    <Text style={[styles.txAmount, tx.type === 'debit' && styles.debitText]}>
+                                        {tx.type === 'credit' ? '+' : '-'}₹{Math.abs(tx.amount)}
+                                    </Text>
+                                    <Text style={styles.txDate}>{formatTxDate(tx.date)}</Text>
                                 </View>
                             </View>
-                            <View style={styles.txRight}>
-                                <Text style={[styles.txAmount, tx.amount < 0 && styles.debitText]}>
-                                    {tx.amount > 0 ? '+' : ''}₹{Math.abs(tx.amount)}
-                                </Text>
-                                <Text style={styles.txDate}>{tx.date}</Text>
-                            </View>
-                        </View>
-                    ))}
+                        ))
+                    )}
                 </View>
             </ScrollView>
 
@@ -194,7 +301,7 @@ export default function DoctorEarningsScreen() {
                 onRequestClose={() => setIsSetupModalVisible(false)}
             >
                 <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={styles.modalOverlay}
                 >
                     <TouchableOpacity
@@ -220,6 +327,16 @@ export default function DoctorEarningsScreen() {
                                     style={styles.input}
                                     value={formData.accountName}
                                     onChangeText={(v) => setFormData(p => ({ ...p, accountName: v }))}
+                                />
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Bank Name</Text>
+                                <TextInput
+                                    placeholder="e.g. HDFC Bank"
+                                    style={styles.input}
+                                    value={formData.bankName}
+                                    onChangeText={(v) => setFormData(p => ({ ...p, bankName: v }))}
                                 />
                             </View>
 
@@ -262,6 +379,60 @@ export default function DoctorEarningsScreen() {
                     </View>
                 </KeyboardAvoidingView>
             </Modal>
+
+            {/* Withdraw Modal */}
+            <Modal
+                visible={isWithdrawModalVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setIsWithdrawModalVisible(false)}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
+                    <TouchableOpacity
+                        style={styles.modalBlur}
+                        activeOpacity={1}
+                        onPress={() => setIsWithdrawModalVisible(false)}
+                    />
+                    <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Withdraw Earnings</Text>
+                            <TouchableOpacity onPress={() => setIsWithdrawModalVisible(false)} style={styles.closeBtn}>
+                                <X size={20} color="#6B7280" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.modalSubtitle}>
+                            Available balance: ₹{(summary?.amountAvailableToWithdraw ?? 0).toLocaleString()}
+                            {accountLabel ? ` · to ${accountLabel}` : ''}
+                        </Text>
+
+                        <View style={styles.form}>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Amount (₹)</Text>
+                                <TextInput
+                                    placeholder="0"
+                                    style={styles.input}
+                                    keyboardType="numeric"
+                                    value={withdrawAmount}
+                                    onChangeText={setWithdrawAmount}
+                                />
+                            </View>
+
+                            <TouchableOpacity
+                                style={[styles.saveBtn, withdrawing && styles.saveBtnDisabled]}
+                                onPress={handleConfirmWithdraw}
+                                disabled={withdrawing}
+                            >
+                                {withdrawing ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Confirm Withdrawal</Text>}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
             <StatusModal
                 visible={status.visible}
                 status={status.type}
@@ -289,6 +460,7 @@ const styles = StyleSheet.create({
     backButton: { padding: 8, marginLeft: -8 },
     headerTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
     scrollContent: { paddingBottom: 40 },
+    emptyText: { textAlign: 'center', color: '#9CA3AF', fontSize: 13, marginTop: 20 },
 
     balanceContainer: { padding: 20 },
     balanceCard: {

@@ -1,20 +1,29 @@
 import { DoctorStackParamList } from '@/src/navigation/DoctorStack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, ScrollView, Share, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, Share, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TypedUseSelectorHook, useSelector } from 'react-redux';
+import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
+import { executeAction } from '../../actions/ActionExecutor';
 import AppIcon from '../../components/icons/AppIcon';
-import { RootState } from '../../redux/store';
-import { API_BASE_URL } from '../../services/api/client';
-import { getPublicDoctorProfile } from '../../services/api/doctor.api';
-import RequestAppointmentModal from './components/RequestAppointmentModal';
 import { useTrackActivity } from '../../hooks/useTrackActivity';
+import { dismissActivity } from '../../redux/slices/activitySlice';
+import { AppDispatch, RootState } from '../../redux/store';
+import { API_BASE_URL } from '../../services/api/client';
+import { getPublicDoctorProfile, requestAppointment } from '../../services/api/doctor.api';
+import { addFavoriteDoctor, getFavoriteDoctors, removeFavoriteDoctor } from '../../services/api/user.api';
+import { formatDoctorName } from '../../utils/formatters';
+import RequestAppointmentModal from './components/RequestAppointmentModal';
 
 // Define useAppSelector locally since hooks file is missing
 const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
+
+const ACTIVE_APPOINTMENT_LABEL: Record<string, string> = {
+  pending: 'You have a pending request with this doctor',
+  approved: 'You have an upcoming appointment with this doctor',
+};
 
 export default function DoctorDetailsScreen() {
   type NavProp = NativeStackNavigationProp<
@@ -31,9 +40,11 @@ export default function DoctorDetailsScreen() {
   const route = useRoute<RouteProps>();
   const { doctor, doctorId, intent, preview } = (route.params || {}) as any;
   const insets = useSafeAreaInsets();
+  const dispatch = useDispatch<AppDispatch>();
   const [data, setData] = useState(doctor || null);
   const [loading, setLoading] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
   const hasAutoBookedRef = useRef(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
 
@@ -42,12 +53,13 @@ export default function DoctorDetailsScreen() {
   // Normalize user ID comparison - convert to string to be safe
   const isOwnProfile = user?.id && data?.id && String(user.id) === String(data.id);
   const isActionDisabled = isOwnProfile || preview;
+  const isNotAccepting = data?.isAcceptingAppointments === false;
 
   // Track this as a resumable activity (only when not preview mode)
   const resolvedDoctorId = doctor?.id || doctor?._id || doctorId;
   useTrackActivity({
     id: `doctor-${resolvedDoctorId}`,
-    title: `Booking ${data?.name || 'Doctor'}`,
+    title: `Booking ${formatDoctorName(data?.name) || 'Doctor'}`,
     subtitle: 'Continue from where you left',
     icon: 'stethoscope',
     stack: 'DoctorStack',
@@ -108,40 +120,47 @@ export default function DoctorDetailsScreen() {
     if (
       intent === 'BOOK' &&
       data &&
+      data.isAcceptingAppointments !== false &&
       !hasAutoBookedRef.current
     ) {
       hasAutoBookedRef.current = true;
-      navigation.navigate('BookAppointment', { doctor: data });
+      setShowRequestModal(true);
     }
-  }, [intent, data, navigation]);
+  }, [intent, data]);
 
   const checkFavoriteStatus = async () => {
+    const id = doctor?.id || doctor?._id || doctorId;
+    if (!id) return;
+
     try {
-      const stored = await AsyncStorage.getItem('favorites');
-      if (stored) {
-        const favorites = JSON.parse(stored);
-        if (favorites.includes(data.id)) setIsFavorite(true);
-      }
+      const res = await getFavoriteDoctors();
+      const list = Array.isArray(res) ? res : res?.data || res?.doctors || [];
+      const ids = list
+        .map((item: any) => item.doctorId || item.id || item._id)
+        .filter(Boolean);
+      setIsFavorite(ids.includes(id));
     } catch (e) {
       console.error(e);
     }
   };
 
   const toggleFavorite = async () => {
+    const id = data?.id || doctor?.id || doctor?._id || doctorId;
+    if (!id || isFavoriteLoading) return;
+
+    setIsFavoriteLoading(true);
     try {
-      const stored = await AsyncStorage.getItem('favorites');
-      let favorites = stored ? JSON.parse(stored) : [];
-
       if (isFavorite) {
-        favorites = favorites.filter((id: string) => id !== doctor.id);
+        await removeFavoriteDoctor(id);
+        setIsFavorite(false);
       } else {
-        favorites.push(doctor.id);
+        await addFavoriteDoctor(id);
+        setIsFavorite(true);
       }
-
-      await AsyncStorage.setItem('favorites', JSON.stringify(favorites));
-      setIsFavorite(!isFavorite);
     } catch (e) {
       console.error(e);
+    } finally {
+      setIsFavoriteLoading(false);
     }
   };
 
@@ -149,7 +168,7 @@ export default function DoctorDetailsScreen() {
     try {
       const url = `medicoo://doctor/${data.id}`;
       await Share.share({
-        message: `Check out Dr. ${data.name}, ${data.specialty} at ${data.location}. Book here: ${url}`,
+        message: `Check out ${formatDoctorName(data.name)}, ${data.specialty} at ${data.location}. Book here: ${url}`,
         url: url, // iOS support
       });
     } catch (e) {
@@ -157,13 +176,34 @@ export default function DoctorDetailsScreen() {
     }
   };
 
-  const handleRequestSubmit = (requestData: any) => {
-    // Navigate to booking success or a special success page for requests
+  const handleRequestSubmit = async (requestData: any) => {
+    const doctorId = resolvedDoctorId;
+    if (!doctorId) {
+      throw new Error('Could not determine which doctor to request - please try again.');
+    }
+
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const preferredDate = requestData.date.toISOString().split('T')[0];
+    const preferredTime = `${pad(requestData.time.getHours())}:${pad(requestData.time.getMinutes())}`;
+
+    // Throws on failure - RequestAppointmentModal catches it and shows the
+    // error itself, keeping the modal open so the user can retry.
+    const res = await requestAppointment({
+      doctorId,
+      preferredDate,
+      preferredTime,
+      reason: requestData.reason,
+      consultationType: requestData.type,
+    });
+
     setShowRequestModal(false);
-    // For now simulate navigating to Success
+    // The "Continue where you left off" card on Home tracks this as a
+    // resumable in-progress booking - now that the request has actually
+    // been submitted, there's nothing left to resume.
+    dispatch(dismissActivity());
     navigation.navigate('BookingSuccess', {
       isRequest: true,
-      ...requestData
+      requestId: res?.data?.requestId,
     });
   };
 
@@ -171,89 +211,119 @@ export default function DoctorDetailsScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-          <AppIcon name="arrow-left" size={24} color="#1c1c1e" />
-        </TouchableOpacity>
-        <View style={styles.headerActions}>
-          <TouchableOpacity onPress={toggleFavorite} style={styles.iconButton}>
-            <AppIcon name="heart" size={24} color={isFavorite ? "#FF3B30" : "#1c1c1e"} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleShare} style={[styles.iconButton, { marginLeft: 8 }]}>
-            <AppIcon name="share" size={24} color="#1c1c1e" />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} bounces={false}>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-
-        {/* Profile Section */}
-        <View style={styles.profileSection}>
-          <View style={styles.imageContainer}>
-            {data.image || data.uniformPhoto ? (
-              <Image
-                source={{
-                  uri: (data.image || data.uniformPhoto).startsWith('http')
-                    ? (data.image || data.uniformPhoto)
-                    : `${API_BASE_URL}/${data.image || data.uniformPhoto}`
-                }}
-                style={styles.doctorImage}
-              />
-            ) : (
-              <Text style={{ fontSize: 48 }}>👨‍⚕️</Text>
-            )}
-          </View>
-
-          <View style={styles.nameRow}>
-            <Text style={styles.name}>{data.name || 'Doctor'}</Text>
-            <View style={styles.verifiedBadge}>
-              <AppIcon name="check" size={12} color="#fff" />
+        {/* Hero Image with basic details overlaid on it */}
+        <View style={styles.heroContainer}>
+          {data.image || data.uniformPhoto ? (
+            <Image
+              source={{
+                uri: (data.image || data.uniformPhoto).startsWith('http')
+                  ? (data.image || data.uniformPhoto)
+                  : `${API_BASE_URL}/${data.image || data.uniformPhoto}`
+              }}
+              style={styles.heroImage}
+            />
+          ) : (
+            <View style={styles.heroPlaceholder}>
+              <Text style={{ fontSize: 72 }}>👨‍⚕️</Text>
             </View>
-            {data.doctorType && (
-              <View style={styles.doctorTypeBadge}>
-                <Text style={styles.doctorTypeText}>{data.doctorType}</Text>
+          )}
+
+          {/* Header icons, overlaid on the image */}
+          <View style={[styles.heroHeader, { paddingTop: insets.top + 10 }]}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.overlayIconButton}>
+              <AppIcon name="arrow-left" size={22} color="#fff" />
+            </TouchableOpacity>
+            {!isActionDisabled && (
+              <View style={styles.headerActions}>
+                <TouchableOpacity onPress={toggleFavorite} disabled={isFavoriteLoading} style={styles.overlayIconButton}>
+                  {isFavoriteLoading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <AppIcon name="heart" size={22} color={isFavorite ? "#FF3B30" : "#fff"} fill={isFavorite ? "#FF3B30" : "none"} />
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleShare} style={[styles.overlayIconButton, { marginLeft: 8 }]}>
+                  <AppIcon name="share" size={22} color="#fff" />
+                </TouchableOpacity>
               </View>
             )}
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.specialty}>{data.specialty || data.specialization}</Text>
-            <View style={styles.dot} />
-            <View style={styles.hospitalBadge}>
-              <AppIcon name="map-pin" size={12} color="#1C6ED5" />
-              <Text style={styles.hospitalText}>{data.location || data.hospital}</Text>
+
+          {/* Scrim so light text stays legible over any photo - kept short and
+              graduated so it only darkens the strip right behind the text,
+              not the photo as a whole. */}
+          <LinearGradient
+            colors={['transparent', 'transparent', 'rgba(0,0,0,0.7)']}
+            locations={[0, 0.35, 1]}
+            style={styles.heroScrim}
+            pointerEvents="none"
+          />
+
+          {/* Basic Details, overlaid at the bottom of the image */}
+          <View style={styles.profileSection}>
+            <View style={styles.profileHeaderRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.specialtyLabel} numberOfLines={1}>
+                  {[data.specialty || data.specialization, data.doctorType].filter(Boolean).join(' • ')}
+                </Text>
+                <View style={styles.nameRow}>
+                  <Text style={styles.name} numberOfLines={1}>{formatDoctorName(data.name) || 'Doctor'}</Text>
+                  <View style={styles.verifiedBadge}>
+                    <AppIcon name="check" size={11} color="#fff" />
+                  </View>
+                </View>
+              </View>
+
+              {(data.rating || data.averageRating) ? (
+                <View style={styles.ratingPill}>
+                  <AppIcon name="star" size={13} color="#FFD166" />
+                  <Text style={styles.ratingPillText}>{data.rating || data.averageRating}</Text>
+                </View>
+              ) : null}
+            </View>
+
+            <View style={styles.locationRow}>
+              <AppIcon name="map-pin" size={14} color="rgba(255,255,255,0.85)" />
+              <Text style={styles.locationText} numberOfLines={1}>{data.location || data.hospital}</Text>
             </View>
           </View>
-
-
         </View>
 
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <View style={[styles.statIcon, { backgroundColor: '#EAF4FF' }]}>
-              <AppIcon name="users" size={20} color="#1C6ED5" />
+        {/* Doctor Information */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Doctor information</Text>
+          <View style={styles.infoCardsRow}>
+            <View style={[styles.infoCard, { backgroundColor: '#EEF4FF', borderColor: '#DCE8FF' }]}>
+              <View style={[styles.infoCardIconBox, { backgroundColor: '#DCE8FF' }]}>
+                <AppIcon name="briefcase" size={17} color="#1C6ED5" />
+              </View>
+              <Text style={styles.infoCardValue}>
+                {typeof data.experience === 'number' ? `${data.experience} Years` : (data.experience || '—')}
+              </Text>
+              <Text style={styles.infoCardLabel}>Experience</Text>
             </View>
-            <Text style={styles.statValue}>{data.totalPatients || '0'}</Text>
-            <Text style={styles.statLabel}>Patients</Text>
-          </View>
-
-          <View style={styles.statItem}>
-            <View style={[styles.statIcon, { backgroundColor: '#FFF6EA' }]}>
-              <AppIcon name="star" size={20} color="#C47A16" />
+            <View style={[styles.infoCard, { backgroundColor: '#F0FBF3', borderColor: '#D7F3DF' }]}>
+              <View style={[styles.infoCardIconBox, { backgroundColor: '#D7F3DF' }]}>
+                <AppIcon name="languages" size={17} color="#0E9448" />
+              </View>
+              <Text style={styles.infoCardValue} numberOfLines={1}>
+                {data.languages?.[0] || 'N/A'}
+              </Text>
+              <Text style={styles.infoCardLabel}>Language</Text>
             </View>
-            <Text style={styles.statValue}>{data.rating || data.averageRating || 0}</Text>
-            <Text style={styles.statLabel}>{data.reviews || data.totalReviews} Reviews</Text>
-          </View>
-
-          <View style={styles.statItem}>
-            <View style={[styles.statIcon, { backgroundColor: '#EAFBF3' }]}>
-              <AppIcon name="stethoscope" size={20} color="#0E7439" />
+            <View style={[styles.infoCard, { backgroundColor: '#FFF6EA', borderColor: '#FDE9C8' }]}>
+              <View style={[styles.infoCardIconBox, { backgroundColor: '#FDE9C8' }]}>
+                <AppIcon name="clock" size={17} color="#C47A16" />
+              </View>
+              <Text style={styles.infoCardValue} numberOfLines={1}>
+                {[data.nextSlot, data.availability].find(v => typeof v === 'string') || 'Check profile'}
+              </Text>
+              <Text style={styles.infoCardLabel}>Availability</Text>
             </View>
-            <Text style={styles.statValue}>{typeof data.experience === 'number' ? `${data.experience} yrs` : data.experience}</Text>
-            <Text style={styles.statLabel}>Experience</Text>
           </View>
         </View>
 
@@ -261,7 +331,7 @@ export default function DoctorDetailsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About Doctor</Text>
           <Text style={styles.aboutText}>
-            {data.description || `${data.name} is a highly skilled ${data.specialty || data.specialization} with over ${data.experience} experience.`}
+            {data.description || `${formatDoctorName(data.name)} is a highly skilled ${data.specialty || data.specialization} with over ${data.experience} experience.`}
           </Text>
 
           {data.languages && data.languages.length > 0 && (
@@ -339,42 +409,41 @@ export default function DoctorDetailsScreen() {
           )
         }
 
-        {/* Availability */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Availability</Text>
-          <View style={styles.availabilityCard}>
-            <View style={styles.availabilityRow}>
-              <AppIcon name="calendar-days" size={20} color="#5B4FDB" />
-              <Text style={styles.availabilityText}>Next Available: {data.nextSlot || data.availability || 'Check availability'}</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.availabilityRow}>
-              <AppIcon name="clock" size={20} color="#5B4FDB" />
-              <Text style={styles.availabilityText}>10:00 AM - 07:00 PM</Text>
-            </View>
-          </View>
-        </View>
 
       </ScrollView>
 
       {/* Bottom Action Bar */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity
-          style={[styles.bookButton, isActionDisabled && styles.disabledButton, { flex: 1 }]}
-          onPress={() => {
-            if (isActionDisabled) return;
-            if (data?.nextSlot === 'Not Available') {
+        {data.activeAppointment && (
+          <TouchableOpacity
+            style={styles.activeAppointmentBanner}
+            onPress={() => executeAction('OPEN_CONSULTATION_DETAIL', { requestId: data.activeAppointment.requestId })}
+          >
+            <AppIcon name="calendar-days" size={16} color="#166534" />
+            <Text style={styles.activeAppointmentText}>
+              {ACTIVE_APPOINTMENT_LABEL[data.activeAppointment.status] || 'You have an active appointment with this doctor'}
+            </Text>
+            <AppIcon name="chevron-right" size={16} color="#166534" />
+          </TouchableOpacity>
+        )}
+        <View style={styles.bottomBarButtonRow}>
+          <TouchableOpacity
+            style={[styles.bookButton, (isActionDisabled || isNotAccepting) && styles.disabledButton, { flex: 1 }]}
+            onPress={() => {
+              if (isActionDisabled || isNotAccepting) return;
               setShowRequestModal(true);
-            } else {
-              navigation.navigate('BookAppointment', { doctor: data });
-            }
-          }}
-          disabled={!!isActionDisabled}
-        >
-          <Text style={styles.bookButtonText}>
-            {isActionDisabled ? (preview ? 'Preview Mode' : 'Your Profile') : (data?.nextSlot === 'Not Available' ? 'Request Appointment' : 'Book Appointment')}
-          </Text>
-        </TouchableOpacity>
+            }}
+            disabled={!!(isActionDisabled || isNotAccepting)}
+          >
+            <Text style={styles.bookButtonText}>
+              {isActionDisabled
+                ? (preview ? 'Preview Mode' : 'Your Profile')
+                : isNotAccepting
+                  ? 'Not Available'
+                  : 'Request Appointment'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Request Modal */}
@@ -382,8 +451,10 @@ export default function DoctorDetailsScreen() {
         <RequestAppointmentModal
           visible={showRequestModal}
           onClose={() => setShowRequestModal(false)}
-          doctorName={data.name || 'Doctor'}
+          doctorName={formatDoctorName(data.name) || 'Doctor'}
           consultationFees={data.consultationFees || {}}
+          weeklyAvailability={data.weeklyAvailability}
+          urgentSurchargePercent={data.urgentSurchargePercent}
           onRequest={handleRequestSubmit}
         />
       )}
@@ -395,117 +466,154 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
+    paddingBottom: 60,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  iconButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1c1c1e',
-  },
   scrollContent: {
     paddingBottom: 140,
   },
-  profileSection: {
-    alignItems: 'center',
-    paddingBottom: 24,
-    paddingTop: 12,
-  },
-  imageContainer: {
-    width: 150,
-    height: 150,
-    borderRadius: '50%',
+  heroContainer: {
+    width: '100%',
+    height: 320,
     backgroundColor: '#F2F2F7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
     overflow: 'hidden',
   },
-  doctorImage: {
+  heroImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
+  heroPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#EAF4FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+  },
+  overlayIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  heroScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '38%',
+  },
+  profileSection: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 18,
+  },
+  profileHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  specialtyLabel: {
+    fontSize: 13,
+    color: '#D8CCFF',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
-    marginTop: 16,
-    marginBottom: 4,
   },
   name: {
-    fontSize: 18,
+    fontSize: 21,
     fontWeight: '700',
-    color: '#1c1c1e',
+    color: '#fff',
   },
   verifiedBadge: {
     backgroundColor: '#2FA561',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
+    borderRadius: 9,
+    width: 18,
+    height: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  infoRow: {
+  ratingPill: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginTop: 2,
+  },
+  ratingPillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+  },
+  locationText: {
+    fontSize: 13.5,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '500',
+  },
+  infoCardsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  infoCard: {
+    flex: 1,
     alignItems: 'center',
     gap: 8,
-    marginBottom: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F2F2F7',
   },
-  specialty: {
-    fontSize: 13,
-    color: '#8e8e93',
-  },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#C7C7CC',
-  },
-  hospitalBadge: {
-    flexDirection: 'row',
+  infoCardIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#EEEAFF',
     alignItems: 'center',
-    backgroundColor: '#EAF4FF',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4
+    justifyContent: 'center',
   },
-  hospitalText: {
-    fontSize: 12,
-    color: '#1C6ED5',
-    fontWeight: '600',
+  infoCardValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1c1c1e',
   },
-  doctorTypeBadge: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginLeft: 4,
-  },
-  doctorTypeText: {
+  infoCardLabel: {
     fontSize: 11,
-    color: '#4B5563',
-    fontWeight: '600',
+    color: '#8e8e93',
   },
   languageContainer: {
     flexDirection: 'row',
@@ -524,33 +632,24 @@ const styles = StyleSheet.create({
     color: '#3A3A3C',
     fontWeight: '500',
   },
-  statsRow: {
+  activeAppointmentBanner: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 24,
-    paddingTop: 0,
-    borderBottomWidth: 8,
-    borderBottomColor: '#F2F2F7',
-  },
-  statItem: {
     alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    width: '100%',
   },
-  statIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 16,
+  activeAppointmentText: {
+    flex: 1,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#1c1c1e',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#8e8e93',
+    color: '#166534',
   },
   section: {
     padding: 20,
@@ -567,21 +666,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#3A3A3C',
     lineHeight: 22,
-  },
-  availabilityCard: {
-    backgroundColor: '#F1EEFF',
-    borderRadius: 16,
-    padding: 16,
-  },
-  availabilityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  availabilityText: {
-    fontSize: 13,
-    color: '#5B4FDB',
-    fontWeight: '500',
-    marginLeft: 12,
   },
   feesContainer: {
     flexDirection: 'row',
@@ -611,19 +695,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1c1c1e',
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#D6D1F5',
-    marginVertical: 12,
-  },
   bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     backgroundColor: '#fff',
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
     paddingHorizontal: 20,
     paddingTop: 16,
     borderTopWidth: 1,
@@ -631,17 +709,9 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     borderTopColor: '#E5E5EA',
   },
-  priceContainer: {
-    flex: 1,
-  },
-  priceLabel: {
-    fontSize: 12,
-    color: '#8e8e93',
-  },
-  priceValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1c1c1e',
+  bottomBarButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   bookButton: {
     backgroundColor: '#2FA561', borderRadius: 24, paddingVertical: 16, alignItems: 'center',

@@ -43,7 +43,7 @@ export const googleLogin = async (
   };
 
   const res = await apiClient.post('/api/userOAuth/google-login', {
-    idToken,
+    token: idToken,
     fcmToken,
     deviceId,
     deviceInfo,

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -c \"C:/Users/Admin/mediseen/backend/controllers/adminController.js\")",
+      "Bash(node -c \"C:/Users/Admin/mediseen/backend/routes/adminRoutes.js\")",
+      "Bash(tee /tmp/tsc_out30.txt)",
+      "Read(//tmp/**)",
+      "Bash(node -c \"C:/Users/Admin/mediseen/backend/routes/customerRoute.js\")",
+      "Bash(tee /tmp/tsc_out31.txt)",
+      "Bash(tee /tmp/tsc_out32.txt)"
+    ]
+  }
+}

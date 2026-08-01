@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { formatDoctorName } from '../../../utils/formatters';
 
 type Doctor = {
   id: string;
@@ -56,7 +57,7 @@ export default function DoctorResultCard({
       {/* Doctor Info */}
       <View style={styles.content}>
         <Text style={styles.name} numberOfLines={1}>
-          {doctor.name}
+          {formatDoctorName(doctor.name)}
         </Text>
 
         <Text style={styles.specialty} numberOfLines={1}>

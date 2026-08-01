@@ -19,7 +19,9 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
+import { API_BASE_URL } from '../../../../config/env';
 import { addUserAddress, updateUserAddress } from '../../../../services/api/address.api';
+import { getToken } from '../../../../utils/tokenManagement';
 
 type FloatingLabelInputProps = {
     label: string;
@@ -128,6 +130,10 @@ export default function AddAddressScreen() {
     });
 
     const ADDRESS_TAGS = ['Home', 'Work', 'Other'];
+    const [authToken, setAuthToken] = useState<string | null>(null);
+    useEffect(() => {
+        getToken('access_token').then(setAuthToken);
+    }, []);
     const mapRef = useRef<MapView>(null);
     const [region, setRegion] = useState({
         latitude: 12.9716,
@@ -362,8 +368,14 @@ export default function AddAddressScreen() {
                                 setFormData(p => ({ ...p, fullAddress: data.description }));
                             }
                         }}
+                        requestUrl={{
+                            url: `${API_BASE_URL}/api/maps`,
+                            useOnPlatform: 'all',
+                            headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+                        }}
                         query={{
-                            key: 'AIzaSyA4Vzs1VRiOO0Sc4MPFDwgRVcVdmfeJSqQ', // Replace with config/env
+                            // Real key lives server-side; the proxy ignores this value.
+                            key: 'proxied-via-backend',
                             language: 'en',
                         }}
                         fetchDetails={true}
@@ -521,7 +533,7 @@ export default function AddAddressScreen() {
 
     return (
         <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
         >
             <View style={[styles.header, { paddingTop: insets.top + 16 }]}>

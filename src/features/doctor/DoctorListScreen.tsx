@@ -1,10 +1,9 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Image,
+    FlatList,
     Modal,
     ScrollView,
     StatusBar,
@@ -17,7 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '../../components/icons/AppIcon';
-import { getNearbyDoctors } from '../../services/api/user.api';
+import { addFavoriteDoctor, getFavoriteDoctors, getNearbyDoctors, removeFavoriteDoctor } from '../../services/api/user.api';
 import DoctorCard from './components/DoctorCard';
 
 type Doctor = {
@@ -26,13 +25,22 @@ type Doctor = {
     specialization: string;
     uniformPhoto?: string;
     consultationFee: number;
-    totalReviews: number;
-    averageRating: number;
     hospital?: string;
     experienceYears?: number;
+    rating?: number;
     availability?: string;
+    isAcceptingAppointments?: boolean;
     image?: string;
+    activeAppointment?: {
+        requestId: string;
+        status: string;
+        consultationType?: string;
+        preferredDate?: string;
+        preferredTime?: string;
+    } | null;
 };
+
+const PAGE_SIZE = 10;
 
 const majorSpecializations = [
     { id: 'Cardiologist', label: 'Cardiologist', icon: 'heart', color: '#FF6F61' },
@@ -57,18 +65,27 @@ export default function DoctorListScreen() {
     const insets = useSafeAreaInsets();
 
     const [doctors, setDoctors] = useState<Doctor[]>([]);
+    // initialLoading covers only the very first fetch (full-screen spinner).
+    // loading covers every subsequent filter/search/sort-triggered fetch and
+    // only swaps out the list body, keeping the header/search/filter bar in place.
+    const [initialLoading, setInitialLoading] = useState(true);
+    const hasLoadedOnce = useRef(false);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const [page, setPage] = useState(1);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [selectedSpecialty, setSelectedSpecialty] = useState('All');
     const [favorites, setFavorites] = useState<string[]>([]);
+    const [togglingFavorites, setTogglingFavorites] = useState<Record<string, boolean>>({});
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
     const [filterModalVisible, setFilterModalVisible] = useState(false);
+    const [stagedSpecialty, setStagedSpecialty] = useState('All');
     const [sortModalVisible, setSortModalVisible] = useState(false);
     const [sortBy, setSortBy] = useState<'rating_low_to_high' | 'rating_high_to_low' | 'price_low_to_high' | 'price_high_to_low'>('rating_high_to_low');
-    const [page, setPage] = useState(1);
 
     // Debounce search query
     useEffect(() => {
@@ -80,44 +97,85 @@ export default function DoctorListScreen() {
     }, [searchQuery]);
 
     // ---------------- Load Doctors ----------------
-    const fetchDoctors = useCallback(async () => {
+    // pageToLoad/append are passed explicitly (rather than read from state)
+    // so a fast double-call - e.g. filters changing while a "load more" is
+    // still in flight - can't race and load the wrong page.
+    const fetchDoctors = useCallback(async (pageToLoad: number, append: boolean) => {
         try {
-            setLoading(true);
+            if (append) setLoadingMore(true); else setLoading(true);
             const data = await getNearbyDoctors({
-                page,
+                page: pageToLoad,
                 query: debouncedSearchQuery,
                 specialization: selectedSpecialty === 'All' ? 'all' : selectedSpecialty,
                 sort: sortBy,
             });
-            setDoctors(data);
+            setDoctors(prev => (append ? [...prev, ...data] : data));
+            setHasMore(data.length >= PAGE_SIZE);
+            setPage(pageToLoad);
         } catch (error) {
             console.error('Failed to fetch doctors:', error);
+            if (!append) setDoctors([]);
         } finally {
             setLoading(false);
+            setLoadingMore(false);
+            if (!hasLoadedOnce.current) {
+                hasLoadedOnce.current = true;
+                setInitialLoading(false);
+            }
         }
-    }, [page, debouncedSearchQuery, selectedSpecialty, sortBy]);
+    }, [debouncedSearchQuery, selectedSpecialty, sortBy]);
 
+    // Reset to page 1 whenever the filters actually change.
     useEffect(() => {
-        fetchDoctors();
-        loadFavorites();
+        fetchDoctors(1, false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [debouncedSearchQuery, selectedSpecialty, sortBy, page]);
+    }, [debouncedSearchQuery, selectedSpecialty, sortBy]);
+
+    // Favorites are unrelated to the doctor query itself, but can change on
+    // other screens (e.g. detail screen) - refresh on every focus, not just mount.
+    useFocusEffect(
+        useCallback(() => {
+            loadFavorites();
+        }, [])
+    );
+
+    const handleLoadMore = () => {
+        if (loading || loadingMore || !hasMore) return;
+        fetchDoctors(page + 1, true);
+    };
 
     // ---------------- Favorites ----------------
     const loadFavorites = async () => {
         try {
-            const stored = await AsyncStorage.getItem('favorites');
-            if (stored) setFavorites(JSON.parse(stored));
-        } catch { }
+            const res = await getFavoriteDoctors();
+            const list = Array.isArray(res) ? res : res?.data || res?.doctors || [];
+            const ids = list
+                .map((item: any) => item.doctorId || item.id || item._id)
+                .filter(Boolean);
+            setFavorites(ids);
+        } catch (e) {
+            console.error('Failed to load favorite doctors', e);
+        }
     };
 
     const toggleFavorite = async (id: string) => {
-        const updated = favorites.includes(id)
-            ? favorites.filter(f => f !== id)
-            : [...favorites, id];
+        if (togglingFavorites[id]) return;
 
-        setFavorites(updated);
-        await AsyncStorage.setItem('favorites', JSON.stringify(updated));
+        setTogglingFavorites(prev => ({ ...prev, [id]: true }));
+        try {
+            const isFav = favorites.includes(id);
+            if (isFav) {
+                await removeFavoriteDoctor(id);
+                setFavorites(prev => prev.filter(f => f !== id));
+            } else {
+                await addFavoriteDoctor(id);
+                setFavorites(prev => [...prev, id]);
+            }
+        } catch (e) {
+            console.error('Failed to toggle favorite doctor', e);
+        } finally {
+            setTogglingFavorites(prev => ({ ...prev, [id]: false }));
+        }
     };
 
     // ---------------- Reset All Filters ----------------
@@ -139,19 +197,95 @@ export default function DoctorListScreen() {
         }
     };
 
+    const openFilterModal = () => {
+        setStagedSpecialty(selectedSpecialty);
+        setFilterModalVisible(true);
+    };
+
+    const applyFilterModal = () => {
+        setSelectedSpecialty(stagedSpecialty);
+        setFilterModalVisible(false);
+    };
+
     // ---------------- Filtering Logic (Client-side for favorites only) ----------------
     const filteredDoctors = doctors.filter(doc => {
         const matchesFavorite = !showFavoritesOnly || favorites.includes(doc.id);
         return matchesFavorite;
     });
 
-    if (loading) {
+    if (initialLoading) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#1C6ED5" />
             </View>
         );
     }
+
+    const renderEmptyState = () => {
+        const hasActiveFilters = searchQuery.trim() !== '' || selectedSpecialty !== 'All' || showFavoritesOnly || sortBy !== 'rating_high_to_low';
+
+        return (
+            <View style={styles.emptyContainer}>
+                <View style={[styles.emptyIconCircle, showFavoritesOnly && styles.emptyIconCircleFavorite]}>
+                    <AppIcon
+                        name={showFavoritesOnly ? 'heart' : searchQuery.trim() !== '' ? 'search' : 'stethoscope'}
+                        size={30}
+                        color={showFavoritesOnly ? '#EF4444' : '#1C6ED5'}
+                    />
+                </View>
+
+                <Text style={styles.emptyTitle}>
+                    {showFavoritesOnly
+                        ? 'No Favorite Doctors Yet'
+                        : searchQuery.trim() !== ''
+                            ? 'No Doctors Found'
+                            : selectedSpecialty !== 'All'
+                                ? `No ${selectedSpecialty} Specialists`
+                                : "We couldn't find any doctors"}
+                </Text>
+
+                <Text style={styles.emptySubtitle}>
+                    {showFavoritesOnly
+                        ? 'Tap the heart icon on any doctor card to bookmark them for quick access.'
+                        : searchQuery.trim() !== ''
+                            ? `We couldn't find any doctors matching "${searchQuery}". Check for typos or try searching another term.`
+                            : selectedSpecialty !== 'All'
+                                ? `No doctors available under "${selectedSpecialty}" right now. Try clearing filters to see all available doctors.`
+                                : 'We couldn\'t find any doctors in your area at this time. Please check back later.'}
+                </Text>
+
+                {hasActiveFilters && (
+                    <View style={styles.emptyActionsRow}>
+                        <TouchableOpacity
+                            style={styles.resetFilterButton}
+                            onPress={resetAllFilters}
+                            activeOpacity={0.8}
+                        >
+                            <LinearGradient
+                                colors={['#1C6ED5', '#1557B0']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.resetFilterGradient}
+                            >
+                                <AppIcon name="rotate-ccw" size={16} color="#FFFFFF" />
+                                <Text style={styles.resetFilterText}>Reset All Filters</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        {searchQuery !== '' && (
+                            <TouchableOpacity
+                                style={styles.clearSearchButton}
+                                onPress={() => setSearchQuery('')}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.clearSearchText}>Clear Search</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                )}
+            </View>
+        );
+    };
 
     return (
         <View style={styles.screen}>
@@ -161,17 +295,24 @@ export default function DoctorListScreen() {
             <View style={styles.header}>
                 <View style={styles.topRow}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <AppIcon name="arrow-left" size={24} color="#1c1c1e" />
+                        <AppIcon name="arrow-left" size={22} color="#1c1c1e" />
                     </TouchableOpacity>
 
-                    <Text style={styles.title}>Consult a Doctor</Text>
-
-                    <View style={{ width: 24 }} />
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.title}>Find a Doctor</Text>
+                        {!loading && (
+                            <Text style={styles.subtitle}>
+                                {filteredDoctors.length > 0
+                                    ? `${filteredDoctors.length}${hasMore && !showFavoritesOnly ? '+' : ''} doctor${filteredDoctors.length === 1 ? '' : 's'} available`
+                                    : 'Consult with verified specialists'}
+                            </Text>
+                        )}
+                    </View>
                 </View>
 
                 {/* ---------- Search Box ---------- */}
                 <View style={styles.searchBox}>
-                    <AppIcon name="search" size={20} color="#8e8e93" />
+                    <AppIcon name="search" size={19} color="#8e8e93" />
                     <TextInput
                         placeholder="Search doctors, specialties..."
                         placeholderTextColor="#8e8e93"
@@ -190,7 +331,38 @@ export default function DoctorListScreen() {
             {/* ---------- Filter Chips ---------- */}
             <View style={styles.filterBar}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-                    <TouchableOpacity style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
+                    {selectedSpecialty !== 'All' && (
+                        <TouchableOpacity
+                            style={styles.activeFilterChip}
+                            onPress={() => setSelectedSpecialty('All')}
+                        >
+                            <Text style={styles.activeFilterChipText} numberOfLines={1}>{selectedSpecialty}</Text>
+                            <AppIcon name="x" size={13} color="#fff" />
+                        </TouchableOpacity>
+                    )}
+                    {showFavoritesOnly && (
+                        <TouchableOpacity
+                            style={styles.activeFilterChip}
+                            onPress={() => setShowFavoritesOnly(false)}
+                        >
+                            <Text style={styles.activeFilterChipText}>Favorites</Text>
+                            <AppIcon name="x" size={13} color="#fff" />
+                        </TouchableOpacity>
+                    )}
+                    {sortBy !== 'rating_high_to_low' && (
+                        <TouchableOpacity
+                            style={styles.activeFilterChip}
+                            onPress={() => setSortBy('rating_high_to_low')}
+                        >
+                            <Text style={styles.activeFilterChipText}>{getSortLabel()}</Text>
+                            <AppIcon name="x" size={13} color="#fff" />
+                        </TouchableOpacity>
+                    )}
+                    {(selectedSpecialty !== 'All' || showFavoritesOnly || sortBy !== 'rating_high_to_low') && (
+                        <View style={styles.verticalDivider} />
+                    )}
+
+                    <TouchableOpacity style={styles.filterButton} onPress={openFilterModal}>
                         <AppIcon name="filter" size={16} color="#1c1c1e" />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.sortButton} onPress={() => setSortModalVisible(true)}>
@@ -203,6 +375,7 @@ export default function DoctorListScreen() {
                         style={[styles.chip, showFavoritesOnly && styles.chipSelected]}
                         onPress={() => setShowFavoritesOnly(!showFavoritesOnly)}
                     >
+                        <AppIcon name="heart" size={13} color={showFavoritesOnly ? '#fff' : '#8e8e93'} />
                         <Text style={[styles.chipText, showFavoritesOnly && styles.chipTextSelected]}>
                             Favorites
                         </Text>
@@ -233,99 +406,48 @@ export default function DoctorListScreen() {
             </View>
 
             {/* ---------- Doctor List ---------- */}
-            <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
-                {filteredDoctors.map(doc => (
-                    <DoctorCard
-                        key={doc.id}
-                        doctor={{
-                            id: doc.id,
-                            name: doc.name,
-                            specialty: doc.specialization,
-                            rating: doc.averageRating,
-                            experience: `${doc.experienceYears || 0} yrs`,
-                            consultationFee: doc.consultationFee || 500,
-                            location: doc.hospital || 'Unknown Hospital',
-                            nextSlot: doc.availability || 'Check availability',
-                            image: doc.image
-                        }}
-                        isFavorite={favorites.includes(doc.id)}
-                        onToggleFavorite={() => toggleFavorite(doc.id)}
-                        onBook={() => navigation.navigate('BookAppointment', { doc })}
-                        onPress={() => navigation.navigate('DoctorDetail', { doctor: doc })}
-                    />
-                ))}
-
-                {filteredDoctors.length === 0 && (() => {
-                    const hasActiveFilters = searchQuery.trim() !== '' || selectedSpecialty !== 'All' || showFavoritesOnly || sortBy !== 'rating_high_to_low';
-
-                    return (
-                        <View style={styles.emptyContainer}>
-                            {/* Graphic Illustration */}
-                            <View style={styles.illustrationWrapper}>
-                                <LinearGradient
-                                    colors={showFavoritesOnly ? ['#FEF2F2', '#FFF1F2', '#FEE2E2'] : ['#EFF6FF', '#F0F9FF', '#E0F2FE']}
-                                    style={styles.illustrationAura}
-                                />
-                                <Image
-                                    source={require('../../assets/images/empty-doctors.png')}
-                                    style={styles.emptyGraphicImage}
-                                    resizeMode="contain"
-                                />
-                            </View>
-
-                            <Text style={styles.emptyTitle}>
-                                {showFavoritesOnly
-                                    ? 'No Favorite Doctors Yet'
-                                    : searchQuery.trim() !== ''
-                                    ? 'No Doctors Found'
-                                    : selectedSpecialty !== 'All'
-                                    ? `No ${selectedSpecialty} Specialists`
-                                    : "We couldn't find any doctors"}
-                            </Text>
-
-                            <Text style={styles.emptySubtitle}>
-                                {showFavoritesOnly
-                                    ? 'Tap the heart icon on any doctor card to bookmark them for quick access.'
-                                    : searchQuery.trim() !== ''
-                                    ? `We couldn't find any doctors matching "${searchQuery}". Check for typos or try searching another term.`
-                                    : selectedSpecialty !== 'All'
-                                    ? `No doctors available under "${selectedSpecialty}" right now. Try clearing filters to see all available doctors.`
-                                    : 'We couldn\'t find any doctors in your area at this time. Please check back later.'}
-                            </Text>
-
-                            {hasActiveFilters && (
-                                <View style={styles.emptyActionsRow}>
-                                    <TouchableOpacity
-                                        style={styles.resetFilterButton}
-                                        onPress={resetAllFilters}
-                                        activeOpacity={0.8}
-                                    >
-                                        <LinearGradient
-                                            colors={['#1C6ED5', '#1557B0']}
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 0 }}
-                                            style={styles.resetFilterGradient}
-                                        >
-                                            <AppIcon name="rotate-ccw" size={16} color="#FFFFFF" />
-                                            <Text style={styles.resetFilterText}>Reset All Filters</Text>
-                                        </LinearGradient>
-                                    </TouchableOpacity>
-
-                                    {searchQuery !== '' && (
-                                        <TouchableOpacity
-                                            style={styles.clearSearchButton}
-                                            onPress={() => setSearchQuery('')}
-                                            activeOpacity={0.7}
-                                        >
-                                            <Text style={styles.clearSearchText}>Clear Search</Text>
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            )}
-                        </View>
-                    );
-                })()}
-            </ScrollView>
+            {/* `loading` only covers filter/search/sort-triggered refetches, so the
+                header/search/filter bar above stay mounted and only this section swaps. */}
+            {loading ? (
+                <View style={styles.listLoadingContainer}>
+                    <ActivityIndicator size="large" color="#1C6ED5" />
+                </View>
+            ) : (
+                <FlatList
+                    data={filteredDoctors}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.listContent}
+                    showsVerticalScrollIndicator={false}
+                    onEndReachedThreshold={0.4}
+                    onEndReached={showFavoritesOnly ? undefined : handleLoadMore}
+                    renderItem={({ item: doc }) => (
+                        <DoctorCard
+                            doctor={{
+                                id: doc.id,
+                                name: doc.name,
+                                specialty: doc.specialization,
+                                rating: doc.rating,
+                                experience: `${doc.experienceYears || 0} yrs`,
+                                consultationFee: doc.consultationFee || 500,
+                                location: doc.hospital || 'Unknown Hospital',
+                                nextSlot: doc.availability || 'Check availability',
+                                isAcceptingAppointments: doc.isAcceptingAppointments,
+                                activeAppointment: doc.activeAppointment,
+                                image: doc.image
+                            }}
+                            isFavorite={favorites.includes(doc.id)}
+                            isFavoriteLoading={!!togglingFavorites[doc.id]}
+                            onToggleFavorite={() => toggleFavorite(doc.id)}
+                            onBook={() => navigation.navigate('DoctorDetail', { doctor: doc, intent: 'BOOK' })}
+                            onPress={() => navigation.navigate('DoctorDetail', { doctor: doc })}
+                        />
+                    )}
+                    ListEmptyComponent={renderEmptyState}
+                    ListFooterComponent={loadingMore ? (
+                        <ActivityIndicator size="small" color="#1C6ED5" style={{ marginVertical: 16 }} />
+                    ) : null}
+                />
+            )}
 
             {/* Filter Modal */}
             <Modal
@@ -358,19 +480,19 @@ export default function DoctorListScreen() {
                                         key={spec.id}
                                         style={[
                                             styles.gridItem,
-                                            selectedSpecialty === spec.id && styles.gridItemSelected,
+                                            stagedSpecialty === spec.id && styles.gridItemSelected,
                                         ]}
-                                        onPress={() => setSelectedSpecialty(spec.id)}
+                                        onPress={() => setStagedSpecialty(spec.id)}
                                     >
                                         <AppIcon
                                             name={spec.icon as any}
                                             size={24}
-                                            color={selectedSpecialty === spec.id ? '#fff' : spec.color}
+                                            color={stagedSpecialty === spec.id ? '#fff' : spec.color}
                                         />
                                         <Text
                                             style={[
                                                 styles.gridLabel,
-                                                selectedSpecialty === spec.id && styles.gridLabelSelected,
+                                                stagedSpecialty === spec.id && styles.gridLabelSelected,
                                             ]}
                                         >
                                             {spec.label}
@@ -384,7 +506,7 @@ export default function DoctorListScreen() {
                         <View style={[styles.modalFooter, { paddingBottom: insets.bottom + 16 }]}>
                             <TouchableOpacity
                                 style={styles.applyButton}
-                                onPress={() => setFilterModalVisible(false)}
+                                onPress={applyFilterModal}
                             >
                                 <Text style={styles.applyButtonText}>Apply Filters</Text>
                             </TouchableOpacity>
@@ -437,6 +559,7 @@ const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: '#F2F2F7' },
 
     loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    listLoadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 40 },
 
     header: {
         backgroundColor: '#fff',
@@ -448,51 +571,42 @@ const styles = StyleSheet.create({
     topRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        gap: 12,
         marginBottom: 16,
     },
 
     backButton: { padding: 4 },
 
-    title: { fontSize: 18, fontWeight: '600', color: '#1c1c1e' },
+    title: { fontSize: 19, fontWeight: '700', color: '#1c1c1e' },
+    subtitle: { fontSize: 12.5, color: '#8e8e93', marginTop: 2, fontWeight: '500' },
 
     searchBox: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#F2F2F7',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        height: 44,
+        borderRadius: 14,
+        paddingHorizontal: 14,
+        height: 46,
+        gap: 8,
     },
 
-    input: { flex: 1, marginLeft: 8, fontSize: 15, color: '#1c1c1e' },
+    input: { flex: 1, fontSize: 15, color: '#1c1c1e' },
 
     filterBar: {
         backgroundColor: '#fff',
-        paddingVertical: 10,
         borderBottomWidth: 1,
         borderBottomColor: '#E5E5EA',
+        paddingBottom: 22,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
     },
 
     filterRow: { paddingHorizontal: 16, alignItems: 'center' },
 
-    sortChip: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#E5E5EA',
-        borderRadius: 20,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        marginRight: 10,
-    },
-
-    sortChipText: { fontSize: 13, color: '#1c1c1e', marginRight: 6, fontWeight: '500' },
-
     filterButton: {
         padding: 8,
         backgroundColor: '#F2F2F7',
-        borderRadius: 8,
+        borderRadius: 10,
         marginRight: 12,
     },
     sortButton: {
@@ -519,6 +633,9 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     chip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
         paddingHorizontal: 14,
         paddingVertical: 8,
         borderRadius: 20,
@@ -534,41 +651,44 @@ const styles = StyleSheet.create({
 
     chipTextSelected: { color: '#fff' },
 
-    listContent: { padding: 20, paddingBottom: 40 },
+    activeFilterChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#1C6ED5',
+        marginRight: 8,
+        maxWidth: 160,
+    },
+    activeFilterChipText: {
+        fontSize: 13,
+        color: '#fff',
+        fontWeight: '600',
+        flexShrink: 1,
+    },
+
+    listContent: { padding: 20, paddingBottom: 40, flexGrow: 1 , backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: 16 },
 
     emptyContainer: {
         paddingVertical: 32,
         paddingHorizontal: 20,
         alignItems: 'center',
         backgroundColor: '#FFFFFF',
-        borderRadius: 24,
         marginTop: 8,
-        borderWidth: 1,
-        borderColor: '#F2F4F7',
-        shadowColor: '#101828',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.04,
-        shadowRadius: 12,
-        elevation: 2,
     },
-    illustrationWrapper: {
-        width: 180,
-        height: 160,
+    emptyIconCircle: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: '#EFF6FF',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
-        position: 'relative',
     },
-    illustrationAura: {
-        position: 'absolute',
-        width: 140,
-        height: 140,
-        borderRadius: 70,
-        opacity: 0.85,
-    },
-    emptyGraphicImage: {
-        width: 170,
-        height: 150,
+    emptyIconCircleFavorite: {
+        backgroundColor: '#FEF2F2',
     },
     emptyTitle: {
         fontSize: 18,

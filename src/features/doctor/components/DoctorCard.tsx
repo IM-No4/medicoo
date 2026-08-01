@@ -1,19 +1,30 @@
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { executeAction } from '../../../actions/ActionExecutor';
 import AppIcon from '../../../components/icons/AppIcon';
 import { API_BASE_URL } from '../../../config/env';
+import { formatDoctorName } from '../../../utils/formatters';
+
+const ACTIVE_APPOINTMENT_LABEL: Record<string, string> = {
+  pending: 'Request Pending',
+  approved: 'Upcoming Appointment',
+};
 
 interface Props {
   doctor: any;
   onBook: () => void;
   onPress?: () => void;
   isFavorite?: boolean;
+  isFavoriteLoading?: boolean;
   onToggleFavorite?: () => void;
 }
 
-export default function DoctorCard({ doctor, onBook, onPress, isFavorite, onToggleFavorite }: Props) {
+export default function DoctorCard({ doctor, onBook, onPress, isFavorite, isFavoriteLoading, onToggleFavorite }: Props) {
+  const isNotAccepting = doctor.isAcceptingAppointments === false;
+  const isAvailableToday = typeof doctor.nextSlot === 'string' && doctor.nextSlot.toLowerCase() === 'today';
+
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={onPress}>
+    <TouchableOpacity style={styles.card} activeOpacity={0.92} onPress={onPress}>
       <View style={styles.mainRow}>
         <View style={styles.imageContainer}>
           {doctor.image ? (
@@ -22,53 +33,83 @@ export default function DoctorCard({ doctor, onBook, onPress, isFavorite, onTogg
               style={styles.doctorImage}
             />
           ) : (
-            <Text style={{ fontSize: 32 }}>👨‍⚕️</Text>
+            <Text style={{ fontSize: 30 }}>👨‍⚕️</Text>
+          )}
+          {!isNotAccepting && (
+            <View style={[styles.statusDot, isAvailableToday && styles.statusDotLive]} />
           )}
         </View>
 
         <View style={styles.infoContainer}>
           <View style={styles.headerRow}>
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <Text style={styles.name} numberOfLines={1}>{doctor.name}</Text>
-            </View>
-            <View style={styles.actionsRow}>
-              {doctor.rating > 0 && (
-                <View style={styles.ratingBadge}>
-                  <AppIcon name="star" size={10} color="#fff" />
-                  <Text style={styles.ratingText}>{doctor.rating}</Text>
-                </View>
-              )}
-              {onToggleFavorite && (
-                <TouchableOpacity onPress={onToggleFavorite} style={styles.favButton}>
-                  <AppIcon
-                    name="heart"
-                    size={20}
-                    color={isFavorite ? "#FF3B30" : "#C7C7CC"}
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
+            <Text style={styles.name} numberOfLines={1}>{formatDoctorName(doctor.name)}</Text>
+            {onToggleFavorite && (
+              <TouchableOpacity
+                onPress={onToggleFavorite}
+                disabled={isFavoriteLoading}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                {isFavoriteLoading ? (
+                  <ActivityIndicator size="small" color="#FF3B30" />
+                ) : (
+                  <AppIcon name="heart" size={19} color={isFavorite ? "#FF3B30" : "#D1D5DB"} fill={isFavorite ? "#FF3B30" : "none"} />
+                )}
+              </TouchableOpacity>
+            )}
           </View>
 
-          <Text style={styles.specialty}>{doctor.specialty} • {doctor.experience}</Text>
+          <View style={styles.specialtyRow}>
+            <AppIcon name="stethoscope" size={12} color="#1C6ED5" />
+            <Text style={styles.specialty} numberOfLines={1}>{doctor.specialty}</Text>
+          </View>
+
+          <View style={styles.metaRow}>
+            {doctor.rating > 0 && (
+              <View style={styles.ratingBadge}>
+                <AppIcon name="star" size={11} color="#C47A16" />
+                <Text style={styles.ratingText}>{doctor.rating}</Text>
+              </View>
+            )}
+            <Text style={styles.experienceText}>{doctor.experience} exp.</Text>
+          </View>
 
           <View style={styles.locationRow}>
             <AppIcon name="map-pin" size={12} color="#8e8e93" />
-            <Text style={styles.locationText}>{doctor.location}</Text>
+            <Text style={styles.locationText} numberOfLines={1}>{doctor.location}</Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.divider} />
+      {doctor.activeAppointment && (
+        <TouchableOpacity
+          style={styles.activeAppointmentBanner}
+          onPress={() => executeAction('OPEN_CONSULTATION_DETAIL', { requestId: doctor.activeAppointment.requestId })}
+        >
+          <AppIcon name="calendar-days" size={13} color="#166534" />
+          <Text style={styles.activeAppointmentText}>
+            {ACTIVE_APPOINTMENT_LABEL[doctor.activeAppointment.status] || 'Active Appointment'} - View
+          </Text>
+          <AppIcon name="chevron-right" size={13} color="#166534" />
+        </TouchableOpacity>
+      )}
 
       <View style={styles.footerRow}>
         <View style={styles.slotInfo}>
-          <Text style={styles.slotLabel}>Next Availability</Text>
-          <Text style={styles.slotTime}>{doctor.nextSlot}</Text>
+          <View style={[styles.slotDot, isNotAccepting ? styles.slotDotOff : isAvailableToday ? styles.slotDotLive : styles.slotDotSoon]} />
+          <View>
+            <Text style={styles.slotLabel}>Next Availability</Text>
+            <Text style={styles.slotTime}>{doctor.nextSlot}</Text>
+          </View>
         </View>
 
-        <TouchableOpacity style={styles.bookButton} onPress={onBook}>
-          <Text style={styles.bookButtonText}>Book Appointment</Text>
+        <TouchableOpacity
+          style={[styles.bookButton, isNotAccepting && styles.bookButtonDisabled]}
+          onPress={onBook}
+          disabled={isNotAccepting}
+        >
+          <Text style={[styles.bookButtonText, isNotAccepting && styles.bookButtonTextDisabled]}>
+            {isNotAccepting ? 'Not Available' : 'Book Appointment'}
+          </Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -78,115 +119,174 @@ export default function DoctorCard({ doctor, onBook, onPress, isFavorite, onTogg
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
+    padding: 8,
+    paddingBottom: 20,
+    marginBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e5ea81',
   },
   mainRow: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   imageContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
+    width: 94,
+    height: 94,
+    borderRadius: 18,
     backgroundColor: '#F2F2F7',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
+    marginRight: 14,
+    overflow: 'visible',
   },
   doctorImage: {
     width: '100%',
     height: '100%',
+    borderRadius: 18,
     resizeMode: 'cover',
+  },
+  statusDot: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#D1D5DB',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  statusDotLive: {
+    backgroundColor: '#2FA561',
   },
   infoContainer: {
     flex: 1,
     justifyContent: 'center',
+    gap: 4,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
   },
   name: {
+    flex: 1,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1c1c1e',
+    marginRight: 8,
   },
-  actionsRow: {
+  specialtyRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 5,
   },
-  favButton: {
-    marginLeft: 12,
+  specialty: {
+    fontSize: 13,
+    color: '#1C6ED5',
+    fontWeight: '600',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2FA561',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    gap: 3,
   },
   ratingText: {
-    color: '#fff',
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '700',
-    marginLeft: 2,
+    color: '#1c1c1e',
   },
-  specialty: {
-    fontSize: 13,
-    color: '#3A3A3C',
-    marginBottom: 6,
+  experienceText: {
+    fontSize: 12.5,
+    color: '#8e8e93',
+    fontWeight: '500',
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
   locationText: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: '#8e8e93',
-    marginLeft: 4,
+    flex: 1,
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#F2F2F7',
+  activeAppointmentBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    borderRadius: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
     marginBottom: 12,
+  },
+  activeAppointmentText: {
+    flex: 1,
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#166534',
   },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
   slotInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     flex: 1,
   },
+  slotDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  slotDotLive: {
+    backgroundColor: '#2FA561',
+  },
+  slotDotSoon: {
+    backgroundColor: '#F59E0B',
+  },
+  slotDotOff: {
+    backgroundColor: '#D1D5DB',
+  },
   slotLabel: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: '#8e8e93',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   slotTime: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1c1c1e',
   },
   bookButton: {
-    backgroundColor: '#EAF4FF',
-    paddingVertical: 8,
+    backgroundColor: '#1C6ED5',
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 20,
+    borderRadius: 14,
   },
   bookButtonText: {
-    color: '#1C6ED5',
+    color: '#fff',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  bookButtonDisabled: {
+    backgroundColor: '#F2F2F7',
+  },
+  bookButtonTextDisabled: {
+    color: '#8e8e93',
   },
 });

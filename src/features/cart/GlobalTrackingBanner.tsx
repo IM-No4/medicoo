@@ -33,13 +33,19 @@ const STATUS_COLORS: Record<string, string> = {
   delivered:      '#10B981',
 };
 
+// Screens where a floating "your medicine order" banner doesn't belong: the
+// patient's own Profile area, and the entire doctor experience
+// (browsing/booking, in-call, in-chat) - all top-level siblings of "Tabs" in
+// MainStack, so none of them are reachable via the tab-root check below.
+const EXCLUDED_ROUTE_NAMES = ['Profile', 'DoctorStack', 'DoctorCall', 'DoctorChat'];
+
 export default function GlobalTrackingBanner() {
   const insets = useSafeAreaInsets();
   const activeOrder = useSelector((state: RootState) => state.order.activeOrder);
 
   const [currentRouteName, setCurrentRouteName] = useState<string | null>(null);
   const [isTabVisible, setIsTabVisible] = useState(true);
-  const [isInProfileScreen, setIsInProfileScreen] = useState(false);
+  const [isInExcludedScreen, setIsInExcludedScreen] = useState(false);
 
   useEffect(() => {
     const checkRoute = () => {
@@ -49,21 +55,21 @@ export default function GlobalTrackingBanner() {
         const currentName = route?.name ?? null;
         setCurrentRouteName(currentName);
 
-        // Traverse the navigation tree to check if the 'Profile' navigator stack is active
-        const checkIfProfileActive = (navState: any): boolean => {
+        // Traverse the navigation tree to check if any excluded stack/screen is active
+        const checkIfExcludedActive = (navState: any): boolean => {
           if (!navState || !navState.routes) return false;
           const activeIndex = navState.index ?? 0;
           const activeRoute = navState.routes[activeIndex];
-          
-          if (activeRoute?.name === 'Profile') {
+
+          if (activeRoute?.name && EXCLUDED_ROUTE_NAMES.includes(activeRoute.name)) {
             return true;
           }
           if (activeRoute?.state) {
-            return checkIfProfileActive(activeRoute.state);
+            return checkIfExcludedActive(activeRoute.state);
           }
           return false;
         };
-        setIsInProfileScreen(checkIfProfileActive(state));
+        setIsInExcludedScreen(checkIfExcludedActive(state));
 
         // Explicit list of known tab root screens to match instantly on boot
         const TAB_ROOT_SCREENS = [
@@ -126,7 +132,7 @@ export default function GlobalTrackingBanner() {
 
   // Slide in / slide out
   useEffect(() => {
-    const shouldShow = !!activeOrder && activeOrder.status !== 'delivered' && currentRouteName !== 'LiveTracking' && !isInProfileScreen;
+    const shouldShow = !!activeOrder && activeOrder.status !== 'delivered' && currentRouteName !== 'LiveTracking' && !isInExcludedScreen;
     if (shouldShow === prevVisible.current) return;
     prevVisible.current = shouldShow;
 
@@ -136,7 +142,7 @@ export default function GlobalTrackingBanner() {
       tension: 80,
       friction: 12,
     }).start();
-  }, [activeOrder, currentRouteName, isInProfileScreen, translateY]);
+  }, [activeOrder, currentRouteName, isInExcludedScreen, translateY]);
 
   // Subtle pulse on the status dot
   useEffect(() => {
@@ -150,7 +156,7 @@ export default function GlobalTrackingBanner() {
     return () => loop.stop();
   }, [pulseAnim]);
 
-  if (!activeOrder || activeOrder.status === 'delivered' || currentRouteName === 'LiveTracking' || isInProfileScreen) {
+  if (!activeOrder || activeOrder.status === 'delivered' || currentRouteName === 'LiveTracking' || isInExcludedScreen) {
     return null;
   }
 

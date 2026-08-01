@@ -6,6 +6,18 @@ import { setActiveOrder, updateOrderStatus } from '../redux/slices/orderSlice';
 
 let socket: Socket | null = null;
 
+type ConsultationChatMessagePayload = { requestId: string; message: any };
+type ConsultationChatMessageHandler = (payload: ConsultationChatMessagePayload) => void;
+const chatMessageHandlers = new Set<ConsultationChatMessageHandler>();
+
+/** Subscribe to real-time consultation chat messages. Returns an unsubscribe function. */
+export function onConsultationChatMessage(handler: ConsultationChatMessageHandler) {
+  chatMessageHandlers.add(handler);
+  return () => {
+    chatMessageHandlers.delete(handler);
+  };
+}
+
 export async function initializeSocket() {
   if (socket?.connected) return;
 
@@ -76,6 +88,10 @@ export async function initializeSocket() {
       if (data && data.status) {
         store.dispatch(updateOrderStatus(data.status));
       }
+    });
+
+    socket.on('consultation_chat:new_message', (payload: ConsultationChatMessagePayload) => {
+      chatMessageHandlers.forEach((handler) => handler(payload));
     });
 
     socket.on('disconnect', (reason) => {

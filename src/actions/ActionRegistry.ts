@@ -135,7 +135,10 @@ export const ActionRegistry: Record<ActionKey, any> = {
     tab: 'Profile',
     screen: 'LabTestDetail',
   },
-  OPEN_REDEEM: {},
+  OPEN_REDEEM: {
+    tab: 'Profile',
+    screen: 'DoctorEarnings',
+  },
   OPEN_DOCTOR_SETTINGS: {
     tab: 'Profile',
     screen: 'DoctorSettings',

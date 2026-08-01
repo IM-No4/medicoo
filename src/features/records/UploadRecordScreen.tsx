@@ -3,13 +3,13 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
 import AppIcon from '../../components/icons/AppIcon';
+import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 import { uploadDocument } from '../../services/api/document.api';
 
 type RecordType = 'prescription' | 'lab' | 'imaging' | 'other';
@@ -18,6 +18,17 @@ export default function UploadRecordScreen() {
   const [file, setFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [type, setType] = useState<RecordType>('prescription');
   const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<{
+    visible: boolean;
+    type: StatusType;
+    title: string;
+    message: string;
+  }>({ visible: false, type: 'idle', title: '', message: '' });
+
+  const showStatus = (type: StatusType, title: string, message: string) => {
+    setStatus({ visible: true, type, title, message });
+  };
+  const hideStatus = () => setStatus(prev => ({ ...prev, visible: false }));
 
   const pickFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -49,11 +60,11 @@ export default function UploadRecordScreen() {
 
       await uploadDocument(formData);
 
-      Alert.alert('Success', 'Your record has been uploaded successfully.');
+      showStatus('success', 'Success', 'Your record has been uploaded successfully.');
       setFile(null);
       setType('prescription');
     } catch {
-      Alert.alert('Upload failed', 'We could not upload the record right now. Please try again.');
+      showStatus('error', 'Upload Failed', 'We could not upload the record right now. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -114,6 +125,15 @@ export default function UploadRecordScreen() {
           <Text style={styles.saveText}>Upload Record</Text>
         )}
       </TouchableOpacity>
+
+      <StatusModal
+        visible={status.visible}
+        status={status.type}
+        title={status.title}
+        message={status.message}
+        onClose={hideStatus}
+        autoCloseDelay={status.type === 'success' ? 2000 : undefined}
+      />
     </View>
   );
 }

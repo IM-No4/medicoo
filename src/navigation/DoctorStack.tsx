@@ -22,9 +22,8 @@ export type DoctorStackParamList = {
   };
 
   BookingSuccess: {
-    date: string;
-    slot: string | null;
-    isRequest: boolean;
+    isRequest?: boolean;
+    requestId?: string;
   };
 };
 

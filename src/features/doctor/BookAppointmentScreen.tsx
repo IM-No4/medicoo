@@ -7,6 +7,7 @@ import AppIcon from '../../components/icons/AppIcon';
 import { executeAction } from '@/src/actions/ActionExecutor';
 import { DoctorStackParamList } from '@/src/navigation/DoctorStack';
 import { API_BASE_URL } from '../../services/api/client';
+import { formatDoctorName } from '../../utils/formatters';
 
 export default function BookAppointmentScreen() {
   // ... (NavProp type defs remain, just ensuring consistent imports)
@@ -115,7 +116,7 @@ export default function BookAppointmentScreen() {
             </View>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.docName}>{doctor.name}</Text>
+            <Text style={styles.docName}>{formatDoctorName(doctor.name)}</Text>
             <Text style={styles.docSpecialty}>{doctor.specialty || doctor.specialization}</Text>
             <View style={styles.miniLocation}>
               <AppIcon name="map-pin" size={10} color="#8e8e93" />

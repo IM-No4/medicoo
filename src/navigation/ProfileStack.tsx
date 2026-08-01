@@ -46,7 +46,7 @@ export type ProfileStackParamList = {
   FamilyMembersModal: undefined;
   AddFamilyMember: { member?: any, isEditing?: boolean } | undefined;
   ConsultationModal: undefined;
-  ConsultationDetail: { consultationId: string };
+  ConsultationDetail: { requestId: string };
   DoctorFeedback: { consultationId: string, doctor: any };
   MedicineOrdersModal: undefined;
   MedicineOrderDetail: { orderId: string };

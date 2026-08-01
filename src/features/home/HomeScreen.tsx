@@ -99,6 +99,15 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
       } as any);
     }
 
+    // Upcoming appointments card - always inserted right after Services,
+    // regardless of whether the backend feed has anything there yet; the
+    // card itself renders nothing if there's nothing upcoming to show.
+    const servicesIndex = result.findIndex(item => item.type === 'SERVICES_SECTION');
+    result.splice(servicesIndex !== -1 ? servicesIndex + 1 : result.length, 0, {
+      id: 'virtual_upcoming_appointments',
+      type: 'UPCOMING_APPOINTMENTS_CARD'
+    } as any);
+
     // Only inject Goals section when user has created active goals
     if (hasActiveGoals) {
       const summaryIndex = result.findIndex(item => item.type === 'HEALTH_SUMMARY');

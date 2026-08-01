@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": ["tez", "phonepe", "paytmmp"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -26,7 +29,8 @@
         "CAMERA",
         "MODIFY_AUDIO_SETTINGS",
         "ACCESS_NETWORK_STATE",
-        "ACCESS_WIFI_STATE"
+        "ACCESS_WIFI_STATE",
+        "POST_NOTIFICATIONS"
       ],
       "googleServicesFile": "./firebase/google-services.json"
     },
@@ -50,8 +54,36 @@
       ],
       "@react-native-firebase/app",
       "@react-native-firebase/messaging",
+      "@react-native-firebase/crashlytics",
       "@react-native-community/datetimepicker",
-      "react-native-ble-plx"
+      [
+        "react-native-ble-plx",
+        {
+          "bluetoothAlwaysPermission": "Medicoo uses Bluetooth to connect to your health monitoring devices."
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Medicoo needs access to your photos to let you upload prescriptions, reports, and your profile picture.",
+          "cameraPermission": "Medicoo needs access to your camera to let you scan and upload prescriptions and documents.",
+          "microphonePermission": "Medicoo needs access to your microphone for audio and video consultations with doctors."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Medicoo needs your location to find nearby pharmacies, doctors, and delivery partners, and to set your delivery address."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Medicoo needs access to your contacts so you can quickly add a family member or delivery address."
+        }
+      ],
+      "./plugins/withRazorpayCheckoutTheme.js"
     ],
     "experiments": {
       "typedRoutes": true,

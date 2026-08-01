@@ -5,7 +5,6 @@ import {
     StyleSheet,
     TouchableOpacity,
     FlatList,
-    Alert,
     ActivityIndicator,
     Switch,
 } from 'react-native';
@@ -15,6 +14,7 @@ import { ArrowLeft, Pill, Plus, Trash2 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import { getMedicineSchedules, deleteMedicineSchedule, updateMedicineSchedule } from '../../services/api/medicine.api';
 import AddMedicationModal from '../../components/modals/AddMedicationModal/AddMedicationModal';
+import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 
 interface MedSchedule {
     _id: string;
@@ -32,6 +32,19 @@ export default function ManageMedicationsScreen() {
     const [schedules, setSchedules] = useState<MedSchedule[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [status, setStatus] = useState<{
+        visible: boolean;
+        type: StatusType;
+        title: string;
+        message: string;
+        primaryAction?: () => void;
+        primaryActionText?: string;
+    }>({ visible: false, type: 'idle', title: '', message: '' });
+
+    const showStatus = (type: StatusType, title: string, message: string, primaryAction?: () => void, primaryActionText?: string) => {
+        setStatus({ visible: true, type, title, message, primaryAction, primaryActionText });
+    };
+    const hideStatus = () => setStatus(prev => ({ ...prev, visible: false }));
 
     const fetchSchedules = async () => {
         try {
@@ -65,24 +78,20 @@ export default function ManageMedicationsScreen() {
     };
 
     const handleDelete = (id: string, name: string) => {
-        Alert.alert(
+        showStatus(
+            'warning',
             'Delete Medication',
             `Are you sure you want to delete ${name}? This cannot be undone.`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            await deleteMedicineSchedule(id);
-                            setSchedules(prev => prev.filter(s => s._id !== id));
-                        } catch (e) {
-                            Alert.alert('Error', 'Failed to delete medication.');
-                        }
-                    }
+            async () => {
+                hideStatus();
+                try {
+                    await deleteMedicineSchedule(id);
+                    setSchedules(prev => prev.filter(s => s._id !== id));
+                } catch (e) {
+                    showStatus('error', 'Error', 'Failed to delete medication.');
                 }
-            ]
+            },
+            'Delete'
         );
     };
 
@@ -169,6 +178,16 @@ export default function ManageMedicationsScreen() {
                     setShowAddModal(false);
                     fetchSchedules();
                 }}
+            />
+
+            <StatusModal
+                visible={status.visible}
+                status={status.type}
+                title={status.title}
+                message={status.message}
+                onClose={hideStatus}
+                primaryAction={status.primaryAction}
+                primaryActionText={status.primaryActionText}
             />
         </View>
     );

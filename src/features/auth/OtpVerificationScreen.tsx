@@ -15,12 +15,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { bootSuccess } from '../../bootstrap/boot.slice';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 import { loginSuccess } from '../../redux/slices/authSlice';
 import { sendOtp, verifyOtp } from '../../services/api/auth.api';
-import { getProfileDetails } from '../../services/api/user.api';
 import { getDeviceId, getFCMToken } from '../../utils/deviceUtils';
 import { setToken } from '../../utils/tokenManagement';
 
@@ -65,23 +65,19 @@ export default function OtpVerificationScreen() {
         setLoading(true);
         try {
             const fcmToken = await getFCMToken();
-            const deviceId = getDeviceId();
-            const res = await verifyOtp(phone, otpString, fcmToken, deviceId);
+            const deviceId = await getDeviceId();
+            const res = await verifyOtp(phone, otpString, fcmToken ?? undefined, deviceId);
             if (res?.access_token) {
                 await setToken('access_token', res.access_token);
 
-                let isProfileComplete = res.onboardingComplete;
-
-                // Double check if profile exists to avoid false negatives for existing users
-                if (!isProfileComplete) {
-                    try {
-                        const profile = await getProfileDetails();
-                        if (profile && profile.name && profile.email) {
-                            isProfileComplete = true;
-                        }
-                    } catch (e) {
-                        // Profile fetch failed, assume incomplete
-                    }
+                // The backend now derives this from the actual onboarding-specific
+                // profile fields (gender/dob/height/weight/bloodGroup), so it's
+                // authoritative - no client-side re-check needed, and none of the
+                // "response was slow so assume incomplete" guessing that used to
+                // wrongly send already-onboarded users back through the form.
+                const isProfileComplete = Boolean(res.onboardingComplete);
+                if (isProfileComplete) {
+                    await AsyncStorage.setItem('onboarding_completed', 'true');
                 }
 
                 dispatch(loginSuccess({ token: res.access_token, onboardingComplete: isProfileComplete, mobile: phone }));
@@ -164,7 +160,7 @@ export default function OtpVerificationScreen() {
             </View>
 
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.keyboardView}
             >
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>

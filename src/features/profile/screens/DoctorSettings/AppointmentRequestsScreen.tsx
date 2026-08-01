@@ -1,13 +1,17 @@
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import {
+  AlertTriangle,
   Calendar,
   CheckCircle2,
   ChevronLeft,
   Clock,
-  Filter,
   Inbox,
+  MessageCircle,
+  Phone,
   RefreshCw,
+  Search,
+  Video,
   X,
 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -38,7 +42,9 @@ type AppointmentRequestItem = {
   preferredTime?: string;
   urgencyLevel?: string;
   reason?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'completed';
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'completed' | 'expired' | 'no_show';
+  expiryReason?: 'doctor_no_response' | 'patient_no_payment';
+  noShowReason?: 'doctor_no_show' | 'patient_no_show' | 'mutual_no_show';
   patientDetails?: {
     name?: string;
     phone?: string;
@@ -48,18 +54,32 @@ type AppointmentRequestItem = {
     remarks?: string;
     respondedAt?: string;
   };
+  consultationType?: 'chat' | 'voice' | 'video';
+  consultationFee?: number;
+  isUrgentSurcharge?: boolean;
+  paymentStatus?: 'unpaid' | 'paid' | 'refunded';
   createdOn?: string;
   updatedOn?: string;
   actionMeta?: {
     patientName?: string;
   };
+  // A pending reschedule request never changes the appointment's own
+  // status (it stays 'no_show') - this is the only signal that this item
+  // needs the doctor's attention rather than being settled history.
+  rescheduleRequest?: {
+    status: 'pending' | 'accepted' | 'rejected';
+    proposedDate?: string;
+    proposedTime?: string;
+  } | null;
 };
 
-const TAB_LABELS: Record<TabKey, string> = {
-  requests: 'Requests',
-  upcoming: 'Upcoming',
-  history: 'History',
-};
+const isAwaitingReschedule = (item: AppointmentRequestItem) => item.rescheduleRequest?.status === 'pending';
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'requests', label: 'Requests' },
+  { key: 'upcoming', label: 'Upcoming' },
+  { key: 'history', label: 'History' },
+];
 
 const STATUS_LABELS: Record<AppointmentRequestItem['status'], string> = {
   pending: 'Pending',
@@ -67,6 +87,14 @@ const STATUS_LABELS: Record<AppointmentRequestItem['status'], string> = {
   rejected: 'Rejected',
   cancelled: 'Cancelled',
   completed: 'Completed',
+  expired: 'Expired',
+  no_show: 'Missed',
+};
+
+const CONSULTATION_TYPE_META: Record<'chat' | 'voice' | 'video', { label: string; color: string; bg: string; Icon: typeof MessageCircle }> = {
+  chat: { label: 'Chat', color: '#1C6ED5', bg: '#EAF4FF', Icon: MessageCircle },
+  voice: { label: 'Voice', color: '#0E7439', bg: '#EAFBF3', Icon: Phone },
+  video: { label: 'Video', color: '#C47A16', bg: '#FFF6EA', Icon: Video },
 };
 
 const formatDate = (value?: string) => {
@@ -78,33 +106,37 @@ const formatDate = (value?: string) => {
 
 const formatTime = (value?: string) => value || 'Time not set';
 
-const getTypeIcon = (urgency?: string) => {
+const getUrgencyTone = (urgency?: string) => {
   switch (urgency) {
     case 'urgent':
-      return { name: 'alert-triangle', color: '#DC2626', bg: '#FEE2E2' };
+      return { color: '#DC2626', bg: '#FEE2E2' };
     case 'high':
-      return { name: 'activity', color: '#D97706', bg: '#FEF3C7' };
+      return { color: '#D97706', bg: '#FEF3C7' };
     case 'medium':
-      return { name: 'calendar', color: '#2563EB', bg: '#DBEAFE' };
+      return { color: '#2563EB', bg: '#DBEAFE' };
     default:
-      return { name: 'clock', color: '#2FA561', bg: '#DCFCE7' };
+      return { color: '#2FA561', bg: '#DCFCE7' };
   }
 };
 
 const getStatusTone = (status: AppointmentRequestItem['status']) => {
   switch (status) {
     case 'pending':
-      return { bg: '#FEF3C7', fg: '#92400E' };
+      return { bg: '#FEF3C7', fg: '#92400E', dot: '#F59E0B' };
     case 'approved':
-      return { bg: '#DCFCE7', fg: '#166534' };
+      return { bg: '#DCFCE7', fg: '#166534', dot: '#2FA561' };
     case 'rejected':
-      return { bg: '#FEE2E2', fg: '#B91C1C' };
+      return { bg: '#FEE2E2', fg: '#B91C1C', dot: '#DC2626' };
     case 'cancelled':
-      return { bg: '#E5E7EB', fg: '#374151' };
+      return { bg: '#E5E7EB', fg: '#374151', dot: '#9CA3AF' };
     case 'completed':
-      return { bg: '#E0E7FF', fg: '#3730A3' };
+      return { bg: '#E0E7FF', fg: '#3730A3', dot: '#6366F1' };
+    case 'expired':
+      return { bg: '#F3F4F6', fg: '#6B7280', dot: '#9CA3AF' };
+    case 'no_show':
+      return { bg: '#FEE2E2', fg: '#B91C1C', dot: '#DC2626' };
     default:
-      return { bg: '#E5E7EB', fg: '#374151' };
+      return { bg: '#E5E7EB', fg: '#374151', dot: '#9CA3AF' };
   }
 };
 
@@ -171,21 +203,30 @@ export default function AppointmentRequestsScreen() {
     return requests.reduce(
       (acc, item) => {
         acc.total += 1;
-        acc[item.status] += 1;
+        if (item.status === 'pending' || isAwaitingReschedule(item)) {
+          // A no_show appointment with a pending reschedule request still
+          // needs the doctor's response, same as a brand new request - it
+          // belongs in the "Requests" bucket, not buried in history under
+          // its stale 'no_show' status.
+          acc.pending += 1;
+        } else {
+          acc[item.status] += 1;
+        }
         return acc;
       },
-      { total: 0, pending: 0, approved: 0, rejected: 0, cancelled: 0, completed: 0 },
+      { total: 0, pending: 0, approved: 0, rejected: 0, cancelled: 0, completed: 0, expired: 0, no_show: 0 },
     );
   }, [requests]);
 
   const filteredRequests = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     const base = requests.filter((item) => {
+      const awaitingReschedule = isAwaitingReschedule(item);
       const matchesTab = activeTab === 'requests'
-        ? item.status === 'pending'
+        ? (item.status === 'pending' || awaitingReschedule)
         : activeTab === 'upcoming'
           ? item.status === 'approved'
-          : ['rejected', 'cancelled', 'completed'].includes(item.status);
+          : (['rejected', 'cancelled', 'completed', 'expired', 'no_show'].includes(item.status) && !awaitingReschedule);
 
       if (!matchesTab) return false;
       if (!query) return true;
@@ -202,21 +243,7 @@ export default function AppointmentRequestsScreen() {
   }, [activeTab, requests, searchText]);
 
   const openDetails = useCallback((item: AppointmentRequestItem) => {
-    executeAction('OPEN_PATIENT_CONSULTATION_DETAIL', {
-      appointment: {
-        id: item.requestId,
-        patientName: item.patientDetails?.name || item.actionMeta?.patientName || 'Patient',
-        date: formatDate(item.preferredDate),
-        time: formatTime(item.preferredTime),
-        type: 'video',
-        status: STATUS_LABELS[item.status],
-        image: null,
-        reason: item.reason,
-        requestId: item.requestId,
-        urgencyLevel: item.urgencyLevel,
-        doctorResponse: item.doctorResponse,
-      },
-    });
+    executeAction('OPEN_PATIENT_CONSULTATION_DETAIL', { appointment: item });
   }, []);
 
   const handleRespond = useCallback((item: AppointmentRequestItem, nextStatus: 'approved' | 'rejected') => {
@@ -256,74 +283,89 @@ export default function AppointmentRequestsScreen() {
     void loadRequests();
   }, [loadRequests]);
 
-  const renderTab = (tab: TabKey) => {
-    const active = activeTab === tab;
-    const count = tab === 'requests' ? counts.pending : tab === 'upcoming' ? counts.approved : counts.rejected + counts.cancelled + counts.completed;
-
-    return (
-      <TouchableOpacity
-        key={tab}
-        style={[styles.tab, active && styles.tabActive]}
-        onPress={() => setActiveTab(tab)}
-      >
-        <Text style={[styles.tabText, active && styles.tabTextActive]}>
-          {TAB_LABELS[tab]}
-        </Text>
-        <View style={[styles.countPill, active && styles.countPillActive]}>
-          <Text style={[styles.countPillText, active && styles.countPillTextActive]}>{count}</Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   const renderItem = ({ item }: { item: AppointmentRequestItem }) => {
-    const tone = getStatusTone(item.status);
-    const urgencyIcon = getTypeIcon(item.urgencyLevel);
+    const awaitingReschedule = isAwaitingReschedule(item);
+    // Override the generic 'no_show'/"Missed" badge - that status is stale
+    // once a reschedule request is pending; the doctor needs to see this
+    // as something to respond to, not a closed-out missed appointment.
+    const tone = awaitingReschedule ? { bg: '#DBEAFE', fg: '#1D4ED8', dot: '#2563EB' } : getStatusTone(item.status);
+    const statusLabel = awaitingReschedule ? 'Reschedule Requested' : STATUS_LABELS[item.status];
+    const urgency = getUrgencyTone(item.urgencyLevel);
     const patientName = item.patientDetails?.name || item.actionMeta?.patientName || 'Patient';
     const isPending = item.status === 'pending';
+    const typeMeta = CONSULTATION_TYPE_META[item.consultationType || 'video'];
+    const TypeIcon = typeMeta.Icon;
 
     return (
       <View style={styles.card}>
         <TouchableOpacity activeOpacity={0.85} onPress={() => openDetails(item)}>
           <View style={styles.cardHeader}>
             <View style={styles.patientRow}>
-              <View style={styles.avatar}>
+              <View style={[styles.avatar, { borderColor: urgency.bg }]}>
                 <Text style={styles.avatarText}>{patientName.charAt(0).toUpperCase()}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.patientName}>{patientName}</Text>
-                <Text style={styles.requestId}>Request #{item.requestId}</Text>
+                <Text style={styles.patientName} numberOfLines={1}>{patientName}</Text>
+                <Text style={styles.requestId}>#{item.requestId}</Text>
               </View>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: tone.bg }]}>
-              <Text style={[styles.statusBadgeText, { color: tone.fg }]}>{STATUS_LABELS[item.status]}</Text>
+              <View style={[styles.statusDot, { backgroundColor: tone.dot }]} />
+              <Text style={[styles.statusBadgeText, { color: tone.fg }]}>{statusLabel}</Text>
             </View>
           </View>
 
-          <View style={styles.metaRow}>
-            <View style={styles.metaItem}>
-              <Calendar size={15} color="#6B7280" />
-              <Text style={styles.metaText}>{formatDate(item.preferredDate)}</Text>
+          <View style={styles.divider} />
+
+          <View style={styles.chipRow}>
+            <View style={[styles.chip, { backgroundColor: typeMeta.bg }]}>
+              <TypeIcon size={13} color={typeMeta.color} />
+              <Text style={[styles.chipText, { color: typeMeta.color }]}>{typeMeta.label}</Text>
             </View>
-            <View style={styles.metaItem}>
-              <Clock size={15} color="#6B7280" />
-              <Text style={styles.metaText}>{formatTime(item.preferredTime)}</Text>
-            </View>
-            <View style={[styles.urgencyPill, { backgroundColor: urgencyIcon.bg }]}>
-              <Text style={[styles.urgencyText, { color: urgencyIcon.color }]}>
+            {typeof item.consultationFee === 'number' && (
+              <View style={[styles.chip, { backgroundColor: '#F3F4F6' }]}>
+                <Text style={[styles.chipText, { color: '#374151' }]}>₹{item.consultationFee}</Text>
+              </View>
+            )}
+            {item.isUrgentSurcharge && (
+              <View style={[styles.chip, { backgroundColor: '#FFFBEB' }]}>
+                <AlertTriangle size={12} color="#B45309" />
+                <Text style={[styles.chipText, { color: '#B45309' }]}>Urgent</Text>
+              </View>
+            )}
+            <View style={[styles.chip, { backgroundColor: urgency.bg, marginLeft: 'auto' }]}>
+              <Text style={[styles.chipText, { color: urgency.color }]}>
                 {String(item.urgencyLevel || 'medium').toUpperCase()}
               </Text>
             </View>
           </View>
 
-          <Text style={styles.reasonLabel}>Reason</Text>
-          <Text style={styles.reasonText} numberOfLines={3}>
+          <View style={styles.metaRow}>
+            <View style={styles.metaItem}>
+              <Calendar size={14} color="#9CA3AF" />
+              <Text style={styles.metaText}>{formatDate(item.preferredDate)}</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Clock size={14} color="#9CA3AF" />
+              <Text style={styles.metaText}>{formatTime(item.preferredTime)}</Text>
+            </View>
+          </View>
+
+          <Text style={styles.reasonText} numberOfLines={2}>
             {item.reason || 'No reason provided'}
           </Text>
         </TouchableOpacity>
 
         <View style={styles.actionRow}>
-          {isPending ? (
+          {awaitingReschedule ? (
+            // Accepting/declining a reschedule needs the proposed date and
+            // remarks field, which only exists on the detail screen - this
+            // just gets them there instead of duplicating that UI here.
+            <TouchableOpacity style={[styles.actionButton, styles.approveButton]} onPress={() => openDetails(item)}>
+              <Clock size={16} color="#FFFFFF" />
+              <Text style={styles.approveButtonText}>Respond to Reschedule</Text>
+            </TouchableOpacity>
+          ) : isPending ? (
             <>
               <TouchableOpacity
                 style={[styles.actionButton, styles.rejectButton]}
@@ -373,12 +415,14 @@ export default function AppointmentRequestsScreen() {
       );
     }
 
+    const activeLabel = TABS.find((t) => t.key === activeTab)?.label || '';
+
     return (
       <View style={styles.emptyState}>
         <View style={styles.emptyIcon}>
           <Inbox size={30} color="#2FA561" />
         </View>
-        <Text style={styles.emptyTitle}>No {TAB_LABELS[activeTab].toLowerCase()}</Text>
+        <Text style={styles.emptyTitle}>No {activeLabel.toLowerCase()}</Text>
         <Text style={styles.emptyText}>
           {activeTab === 'requests'
             ? 'New appointment requests will show up here as soon as patients submit them.'
@@ -396,34 +440,21 @@ export default function AppointmentRequestsScreen() {
 
       <View style={styles.header}>
         <TouchableOpacity style={styles.iconButton} onPress={() => executeAction('GO_BACK')}>
-          <ChevronLeft size={24} color="#111827" />
+          <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Manage Appointments</Text>
-          <Text style={styles.headerSubtitle}>{counts.pending} pending requests</Text>
+          <Text style={styles.headerSubtitle}>
+            {counts.pending > 0 ? `${counts.pending} awaiting your response` : 'All caught up'}
+          </Text>
         </View>
         <TouchableOpacity style={styles.iconButton} onPress={onRefresh}>
-          <RefreshCw size={20} color="#2FA561" />
+          <RefreshCw size={18} color="#2FA561" />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Total</Text>
-          <Text style={styles.summaryValue}>{counts.total}</Text>
-        </View>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Pending</Text>
-          <Text style={styles.summaryValue}>{counts.pending}</Text>
-        </View>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Approved</Text>
-          <Text style={styles.summaryValue}>{counts.approved}</Text>
-        </View>
-      </View>
-
-      <View style={styles.searchWrap}>
-        <Filter size={16} color="#6B7280" />
+      <View style={[styles.searchWrap, { marginTop: 16 }]}>
+        <Search size={17} color="#9CA3AF" />
         <TextInput
           style={styles.searchInput}
           placeholder="Search by patient, request ID, or reason"
@@ -434,7 +465,25 @@ export default function AppointmentRequestsScreen() {
       </View>
 
       <View style={styles.tabRow}>
-        {(['requests', 'upcoming', 'history'] as TabKey[]).map(renderTab)}
+        {TABS.map(({ key, label }) => {
+          const active = activeTab === key;
+          const count = key === 'requests' ? counts.pending : key === 'upcoming' ? counts.approved : counts.rejected + counts.cancelled + counts.completed + counts.expired + counts.no_show;
+          return (
+            <TouchableOpacity
+              key={key}
+              style={[styles.tab, active && styles.tabActive]}
+              onPress={() => setActiveTab(key)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
+              {count > 0 && (
+                <View style={[styles.countPill, active && styles.countPillActive]}>
+                  <Text style={[styles.countPillText, active && styles.countPillTextActive]}>{count}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <FlatList
@@ -469,56 +518,31 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     paddingHorizontal: 18,
-    paddingBottom: 14,
+    paddingBottom: 16,
     paddingTop: 8,
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F9FAFB',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '800',
     color: '#111827',
+    letterSpacing: -0.3,
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: '#6B7280',
     marginTop: 2,
-  },
-  summaryCard: {
-    margin: 16,
-    marginBottom: 12,
-    padding: 14,
-    borderRadius: 18,
-    backgroundColor: '#ECFDF5',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  summaryItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: '#047857',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  summaryValue: {
-    marginTop: 4,
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#065F46',
+    fontWeight: '500',
   },
   searchWrap: {
     marginHorizontal: 16,
@@ -527,11 +551,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 14,
-    height: 48,
-    borderRadius: 16,
+    height: 46,
+    borderRadius: 14,
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EEF0F3',
   },
   searchInput: {
     flex: 1,
@@ -540,50 +564,55 @@ const styles = StyleSheet.create({
   },
   tabRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     paddingHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 14,
+    backgroundColor: '#F0F1F3',
+    marginHorizontal: 16,
+    borderRadius: 14,
+    padding: 4,
   },
   tab: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    gap: 6,
+    height: 38,
+    borderRadius: 11,
   },
   tabActive: {
-    backgroundColor: '#1F8E5A',
-    borderColor: '#1F8E5A',
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
   tabText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#4B5563',
+    color: '#6B7280',
   },
   tabTextActive: {
-    color: '#fff',
+    color: '#111827',
   },
   countPill: {
-    minWidth: 24,
-    height: 24,
-    paddingHorizontal: 8,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#E5E7EB',
   },
   countPillActive: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: '#2FA561',
   },
   countPillText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
-    color: '#374151',
+    color: '#4B5563',
   },
   countPillTextActive: {
     color: '#fff',
@@ -602,11 +631,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
   cardHeader: {
@@ -627,7 +655,8 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#D1FAE5',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 2,
   },
   avatarText: {
     fontSize: 16,
@@ -635,21 +664,54 @@ const styles = StyleSheet.create({
     color: '#047857',
   },
   patientName: {
-    fontSize: 15,
+    fontSize: 15.5,
     fontWeight: '800',
     color: '#111827',
   },
   requestId: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#9CA3AF',
     marginTop: 2,
+    fontWeight: '500',
   },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
   },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
   statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  chipText: {
     fontSize: 11,
     fontWeight: '800',
   },
@@ -657,8 +719,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 14,
+    gap: 16,
+    marginTop: 12,
   },
   metaItem: {
     flexDirection: 'row',
@@ -667,31 +729,14 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 13,
-    color: '#374151',
+    color: '#4B5563',
     fontWeight: '600',
   },
-  urgencyPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-  },
-  urgencyText: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-  },
-  reasonLabel: {
-    marginTop: 14,
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#6B7280',
-    textTransform: 'uppercase',
-  },
   reasonText: {
-    marginTop: 6,
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#374151',
+    marginTop: 10,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: '#6B7280',
   },
   actionRow: {
     flexDirection: 'row',

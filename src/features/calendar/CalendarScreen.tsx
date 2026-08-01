@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { styles } from './styles';
+import { formatDoctorName } from '../../utils/formatters';
 
 // Components
 import AppointmentCard from './components/AppointmentCard';
@@ -17,6 +18,7 @@ import AddActionModal from '../../components/modals/AddActionModal';
 import AddMedicationModal from '../../components/modals/AddMedicationModal/AddMedicationModal';
 import ManageRemindersSheet from '../../components/modals/ManageRemindersSheet';
 
+import { executeAction } from '../../actions/ActionExecutor';
 import { loadCalendarCache, loadCalendarData, markMedicineIntake } from '@/src/redux/slices/calendarSlice';
 import { selectActiveGoals } from '@/src/redux/slices/goalsSlice';
 import { useDispatch, useSelector } from 'react-redux';
@@ -153,9 +155,18 @@ export default function CalendarScreen() {
                                 {appointments.map((item: any) => (
                                     <AppointmentCard
                                         key={item.id}
-                                        doctorName={item.title}
+                                        doctorName={formatDoctorName(item.title)}
                                         specialty={item.subtitle}
-                                        time={`${item.startTime} - ${item.endTime}`}
+                                        time={
+                                            item.endTime && item.endTime !== item.startTime
+                                                ? `${item.startTime} - ${item.endTime}`
+                                                : item.startTime
+                                        }
+                                        onPress={
+                                            item.requestId
+                                                ? () => executeAction('OPEN_CONSULTATION_DETAIL', { requestId: item.requestId })
+                                                : undefined
+                                        }
                                     />
                                 ))}
                             </View>

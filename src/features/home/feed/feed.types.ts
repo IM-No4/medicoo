@@ -21,7 +21,8 @@ export type HomeFeedItemType =
   | 'UPCOMING_SECTION'
   | 'HEALTH_SUMMARY'
   | 'SEASONAL_ESSENTIALS'
-  | 'HOME_FEED_FOOTER';
+  | 'HOME_FEED_FOOTER'
+  | 'UPCOMING_APPOINTMENTS_CARD';
 
 export interface SeasonalCollection {
   id: string;
@@ -139,6 +140,16 @@ export interface HomeFeedItemBase {
   action?: FeedAction;
 }
 
+// Client-only, spliced into the feed after SERVICES_SECTION (see HomeScreen.tsx)
+// rather than coming from the backend feed - it's real-time, per-role,
+// per-user appointment data that doesn't belong in a generically cached
+// feed response. The card fetches its own data (role + appointments)
+// rather than carrying a payload here, same reasoning as HealthSummary
+// pulling from Redux instead of the feed item.
+export interface UpcomingAppointmentsCardFeedItem extends HomeFeedItemBase {
+  type: 'UPCOMING_APPOINTMENTS_CARD';
+}
+
 export interface ContinueActivityFeedItem extends HomeFeedItemBase {
   type: 'CONTINUE_ACTIVITY';
   title: string;
@@ -212,7 +223,8 @@ export type HomeFeedItem =
   | UpcomingSectionFeedItem
   | HealthSummaryFeedItem
   | SeasonalEssentialsFeedItem
-  | HomeFeedFooterFeedItem;
+  | HomeFeedFooterFeedItem
+  | UpcomingAppointmentsCardFeedItem;
 
 export interface HomeCareService {
   id: string;

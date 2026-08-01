@@ -30,6 +30,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { formatDoctorName } from "../../utils/formatters";
 
 const { width, height } = Dimensions.get("window");
 
@@ -362,7 +363,7 @@ export default function PrescriptionResultScreen() {
                 <View style={styles.dataTexts}>
                   <Text style={styles.dataLabel}>Doctor / Clinic</Text>
                   <Text style={styles.dataVal}>
-                    {doctorName || "Qualified Medical Practitioner"}
+                    {doctorName ? formatDoctorName(doctorName) : "Qualified Medical Practitioner"}
                   </Text>
                 </View>
               </View>

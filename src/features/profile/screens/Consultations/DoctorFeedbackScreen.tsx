@@ -1,6 +1,6 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft, Star, Stethoscope } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
-import { submitDoctorFeedback } from '../../../../services/api';
+import { getMyDoctorReview, submitDoctorFeedback } from '../../../../services/api';
+import { formatDoctorName } from '../../../../utils/formatters';
 
 export default function DoctorFeedbackScreen() {
     const navigation = useNavigation();
@@ -25,6 +26,10 @@ export default function DoctorFeedbackScreen() {
     const [rating, setRating] = useState(0);
     const [review, setReview] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    // Whether this patient already reviewed this doctor before (from any
+    // past consultation, not just this one - reviews aren't per-consultation)
+    // so this becomes an update instead of a fresh review.
+    const [isUpdate, setIsUpdate] = useState(false);
 
     // Status Modal State
     const [status, setStatus] = useState<{
@@ -45,6 +50,19 @@ export default function DoctorFeedbackScreen() {
 
     const hideStatus = () => setStatus(prev => ({ ...prev, visible: false }));
 
+    useEffect(() => {
+        if (!doctor?._id) return;
+        getMyDoctorReview(doctor._id)
+            .then((existing) => {
+                if (existing) {
+                    setRating(existing.rating);
+                    setReview(existing.review || '');
+                    setIsUpdate(true);
+                }
+            })
+            .catch(() => { /* No existing review to pre-fill - fine to start blank */ });
+    }, [doctor?._id]);
+
     const handleSubmit = async () => {
         if (rating === 0) {
             showStatus('warning', 'Rating Required', 'Please provide a star rating to help us improve our services.');
@@ -59,10 +77,13 @@ export default function DoctorFeedbackScreen() {
                 rating,
                 review
             });
-            showStatus('success', 'Review Submitted', 'Thank you for your valuable feedback! It helps other patients find the best care.');
+            showStatus(
+                'success',
+                isUpdate ? 'Review Updated' : 'Review Submitted',
+                'Thank you for your valuable feedback! It helps other patients find the best care.'
+            );
         } catch (error) {
-            // Even if API fails in this mock context, we show success for UX demo
-            showStatus('success', 'Review Submitted', 'Thank you for your valuable feedback! It helps other patients find the best care.');
+            showStatus('error', 'Could Not Submit', 'We could not save your review right now. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -70,14 +91,14 @@ export default function DoctorFeedbackScreen() {
 
     return (
         <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
         >
             <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <ChevronLeft size={24} color="#111827" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Write a Review</Text>
+                <Text style={styles.headerTitle}>{isUpdate ? 'Update Review' : 'Write a Review'}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -86,8 +107,8 @@ export default function DoctorFeedbackScreen() {
                     <View style={[styles.avatar, styles.placeholderAvatar]}>
                         <Stethoscope size={32} color="#2FA561" />
                     </View>
-                    <Text style={styles.doctorName}>{doctor.name}</Text>
-                    <Text style={styles.specialtyText}>{doctor.specialty}</Text>
+                    <Text style={styles.doctorName}>{formatDoctorName(doctor.name)}</Text>
+                    <Text style={styles.specialtyText}>{doctor.specialty || doctor.specialization}</Text>
                 </View>
 
                 <View style={styles.ratingSection}>
@@ -135,7 +156,7 @@ export default function DoctorFeedbackScreen() {
                     {submitting ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <Text style={styles.submitButtonText}>Submit Review</Text>
+                        <Text style={styles.submitButtonText}>{isUpdate ? 'Update Review' : 'Submit Review'}</Text>
                     )}
                 </TouchableOpacity>
             </View>

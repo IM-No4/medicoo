@@ -10,6 +10,9 @@ import { linking } from '../navigation/linking';
 import { navigationRef } from '../navigation/navigationRef';
 import { store } from '../redux/store';
 
+import ErrorBoundary from '../components/ErrorBoundary';
+import { initCrashReporting } from '../bootstrap/crashReporting';
+import { initPushNotifications, setupNotificationTapHandling } from '../bootstrap/pushNotifications';
 import { syncCartOnBoot } from '../bootstrap/syncCartOnBoot';
 import { useBoot } from '../bootstrap/useBoot';
 import { usePostLoginEffects } from '../features/auth/usePostLoginEffects';
@@ -49,6 +52,9 @@ function AppContent() {
       }
     });
 
+    // Push notification taps (background wake + cold start)
+    setupNotificationTapHandling();
+
     return () => sub.remove();
   }, [boot.status]);
 
@@ -61,16 +67,23 @@ function AppContent() {
 }
 
 export default function App() {
+  useEffect(() => {
+    initCrashReporting();
+    initPushNotifications();
+  }, []);
+
   return (
-    <Provider store={store}>
-      <SafeAreaProvider>
-        <NavigationContainer
-          ref={navigationRef}
-          linking={linking}
-        >
-          <AppContent />
-        </NavigationContainer>
-      </SafeAreaProvider>
-    </Provider>
+    <ErrorBoundary>
+      <Provider store={store}>
+        <SafeAreaProvider>
+          <NavigationContainer
+            ref={navigationRef}
+            linking={linking}
+          >
+            <AppContent />
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </Provider>
+    </ErrorBoundary>
   );
 }

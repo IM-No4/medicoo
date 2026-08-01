@@ -1,4 +1,3 @@
-import { AlertCircle, CheckCircle, Info, XCircle } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -14,6 +13,26 @@ interface StatusModalProps {
     primaryAction?: () => void;
     primaryActionText?: string;
 }
+
+const DEFAULT_TITLES: Partial<Record<StatusType, string>> = {
+    success: 'Success',
+    error: 'Error',
+    date_error: 'Error',
+    warning: 'Warning',
+    info: 'Information',
+};
+
+const PRIMARY_COLORS: Partial<Record<StatusType, string>> = {
+    success: '#2FA561',
+    error: '#EF4444',
+    date_error: '#EF4444',
+    info: '#3B82F6',
+};
+
+// Confirm dialogs (primaryAction set) read as "are you sure" prompts, so the
+// action button is red regardless of type - matches how a plain single-
+// button dismissal (no primaryAction) stays a neutral dark button instead.
+const CONFIRM_COLOR = '#EF4444';
 
 export default function StatusModal({
     visible,
@@ -38,94 +57,53 @@ export default function StatusModal({
 
     if (!visible) return null;
 
-    const renderContent = () => {
-        switch (status) {
-            case 'loading':
-                return (
-                    <View style={styles.centerContent}>
+    if (status === 'loading') {
+        return (
+            <Modal transparent visible={visible} animationType="fade" statusBarTranslucent>
+                <View style={styles.overlay}>
+                    <View style={[styles.card, styles.loadingCard]}>
                         <ActivityIndicator size="large" color="#2FA561" />
                         <Text style={styles.loadingText}>{message || 'Processing...'}</Text>
                     </View>
-                );
+                </View>
+            </Modal>
+        );
+    }
 
-            case 'success':
-                return (
-                    <View style={styles.centerContent}>
-                        <CheckCircle size={48} color="#10B981" />
-                        <Text style={styles.titleText}>{title || 'Success'}</Text>
-                        <Text style={styles.messageText}>{message || 'Action completed successfully.'}</Text>
-                        <TouchableOpacity style={styles.button} onPress={primaryAction || onClose}>
-                            <Text style={styles.buttonText}>{primaryActionText || 'Close'}</Text>
-                        </TouchableOpacity>
-                    </View>
-                );
+    if (status === 'idle') return null;
 
-            case 'error':
-            case 'date_error':
-                return (
-                    <View style={styles.centerContent}>
-                        <XCircle size={48} color="#EF4444" />
-                        <Text style={[styles.titleText, { color: '#EF4444' }]}>{title || 'Error'}</Text>
-                        <Text style={styles.messageText}>{message || 'Something went wrong.'}</Text>
-                        <TouchableOpacity style={[styles.button, styles.errorButton]} onPress={onClose}>
-                            <Text style={styles.buttonText}>{primaryActionText || 'Close'}</Text>
-                        </TouchableOpacity>
-                    </View>
-                );
-
-            case 'warning':
-                return (
-                    <View style={styles.centerContent}>
-                        <AlertCircle size={48} color="#F59E0B" />
-                        <Text style={[styles.titleText, { color: '#F59E0B' }]}>{title || 'Warning'}</Text>
-                        <Text style={styles.messageText}>{message || 'Please check your input.'}</Text>
-                        <View style={styles.buttonRow}>
-                            {primaryAction && (
-                                <TouchableOpacity style={[styles.button, styles.flexButton, styles.warningButton]} onPress={primaryAction}>
-                                    <Text style={styles.buttonText}>{primaryActionText || 'Confirm'}</Text>
-                                </TouchableOpacity>
-                            )}
-                            <TouchableOpacity style={[styles.button, styles.flexButton, styles.outlineButton, !primaryAction && styles.warningButton]} onPress={onClose}>
-                                <Text style={[styles.buttonText, primaryAction && styles.outlineButtonText]}>{primaryAction ? 'Cancel' : 'Close'}</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                );
-
-            case 'info':
-                return (
-                    <View style={styles.centerContent}>
-                        <Info size={48} color="#3B82F6" />
-                        <Text style={[styles.titleText, { color: '#3B82F6' }]}>{title || 'Information'}</Text>
-                        <Text style={styles.messageText}>{message}</Text>
-                        <View style={styles.buttonRow}>
-                            {primaryAction && (
-                                <TouchableOpacity style={[styles.button, styles.flexButton, styles.infoButton]} onPress={primaryAction}>
-                                    <Text style={styles.buttonText}>{primaryActionText || 'Confirm'}</Text>
-                                </TouchableOpacity>
-                            )}
-                            <TouchableOpacity style={[styles.button, styles.flexButton, styles.outlineButton, !primaryAction && styles.infoButton]} onPress={onClose}>
-                                <Text style={[styles.buttonText, primaryAction && styles.outlineButtonText]}>{primaryAction ? 'Cancel' : 'Close'}</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                );
-
-            default:
-                return null;
-        }
-    };
+    // success/error/date_error are plain acknowledgements - one button,
+    // always calling primaryAction if the caller gave one (so a custom
+    // completion callback actually runs) or onClose otherwise. There's
+    // nothing to "Cancel" out of, so no second button here.
+    // warning/info double as confirm dialogs - a primaryAction turns them
+    // into the two-button "Cancel" / "Yes" pattern; without one they're
+    // just a single-button dismissal too.
+    const isConfirmable = status === 'warning' || status === 'info';
+    const showCancel = isConfirmable && !!primaryAction;
+    const primaryColor = showCancel ? CONFIRM_COLOR : (PRIMARY_COLORS[status] || '#111827');
+    const primaryLabel = primaryActionText || (showCancel ? 'Yes' : 'OK');
 
     return (
-        <Modal
-            transparent
-            visible={visible}
-            animationType="fade"
-            statusBarTranslucent
-        >
+        <Modal transparent visible={visible} animationType="fade" statusBarTranslucent>
             <View style={styles.overlay}>
                 <View style={styles.card}>
-                    {renderContent()}
+                    <Text style={styles.title}>{title || DEFAULT_TITLES[status]}</Text>
+                    {!!message && <Text style={styles.message}>{message}</Text>}
+
+                    <View style={styles.buttonRow}>
+                        {showCancel && (
+                            <TouchableOpacity style={[styles.button, styles.flexButton, styles.secondaryButton]} onPress={onClose}>
+                                <Text style={styles.secondaryButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                            style={[styles.button, styles.flexButton, { backgroundColor: primaryColor }]}
+                            onPress={primaryAction || onClose}
+                        >
+                            <Text style={styles.buttonText}>{primaryLabel}</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
         </Modal>
@@ -135,88 +113,69 @@ export default function StatusModal({
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.6)',
+        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 24,
     },
     card: {
         width: '100%',
-        maxWidth: 320,
+        maxWidth: 340,
         backgroundColor: '#fff',
-        borderRadius: 24,
-        paddingVertical: 32,
-        paddingHorizontal: 24,
-        alignItems: 'center',
+        borderRadius: 20,
+        padding: 24,
         shadowColor: '#000',
-        shadowOpacity: 0.25,
+        shadowOpacity: 0.15,
         shadowRadius: 16,
         elevation: 8,
     },
-    centerContent: {
+    loadingCard: {
         alignItems: 'center',
-        width: '100%',
+        maxWidth: 280,
     },
     loadingText: {
         marginTop: 16,
-        fontSize: 16,
+        fontSize: 15,
         color: '#374151',
         fontWeight: '500',
+        textAlign: 'center',
     },
-    titleText: {
-        marginTop: 16,
-        fontSize: 20,
+    title: {
+        fontSize: 18,
         fontWeight: '700',
         color: '#111827',
-        textAlign: 'center',
     },
-    messageText: {
+    message: {
         marginTop: 8,
-        fontSize: 15,
+        fontSize: 14,
         color: '#6B7280',
-        textAlign: 'center',
-        marginBottom: 24,
-        lineHeight: 22,
+        lineHeight: 20,
+    },
+    buttonRow: {
+        flexDirection: 'row',
+        marginTop: 22,
+        gap: 12,
     },
     button: {
-        backgroundColor: '#2FA561',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 12,
-        minWidth: 120,
+        paddingVertical: 13,
+        borderRadius: 14,
         alignItems: 'center',
+        justifyContent: 'center',
     },
     flexButton: {
         flex: 1,
     },
-    errorButton: {
-        backgroundColor: '#EF4444',
-    },
-    warningButton: {
-        backgroundColor: '#F59E0B'
-    },
     buttonText: {
         color: '#fff',
-        fontSize: 14,
-        fontWeight: '600',
-        textAlign: 'center',
+        fontSize: 15,
+        fontWeight: '700',
     },
-    buttonRow: {
-        flexDirection: 'row',
-        marginTop: 8,
-        width: '100%',
-        justifyContent: 'center',
-        gap: 12,
+    secondaryButton: {
+        backgroundColor: '#F3F4F6',
     },
-    infoButton: {
-        backgroundColor: '#3B82F6',
-    },
-    outlineButton: {
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-    },
-    outlineButtonText: {
+    secondaryButtonText: {
         color: '#374151',
+        fontSize: 15,
+        fontWeight: '700',
     },
 });

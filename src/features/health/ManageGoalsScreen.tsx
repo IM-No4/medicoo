@@ -6,7 +6,6 @@ import {
   View,
   ScrollView,
   Switch,
-  Alert,
   Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +15,7 @@ import { ArrowLeft, Trash2, Droplets, Footprints, Moon, Activity, Target, Plus, 
 import { RootState } from '../../redux/store';
 import { deleteGoal, toggleGoalEnabled } from '../../redux/slices/goalsSlice';
 import AddGoalModal from '../../components/modals/AddGoalModal/AddGoalModal';
+import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 import { StatusBar } from 'expo-status-bar';
 
 export default function ManageGoalsScreen() {
@@ -25,6 +25,19 @@ export default function ManageGoalsScreen() {
   
   const { goals } = useSelector((state: RootState) => state.goals);
   const [addGoalVisible, setAddGoalVisible] = useState(false);
+  const [status, setStatus] = useState<{
+    visible: boolean;
+    type: StatusType;
+    title: string;
+    message: string;
+    primaryAction?: () => void;
+    primaryActionText?: string;
+  }>({ visible: false, type: 'idle', title: '', message: '' });
+
+  const showStatus = (type: StatusType, title: string, message: string, primaryAction?: () => void, primaryActionText?: string) => {
+    setStatus({ visible: true, type, title, message, primaryAction, primaryActionText });
+  };
+  const hideStatus = () => setStatus(prev => ({ ...prev, visible: false }));
 
   const getGoalIcon = (type: string) => {
     switch (type) {
@@ -44,17 +57,12 @@ export default function ManageGoalsScreen() {
   };
 
   const handleDelete = (id: string, name: string) => {
-    Alert.alert(
+    showStatus(
+      'warning',
       'Delete Goal',
       `Are you sure you want to delete your ${name} goal? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => dispatch(deleteGoal(id))
-        }
-      ]
+      () => { hideStatus(); dispatch(deleteGoal(id)); },
+      'Delete'
     );
   };
 
@@ -151,6 +159,16 @@ export default function ManageGoalsScreen() {
       <AddGoalModal
         visible={addGoalVisible}
         onClose={() => setAddGoalVisible(false)}
+      />
+
+      <StatusModal
+        visible={status.visible}
+        status={status.type}
+        title={status.title}
+        message={status.message}
+        onClose={hideStatus}
+        primaryAction={status.primaryAction}
+        primaryActionText={status.primaryActionText}
       />
     </View>
   );

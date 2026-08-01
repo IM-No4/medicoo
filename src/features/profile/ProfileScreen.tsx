@@ -24,7 +24,6 @@ import {
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   InteractionManager,
   ScrollView,
   StyleSheet,
@@ -40,7 +39,12 @@ import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 import { logout as logoutRedux } from '../../redux/slices/authSlice';
 import { clearActiveOrder } from '../../redux/slices/orderSlice';
 import { getProfileDetails, logoutApi } from '../../services/api';
+import { getDoctorAppointmentRequests } from '../../services/api/doctor.api';
+import { formatDoctorName } from '../../utils/formatters';
 import { API_BASE_URL } from '../../services/api/client';
+import { unregisterDeviceToken } from '../../services/api/pushNotification.api';
+import { clearToken } from '../../utils/tokenManagement';
+import { getFCMToken } from '../../utils/deviceUtils';
 import ProfileHeader from './components/ProfileHeader';
 
 export default function ProfileScreen() {
@@ -110,7 +114,13 @@ export default function ProfileScreen() {
           rating: profile.rating || 0,
           reviewCount: profile.reviewsCount || 0
         });
-        setPendingRequestCount(2); // Mock: TODO replace with API count
+
+        try {
+          const requestsRes = await getDoctorAppointmentRequests({ limit: 1 });
+          setPendingRequestCount(requestsRes?.data?.counts?.pending || 0);
+        } catch (error) {
+          setPendingRequestCount(0);
+        }
       }
     } catch (error) {
       // Error fetching profile details
@@ -131,39 +141,31 @@ export default function ProfileScreen() {
   );
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to log out?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // 1. Call API
-              await logoutApi();
-              // 2. Clear Active Order Tracking
-              dispatch(clearActiveOrder());
-              // 3. Clear Redux Auth State
-              dispatch(logoutRedux());
-              // 4. Update Boot State (Force RootNavigator switch)
-              dispatch(bootSuccess({ isAuthenticated: false }));
-            } catch (error) {
-              console.error('Logout failed:', error);
-              // Fallback: force logout anyway
-              dispatch(clearActiveOrder());
-              dispatch(logoutRedux());
-              dispatch(bootSuccess({ isAuthenticated: false }));
-            }
-          },
-        },
-      ],
-      { cancelable: true }
-    );
+    showStatus('warning', 'Logout', 'Are you sure you want to log out?', async () => {
+      hideStatus();
+      try {
+        // 1. Call API
+        await logoutApi();
+        // Best-effort: stop this device from receiving push notifications
+        // for the account that just logged out.
+        const fcmToken = await getFCMToken();
+        if (fcmToken) {
+          await unregisterDeviceToken(fcmToken).catch(() => {});
+        }
+      } catch (error) {
+        console.error('Logout failed:', error);
+        // Fall through - still clear local state so the user isn't stuck logged in.
+      } finally {
+        // 2. Clear stored token
+        await clearToken('access_token');
+        // 3. Clear Active Order Tracking
+        dispatch(clearActiveOrder());
+        // 4. Clear Redux Auth State
+        dispatch(logoutRedux());
+        // 5. Update Boot State (Force RootNavigator switch)
+        dispatch(bootSuccess({ isAuthenticated: false }));
+      }
+    }, 'Logout');
   };
 
   const handleCopyMedId = async () => {
@@ -245,7 +247,7 @@ export default function ProfileScreen() {
 
       <View style={{ paddingTop: insets.top + 16, paddingBottom: 8 }}>
         <ProfileHeader
-          name={name}
+          name={isDoctor ? formatDoctorName(name) : name}
           profileImage={profileImage}
           onEditPress={() => executeAction('OPEN_PROFILE_DETAILS')}
         />

@@ -262,7 +262,7 @@ export default function EditProfileScreen() {
 
     return (
         <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={{ flex: 1, backgroundColor: '#fff' }}
         >
             <View style={[styles.header, { paddingTop: insets.top + 10 }]}>

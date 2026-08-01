@@ -105,9 +105,9 @@ export default function BookingSuccessScreen() {
         </Animated.View>
 
         <Animated.View style={{ opacity: fadeAnim, alignItems: 'center' }}>
-          <Text style={styles.title}>Booking Confirmed!</Text>
+          <Text style={styles.title}>Request Sent!</Text>
           <Text style={styles.subtitle}>
-            Your appointment has been successfully booked. You will receive a confirmation message shortly.
+            Your appointment request has been sent to the doctor. You'll be notified as soon as they respond.
           </Text>
         </Animated.View>
       </View>

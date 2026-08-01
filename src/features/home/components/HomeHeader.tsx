@@ -9,7 +9,7 @@ import { setUnreadCount } from "@/src/redux/slices/notificationSlice";
 import { RootState } from "@/src/redux/store";
 import { getUserAddresses } from "@/src/services/api/address.api";
 import { getUnreadCustomerNotificationCount } from "@/src/services/api/notification.api";
-import { GOOGLE_MAPS_API_KEY } from "@/src/config/env";
+import { reverseGeocode } from "@/src/services/api/maps.api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useDispatch, useSelector } from "react-redux";
@@ -212,16 +212,9 @@ export default function HomeHeader({
             console.warn("Failed to read cached location", err);
           }
 
-          // 2. Reverse geocoding API call using Google Maps API directly (efficient single external request)
+          // 2. Reverse geocoding via backend proxy (key stays server-side)
           try {
-            if (!GOOGLE_MAPS_API_KEY) {
-              console.warn("Missing Google Maps API key");
-              return;
-            }
-            const response = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`,
-            );
-            const data = await response.json();
+            const data = await reverseGeocode(latitude, longitude);
 
             if (data.results && data.results.length > 0) {
               const addressStr = data.results[0].formatted_address;

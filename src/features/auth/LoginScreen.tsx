@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -21,6 +22,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { bootSuccess } from '../../bootstrap/boot.slice';
 import { loginSuccess } from '../../redux/slices/authSlice';
@@ -30,6 +32,14 @@ import { setToken } from '../../utils/tokenManagement';
 
 const BG_IMAGE = require('../../assets/images/login-screen-bg.png');
 const GOOGLE_ICON = require('../../assets/icons/google-logo.png'); // Removed to prevent crash
+
+// heroContainer used to size itself as '38%' of the screen, which only
+// works when its parent is the full-height root View. Now that it lives
+// inside the ScrollView (so it scrolls with everything else instead of
+// staying pinned), it needs a fixed pixel height instead - percentages
+// inside a ScrollView's content resolve against the content's own
+// (content-driven) size, not the screen.
+const HERO_HEIGHT = Dimensions.get('window').height * 0.38;
 
 export default function LoginScreen() {
   const dispatch = useDispatch();
@@ -70,12 +80,18 @@ export default function LoginScreen() {
       const { idToken } = userInfo.data || {};
       if (idToken) {
         const fcmToken = await getFCMToken();
-        const deviceId = getDeviceId();
-        const res = await googleLogin(idToken, fcmToken, deviceId);
+        const deviceId = await getDeviceId();
+        const res = await googleLogin(idToken, fcmToken ?? undefined, deviceId);
         if (res?.access_token) {
           await setToken('access_token', res.access_token);
-          dispatch(loginSuccess({ token: res.access_token, onboardingComplete: res.onboardingComplete }));
-          dispatch(bootSuccess({ isAuthenticated: true, onboardingCompleted: res.onboardingComplete }));
+
+          const isProfileComplete = Boolean(res.onboardingComplete);
+          if (isProfileComplete) {
+            await AsyncStorage.setItem('onboarding_completed', 'true');
+          }
+
+          dispatch(loginSuccess({ token: res.access_token, onboardingComplete: isProfileComplete }));
+          dispatch(bootSuccess({ isAuthenticated: true, onboardingCompleted: isProfileComplete }));
         }
       }
     } catch (error) {
@@ -102,22 +118,24 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* Hero Image Section */}
-      <View style={styles.heroContainer}>
-        <Image source={BG_IMAGE} style={styles.heroImage} resizeMode="cover" />
-        <LinearGradient
-          colors={['rgba(0,0,0,0.6)', 'transparent']}
-          style={StyleSheet.absoluteFillObject}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 0.4 }}
-        />
-      </View>
-
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]} showsVerticalScrollIndicator={false}>
+          {/* Hero Image Section - part of the scrollable content now, so it
+              moves with everything else instead of staying pinned when the
+              keyboard opens. */}
+          <View style={styles.heroContainer}>
+            <Image source={BG_IMAGE} style={styles.heroImage} resizeMode="cover" />
+            <LinearGradient
+              colors={['rgba(0,0,0,0.6)', 'transparent']}
+              style={StyleSheet.absoluteFillObject}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 0.4 }}
+            />
+          </View>
+
           <View style={styles.contentContainer}>
 
             {/* OTP Back button removed */}
@@ -203,7 +221,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   heroContainer: {
-    height: '38%',
+    height: HERO_HEIGHT,
     width: '100%',
     overflow: 'hidden',
     borderBottomLeftRadius: 24,

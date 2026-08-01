@@ -1,12 +1,14 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Dimensions,
     Modal,
     Platform,
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
@@ -25,8 +27,12 @@ interface RequestAppointmentModalProps {
         voice: any;
         video: any;
     };
-    onRequest: (data: any) => void;
+    weeklyAvailability?: Record<string, { enabled: boolean; start: string; end: string }>;
+    urgentSurchargePercent?: number;
+    onRequest: (data: any) => Promise<void>;
 }
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const CONSULTATION_TYPES = [
     { id: 'chat', label: 'Chat', icon: 'message-circle' },
@@ -42,6 +48,8 @@ export default function RequestAppointmentModal({
     onClose,
     doctorName,
     consultationFees,
+    weeklyAvailability,
+    urgentSurchargePercent,
     onRequest,
 }: RequestAppointmentModalProps) {
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -49,6 +57,8 @@ export default function RequestAppointmentModal({
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [selectedType, setSelectedType] = useState('chat');
     const [dates, setDates] = useState<any[]>([]);
+    const [reason, setReason] = useState('');
+    const [submitting, setSubmitting] = useState(false);
 
     const insets = useSafeAreaInsets();
 
@@ -139,15 +149,61 @@ export default function RequestAppointmentModal({
         return Number(typeFee) || 0;
     };
 
-    const handlePayment = () => {
+    // Estimate only - the backend independently checks the doctor's
+    // availability and computes the real fee, so this can never be trusted
+    // as the actual charge. It exists purely to avoid surprising the patient.
+    const getSurchargeInfo = () => {
+        const percent = Math.max(0, Math.min(Number(urgentSurchargePercent) || 0, 50));
+        const hasAnyEnabledDay = weeklyAvailability && Object.values(weeklyAvailability).some((d: any) => d?.enabled);
+
+        if (!hasAnyEnabledDay || percent <= 0) {
+            return { applies: false, percent: 0, amount: 0 };
+        }
+
+        const dayWindow = weeklyAvailability![DAY_NAMES[selectedDate.getDay()]];
+        const timeStr = `${String(selectedTime.getHours()).padStart(2, '0')}:${String(selectedTime.getMinutes()).padStart(2, '0')}`;
+        const isWithinHours = !!(
+            dayWindow?.enabled && dayWindow.start && dayWindow.end &&
+            timeStr >= dayWindow.start && timeStr <= dayWindow.end
+        );
+
+        if (isWithinHours) {
+            return { applies: false, percent, amount: 0 };
+        }
+
+        return { applies: true, percent, amount: Math.round(getFee() * (percent / 100)) };
+    };
+
+    const surcharge = getSurchargeInfo();
+    const totalWithSurcharge = getFee() + surcharge.amount;
+
+    const handlePayment = async () => {
+        if (!reason.trim()) {
+            showStatus('warning', 'Reason required', "Please let the doctor know why you'd like to consult them.");
+            return;
+        }
+
         const fee = getFee();
-        // Pass data back to parent to handle "payment"
-        onRequest({
-            date: selectedDate,
-            time: selectedTime,
-            type: selectedType,
-            fee: fee
-        });
+        setSubmitting(true);
+        try {
+            // Parent creates the actual appointment request and only resolves on success -
+            // it navigates away itself, so nothing else needs to happen here.
+            await onRequest({
+                date: selectedDate,
+                time: selectedTime,
+                type: selectedType,
+                fee: fee,
+                reason: reason.trim(),
+            });
+        } catch (error: any) {
+            showStatus(
+                'error',
+                'Request failed',
+                error?.response?.data?.message || 'Could not send your appointment request. Please try again.'
+            );
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -279,15 +335,36 @@ export default function RequestAppointmentModal({
                                 })}
                             </View>
 
-                            {/* 4. Payment/Pre-auth Info */}
+                            {/* 4. Reason for visit */}
+                            <Text style={styles.sectionTitle}>Reason for Visit</Text>
+                            <TextInput
+                                style={styles.reasonInput}
+                                placeholder="Briefly describe your symptoms or reason for consultation..."
+                                placeholderTextColor="#8e8e93"
+                                value={reason}
+                                onChangeText={setReason}
+                                multiline
+                                numberOfLines={3}
+                            />
+
+                            {/* 5. Payment Info */}
+                            {surcharge.applies && (
+                                <View style={styles.surchargeNotice}>
+                                    <AppIcon name="alert-triangle" size={16} color="#B45309" />
+                                    <Text style={styles.surchargeNoticeText}>
+                                        This time is outside {doctorName}'s regular hours - a {surcharge.percent}% urgent
+                                        care surcharge (₹{surcharge.amount}) applies.
+                                    </Text>
+                                </View>
+                            )}
                             <View style={styles.paymentInfoContainer}>
                                 <View style={styles.paymentRow}>
-                                    <Text style={styles.payLabel}>Total to authorize</Text>
-                                    <Text style={styles.payAmount}>₹{getFee()}</Text>
+                                    <Text style={styles.payLabel}>{surcharge.applies ? 'Estimated total' : 'Consultation fee'}</Text>
+                                    <Text style={styles.payAmount}>₹{totalWithSurcharge}</Text>
                                 </View>
                                 <Text style={styles.disclaimer}>
-                                    By requesting, you authorize Medicoo to charge ₹{getFee()} if {doctorName} accepts.
-                                    Money is held, not charged, until acceptance.
+                                    You won't be charged now. {doctorName} needs to accept your request first - you'll then
+                                    get a payment prompt to confirm the appointment.
                                 </Text>
                             </View>
 
@@ -295,8 +372,16 @@ export default function RequestAppointmentModal({
 
                         {/* Footer Action */}
                         <View style={styles.footer}>
-                            <TouchableOpacity style={styles.payButton} onPress={handlePayment}>
-                                <Text style={styles.payButtonText}>Pre-authorize ₹{getFee()}</Text>
+                            <TouchableOpacity
+                                style={[styles.payButton, submitting && styles.payButtonDisabled]}
+                                onPress={handlePayment}
+                                disabled={submitting}
+                            >
+                                {submitting ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.payButtonText}>Send Request</Text>
+                                )}
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -492,6 +577,36 @@ const styles = StyleSheet.create({
         color: '#1c1c1e',
     },
 
+    reasonInput: {
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#E5E5EA',
+        borderRadius: 16,
+        padding: 16,
+        fontSize: 14,
+        color: '#1c1c1e',
+        minHeight: 80,
+        textAlignVertical: 'top',
+        marginBottom: 24,
+    },
+
+    surchargeNotice: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 8,
+        backgroundColor: '#FFFBEB',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#FDE68A',
+        padding: 12,
+        marginTop: 8,
+    },
+    surchargeNoticeText: {
+        flex: 1,
+        fontSize: 12,
+        color: '#92400E',
+        lineHeight: 17,
+    },
     paymentInfoContainer: {
         backgroundColor: '#F9FAFB',
         borderRadius: 16,
@@ -531,11 +646,15 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         borderRadius: 24,
         alignItems: 'center',
+        justifyContent: 'center',
         shadowColor: THEME_COLOR,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 5,
+    },
+    payButtonDisabled: {
+        opacity: 0.7,
     },
     payButtonText: {
         fontSize: 16,

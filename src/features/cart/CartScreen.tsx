@@ -698,6 +698,29 @@ export default function CartScreen() {
 
     const total = Math.max(subtotal + deliveryFee + gstAndOtherCharges - couponDiscount, 0);
 
+    // No address selected used to be silently invisible past this point -
+    // checkout would proceed straight through with the "John Doe" / fake
+    // phone placeholder and whatever fallback coordinates downstream
+    // screens default to. Now it's a hard stop that sends the user to pick
+    // a real one first.
+    const handleProceedToCheckout = () => {
+      if (!selectedAddress) {
+        alert("Please select a delivery address before proceeding to pay.");
+        navigation.navigate("AddressBookModal");
+        return;
+      }
+      executeAction("OPEN_CHECKOUT", {
+        storeId: storeCart.storeId,
+        amount: total,
+        deliveryFee: deliveryFee,
+        subtotal: subtotal,
+        taxes: taxes,
+        couponDiscount: couponDiscount,
+        platformFee: platformFee,
+        otherCharges: otherCharges,
+      });
+    };
+
     return (
       <View
         style={[
@@ -709,18 +732,7 @@ export default function CartScreen() {
           {/* Left Division: Payment Details */}
           <TouchableOpacity
             style={styles.paymentCol}
-            onPress={() =>
-              executeAction("OPEN_CHECKOUT", {
-                storeId: storeCart.storeId,
-                amount: total,
-                deliveryFee: deliveryFee,
-                subtotal: subtotal,
-                taxes: taxes,
-                couponDiscount: couponDiscount,
-                platformFee: platformFee,
-                otherCharges: otherCharges,
-              })
-            }
+            onPress={handleProceedToCheckout}
             activeOpacity={0.7}
           >
             <CreditCard size={18} color="#089643" />
@@ -740,18 +752,7 @@ export default function CartScreen() {
             ]}
             activeOpacity={isOffline ? 1 : 0.8}
             disabled={isOffline}
-            onPress={() =>
-              executeAction("OPEN_CHECKOUT", {
-                storeId: storeCart.storeId,
-                amount: total,
-                deliveryFee: deliveryFee,
-                subtotal: subtotal,
-                taxes: taxes,
-                couponDiscount: couponDiscount,
-                platformFee: platformFee,
-                otherCharges: otherCharges,
-              })
-            }
+            onPress={handleProceedToCheckout}
           >
             <Text style={styles.payBtnText}>
               {isOffline ? "Store Offline" : `Pay ₹${formatPrice(total)}`}

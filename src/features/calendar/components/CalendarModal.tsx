@@ -7,6 +7,11 @@ import MedicineCard from './MedicineCard';
 import EmptyState from '@/src/components/layout/EmptyState';
 import { markMedicineIntake } from '@/src/redux/slices/calendarSlice';
 import { AppDispatch } from '@/src/redux/store';
+import { DayEventStatus, fetchCalendarMonthStatus } from '@/src/services/api/calendar.api';
+import { executeAction } from '@/src/actions/ActionExecutor';
+import { formatDoctorName } from '@/src/utils/formatters';
+import AppointmentCard from './AppointmentCard';
+import { timeToMinutes } from '../utils/scheduleSort';
 
 // Helper to get days in a month
 const getDaysInMonth = (month: any, year: any) => {
@@ -25,6 +30,7 @@ export default function CalendarModal({ visible, onClose, selectedDate, onSelect
   const [currentMonth, setCurrentMonth] = useState(selectedDate.getMonth());
   const [currentYear, setCurrentYear] = useState(selectedDate.getFullYear());
   const [calendarGrid, setCalendarGrid] = useState<any[]>([]);
+  const [monthStatus, setMonthStatus] = useState<Record<string, DayEventStatus>>({});
 
   // Calculate isFuture for the "Today's plan" section based on the SELECTED date (not the modal nav month)
   // Logic must match CalendarScreen
@@ -44,6 +50,22 @@ export default function CalendarModal({ visible, onClose, selectedDate, onSelect
     }
   }, [visible]);
 
+  // Fetch which days this month have an event (medicine reminder,
+  // consultation, or lab booking) to drive the dots below - one call per
+  // month shown, not per day.
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    const monthParam = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+    fetchCalendarMonthStatus(monthParam)
+      .then((data) => { if (!cancelled) setMonthStatus(data); })
+      .catch((err) => {
+        console.warn('Failed to load calendar month status:', err);
+        if (!cancelled) setMonthStatus({});
+      });
+    return () => { cancelled = true; };
+  }, [visible, currentMonth, currentYear]);
+
   // Generate the grid logic
   useEffect(() => {
     const daysInMonth = getDaysInMonth(currentMonth, currentYear);
@@ -57,19 +79,18 @@ export default function CalendarModal({ visible, onClose, selectedDate, onSelect
 
     // Actual days
     for (let i = 1; i <= daysInMonth; i++) {
-      // Removed hardcoded dots. 
-      // TODO: specific endpoint needed to fetch monthly status.
-      let status = null;
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+      const eventStatus = monthStatus[dateStr];
 
       grid.push({
         day: i,
         id: `curr-${i}`,
-        status: status
+        eventStatus,
       });
     }
 
     setCalendarGrid(grid);
-  }, [currentMonth, currentYear]);
+  }, [currentMonth, currentYear, monthStatus]);
 
   const handlePrevMonth = () => {
     if (currentMonth === 0) {
@@ -155,9 +176,16 @@ export default function CalendarModal({ visible, onClose, selectedDate, onSelect
                         <Text style={[styles.dayText, isSelected && styles.selectedDayText]}>
                           {item.day}
                         </Text>
-                        {/* Dots: Only show if NOT selected (selected has solid bg) */}
-                        {!isSelected && item.status === 'completed' && <View style={styles.dotTeal} />}
-                        {!isSelected && item.status === 'missed' && <View style={styles.dotRed} />}
+                        {/* Dots: Only show if NOT selected (selected has solid bg) -
+                            one per event type present that day, so a day with
+                            both a reminder and a consultation shows two. */}
+                        {!isSelected && (
+                          <View style={styles.dotRow}>
+                            {item.eventStatus?.medicine && <View style={[styles.eventDot, styles.dotMedicine]} />}
+                            {item.eventStatus?.appointment && <View style={[styles.eventDot, styles.dotAppointment]} />}
+                            {item.eventStatus?.lab && <View style={[styles.eventDot, styles.dotLab]} />}
+                          </View>
+                        )}
                       </>
                     )}
                   </TouchableOpacity>
@@ -175,41 +203,69 @@ export default function CalendarModal({ visible, onClose, selectedDate, onSelect
               // Prevent flicker: Wait for data to match selected date
               if (data?.date !== dateStr) return null;
 
-              const hasMedicines = data.medicines && data.medicines.length > 0;
+              const sortedAppointments = [...(data.appointments || [])].sort(
+                (a: any, b: any) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
+              );
+              const sortedMedicines = [...(data.medicines || [])].sort(
+                (a: any, b: any) => timeToMinutes(a.time) - timeToMinutes(b.time)
+              );
 
-              if (!hasMedicines) {
+              if (sortedAppointments.length === 0 && sortedMedicines.length === 0) {
                 return (
                   <EmptyState
-                    title="No entries"
-                    message="No scheduled plan for this date."
+                    title="Nothing scheduled"
+                    message="No appointments or reminders for this date."
                   />
                 );
               }
 
-              return data.medicines.map((item: any) => (
-                <MedicineCard
-                  key={item.id}
-                  scheduleId={item.id.split('_')[0]}
-                  date={dateStr}
-                  name={item.title}
-                  dosage={item.subtitle}
-                  time={item.time}
-                  status={item.status}
-                  shape={item.shape}
-                  color={item.color}
-                  leftColor={item.leftColor}
-                  rightColor={item.rightColor}
-                  isFuture={isFuture}
-                  onMarkIntake={(status) => {
-                    dispatch(markMedicineIntake({
-                      scheduleId: item.id.split('_')[0],
-                      date: dateStr,
-                      time: item.time,
-                      status,
-                    }));
-                  }}
-                />
-              ));
+              return (
+                <>
+                  {sortedAppointments.map((item: any) => (
+                    <AppointmentCard
+                      key={item.id}
+                      doctorName={formatDoctorName(item.title)}
+                      specialty={item.subtitle}
+                      time={
+                        item.endTime && item.endTime !== item.startTime
+                          ? `${item.startTime} - ${item.endTime}`
+                          : item.startTime
+                      }
+                      status={item.status}
+                      consultationType={item.consultationType}
+                      onPress={
+                        item.requestId
+                          ? () => executeAction('OPEN_CONSULTATION_DETAIL', { requestId: item.requestId })
+                          : undefined
+                      }
+                    />
+                  ))}
+                  {sortedMedicines.map((item: any) => (
+                    <MedicineCard
+                      key={item.id}
+                      scheduleId={item.id.split('_')[0]}
+                      date={dateStr}
+                      name={item.title}
+                      dosage={item.subtitle}
+                      time={item.time}
+                      status={item.status}
+                      shape={item.shape}
+                      color={item.color}
+                      leftColor={item.leftColor}
+                      rightColor={item.rightColor}
+                      isFuture={isFuture}
+                      onMarkIntake={(status) => {
+                        dispatch(markMedicineIntake({
+                          scheduleId: item.id.split('_')[0],
+                          date: dateStr,
+                          time: item.time,
+                          status,
+                        }));
+                      }}
+                    />
+                  ))}
+                </>
+              );
             })()}
           </View>
         </ScrollView>
@@ -330,19 +386,25 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
-  dotTeal: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.primary,
+  dotRow: {
+    flexDirection: 'row',
+    gap: 3,
     marginTop: 4,
+    height: 5,
   },
-  dotRed: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.danger,
-    marginTop: 4,
+  eventDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  dotMedicine: {
+    backgroundColor: COLORS.primary, // green - medicine reminder
+  },
+  dotAppointment: {
+    backgroundColor: '#3B82F6', // blue - doctor consultation
+  },
+  dotLab: {
+    backgroundColor: '#7C3AED', // purple - lab booking, matches the app's existing Lab Tests accent color
   },
 
   // Plan Section

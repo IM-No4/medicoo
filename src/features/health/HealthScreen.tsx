@@ -1,9 +1,10 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { Activity, Bell, Flame, Heart } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,8 +12,11 @@ import {
   View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../redux/store';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../../redux/store';
+import { loadOnDeviceSteps, selectTodaySteps } from '../../redux/slices/deviceSlice';
+import { loadVitalRecords } from '../../redux/slices/vitalsSlice';
+import { watchLiveSteps } from '../../services/health/stepsService';
 import { DeviceConnectCard } from './components/DeviceConnectCard';
 import { GoalsCard } from './components/GoalsCard';
 import { HealthHighlights } from './components/HealthHighlights';
@@ -21,29 +25,77 @@ import { MedicationsSummary } from './components/MedicationsSummary';
 import { TodaysFocus } from './components/TodaysFocus';
 import { VitalsSnapshot } from './components/VitalsSnapshot';
 
-// Modals
-import AddGoalModal from '../../components/modals/AddGoalModal/AddGoalModal';
-
 export default function HealthScreen() {
   const insets = useSafeAreaInsets();
+  const dispatch = useDispatch<AppDispatch>();
   const [isFocused, setIsFocused] = useState(false);
-  const [showAddGoal, setShowAddGoal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  // Android has no "steps since midnight" query without Health Connect (see
+  // stepsService.ts), so with no wearable connected there's nothing for
+  // selectTodaySteps to read - this is a live, session-only count from the
+  // moment the screen was opened instead, kept deliberately separate from
+  // todaySteps so it never gets written to a goal or a friends leaderboard
+  // as if it were a real daily total.
+  const [liveSteps, setLiveSteps] = useState<number | null>(null);
+  // Tracks only pull-to-refresh gestures, separate from the focus-effect
+  // loads below - same split used on the Calendar screen.
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
 
-  const { connectedDevice } = useSelector((state: RootState) => state.device);
+  const { connectedDevice, onDeviceSteps } = useSelector((state: RootState) => state.device);
   const { records } = useSelector((state: RootState) => state.vitals);
+  const todaySteps = useSelector(selectTodaySteps);
+  const unreadNotificationCount = useSelector((state: RootState) => state.notifications.unreadCount);
 
   const latestManual = records[0];
   const heartRate = latestManual?.heartRate ?? connectedDevice?.data?.heartRate ?? '--';
-  const steps = connectedDevice?.data?.steps !== undefined ? connectedDevice.data.steps.toLocaleString() : '--';
+  const isLiveStepsFallback = Platform.OS === 'android' && !connectedDevice && onDeviceSteps === null;
+  const hasStepsData = connectedDevice?.data?.steps !== undefined || onDeviceSteps !== null || (isLiveStepsFallback && liveSteps !== null);
+  const steps = hasStepsData ? (isLiveStepsFallback ? liveSteps! : todaySteps).toLocaleString() : '--';
+  const stepsLabel = isLiveStepsFallback && hasStepsData ? 'Steps (live)' : 'Steps';
   const calories = connectedDevice?.data?.calories !== undefined ? `${connectedDevice.data.calories}` : '--';
+
+  const stepsSubscriptionRef = useRef<{ remove: () => void } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       setIsFocused(true);
-      return () => setIsFocused(false);
-    }, [])
+      dispatch(loadOnDeviceSteps());
+      dispatch(loadVitalRecords());
+
+      let cancelled = false;
+      if (Platform.OS === 'android' && !connectedDevice) {
+        setLiveSteps(null);
+        watchLiveSteps((count) => setLiveSteps(count)).then((sub) => {
+          // The screen may have already lost focus by the time this
+          // promise resolves - don't leak a subscription past cleanup.
+          if (cancelled) {
+            sub?.remove();
+          } else {
+            stepsSubscriptionRef.current = sub;
+          }
+        });
+      }
+
+      return () => {
+        setIsFocused(false);
+        cancelled = true;
+        stepsSubscriptionRef.current?.remove();
+        stepsSubscriptionRef.current = null;
+      };
+    }, [dispatch, connectedDevice])
   );
+
+  const onRefresh = useCallback(async () => {
+    setIsManualRefreshing(true);
+    try {
+      await Promise.all([
+        dispatch(loadOnDeviceSteps()),
+        dispatch(loadVitalRecords()),
+      ]);
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  }, [dispatch]);
 
   return (
     <View style={styles.container}>
@@ -64,7 +116,7 @@ export default function HealthScreen() {
             onPress={() => setShowNotifications(true)}
           >
             <Bell size={22} color="#1F2937" />
-            <View style={styles.notificationBadge} />
+            {unreadNotificationCount > 0 && <View style={styles.notificationBadge} />}
           </TouchableOpacity>
         </View>
       </View>
@@ -72,6 +124,9 @@ export default function HealthScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl refreshing={isManualRefreshing} onRefresh={onRefresh} />
+        }
       >
         {/* Activity Summary Row */}
         <View style={styles.activitySummary}>
@@ -86,7 +141,7 @@ export default function HealthScreen() {
             icon={<Activity size={18} color="#2FA561" />}
             value={steps}
             unit="steps"
-            label="Steps"
+            label={stepsLabel}
             color="#F0FDF4"
           />
           <SummaryCard
@@ -100,18 +155,13 @@ export default function HealthScreen() {
 
         <TodaysFocus />
         <MedicationsSummary />
-        <GoalsCard onAddGoal={() => setShowAddGoal(true)} />
+        <GoalsCard />
         <VitalsSnapshot />
         <HealthHighlights />
         <DeviceConnectCard />
       </ScrollView>
 
       {/* Modals */}
-      <AddGoalModal
-        visible={showAddGoal}
-        onClose={() => setShowAddGoal(false)}
-      />
-
       <HealthNotificationsModal
         visible={showNotifications}
         onClose={() => setShowNotifications(false)}
@@ -129,7 +179,7 @@ function SummaryCard({ icon, value, unit, label, color }: any) {
           <Text style={styles.summaryValue}>{value}</Text>
           <Text style={styles.summaryUnit}>{unit}</Text>
         </View>
-        <Text style={styles.summaryLabel}>{label}</Text>
+        <Text style={styles.summaryLabel} numberOfLines={1}>{label}</Text>
       </View>
     </View>
   );

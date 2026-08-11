@@ -4,7 +4,7 @@ import { COLORS } from '../styles';
 
 // Configuration
 const ITEM_WIDTH = 60;
-const ITEM_MARGIN = 6;
+const ITEM_MARGIN = 4;
 const FULL_ITEM_WIDTH = ITEM_WIDTH + (ITEM_MARGIN * 2);
 const BUFFER_DAYS = 30; // Load 30 days back/forward initially
 
@@ -145,11 +145,11 @@ export default function DateStrip({ selectedDate, onSelectDate }: DateStripProps
 
 const styles = StyleSheet.create({
     container: {
-        paddingVertical: 20,
+        paddingVertical: 0,
     },
     dayItem: {
         width: ITEM_WIDTH,
-        height: 75,
+        height: 72,
         backgroundColor: '#FFFFFF',
         borderRadius: 18, // Keep rounded corners base
         alignItems: 'center',
@@ -177,13 +177,13 @@ const styles = StyleSheet.create({
         borderColor: '#FFFFFF', // White border contrasts nicely with the Teal background
     },
     dayLabel: {
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: '500',
         color: COLORS.textSecondary,
         marginBottom: 6,
     },
     dateLabel: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '700',
         color: COLORS.text,
     },

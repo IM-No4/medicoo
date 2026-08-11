@@ -132,6 +132,16 @@ export default function PaymentScreen() {
   const handlePay = async () => {
     setPaymentError(null);
 
+    // Defense in depth: CartScreen already blocks getting here without a
+    // selected address, but this screen shouldn't trust that and place an
+    // order with deliveryAddress: null if it's ever reached another way
+    // (deep link, back-forward navigation, etc).
+    if (!selectedAddress) {
+      setPaymentError('Please select a delivery address before paying.');
+      navigation.navigate('AddressBookModal');
+      return;
+    }
+
     if (selectedMethod === 'cod') {
       setIsProcessing(true);
       try {

@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux';
 import { useSystemUI } from '../bootstrap/useSystemUI';
 import CommandPalette from '../command/CommandPalette';
 import GlobalTrackingBanner from '../features/cart/GlobalTrackingBanner';
+import LegalAcceptanceModal from '../components/modals/LegalAcceptanceModal';
 import OnboardingStack from '../features/onboarding/OnboardingStack';
 import SplashScreen from '../features/splash/SplashScreen';
 import { RootState } from '../redux/store';
@@ -70,6 +71,12 @@ export default function RootNavigator() {
       {/* 📦 GLOBAL ORDER TRACKING BANNER (floats above bottom nav when order is active) */}
       {boot.isAuthenticated && boot.onboardingCompleted && (
         <GlobalTrackingBanner />
+      )}
+
+      {/* ⚖️ TERMS & PRIVACY RE-ACCEPTANCE GATE - decides for itself whether
+          to actually render based on Redux state + local snooze timestamp */}
+      {boot.isAuthenticated && boot.onboardingCompleted && (
+        <LegalAcceptanceModal />
       )}
     </>
   );

@@ -3,7 +3,6 @@ import React from 'react';
 import ProfileScreen from '../features/profile/ProfileScreen';
 import AddAddressScreen from '../features/profile/screens/AddressBook/AddAddressScreen';
 import AddressBookScreen from '../features/profile/screens/AddressBook/AddressBookScreen';
-import ConsultationDetailScreen from '../features/profile/screens/Consultations/ConsultationDetailScreen';
 import ConsultationsScreen from '../features/profile/screens/Consultations/ConsultationsScreen';
 import DoctorFeedbackScreen from '../features/profile/screens/Consultations/DoctorFeedbackScreen';
 import DoctorOnboardingScreen from '../features/profile/screens/DoctorOnboarding/DoctorOnboardingScreen';
@@ -23,6 +22,9 @@ import MedicineOrdersScreen from '../features/profile/screens/Medicines/Medicine
 import HelpSupportScreen from '../features/profile/screens/Support/HelpSupportScreen';
 import TermsPrivacyScreen from '../features/profile/screens/Support/TermsPrivacyScreen';
 import OrderSupportScreen from '../features/profile/screens/Support/OrderSupportScreen';
+import LiveChatScreen from '../features/profile/screens/Support/LiveChatScreen';
+import ContentPolicyScreen from '../features/legals/ContentPolicyScreen';
+import PrivacyPolicyScreen from '../features/legals/PrivacyPolicyScreen';
 import EditProfileScreen from '../features/profile/screens/UserDetails/EditProfileScreen';
 import ProfileDetailsScreen from '../features/profile/screens/UserDetails/ProfileDetailsScreen';
 
@@ -46,7 +48,6 @@ export type ProfileStackParamList = {
   FamilyMembersModal: undefined;
   AddFamilyMember: { member?: any, isEditing?: boolean } | undefined;
   ConsultationModal: undefined;
-  ConsultationDetail: { requestId: string };
   DoctorFeedback: { consultationId: string, doctor: any };
   MedicineOrdersModal: undefined;
   MedicineOrderDetail: { orderId: string };
@@ -54,12 +55,16 @@ export type ProfileStackParamList = {
   LabTestDetail: { testId: string };
   HelpModal: undefined;
   TermsModal: undefined;
+  CommunityGuidelines: undefined;
+  SecurityStandards: undefined;
   ManageAvailability: undefined;
   ManageAppointments: { initialTab?: 'requests' | 'upcoming' | 'history' };
   PatientConsultationDetail: { appointment: any };
   DoctorPendingRequests: undefined;
   DoctorReviews: undefined;
   DoctorEarnings: undefined;
+  LiveChat: undefined;
+  OrderSupport: { orderId: string };
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -120,11 +125,6 @@ export default function ProfileStack() {
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
       <Stack.Screen
-        name="ConsultationDetail"
-        component={ConsultationDetailScreen}
-        options={{ presentation: 'card' }}
-      />
-      <Stack.Screen
         name="DoctorFeedback"
         component={DoctorFeedbackScreen}
         options={{ presentation: 'modal' }}
@@ -163,8 +163,23 @@ export default function ProfileStack() {
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
       <Stack.Screen
+        name="CommunityGuidelines"
+        component={ContentPolicyScreen}
+        options={{ presentation: 'card' }}
+      />
+      <Stack.Screen
+        name="SecurityStandards"
+        component={PrivacyPolicyScreen}
+        options={{ presentation: 'card' }}
+      />
+      <Stack.Screen
         name="OrderSupport"
         component={OrderSupportScreen}
+        options={{ presentation: 'card' }}
+      />
+      <Stack.Screen
+        name="LiveChat"
+        component={LiveChatScreen}
         options={{ presentation: 'card' }}
       />
       <Stack.Screen

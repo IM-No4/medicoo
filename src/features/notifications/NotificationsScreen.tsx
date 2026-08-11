@@ -4,18 +4,17 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Linking,
   RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 
 import AppIcon from '@/src/components/icons/AppIcon';
-import { executeAction } from '@/src/actions/ActionExecutor';
 import { clearUnread, setUnreadCount } from '../../redux/slices/notificationSlice';
 import {
   CustomerNotification,
@@ -118,6 +117,8 @@ export default function NotificationsScreen() {
         return { name: 'heart', color: '#EC4899', bgColor: '#FCE7F3' };
       case 'review':
         return { name: 'star', color: '#10B981', bgColor: '#D1FAE5' };
+      case 'blood_request':
+        return { name: 'droplet', color: '#EF4444', bgColor: '#FEF2F2' };
       default:
         return { name: 'bell', color: '#64748B', bgColor: '#F1F5F9' };
     }
@@ -238,20 +239,21 @@ const styles = StyleSheet.create({
     color: '#1F2937',
   },
   listContent: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 12,
+    padding: 0,
+    paddingBottom: 84,
+    gap: 0,
+    backgroundColor: '#FFFFFF',
   },
   emptyListContent: {
     flexGrow: 1,
     padding: 16,
   },
   card: {
+    marginHorizontal: 16,
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
+    borderBottomWidth: 1,
     borderColor: '#F1F5F9', // Subtle, premium light border
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
@@ -280,7 +282,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#374151',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   unreadTitle: {
     color: '#111827',
@@ -289,7 +291,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     lineHeight: 18,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   timeTag: {
     fontSize: 11,

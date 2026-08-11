@@ -22,7 +22,8 @@ export type HomeFeedItemType =
   | 'HEALTH_SUMMARY'
   | 'SEASONAL_ESSENTIALS'
   | 'HOME_FEED_FOOTER'
-  | 'UPCOMING_APPOINTMENTS_CARD';
+  | 'UPCOMING_APPOINTMENTS_CARD'
+  | 'CATEGORY_ROW';
 
 export interface SeasonalCollection {
   id: string;
@@ -150,6 +151,22 @@ export interface UpcomingAppointmentsCardFeedItem extends HomeFeedItemBase {
   type: 'UPCOMING_APPOINTMENTS_CARD';
 }
 
+export interface CategoryRowItem {
+  id: string;
+  title: string;
+  imageUrl?: string | null;
+  action: FeedAction;
+}
+
+// Zomato-style circular category selector (pharmacyOnly home layout only) -
+// one flat row combining every active ProductShowcase category, built
+// server-side in place of several stacked PRODUCT_SHOWCASE carousels.
+export interface CategoryRowFeedItem extends HomeFeedItemBase {
+  type: 'CATEGORY_ROW';
+  title: string;
+  items: CategoryRowItem[];
+}
+
 export interface ContinueActivityFeedItem extends HomeFeedItemBase {
   type: 'CONTINUE_ACTIVITY';
   title: string;
@@ -224,7 +241,8 @@ export type HomeFeedItem =
   | HealthSummaryFeedItem
   | SeasonalEssentialsFeedItem
   | HomeFeedFooterFeedItem
-  | UpcomingAppointmentsCardFeedItem;
+  | UpcomingAppointmentsCardFeedItem
+  | CategoryRowFeedItem;
 
 export interface HomeCareService {
   id: string;
@@ -334,7 +352,10 @@ export interface DoctorRecommendationFeedItem extends HomeFeedItemBase {
 export interface Product {
   id: string;
   name: string;
-  price: number;
+  // Omitted (not 0) when no store has confirmed real stock/price for this
+  // item yet - the card shows a "View Details" CTA instead of a price in
+  // that case, rather than a fabricated number.
+  price?: number;
   originalPrice?: number;
   discount?: string;
   image?: string;

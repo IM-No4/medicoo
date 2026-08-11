@@ -3,20 +3,20 @@ import { StatusBar } from "expo-status-bar";
 import { ChevronLeft, Clock, Plus, User, UserPlus } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { executeAction } from "../../../../actions/ActionExecutor";
 import ConfirmModal from "../../../../components/modals/ConfirmModal";
 import StatusModal, {
-    StatusType,
+  StatusType,
 } from "../../../../components/modals/StatusModal";
 import { getFamilyMembers, removeFamilyMember } from "../../../../services/api";
 
@@ -292,7 +292,7 @@ export default function FamilyMembersScreen() {
         )}
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom - 24 }]}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => executeAction("OPEN_ADD_FAMILY_MEMBER")}

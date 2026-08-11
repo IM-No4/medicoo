@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import AppIcon from '../../../components/icons/AppIcon';
 import { RootState } from '../../../redux/store';
@@ -35,46 +35,57 @@ function QuickActions({ items, onAction }: Props) {
     ).length;
   }, [carts]);
 
+  const renderItem = ({ item }: { item: QuickActionItem }) => {
+    const isPharmacy =
+      item.id === 'medicines' ||
+      item.id === 'pharmacy' ||
+      (item.action?.type === 'NAVIGATE' && (item.action.stack === 'PharmacyStack' || item.action.screen === 'PharmacyList'));
+
+    const showCartBadge = isPharmacy && medicineCartCount > 0;
+
+    return (
+      <TouchableOpacity
+        style={styles.action}
+        activeOpacity={0.85}
+        onPress={() => onAction(item.action)}
+      >
+        <LinearGradient
+          colors={[item.background.start, item.background.end]}
+          style={styles.iconWrap}
+        >
+          <AppIcon
+            name={item.icon as any}
+            size={32}
+            color={item.accentColor}
+          />
+          {showCartBadge && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText} numberOfLines={1}>
+                {medicineCartCount > 99 ? '99+' : String(medicineCartCount)}
+              </Text>
+            </View>
+          )}
+        </LinearGradient>
+
+        <Text style={styles.label} numberOfLines={2}>{item.title}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // A fixed-width, left-aligned, horizontally-scrolling row (same pattern as
+  // ServicesSection) - the item count is no longer a hardcoded 4, so a
+  // space-between grid sized for exactly 4 columns would shove 2 items to
+  // opposite edges of the screen, or overflow badly past 4.
   return (
-    <View style={styles.row}>
-      {items.map((item) => {
-        const isPharmacy =
-          item.id === 'medicines' ||
-          item.id === 'pharmacy' ||
-          (item.action?.type === 'NAVIGATE' && (item.action.stack === 'PharmacyStack' || item.action.screen === 'PharmacyList'));
-
-        const showCartBadge = isPharmacy && medicineCartCount > 0;
-
-        return (
-          <TouchableOpacity
-            key={item.id}
-            style={styles.action}
-            activeOpacity={0.85}
-            onPress={() => onAction(item.action)}
-          >
-            <LinearGradient
-              colors={[item.background.start, item.background.end]}
-              style={styles.iconWrap}
-            >
-              <AppIcon
-                name={item.icon as any}
-                size={32}
-                color={item.accentColor}
-              />
-              {showCartBadge && (
-                <View style={styles.cartBadge}>
-                  <Text style={styles.cartBadgeText} numberOfLines={1}>
-                    {medicineCartCount > 99 ? '99+' : String(medicineCartCount)}
-                  </Text>
-                </View>
-              )}
-            </LinearGradient>
-
-            <Text style={styles.label}>{item.title}</Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
+    <FlatList
+      data={items}
+      renderItem={renderItem}
+      keyExtractor={(item) => item.id}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.listContent}
+      style={styles.row}
+    />
   );
 }
 
@@ -82,15 +93,16 @@ export default React.memo(QuickActions);
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
     marginBottom: 28,
     overflow: 'visible',
   },
+  listContent: {
+    paddingHorizontal: 20,
+  },
   action: {
     alignItems: 'center',
-    width: '24%',
+    width: 76,
+    marginRight: 18,
     overflow: 'visible',
   },
   iconWrap: {
@@ -111,6 +123,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#151517',
     opacity: 0.7,
+    textAlign: 'center',
   },
   cartBadge: {
     position: 'absolute',

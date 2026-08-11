@@ -112,7 +112,7 @@ export default function ProfileDetailsScreen() {
             </ScrollView>
 
             {/* Edit CTA */}
-            <View style={[styles.footer, { paddingBottom: insets.bottom - 24 }]}>
+            <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
                 <TouchableOpacity
                     style={styles.editButton}
                     onPress={() => executeAction('OPEN_EDIT_PROFILE', { profile })}
@@ -195,7 +195,8 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        padding: 20,
+        paddingHorizontal: 20,
+        paddingVertical: 12,
         backgroundColor: '#fff',
         borderTopWidth: 1,
         borderTopColor: '#E5E7EB',

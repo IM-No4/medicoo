@@ -1,4 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
+import * as Location from 'expo-location';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useDispatch } from 'react-redux';
@@ -72,11 +73,22 @@ export default function BloodDonorApplicationScreen() {
             setSubmitting(true);
             showStatus('loading', 'Submitting Application', 'Please wait while we process your donor registration...');
 
+            // Real device location is required here, not a placeholder -
+            // it's what nearby blood requests are matched against.
+            const { status: permissionStatus } = await Location.requestForegroundPermissionsAsync();
+            if (permissionStatus !== 'granted') {
+                showStatus('warning', 'Location needed', 'Please enable location access so nearby patients can find you when they need blood.');
+                setSubmitting(false);
+                return;
+            }
+            const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            const { latitude, longitude } = loc.coords;
+
             const result = await dispatch(applyAsDonor({
                 bloodGroup: form.bloodGroup,
                 location: {
-                    latitude: 0, // Placeholder
-                    longitude: 0, // Placeholder
+                    latitude,
+                    longitude,
                     address: form.address,
                 },
                 availableForEmergency: form.availableForEmergency,

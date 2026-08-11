@@ -13,19 +13,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiClient } from '../../../services/api/client';
 import { getPatientDocumentsForDoctor, PatientDocumentSummary } from '../../../services/api/doctor.api';
 import { getToken } from '../../../utils/tokenManagement';
+import { getDocumentTypeMeta } from '../../records/documentTypes';
 
 interface Props {
     visible: boolean;
     onClose: () => void;
     customerId?: string;
 }
-
-const TYPE_LABEL: Record<string, string> = {
-    lab_report: 'Lab Report',
-    scan: 'Scan',
-    prescription: 'Prescription',
-    other: 'Other',
-};
 
 const isImageDoc = (doc: PatientDocumentSummary) => doc.fileType === 'image' || doc.mimeType?.startsWith('image/');
 
@@ -80,7 +74,7 @@ export default function PatientReportsModal({ visible, onClose, customerId }: Pr
                 <View style={styles.docInfo}>
                     <Text style={styles.docTitle} numberOfLines={1}>{doc.name}</Text>
                     <Text style={styles.docSub}>
-                        {TYPE_LABEL[doc.documentType] || 'Document'} · {new Date(doc.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {getDocumentTypeMeta(doc.documentType).label} · {new Date(doc.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </Text>
                 </View>
             </TouchableOpacity>

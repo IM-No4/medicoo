@@ -15,6 +15,8 @@ import vitalsReducer from './slices/vitalsSlice';
 import goalsReducer from './slices/goalsSlice';
 import activityReducer from './slices/activitySlice';
 import orderReducer from './slices/orderSlice';
+import friendsReducer from './slices/friendsSlice';
+import legalReducer from './slices/legalSlice';
 
 export const store = configureStore({
   reducer: {
@@ -33,6 +35,8 @@ export const store = configureStore({
     goals: goalsReducer,
     activity: activityReducer,
     order: orderReducer,
+    friends: friendsReducer,
+    legal: legalReducer,
   },
 });
 

@@ -1,26 +1,49 @@
-import { Droplets, Footprints, Moon, Activity, Target, Plus, Settings, Salad, Brain, Heart } from 'lucide-react-native';
+import { Droplets, Footprints, Moon, Activity, Target, Settings, Salad, Brain, Heart } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigation } from '@react-navigation/native';
-import { RootState } from '../../../redux/store';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { AppDispatch, RootState } from '../../../redux/store';
 import { HealthSection } from './HealthSection';
 import { updateGoalProgress } from '../../../redux/slices/goalsSlice';
+import { loadOnDeviceSteps, selectTodaySteps } from '../../../redux/slices/deviceSlice';
 
-interface GoalsCardProps {
-    onAddGoal?: () => void;
-}
-
-export function GoalsCard({ onAddGoal }: GoalsCardProps) {
-    const dispatch = useDispatch();
+export function GoalsCard() {
+    const dispatch = useDispatch<AppDispatch>();
     const navigation = useNavigation<any>();
     const { goals } = useSelector((state: RootState) => state.goals);
-    const { connectedDevice } = useSelector((state: RootState) => state.device);
+    const stepsVal = useSelector(selectTodaySteps);
+    const { connectedDevice, onDeviceSteps } = useSelector((state: RootState) => state.device);
+    // selectTodaySteps falls back to 0 when there's no real source at all -
+    // that 0 must never get written to the backend as if it were an honest
+    // "no steps yet today" reading, or it'd stomp a previously-synced value.
+    const hasStepsSource = !!connectedDevice || onDeviceSteps !== null;
 
-    const stepsVal = connectedDevice?.data?.steps ?? 0;
+    // Refresh on-device step count whenever this card comes into view -
+    // steps accumulate through the day, so a boot-time read alone would go
+    // stale while the app stays open.
+    useFocusEffect(
+        React.useCallback(() => {
+            dispatch(loadOnDeviceSteps());
+        }, [dispatch])
+    );
 
     // Filter to only display enabled/active goals on the summary cards
     const activeGoalsList = goals.filter(g => g.enabled === true || g.enabled === undefined);
+
+    // Persist the device-read step count onto the goal itself - without
+    // this, the auto-synced number only ever existed in this card's local
+    // render (ManageGoalsScreen would show a stale value, and a shared
+    // steps goal would never reflect real progress on the friends
+    // leaderboard, which reads `current` straight from the database).
+    const stepsGoal = activeGoalsList.find(g => g.type === 'steps');
+    const stepsGoalId = stepsGoal?.id;
+    const storedStepsCurrent = stepsGoal?.current;
+    React.useEffect(() => {
+        if (stepsGoalId && hasStepsSource && storedStepsCurrent !== stepsVal) {
+            dispatch(updateGoalProgress({ id: stepsGoalId, current: stepsVal }));
+        }
+    }, [stepsGoalId, hasStepsSource, storedStepsCurrent, stepsVal, dispatch]);
 
     const processedGoals = activeGoalsList.map(goal => {
         let current = goal.current;
@@ -84,92 +107,82 @@ export function GoalsCard({ onAddGoal }: GoalsCardProps) {
                 </TouchableOpacity>
             }
         >
-            <View style={styles.card}>
+            <View>
                 {processedGoals.length === 0 ? (
-                    <View style={styles.emptyContainer}>
+                    <View style={styles.emptyCard}>
                         <Text style={styles.emptyTitle}>No Active Goals</Text>
                         <Text style={styles.emptySubtitle}>
                             Configure your custom daily steps, hydration, sleep, or activity targets.
                         </Text>
                     </View>
                 ) : (
-                    processedGoals.map((goal, index) => {
+                    processedGoals.map((goal) => {
                         const Icon = getGoalIcon(goal.type);
                         const progressPercent = `${Math.round(goal.progress * 100)}%` as any;
 
                         return (
-                            <View
+                            <TouchableOpacity
                                 key={goal.id}
-                                style={[styles.goalItem, index !== processedGoals.length - 1 && styles.divider]}
+                                style={styles.goalCard}
+                                onPress={() => handleGoalPress(goal)}
+                                activeOpacity={goal.type === 'steps' ? 1 : 0.7}
                             >
-                                <TouchableOpacity 
-                                    style={styles.goalInfo}
-                                    onPress={() => handleGoalPress(goal)}
-                                    activeOpacity={goal.type === 'steps' ? 1 : 0.7}
-                                >
-                                    <View style={[styles.goalIcon, { backgroundColor: goal.color + '15' }]}>
-                                        <Icon size={18} color={goal.color} />
+                                <View style={[styles.goalIcon, { backgroundColor: goal.color + '15' }]}>
+                                    <Icon size={22} color={goal.color} />
+                                </View>
+                                <View style={styles.goalInfo}>
+                                    <View style={styles.goalHeader}>
+                                        <Text style={styles.goalTitle}>{goal.title}</Text>
+                                        <Text style={styles.goalValue}>
+                                            {goal.current} / {goal.target} {goal.unit}
+                                        </Text>
                                     </View>
-                                    <View style={{ flex: 1 }}>
-                                        <View style={styles.goalHeader}>
-                                            <Text style={styles.goalTitle}>{goal.title}</Text>
-                                            <Text style={styles.goalValue}>
-                                                {goal.current} / {goal.target} {goal.unit}
-                                            </Text>
-                                        </View>
-                                        <View style={styles.goalBarBg}>
-                                            <View
-                                                style={[
-                                                    styles.goalBarFill,
-                                                    { width: progressPercent, backgroundColor: goal.color }
-                                                ]}
-                                            />
-                                        </View>
+                                    <View style={styles.goalBarBg}>
+                                        <View
+                                            style={[
+                                                styles.goalBarFill,
+                                                { width: progressPercent, backgroundColor: goal.color }
+                                            ]}
+                                        />
                                     </View>
-                                </TouchableOpacity>
-                            </View>
+                                </View>
+                            </TouchableOpacity>
                         );
                     })
                 )}
-
-                <TouchableOpacity
-                    style={styles.addGoal}
-                    onPress={onAddGoal}
-                    activeOpacity={0.7}
-                >
-                    <Plus size={16} color="#2FA561" />
-                    <Text style={styles.addGoalText}>Set New Goal</Text>
-                </TouchableOpacity>
             </View>
         </HealthSection>
     );
 }
 
 const styles = StyleSheet.create({
-    card: {
-        backgroundColor: '#fff',
+    // Same card language as AppointmentCard/MedicineCard (border instead of
+    // shadow, 48x48/radius-14 icon box) so a goal reads as the same kind of
+    // row as a consultation or medicine reminder, instead of the old single
+    // shared container with divided rows.
+    goalCard: {
+        backgroundColor: '#FFFFFF',
         borderRadius: 20,
         padding: 16,
-        borderWidth: 1,
-        borderColor: '#F3F4F6'
-    },
-    goalItem: {
+        paddingVertical: 12,
+        marginBottom: 12,
         flexDirection: 'row',
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
     },
-    divider: {
-        borderBottomWidth: 1,
-        borderBottomColor: '#F9FAFB',
-        paddingBottom: 16,
-        marginBottom: 16
-    },
-    goalInfo: { 
+    goalInfo: {
         flex: 1,
-        flexDirection: 'row', 
-        gap: 12, 
-        alignItems: 'center',
+        marginRight: 8,
     },
-    goalIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    goalIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 14,
+    },
     goalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -188,28 +201,16 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 3
     },
-    addGoal: {
-        marginTop: 16,
-        backgroundColor: '#F9FAFB',
-        padding: 12,
-        borderRadius: 12,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 8,
-        borderWidth: 1,
-        borderColor: '#F3F4F6',
-        borderStyle: 'dashed'
-    },
-    addGoalText: { fontSize: 13, color: '#2FA561', fontWeight: '700' },
     /* Empty State styles */
-    emptyContainer: {
+    emptyCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
         paddingVertical: 24,
         alignItems: 'center',
         justifyContent: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: '#F9FAFB',
-        marginBottom: 16,
+        marginBottom: 12,
     },
     emptyTitle: {
         fontSize: 14,

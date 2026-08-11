@@ -43,6 +43,11 @@ export default function MainTabs({ onOpenCommandPalette }: Props) {
 
   return (
     <Tab.Navigator
+      // Default is 'firstRoute', which always sends the back button to
+      // whichever tab is declared first (Home) regardless of where the user
+      // actually came from. 'history' returns to the last tab that was
+      // actually focused instead (e.g. Health -> Calendar -> back -> Health).
+      backBehavior="history"
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: false,

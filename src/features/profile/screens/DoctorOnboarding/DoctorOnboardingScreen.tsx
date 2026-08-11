@@ -1255,7 +1255,7 @@ export default function DoctorOnboardingScreen() {
                 {currentStep === OnboardingStep.REVIEW && renderReviewStep()}
             </ScrollView>
 
-            <View style={[styles.footer, { paddingBottom: insets.bottom - 24 }]}>
+            <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }]}>
                 {isReadOnly ? (
                     <View style={styles.pendingInfoContainer}>
                         <Text style={styles.pendingInfoText}>

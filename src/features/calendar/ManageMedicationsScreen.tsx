@@ -6,13 +6,12 @@ import {
     TouchableOpacity,
     FlatList,
     ActivityIndicator,
-    Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Pill, Plus, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, Pencil, Pill, Plus, Trash2 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
-import { getMedicineSchedules, deleteMedicineSchedule, updateMedicineSchedule } from '../../services/api/medicine.api';
+import { getMedicineSchedules, deleteMedicineSchedule } from '../../services/api/medicine.api';
 import AddMedicationModal from '../../components/modals/AddMedicationModal/AddMedicationModal';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 
@@ -24,6 +23,20 @@ interface MedSchedule {
     isActive: boolean;
     times?: string[];
     medicineType?: string;
+    shape?: string;
+    color?: string;
+    leftColor?: string;
+    rightColor?: string;
+    startDate?: string;
+    endDate?: string | null;
+    frequency?: string;
+    notes?: string;
+    familyVisible?: boolean;
+    selectedDays?: number[];
+    intervalValue?: number;
+    intervalType?: string;
+    cycleDaysOn?: number;
+    cycleDaysOff?: number;
 }
 
 export default function ManageMedicationsScreen() {
@@ -32,6 +45,7 @@ export default function ManageMedicationsScreen() {
     const [schedules, setSchedules] = useState<MedSchedule[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [editingSchedule, setEditingSchedule] = useState<MedSchedule | null>(null);
     const [status, setStatus] = useState<{
         visible: boolean;
         type: StatusType;
@@ -63,18 +77,9 @@ export default function ManageMedicationsScreen() {
         fetchSchedules();
     }, []);
 
-    const handleToggleActive = async (id: string, current: boolean) => {
-        try {
-            setSchedules(prev =>
-                prev.map(s => s._id === id ? { ...s, isActive: !current } : s)
-            );
-            await updateMedicineSchedule(id, { scheduleType: current ? 'paused' : 'active' } as any);
-        } catch (e) {
-            // Revert on failure
-            setSchedules(prev =>
-                prev.map(s => s._id === id ? { ...s, isActive: current } : s)
-            );
-        }
+    const handleEdit = (schedule: MedSchedule) => {
+        setEditingSchedule(schedule);
+        setShowAddModal(true);
     };
 
     const handleDelete = (id: string, name: string) => {
@@ -99,14 +104,17 @@ export default function ManageMedicationsScreen() {
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <StatusBar style="dark" />
 
-            {/* Header */}
+            {/* Header - bare icon buttons (no circle background), matching
+                the back/action button convention used across the rest of
+                the app (e.g. FamilyMembersScreen, LabTestsHistoryScreen)
+                rather than the filled-circle style this screen had before. */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-                    <ArrowLeft size={24} color="#1E293B" />
+                    <ChevronLeft size={24} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>My Medications</Text>
-                <TouchableOpacity style={styles.addHeaderBtn} onPress={() => setShowAddModal(true)} activeOpacity={0.7}>
-                    <Plus size={18} color="#2FA561" />
+                <TouchableOpacity style={styles.addHeaderBtn} onPress={() => { setEditingSchedule(null); setShowAddModal(true); }} activeOpacity={0.7}>
+                    <Plus size={22} color="#1F2937" />
                 </TouchableOpacity>
             </View>
 
@@ -121,7 +129,7 @@ export default function ManageMedicationsScreen() {
                     </View>
                     <Text style={styles.emptyTitle}>No Medications Added</Text>
                     <Text style={styles.emptySubtitle}>Add your medications to get daily reminders.</Text>
-                    <TouchableOpacity style={styles.emptyBtn} onPress={() => setShowAddModal(true)} activeOpacity={0.8}>
+                    <TouchableOpacity style={styles.emptyBtn} onPress={() => { setEditingSchedule(null); setShowAddModal(true); }} activeOpacity={0.8}>
                         <Plus size={16} color="#FFF" style={{ marginRight: 6 }} />
                         <Text style={styles.emptyBtnText}>Add First Medication</Text>
                     </TouchableOpacity>
@@ -133,7 +141,7 @@ export default function ManageMedicationsScreen() {
                     contentContainerStyle={styles.list}
                     showsVerticalScrollIndicator={false}
                     ListHeaderComponent={
-                        <Text style={styles.sectionLabel}>ENABLE OR REMOVE MEDICATION SCHEDULES</Text>
+                        <Text style={styles.sectionLabel}>EDIT OR REMOVE MEDICATION SCHEDULES</Text>
                     }
                     renderItem={({ item }) => (
                         <View style={[styles.medCard, !item.isActive && styles.disabledCard]}>
@@ -152,13 +160,13 @@ export default function ManageMedicationsScreen() {
                             </View>
 
                             <View style={styles.medActions}>
-                                <Switch
-                                    value={item.isActive}
-                                    onValueChange={() => handleToggleActive(item._id, item.isActive)}
-                                    trackColor={{ false: '#CBD5E1', true: '#DCFCE7' }}
-                                    thumbColor={item.isActive ? '#2FA561' : '#94A3B8'}
-                                    ios_backgroundColor="#CBD5E1"
-                                />
+                                <TouchableOpacity
+                                    style={styles.editBtn}
+                                    onPress={() => handleEdit(item)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Pencil size={16} color="#2FA561" />
+                                </TouchableOpacity>
                                 <TouchableOpacity
                                     style={styles.deleteBtn}
                                     onPress={() => handleDelete(item._id, item.medicineName)}
@@ -174,8 +182,10 @@ export default function ManageMedicationsScreen() {
 
             <AddMedicationModal
                 visible={showAddModal}
+                editingSchedule={editingSchedule}
                 onClose={() => {
                     setShowAddModal(false);
+                    setEditingSchedule(null);
                     fetchSchedules();
                 }}
             />
@@ -202,19 +212,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
+        paddingHorizontal: 20,
         height: 56,
         backgroundColor: '#FFFFFF',
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        borderBottomColor: '#F3F4F6',
     },
     backBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#F8FAFC',
+        padding: 8,
+        marginLeft: -8,
     },
     headerTitle: {
         fontSize: 18,
@@ -222,12 +228,8 @@ const styles = StyleSheet.create({
         color: '#0F172A',
     },
     addHeaderBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#F0FDF4',
+        padding: 8,
+        marginRight: -8,
     },
     list: {
         paddingHorizontal: 20,
@@ -291,6 +293,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
+    },
+    editBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        backgroundColor: '#F0FDF4',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     deleteBtn: {
         width: 36,

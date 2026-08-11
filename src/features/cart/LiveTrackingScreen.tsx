@@ -15,7 +15,6 @@ import {
   RefreshCw,
   ShieldCheck,
   ShoppingBag,
-  Star,
   X,
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -40,6 +39,9 @@ import {
 } from "../../redux/slices/orderSlice";
 import { RootState } from "../../redux/store";
 import { apiClient } from "../../services/api/client";
+import { onDeliveryLocationUpdate } from "../../services/socketService";
+
+type DeliveryPartnerInfo = { partnerId: string; name: string; phone: string | null };
 
 const { width, height } = Dimensions.get("window");
 
@@ -49,7 +51,7 @@ const formatPrice = (amount: number): string => {
   return parts.join(".");
 };
 
-const getHeaderMessages = (status: string) => {
+const getHeaderMessages = (status: string, partnerName?: string) => {
   switch (status) {
     case "pending":
       return {
@@ -75,13 +77,25 @@ const getHeaderMessages = (status: string) => {
       return {
         title: "Order is on the way 🛵",
         subtitle: "Arriving in 8 mins",
-        alert: "Rider Aman Verma is carrying your package to your location.",
+        alert: `${partnerName || "Your delivery partner"} is carrying your package to your location.`,
       };
     case "delivered":
       return {
         title: "Order Delivered 🎉",
         subtitle: "Delivered successfully",
         alert: "Your medicines have been handed over.",
+      };
+    case "rejected":
+      return {
+        title: "Order Rejected",
+        subtitle: "Not confirmed by pharmacy",
+        alert: "The pharmacy was unable to fulfill this order.",
+      };
+    case "cancelled":
+      return {
+        title: "Order Cancelled",
+        subtitle: "This order was cancelled",
+        alert: "This order has been cancelled.",
       };
     default:
       return {
@@ -221,25 +235,28 @@ export default function LiveTrackingScreen() {
   const [hasMapError, setHasMapError] = useState(false);
   const mapRef = useRef<MapView>(null);
 
-  const [dispatchStart, setDispatchStart] = useState<number | null>(null);
+  // Real assigned-partner identity and live GPS position - replaces the
+  // previous hardcoded "Aman Verma" + fake 20s linear-interpolation
+  // animation. With no real ping yet, the rider marker stays put at the
+  // pharmacy rather than fake-animating toward the destination.
+  const [deliveryPartner, setDeliveryPartner] = useState<DeliveryPartnerInfo | null>(null);
+  const [liveLocation, setLiveLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  // Monitor dispatched/pickedUp status to set starting time for rider transit animation
   useEffect(() => {
-    if (
-      (activeOrder?.status === "dispatched" ||
-        activeOrder?.status === "pickedUp") &&
-      !dispatchStart
-    ) {
-      setDispatchStart(Date.now());
-    } else if (
-      activeOrder?.status !== "dispatched" &&
-      activeOrder?.status !== "pickedUp"
-    ) {
-      setDispatchStart(null);
-    }
-  }, [activeOrder?.status, dispatchStart]);
+    setDeliveryPartner(null);
+    setLiveLocation(null);
+  }, [activeOrder?.orderId]);
 
-  // Update rider coordinate position on status changes
+  useEffect(() => {
+    const unsubscribe = onDeliveryLocationUpdate((payload) => {
+      if (deliveryPartner && payload.partnerId === deliveryPartner.partnerId) {
+        setLiveLocation({ latitude: payload.location.latitude, longitude: payload.location.longitude });
+      }
+    });
+    return unsubscribe;
+  }, [deliveryPartner]);
+
+  // Update rider coordinate position on status/live-location changes
   useEffect(() => {
     if (!activeOrder) return;
 
@@ -247,18 +264,13 @@ export default function LiveTrackingScreen() {
       activeOrder.status === "dispatched" ||
       activeOrder.status === "pickedUp"
     ) {
-      const startTime = dispatchStart || activeOrder.timestamp;
-      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-      const totalDispatchDuration = 20; // 20s travel duration
-      const progress = Math.min(elapsedSeconds / totalDispatchDuration, 1);
-      const nextLat = pharmacyLat - (pharmacyLat - userLat) * progress;
-      const nextLng = pharmacyLng - (pharmacyLng - userLng) * progress;
-      setRiderCoords({ latitude: nextLat, longitude: nextLng });
+      const coords = liveLocation || riderCoords;
+      if (liveLocation) setRiderCoords(liveLocation);
 
       if (mapRef.current && !hasMapError) {
         mapRef.current.fitToCoordinates(
           [
-            { latitude: nextLat, longitude: nextLng },
+            coords,
             { latitude: userLat, longitude: userLng },
           ],
           {
@@ -272,9 +284,10 @@ export default function LiveTrackingScreen() {
     } else {
       setRiderCoords({ latitude: pharmacyLat, longitude: pharmacyLng });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     activeOrder?.status,
-    dispatchStart,
+    liveLocation,
     userLat,
     userLng,
     pharmacyLat,
@@ -339,6 +352,13 @@ export default function LiveTrackingScreen() {
           if (activeOrder.status !== res.data.status) {
             dispatch(updateOrderStatus(res.data.status));
           }
+          if (res.data.deliveryPartner) {
+            setDeliveryPartner(res.data.deliveryPartner);
+          }
+          if (res.data.lastKnownLocation) {
+            const loc = res.data.lastKnownLocation;
+            setLiveLocation((prev) => prev ?? { latitude: loc.latitude, longitude: loc.longitude });
+          }
         }
       } catch (err) {
         console.warn("Failed to poll order status from server:", err);
@@ -374,7 +394,11 @@ export default function LiveTrackingScreen() {
   }, [userLat, userLng, pharmacyLat, pharmacyLng]);
 
   const handleCallRider = () => {
-    Linking.openURL("tel:+919876543210").catch(() => {
+    if (!deliveryPartner?.phone) {
+      alert("Rider's phone number isn't available yet.");
+      return;
+    }
+    Linking.openURL(`tel:${deliveryPartner.phone}`).catch(() => {
       alert("Unable to make call on this device.");
     });
   };
@@ -445,14 +469,14 @@ export default function LiveTrackingScreen() {
         </View>
 
         <Text style={styles.headerStatusTitle}>
-          {getHeaderMessages(activeOrder.status).title}
+          {getHeaderMessages(activeOrder.status, deliveryPartner?.name).title}
         </Text>
 
         <View style={styles.headerPillRow}>
           <View style={styles.headerTimePill}>
             <Clock size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
             <Text style={styles.headerTimePillText}>
-              {getHeaderMessages(activeOrder.status).subtitle}
+              {getHeaderMessages(activeOrder.status, deliveryPartner?.name).subtitle}
             </Text>
           </View>
           <TouchableOpacity
@@ -464,6 +488,9 @@ export default function LiveTrackingScreen() {
                 );
                 if (res.data && res.data.success && res.data.status) {
                   dispatch(updateOrderStatus(res.data.status));
+                  if (res.data.deliveryPartner) {
+                    setDeliveryPartner(res.data.deliveryPartner);
+                  }
                   alert("Status synced successfully");
                 }
               } catch {
@@ -544,7 +571,7 @@ export default function LiveTrackingScreen() {
               activeOrder.status === "pickedUp") && (
               <Marker
                 coordinate={riderCoords}
-                title="Rider - Aman Verma"
+                title={`Rider - ${deliveryPartner?.name || "Delivery Partner"}`}
                 anchor={{ x: 0.5, y: 0.5 }}
               >
                 {renderMarkerIcon(
@@ -637,7 +664,7 @@ export default function LiveTrackingScreen() {
         {/* Status Strip Alert */}
         {/* <View style={styles.zomatoAlertStrip}>
           <Text style={styles.zomatoAlertStripText}>
-            {getHeaderMessages(activeOrder.status).alert}
+            {getHeaderMessages(activeOrder.status, deliveryPartner?.name).alert}
           </Text>
         </View> */}
 
@@ -656,30 +683,36 @@ export default function LiveTrackingScreen() {
           <View style={styles.partnerCard}>
             <View style={styles.partnerInfo}>
               <View style={styles.avatarBox}>
-                <Text style={styles.avatarText}>AV</Text>
+                <Text style={styles.avatarText}>
+                  {(deliveryPartner?.name || "DP")
+                    .split(" ")
+                    .map((part) => part.charAt(0))
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()}
+                </Text>
               </View>
               <View>
-                <Text style={styles.partnerName}>Aman Verma</Text>
-                <View style={styles.partnerRatingRow}>
-                  <Star size={12} color="#D97706" fill="#D97706" />
-                  <Text style={styles.partnerRatingText}>
-                    4.9 ★ (100+ deliveries)
-                  </Text>
-                </View>
+                <Text style={styles.partnerName}>
+                  {deliveryPartner?.name || "Delivery Partner"}
+                </Text>
+                <Text style={styles.partnerRatingText}>On the way to you</Text>
               </View>
             </View>
             <View style={styles.partnerActions}>
-              <TouchableOpacity
-                style={styles.actionCircleBtn}
-                onPress={handleCallRider}
-                activeOpacity={0.7}
-              >
-                <Phone
-                  size={16}
-                  color="#089643"
-                  style={{ transform: [{ scaleX: -1 }] }}
-                />
-              </TouchableOpacity>
+              {!!deliveryPartner?.phone && (
+                <TouchableOpacity
+                  style={styles.actionCircleBtn}
+                  onPress={handleCallRider}
+                  activeOpacity={0.7}
+                >
+                  <Phone
+                    size={16}
+                    color="#089643"
+                    style={{ transform: [{ scaleX: -1 }] }}
+                  />
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={styles.actionCircleBtn}
                 activeOpacity={0.7}

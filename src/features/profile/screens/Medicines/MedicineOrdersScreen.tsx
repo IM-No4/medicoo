@@ -1,25 +1,25 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import {
-    Calendar,
-    ChevronLeft,
-    ChevronRight,
-    Clock,
-    Package,
-    Search,
-    ShoppingBag,
-    Truck,
-    X,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Package,
+  Search,
+  ShoppingBag,
+  Truck,
+  X,
 } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { executeAction } from "../../../../actions/ActionExecutor";
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   listContent: {
-    paddingBottom: 96,
+    paddingBottom: 32,
   },
   itemRow: {
     flexDirection: "row",
@@ -496,5 +496,10 @@ const styles = StyleSheet.create({
   loadingContainer: {
     marginTop: 100,
     alignItems: "center",
+  },
+  separator: {
+    height: 1,
+    backgroundColor: "#F3F4F6",
+    marginLeft: 84,
   },
 });

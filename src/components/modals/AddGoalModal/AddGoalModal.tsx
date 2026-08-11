@@ -18,11 +18,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, X } from 'lucide-react-native';
 import { useDispatch } from 'react-redux';
 
+import { AppDispatch } from '../../../redux/store';
 import { addGoal } from '../../../redux/slices/goalsSlice';
 import StatusModal, { StatusType } from '../StatusModal';
 import GoalTypeStep, { GOAL_TYPES } from './steps/GoalTypeStep';
 import GoalTargetStep from './steps/GoalTargetStep';
 import GoalFrequencyStep from './steps/GoalFrequencyStep';
+import { enableStepsTracking, isHealthConnectSupported, openHealthConnectInPlayStore } from '../../../services/health/healthConnectStepsService';
 
 const { width } = Dimensions.get('window');
 
@@ -36,7 +38,7 @@ interface AddGoalModalProps {
 }
 
 export default function AddGoalModal({ visible, onClose, onSuccess }: AddGoalModalProps) {
-    const dispatch = useDispatch();
+    const dispatch = useDispatch<AppDispatch>();
     const insets = useSafeAreaInsets();
     const [stepIndex, setStepIndex] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -48,7 +50,14 @@ export default function AddGoalModal({ visible, onClose, onSuccess }: AddGoalMod
         type: StatusType;
         title: string;
         message: string;
-    }>({ visible: false, type: 'idle', title: '', message: '' });
+        primaryAction?: () => void;
+        primaryActionText?: string;
+        // Whether dismissing this status should also close the whole modal.
+        // False only for "could not save goal" - the goal doesn't exist yet
+        // there, so the user should land back on the form to retry instead
+        // of losing what they filled in.
+        closeOnDismiss: boolean;
+    }>({ visible: false, type: 'idle', title: '', message: '', closeOnDismiss: false });
 
     const [form, setForm] = useState({
         type: '',
@@ -133,32 +142,101 @@ export default function AddGoalModal({ visible, onClose, onSuccess }: AddGoalMod
         return false;
     };
 
+    const handleEnableTracking = async () => {
+        const result = await enableStepsTracking();
+        if (result.success) {
+            setStatus({
+                visible: true,
+                type: 'success',
+                title: 'Tracking Enabled',
+                message: 'Medicoo will keep your steps goal updated automatically from Health Connect.',
+                closeOnDismiss: true,
+            });
+            return;
+        }
+
+        if (result.reason === 'not_installed' || result.reason === 'update_required') {
+            // Below Android 14, Health Connect is a separate Play Store app -
+            // this is the expected/common case, not just a dead-end failure,
+            // so send the user straight to install/update it.
+            setStatus({
+                visible: true,
+                type: 'warning',
+                title: result.reason === 'not_installed' ? 'Health Connect Required' : 'Health Connect Update Required',
+                message: result.reason === 'not_installed'
+                    ? 'Automatic step tracking needs the Health Connect app, which isn\'t installed on this device yet.'
+                    : 'Your Health Connect app needs an update before Medicoo can read step data from it.',
+                primaryAction: openHealthConnectInPlayStore,
+                primaryActionText: 'Get Health Connect',
+                closeOnDismiss: true,
+            });
+            return;
+        }
+
+        setStatus({
+            visible: true,
+            type: 'error',
+            title: 'Could not enable tracking',
+            message: 'Permission wasn\'t granted, so tracking is off for now. You can try again from Manage Goals.',
+            closeOnDismiss: true,
+        });
+    };
+
     const handleSave = async () => {
         setLoading(true);
-        setTimeout(() => {
-            setLoading(false);
-            dispatch(addGoal({
-                id: Math.random().toString(36).substring(7),
+        try {
+            const createdType = form.type;
+            const createdTitle = form.title;
+
+            await dispatch(addGoal({
                 type: form.type,
                 title: form.type === 'custom' ? form.title : (form.title || 'Goal'),
                 target: parseFloat(form.target) || 0,
                 unit: form.unit,
-                current: 0,
                 color: form.color,
                 frequency: form.frequency,
                 enabled: true,
-            }));
+            })).unwrap();
+
             onSuccess?.();
-            setStatus({
-                visible: true,
-                type: 'success',
-                title: 'Goal Created! 🎯',
-                message: `Your ${form.title || 'goal'} has been added to your daily habits.`,
-            });
             setStepIndex(0);
             animateProgress(0);
             setForm({ type: '', title: '', target: '', unit: '', color: '#6366F1', frequency: 'Daily' });
-        }, 1200);
+
+            // Steps is the one goal type that can be auto-tracked - offer to
+            // wire it up right after creation rather than leaving the user
+            // to discover Health Connect on their own. Only relevant on
+            // Android, where Health Connect actually exists.
+            if (createdType === 'steps' && isHealthConnectSupported) {
+                setStatus({
+                    visible: true,
+                    type: 'info',
+                    title: 'Track Steps Automatically?',
+                    message: `Let Medicoo read your steps from Health Connect so "${createdTitle || 'Daily Steps'}" updates automatically using your phone's background step data.`,
+                    primaryAction: handleEnableTracking,
+                    primaryActionText: 'Enable',
+                    closeOnDismiss: true,
+                });
+            } else {
+                setStatus({
+                    visible: true,
+                    type: 'success',
+                    title: 'Goal Created',
+                    message: `Your ${createdTitle || 'goal'} has been added to your daily habits.`,
+                    closeOnDismiss: true,
+                });
+            }
+        } catch (error: any) {
+            setStatus({
+                visible: true,
+                type: 'error',
+                title: 'Could not save goal',
+                message: error?.message || 'Something went wrong. Please try again.',
+                closeOnDismiss: false,
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const goalMeta = GOAL_TYPES.find(g => g.id === form.type);
@@ -206,7 +284,7 @@ export default function AddGoalModal({ visible, onClose, onSuccess }: AddGoalMod
 
                                 <View style={styles.headerBar}>
                                     <TouchableOpacity style={styles.iconBtn} onPress={goBack} activeOpacity={0.7}>
-                                        <ChevronLeft size={22} color="#64748B" />
+                                        <ChevronLeft size={22} color="#1F2937" />
                                     </TouchableOpacity>
 
                                     <View style={styles.headerCenter}>
@@ -214,7 +292,7 @@ export default function AddGoalModal({ visible, onClose, onSuccess }: AddGoalMod
                                     </View>
 
                                     <TouchableOpacity style={styles.iconBtn} onPress={handleClose} activeOpacity={0.7}>
-                                        <X size={20} color="#64748B" />
+                                        <X size={20} color="#1F2937" />
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -261,7 +339,7 @@ export default function AddGoalModal({ visible, onClose, onSuccess }: AddGoalMod
                                         <ActivityIndicator color="#FFF" />
                                     ) : (
                                         <Text style={[styles.nextBtnText, isNextDisabled() && { color: '#94A3B8' }]}>
-                                            {isLastStep ? 'Save Goal ✓' : 'Continue →'}
+                                            {isLastStep ? 'Save Goal' : 'Continue'}
                                         </Text>
                                     )}
                                 </TouchableOpacity>
@@ -276,11 +354,13 @@ export default function AddGoalModal({ visible, onClose, onSuccess }: AddGoalMod
                 status={status.type}
                 title={status.title}
                 message={status.message}
+                primaryAction={status.primaryAction}
+                primaryActionText={status.primaryActionText}
                 onClose={() => {
                     setStatus(prev => ({ ...prev, visible: false }));
-                    if (status.type === 'success') onClose();
+                    if (status.closeOnDismiss) onClose();
                 }}
-                autoCloseDelay={status.type === 'success' ? 2500 : undefined}
+                autoCloseDelay={status.type === 'success' && !status.primaryAction ? 2500 : undefined}
             />
         </>
     );

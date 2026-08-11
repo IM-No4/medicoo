@@ -2,6 +2,11 @@ import messaging from '@react-native-firebase/messaging';
 import { registerRootComponent } from 'expo';
 import { FlatList, Platform, ScrollView, SectionList } from 'react-native';
 import App from './src/app/App';
+import { installGlobalMontserratFont } from './src/bootstrap/globalFont';
+
+// Must run before the app's first render - see globalFont.ts for why this
+// can't just be Text.defaultProps.
+installGlobalMontserratFont();
 
 // Must be registered outside the React tree - handles data-only FCM messages
 // received while the app is backgrounded/killed. Notification-type messages

@@ -18,16 +18,6 @@ export function useFeedActionExecutor() {
                 let screen = action.screen;
                 let params = action.params;
 
-                // Intercept Coming Soon features (Path Labs & Hospitals)
-                if (stack === 'LabStack' || screen === 'LabList' || screen === 'LabTests') {
-                    navigation.navigate('ComingSoon', { featureName: 'Path Labs' });
-                    return;
-                }
-                if (stack === 'HospitalStack' || screen === 'HospitalFeed' || screen === 'HospitalDetail') {
-                    navigation.navigate('ComingSoon', { featureName: 'Hospitals' });
-                    return;
-                }
-
                 // Patch legacy/incorrect routes
                 if (stack === 'ProfileStack' || stack === 'Profile') {
                     if (screen === 'Eligibility' || screen === 'BloodDonation') {
@@ -41,6 +31,16 @@ export function useFeedActionExecutor() {
                         });
                         return;
                     }
+                }
+
+                // Intercept Coming Soon features (Path Labs & Hospitals)
+                if (stack === 'LabStack' || screen === 'LabList' || screen === 'LabTests') {
+                    navigation.navigate('ComingSoon', { featureName: 'Path Labs' });
+                    return;
+                }
+                if (stack === 'HospitalStack' || screen === 'HospitalFeed' || screen === 'HospitalDetail') {
+                    navigation.navigate('ComingSoon', { featureName: 'Hospitals' });
+                    return;
                 }
 
                 if (stack === 'HomeStack' || stack === 'Home') {

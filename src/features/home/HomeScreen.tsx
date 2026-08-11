@@ -28,6 +28,7 @@ import { uploadPrescription } from '@/src/services/api/prescription.api';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 import { DynamicHeaderFeedItem } from './feed/feed.types';
 import { useFeedActionExecutor } from './hooks/useFeedActionExecutor';
+import { getLocalDateString } from '../../utils/dateUtils';
 import { useHomeFeed } from './hooks/useHomeFeed';
 import PrescriptionUploadModal from '../../components/modals/PrescriptionUploadModal';
 
@@ -153,8 +154,7 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    const today = new Date().toISOString().split('T')[0];
-    dispatch(loadCalendarData(today));
+    dispatch(loadCalendarData(getLocalDateString()));
     await refreshFeed();
     setRefreshing(false);
   }, [dispatch, refreshFeed]);
@@ -194,8 +194,7 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
   // Fetch today's data on mount/focus
   useFocusEffect(
     useCallback(() => {
-      const today = new Date().toISOString().split('T')[0];
-      dispatch(loadCalendarData(today));
+      dispatch(loadCalendarData(getLocalDateString()));
     }, [dispatch])
   );
 

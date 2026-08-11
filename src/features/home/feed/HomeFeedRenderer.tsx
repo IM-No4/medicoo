@@ -10,6 +10,7 @@ import ServicesSection from '../components/ServicesSection';
 import UpcomingSection from '../components/UpcomingSection';
 import BloodDonationAwarenessCard from './cards/BloodDonationAwarenessCard';
 import BloodRequestAlertCard from './cards/BloodRequestAlertCard';
+import CategoryRow from './cards/CategoryRow';
 import ContinueActivityCard from './cards/ContinueActivityCard';
 import DoctorRecommendationCard from './cards/DoctorRecommendationCard';
 import FamilyOverviewCard from './cards/FamilyOverviewCard';
@@ -38,7 +39,7 @@ export default function HomeFeedRenderer({ item, onAction }: Props) {
   if ((item.type as any) === 'GOALS_SECTION') {
     return (
       <View style={{ marginBottom: 24 }}>
-        <GoalsCard onAddGoal={() => onAction?.({ type: 'NAVIGATE', stack: 'Tabs', screen: 'Health' } as any)} />
+        <GoalsCard />
       </View>
     );
   }
@@ -68,6 +69,8 @@ export default function HomeFeedRenderer({ item, onAction }: Props) {
       return <ServicesSection title={item.title} services={item.services} onAction={onAction!} />;
     case 'UPCOMING_APPOINTMENTS_CARD':
       return <UpcomingAppointmentsCard />;
+    case 'CATEGORY_ROW':
+      return <CategoryRow title={item.title} items={item.items} onAction={onAction!} />;
     case 'PROMO':
       return <PromoCard data={item as any} onAction={onAction} />;
     case 'HEALTH_TIP':

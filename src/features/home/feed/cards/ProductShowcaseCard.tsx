@@ -2,6 +2,7 @@ import React from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { Product, ProductShowcaseFeedItem } from '../feed.types';
+import SectionHeader from './SectionHeader';
 
 import { FeedAction } from '../feed.actions';
 
@@ -84,8 +85,18 @@ function ProductShowcaseCard({ data, onAction }: Props) {
                     <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
 
                     <View style={styles.footerRow}>
+                        {typeof product.price === 'number' ? (
+                            <View style={styles.priceRow}>
+                                <Text style={styles.priceText}>₹{product.price}</Text>
+                                {!!product.originalPrice && product.originalPrice > product.price && (
+                                    <Text style={styles.originalPriceText}>₹{product.originalPrice}</Text>
+                                )}
+                            </View>
+                        ) : (
+                            <Text style={styles.viewDetailsText}>View Details</Text>
+                        )}
                         <View style={styles.arrowIcon}>
-                            <AppIcon name="arrow-right" size={14} color="#F9FAFB" />
+                            <AppIcon name="arrow-right" size={14} color="#5a6773ff" />
                         </View>
                     </View>
                 </View>
@@ -95,12 +106,7 @@ function ProductShowcaseCard({ data, onAction }: Props) {
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                <View>
-                    <Text style={styles.title}>{data.title}</Text>
-                    {!!data.subtitle && <Text style={styles.subtitle}>{data.subtitle}</Text>}
-                </View>
-            </View>
+            <SectionHeader title={data.title} subtitle={data.subtitle} />
 
             <FlatList
                 data={data.sections?.length ? data.sections : data.products}
@@ -119,28 +125,6 @@ export default React.memo(ProductShowcaseCard);
 const styles = StyleSheet.create({
     container: {
         marginBottom: 28,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 24,
-        marginBottom: 16,
-    },
-    title: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#111827',
-    },
-    subtitle: {
-        fontSize: 12,
-        color: '#6B7280',
-        marginTop: 2,
-    },
-    seeAll: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#2563EB',
     },
     listContent: {
         paddingHorizontal: 16,
@@ -188,7 +172,29 @@ const styles = StyleSheet.create({
     footerRow: {
         flexDirection: 'row',
         alignItems: 'flex-end',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
+    },
+    priceRow: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        gap: 4,
+        flexShrink: 1,
+    },
+    priceText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#111827',
+    },
+    originalPriceText: {
+        fontSize: 11,
+        color: '#9CA3AF',
+        textDecorationLine: 'line-through',
+    },
+    viewDetailsText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#6B7280',
+        flexShrink: 1,
     },
     arrowIcon: {
         backgroundColor: '#ffffffff',

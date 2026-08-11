@@ -11,10 +11,10 @@ const isLocalFile = (uri: string) =>
     uri && (uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('data:'));
 
 export const updateProfile = async (formData: any) => {
+    // See document.api.ts's uploadDocument for why this Content-Type must
+    // be set explicitly (confirmed via a live device trace).
     const res = await apiClient.put('/api/user/save-profile', formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
     });
     return res.data;
 };
@@ -36,27 +36,16 @@ export const getDoctorProfile = async () => {
 };
 
 export const updateDoctorDraft = async (formData: FormData) => {
-    const res = await apiClient.put(
-        '/api/user/update-doctor-draft',
-        formData,
-        {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        }
-    );
+    const res = await apiClient.put('/api/user/update-doctor-draft', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return res.data;
 };
 
 export const applyAsDoctor = async (formData: FormData) => {
-    const res = await apiClient.post(
-        '/api/user/apply-doctor',
-        formData,
-        {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
+    const res = await apiClient.post('/api/user/apply-doctor', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return res.data;
 };
 
@@ -78,7 +67,7 @@ export const getNearbyDoctors = async (params: {
     page?: number;
     query?: string;
     specialization?: string;
-    sort?: 'price_low_to_high' | 'price_high_to_low' | 'rating_high_to_low' | 'rating_low_to_high';
+    sort?: 'price_low_to_high' | 'price_high_to_low' | 'rating_high_to_low' | 'rating_low_to_high' | 'responsiveness_high_to_low';
 }) => {
     const res = await apiClient.get('/api/user/nearby-doctors', { params });
     return res.data.doctors || [];

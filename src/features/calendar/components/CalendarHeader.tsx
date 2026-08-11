@@ -1,3 +1,4 @@
+import { Settings } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS } from '../styles';
@@ -5,10 +6,11 @@ import { COLORS } from '../styles';
 // Add the prop here
 type Props = {
   onOpenCalendar: () => void;
+  onOpenManage?: () => void;
   selectedDate: Date | null;
 };
 
-export default function CalendarHeader({ onOpenCalendar, selectedDate }: Props) {
+export default function CalendarHeader({ onOpenCalendar, onOpenManage, selectedDate }: Props) {
   // Format date: "Wednesday, June 25"
   const dateString = selectedDate
     ? selectedDate.toLocaleDateString('en-US', {
@@ -27,10 +29,17 @@ export default function CalendarHeader({ onOpenCalendar, selectedDate }: Props) 
 
       <View style={styles.dateRow}>
         <Text style={styles.dateText}>{dateString}</Text>
-        {/* Connect the onPress handler */}
-        <TouchableOpacity style={styles.iconButton} onPress={onOpenCalendar}>
-          <Text style={{ fontSize: 20 }}>📅</Text>
-        </TouchableOpacity>
+        <View style={styles.actionsRow}>
+          {onOpenManage && (
+            <TouchableOpacity style={[styles.iconButton, { marginRight: 8 }]} onPress={onOpenManage}>
+              <Settings size={20} color={COLORS.text} />
+            </TouchableOpacity>
+          )}
+          {/* Connect the onPress handler */}
+          <TouchableOpacity style={styles.iconButton} onPress={onOpenCalendar}>
+            <Text style={{ fontSize: 20 }}>📅</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -61,6 +70,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '500',
     color: COLORS.text,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   iconButton: {
     width: 40,

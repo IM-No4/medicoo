@@ -1,3 +1,4 @@
+import { Check, Clock, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { RenderMedicationIcon } from '../../../components/modals/AddMedicationModal/config/shapes';
@@ -19,6 +20,10 @@ interface Props {
   onMarkIntake: (status: 'taken' | 'skipped') => void;
 }
 
+// Matches AppointmentCard's card language (border instead of shadow, same
+// icon box size/radius, same name/subtitle/meta-row type scale) so a
+// consultation and a medicine reminder read as the same kind of thing in
+// the merged "Today's schedule" list.
 export default function MedicineCard({
   // scheduleId,
   // date,
@@ -40,7 +45,7 @@ export default function MedicineCard({
   const [modalVisible, setModalVisible] = useState(false);
 
   const handlePress = () => {
-    // Replaced Alert.alert with specific confirm modal logic if needed, 
+    // Replaced Alert.alert with specific confirm modal logic if needed,
     // but here we can just show the StatusModal for confirmation
     setModalVisible(true);
   };
@@ -68,32 +73,37 @@ export default function MedicineCard({
 
         {/* Info */}
         <View style={styles.info}>
-          <Text style={styles.name}>{name}</Text>
-          <Text style={styles.dosage}>{dosage}</Text>
-          <Text style={styles.time}>{time}</Text>
+          <Text style={styles.name} numberOfLines={1}>{name}</Text>
+          {!!dosage && <Text style={styles.dosage} numberOfLines={1}>{dosage}</Text>}
+          <View style={styles.metaRow}>
+            <Clock size={12} color={COLORS.textSecondary} />
+            <Text style={styles.timeText}>{time}</Text>
+          </View>
         </View>
 
         {/* Actions */}
-        <View style={styles.actionContainer}>
+        <View style={styles.rightCol}>
           {(!isTaken && !isSkipped && !isFuture) ? (
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
-                style={[styles.actionBtn, styles.skipBtn]}
+                style={[styles.actionCircle, styles.skipBtn]}
                 onPress={() => onMarkIntake('skipped')}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
-                <Text style={styles.skipBtnText}>Skipped</Text>
+                <X size={18} color="#EF4444" strokeWidth={2.5} />
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.actionBtn, styles.takeBtn]}
+                style={[styles.actionCircle, styles.takeBtn]}
                 onPress={() => onMarkIntake('taken')}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
-                <Text style={styles.takeBtnText}>Taken</Text>
+                <Check size={18} color="#10B981" strokeWidth={2.5} />
               </TouchableOpacity>
             </View>
           ) : (
             (isTaken || isSkipped) && (
               <View style={[styles.statusBadge, isTaken ? styles.badgeTaken : styles.badgeSkipped]}>
-                <Text style={[styles.badgeText, isTaken ? styles.textTaken : styles.textSkipped]}>
+                <Text style={[styles.statusText, isTaken ? styles.textTaken : styles.textSkipped]}>
                   {isTaken ? 'Taken' : 'Skipped'}
                 </Text>
               </View>
@@ -124,14 +134,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
+    paddingVertical: 12,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 5,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   iconBox: {
     width: 48,
@@ -143,29 +151,36 @@ const styles = StyleSheet.create({
   },
   info: {
     flex: 1,
+    marginRight: 8,
   },
   name: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: COLORS.text,
   },
   dosage: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textSecondary,
-    marginBottom: 4,
+    marginTop: 1,
   },
-  time: {
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 6,
+  },
+  timeText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: COLORS.textSecondary,
   },
-  actionContainer: {
-    marginLeft: 8,
+  rightCol: {
+    alignItems: 'flex-end',
   },
-  actionBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+  actionCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -175,19 +190,9 @@ const styles = StyleSheet.create({
   takeBtn: {
     backgroundColor: '#ECFDF5',
   },
-  skipBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#EF4444',
-  },
-  takeBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#10B981',
-  },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 8,
   },
   badgeTaken: {
@@ -196,9 +201,9 @@ const styles = StyleSheet.create({
   badgeSkipped: {
     backgroundColor: '#FEF2F2',
   },
-  badgeText: {
-    fontSize: 13,
-    fontWeight: '600',
+  statusText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   textTaken: {
     color: '#10B981',

@@ -33,10 +33,10 @@ export async function submitOnboarding(data: OnboardingPayload) {
     } as any);
   }
 
+  // See document.api.ts's uploadDocument for why this Content-Type must be
+  // set explicitly (confirmed via a live device trace).
   const res = await apiClient.post('/api/user/onboarding', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
   return res.data;
 }

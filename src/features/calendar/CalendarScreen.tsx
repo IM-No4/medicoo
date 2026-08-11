@@ -2,8 +2,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { styles } from './styles';
+import { COLORS, styles } from './styles';
 import { formatDoctorName } from '../../utils/formatters';
+import { getLocalDateString } from '../../utils/dateUtils';
 
 // Components
 import AppointmentCard from './components/AppointmentCard';
@@ -12,7 +13,6 @@ import CalendarModal from './components/CalendarModal';
 import CalendarSkeleton from './components/CalendarSkeleton';
 import DateStrip from './components/DateStrip';
 import MedicineCard from './components/MedicineCard';
-import ProgressCard from './components/ProgressCard';
 
 import AddActionModal from '../../components/modals/AddActionModal';
 import AddMedicationModal from '../../components/modals/AddMedicationModal/AddMedicationModal';
@@ -28,6 +28,8 @@ import AddGoalModal from '../../components/modals/AddGoalModal/AddGoalModal';
 import { GoalsCard } from '../health/components/GoalsCard';
 import { AppDispatch, RootState } from '../../redux/store';
 import { useNavigation } from '@react-navigation/native';
+import { Settings } from 'lucide-react-native';
+import { timeToMinutes } from './utils/scheduleSort';
 
 export default function CalendarScreen() {
     const [isFocused, setIsFocused] = useState(false);
@@ -56,23 +58,41 @@ export default function CalendarScreen() {
     const [showAddGoal, setShowAddGoal] = useState(false);
     const [showManageSheet, setShowManageSheet] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
+    // Tracks only pull-to-refresh gestures, separate from the redux `loading`
+    // flag - initial loads and date-switch loads show the skeleton instead,
+    // so the native pull spinner and the skeleton never stack on top of
+    // each other.
+    const [isManualRefreshing, setIsManualRefreshing] = useState(false);
 
-    useEffect(() => {
-        const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
-        dispatch(loadCalendarCache(dateStr));
-        dispatch(loadCalendarData(dateStr));
-    }, [dispatch, selectedDate]);
+    // useFocusEffect (not a plain useEffect) so returning to this screen
+    // after adding/editing/deleting a medication or goal elsewhere - e.g.
+    // ManageMedicationsScreen, ManageGoalsScreen, or a Home screen quick
+    // action - refetches automatically instead of showing stale data until
+    // the user pulls to refresh or changes the selected date. Still refires
+    // on selectedDate changes while already focused, since useFocusEffect
+    // reruns whenever its callback identity changes (the useCallback dep).
+    useFocusEffect(
+        useCallback(() => {
+            const dateStr = getLocalDateString(selectedDate);
+            dispatch(loadCalendarCache(dateStr));
+            dispatch(loadCalendarData(dateStr));
+        }, [dispatch, selectedDate])
+    );
 
     const onRefresh = React.useCallback(() => {
-        const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
-        dispatch(loadCalendarData(dateStr));
+        setIsManualRefreshing(true);
+        dispatch(loadCalendarData(getLocalDateString(selectedDate)));
     }, [dispatch, selectedDate]);
 
+    useEffect(() => {
+        if (!loading) setIsManualRefreshing(false);
+    }, [loading]);
+
     /* ---------------- DATA & LOGIC ---------------- */
-    const { progress, appointments, medicines } = data;
+    const { appointments, medicines } = data;
 
     // Date Comparison for UI Logic
-    const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+    const dateStr = getLocalDateString(selectedDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const selected = new Date(selectedDate);
@@ -82,6 +102,15 @@ export default function CalendarScreen() {
 
     // Check if data matches selected date (to prevent stale flash)
     const isDataForSelectedDate = (data as any).date === dateStr;
+
+    // Appointments and medicines each get their own section (sorted by
+    // time-of-day within themselves), rather than one interleaved list.
+    const sortedAppointments = [...appointments].sort(
+        (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
+    );
+    const sortedMedicines = [...medicines].sort(
+        (a, b) => timeToMinutes(a.time) - timeToMinutes(b.time)
+    );
 
     // Show skeleton if:
     // 1. Loading AND switching dates (data mismatch)
@@ -114,6 +143,7 @@ export default function CalendarScreen() {
             <CalendarHeader
                 selectedDate={selectedDate}
                 onOpenCalendar={() => setCalendarVisible(true)}
+                onOpenManage={() => setShowManageSheet(true)}
             />
             <DateStrip
                 selectedDate={selectedDate}
@@ -124,103 +154,103 @@ export default function CalendarScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 40, flexGrow: 1 }}
                 refreshControl={
-                    <RefreshControl refreshing={loading} onRefresh={onRefresh} />
+                    <RefreshControl refreshing={isManualRefreshing} onRefresh={onRefresh} />
                 }
             >
                 {showSkeleton ? (
                     <CalendarSkeleton />
                 ) : (
                     <>
-                        {/* Progress Section */}
-                        {progress.total > 0 && !isFuture && (
-                            <ProgressCard
-                                taken={progress.taken}
-                                total={progress.total}
-                                percentage={
-                                    progress.total > 0
-                                        ? Math.round((progress.taken / progress.total) * 100)
-                                        : 0
-                                }
-                            />
-                        )}
-
                         {/* Appointments */}
-                        {appointments.length > 0 && (
-                            <View>
+                        {sortedAppointments.length > 0 && (
+                            <>
                                 <View style={styles.sectionHeaderRow}>
-                                    <Text style={styles.sectionTitle}>My appointments</Text>
-                                    <Text style={styles.seeAllText}>See all &gt;</Text>
+                                    <Text style={styles.sectionTitle}>Today's schedule</Text>
                                 </View>
-
-                                {appointments.map((item: any) => (
-                                    <AppointmentCard
-                                        key={item.id}
-                                        doctorName={formatDoctorName(item.title)}
-                                        specialty={item.subtitle}
-                                        time={
-                                            item.endTime && item.endTime !== item.startTime
-                                                ? `${item.startTime} - ${item.endTime}`
-                                                : item.startTime
-                                        }
-                                        onPress={
-                                            item.requestId
-                                                ? () => executeAction('OPEN_CONSULTATION_DETAIL', { requestId: item.requestId })
-                                                : undefined
-                                        }
-                                    />
-                                ))}
-                            </View>
+                                <View style={{ marginHorizontal: 24 }}>
+                                    {sortedAppointments.map((item: any) => (
+                                        <AppointmentCard
+                                            key={item.id}
+                                            doctorName={formatDoctorName(item.title)}
+                                            specialty={item.subtitle}
+                                            time={
+                                                item.endTime && item.endTime !== item.startTime
+                                                    ? `${item.startTime} - ${item.endTime}`
+                                                    : item.startTime
+                                            }
+                                            status={item.status}
+                                            consultationType={item.consultationType}
+                                            onPress={
+                                                item.requestId
+                                                    ? () => executeAction('OPEN_CONSULTATION_DETAIL', { requestId: item.requestId })
+                                                    : undefined
+                                            }
+                                        />
+                                    ))}
+                                </View>
+                            </>
                         )}
 
-                        {/* Reminders Header */}
-                        <View style={styles.sectionHeaderRow}>
-                            <Text style={styles.sectionTitle}>My reminders</Text>
-                            <TouchableOpacity
-                                style={styles.addButton}
-                                onPress={() => setShowManageSheet(true)}
-                            >
-                                <Text style={styles.addButtonText}>Manage</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={{ marginHorizontal: 24 }}>
-                            {/* Medicines */}
-                            {medicines.map((item: any) => (
-                                <MedicineCard
-                                    key={item.id}
-                                    scheduleId={item.id.split('_')[0]}
-                                    date={dateStr}
-                                    name={item.title}
-                                    dosage={item.subtitle}
-                                    time={item.time}
-                                    status={item.status}
-                                    shape={item.shape}
-                                    color={item.color}
-                                    leftColor={item.leftColor}
-                                    rightColor={item.rightColor}
-                                    isFuture={isFuture}
-                                    onMarkIntake={(status) => {
-                                        dispatch(markMedicineIntake({
-                                            scheduleId: item.id.split('_')[0],
-                                            date: dateStr,
-                                            time: item.time,
-                                            status,
-                                        }));
-                                    }}
-                                />
-                            ))}
-                        </View>
+                        {/* Medications - own label + manage button, matching
+                            the "Active Goals" section's pattern below */}
+                        {sortedMedicines.length > 0 && (
+                            <>
+                                <View style={styles.sectionHeaderRow}>
+                                    <Text style={styles.sectionTitle}>Medications</Text>
+                                    <TouchableOpacity
+                                        style={styles.manageBtn}
+                                        onPress={() => navigation.navigate('ManageMedications' as never)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Settings size={12} color={COLORS.primary} style={{ marginRight: 4 }} />
+                                        <Text style={styles.manageBtnText}>Manage</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <View style={{ marginHorizontal: 24 }}>
+                                    {sortedMedicines.map((item: any) => (
+                                        <MedicineCard
+                                            key={item.id}
+                                            scheduleId={item.id.split('_')[0]}
+                                            date={dateStr}
+                                            name={item.title}
+                                            dosage={item.subtitle}
+                                            time={item.time}
+                                            status={item.status}
+                                            shape={item.shape}
+                                            color={item.color}
+                                            leftColor={item.leftColor}
+                                            rightColor={item.rightColor}
+                                            isFuture={isFuture}
+                                            onMarkIntake={(status) => {
+                                                dispatch(markMedicineIntake({
+                                                    scheduleId: item.id.split('_')[0],
+                                                    date: dateStr,
+                                                    time: item.time,
+                                                    status,
+                                                }));
+                                            }}
+                                        />
+                                    ))}
+                                </View>
+                            </>
+                        )}
 
                         {/* Only show Goals Card when there are active goals */}
                         {hasActiveGoals && (
-                            <GoalsCard onAddGoal={() => navigation.navigate('ManageGoals')} />
+                            <GoalsCard />
                         )}
 
                         {/* Empty State */}
                         {medicines.length === 0 && appointments.length === 0 && (
                             <EmptyState
-                                title="No entries today"
-                                message="Appointments and medicines will appear here."
+                                title={isPast ? 'Nothing on this day' : 'No plans yet'}
+                                message={
+                                    isPast
+                                        ? 'No appointments or reminders were scheduled for this date.'
+                                        : 'Your appointments and medicine reminders will show up here.'
+                                }
+                                actionLabel={isPast ? undefined : 'Add a reminder'}
+                                onAction={isPast ? undefined : () => setShowAddAction(true)}
                             />
                         )}
                     </>

@@ -1,52 +1,73 @@
 import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft, MessageSquare, Star, ThumbsUp } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { executeAction } from '../../../../actions/ActionExecutor';
+import { DoctorRatingBreakdown, DoctorReviewItem, getMyDoctorReviews } from '../../../../services/api/doctor.api';
 
-const MOCK_REVIEWS = [
-    {
-        id: '1',
-        patientName: 'John Doe',
-        rating: 5,
-        date: '2 Days ago',
-        comment: 'Dr. Neeraj is very professional and empathetic. He explained the diagnosis very clearly and the treatment plan worked wonders.',
-        tags: ['Empathic', 'Detailed Explanation']
-    },
-    {
-        id: '2',
-        patientName: 'Alice Smith',
-        rating: 4,
-        date: '1 Week ago',
-        comment: 'Great experience overall. The consultation was on time and very helpful.',
-        tags: ['Punctual']
-    },
-    {
-        id: '3',
-        patientName: 'Robert Wilson',
-        rating: 5,
-        date: '2 Weeks ago',
-        comment: 'Exceptional care! Definitely recommend for anyone looking for a knowledgeable physician.',
-        tags: ['Highly Recommended', 'Professional']
-    }
-];
+const EMPTY_BREAKDOWN: DoctorRatingBreakdown[] = [5, 4, 3, 2, 1].map((stars) => ({ stars, count: 0, percentage: 0 }));
 
-const RATING_BREAKDOWN = [
-    { stars: 5, count: 85, percentage: 70 },
-    { stars: 4, count: 25, percentage: 20 },
-    { stars: 3, count: 10, percentage: 8 },
-    { stars: 2, count: 3, percentage: 2 },
-    { stars: 1, count: 1, percentage: 0 },
-];
+const formatReviewDate = (isoString: string) => {
+    const diffMs = Date.now() - new Date(isoString).getTime();
+    const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+    if (diffDays <= 0) return 'Today';
+    if (diffDays === 1) return '1 Day ago';
+    if (diffDays < 7) return `${diffDays} Days ago`;
+    const diffWeeks = Math.floor(diffDays / 7);
+    if (diffWeeks === 1) return '1 Week ago';
+    if (diffWeeks < 5) return `${diffWeeks} Weeks ago`;
+    const diffMonths = Math.floor(diffDays / 30);
+    if (diffMonths <= 1) return '1 Month ago';
+    return `${diffMonths} Months ago`;
+};
 
 export default function DoctorReviewsScreen() {
     const insets = useSafeAreaInsets();
     const [activeFilter, setActiveFilter] = useState('All');
+    const [loading, setLoading] = useState(true);
+    const [reviews, setReviews] = useState<DoctorReviewItem[]>([]);
+    const [ratingBreakdown, setRatingBreakdown] = useState<DoctorRatingBreakdown[]>(EMPTY_BREAKDOWN);
+    const [averageRating, setAverageRating] = useState(0);
+    const [totalReviews, setTotalReviews] = useState(0);
 
     const filters = ['All', 'Recent', 'Highest', 'Lowest'];
 
-    const renderReviewItem = ({ item }: { item: any }) => (
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const data = await getMyDoctorReviews();
+                if (cancelled) return;
+                setReviews(data.reviews);
+                setRatingBreakdown(data.ratingBreakdown);
+                setAverageRating(data.averageRating);
+                setTotalReviews(data.totalReviews);
+            } catch {
+                // Leave the empty-state defaults in place.
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, []);
+
+    // "Recent" is the same order the backend already returns (newest
+    // first); Highest/Lowest re-sort by rating without touching the
+    // underlying fetched list.
+    const visibleReviews = useMemo(() => {
+        if (activeFilter === 'Highest') return [...reviews].sort((a, b) => b.rating - a.rating);
+        if (activeFilter === 'Lowest') return [...reviews].sort((a, b) => a.rating - b.rating);
+        return reviews;
+    }, [reviews, activeFilter]);
+
+    const fiveStarPercent = ratingBreakdown.find(r => r.stars === 5)?.percentage ?? 0;
+    const newReviewsCount = useMemo(
+        () => reviews.filter(r => Date.now() - new Date(r.date).getTime() < 7 * 24 * 60 * 60 * 1000).length,
+        [reviews]
+    );
+
+    const renderReviewItem = ({ item }: { item: DoctorReviewItem }) => (
         <View style={styles.reviewCard}>
             <View style={styles.reviewHeader}>
                 <View style={styles.patientInfo}>
@@ -55,7 +76,7 @@ export default function DoctorReviewsScreen() {
                     </View>
                     <View>
                         <Text style={styles.patientName}>{item.patientName}</Text>
-                        <Text style={styles.reviewDate}>{item.date}</Text>
+                        <Text style={styles.reviewDate}>{formatReviewDate(item.date)}</Text>
                     </View>
                 </View>
                 <View style={styles.ratingBadge}>
@@ -65,14 +86,6 @@ export default function DoctorReviewsScreen() {
             </View>
 
             <Text style={styles.comment}>{item.comment}</Text>
-
-            <View style={styles.tagContainer}>
-                {item.tags.map((tag: string, index: number) => (
-                    <View key={index} style={styles.tag}>
-                        <Text style={styles.tagText}>{tag}</Text>
-                    </View>
-                ))}
-            </View>
         </View>
     );
 
@@ -87,72 +100,84 @@ export default function DoctorReviewsScreen() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                <View style={styles.statsSection}>
-                    <View style={styles.ratingMainRow}>
-                        <View style={styles.mainRatingBox}>
-                            <Text style={styles.bigRating}>4.8</Text>
-                            <View style={styles.starsRow}>
-                                {[1, 2, 3, 4, 5].map((s) => (
-                                    <Star key={s} size={14} color="#F59E0B" fill={s <= 4 ? "#F59E0B" : "transparent"} />
+            {loading ? (
+                <View style={styles.loadingState}>
+                    <ActivityIndicator color="#2FA561" />
+                </View>
+            ) : (
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                    <View style={styles.statsSection}>
+                        <View style={styles.ratingMainRow}>
+                            <View style={styles.mainRatingBox}>
+                                <Text style={styles.bigRating}>{averageRating.toFixed(1)}</Text>
+                                <View style={styles.starsRow}>
+                                    {[1, 2, 3, 4, 5].map((s) => (
+                                        <Star key={s} size={14} color="#F59E0B" fill={s <= Math.round(averageRating) ? "#F59E0B" : "transparent"} />
+                                    ))}
+                                </View>
+                                <Text style={styles.totalReviews}>{totalReviews} Review{totalReviews === 1 ? '' : 's'}</Text>
+                            </View>
+
+                            <View style={styles.breakdownContainer}>
+                                {ratingBreakdown.map((item) => (
+                                    <View key={item.stars} style={styles.breakdownRow}>
+                                        <Text style={styles.breakdownStarText}>{item.stars}</Text>
+                                        <View style={styles.progressBg}>
+                                            <View style={[styles.progressFill, { width: `${item.percentage}%` }]} />
+                                        </View>
+                                    </View>
                                 ))}
                             </View>
-                            <Text style={styles.totalReviews}>124 Reviews</Text>
                         </View>
 
-                        <View style={styles.breakdownContainer}>
-                            {RATING_BREAKDOWN.map((item) => (
-                                <View key={item.stars} style={styles.breakdownRow}>
-                                    <Text style={styles.breakdownStarText}>{item.stars}</Text>
-                                    <View style={styles.progressBg}>
-                                        <View style={[styles.progressFill, { width: `${item.percentage}%` }]} />
-                                    </View>
-                                </View>
+                        <View style={styles.smallStatsRow}>
+                            <View style={[styles.smallStatCard, { backgroundColor: '#F0FDF4' }]}>
+                                <ThumbsUp size={18} color="#16A34A" />
+                                <Text style={styles.smallStatValue}>{fiveStarPercent}%</Text>
+                                <Text style={styles.smallStatLabel}>5-Star</Text>
+                            </View>
+                            <View style={[styles.smallStatCard, { backgroundColor: '#EFF6FF' }]}>
+                                <MessageSquare size={18} color="#2563EB" />
+                                <Text style={styles.smallStatValue}>{newReviewsCount}</Text>
+                                <Text style={styles.smallStatLabel}>New</Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Filters */}
+                    <View style={styles.filterSection}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+                            {filters.map((filter) => (
+                                <TouchableOpacity
+                                    key={filter}
+                                    style={[styles.filterChip, activeFilter === filter && styles.filterChipActive]}
+                                    onPress={() => setActiveFilter(filter)}
+                                >
+                                    <Text style={[styles.filterText, activeFilter === filter && styles.filterTextActive]}>{filter}</Text>
+                                </TouchableOpacity>
                             ))}
-                        </View>
+                        </ScrollView>
                     </View>
 
-                    <View style={styles.smallStatsRow}>
-                        <View style={[styles.smallStatCard, { backgroundColor: '#F0FDF4' }]}>
-                            <ThumbsUp size={18} color="#16A34A" />
-                            <Text style={styles.smallStatValue}>96%</Text>
-                            <Text style={styles.smallStatLabel}>Purity</Text>
-                        </View>
-                        <View style={[styles.smallStatCard, { backgroundColor: '#EFF6FF' }]}>
-                            <MessageSquare size={18} color="#2563EB" />
-                            <Text style={styles.smallStatValue}>12</Text>
-                            <Text style={styles.smallStatLabel}>New</Text>
-                        </View>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Patient Feedbacks</Text>
                     </View>
-                </View>
 
-                {/* Filters */}
-                <View style={styles.filterSection}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-                        {filters.map((filter) => (
-                            <TouchableOpacity
-                                key={filter}
-                                style={[styles.filterChip, activeFilter === filter && styles.filterChipActive]}
-                                onPress={() => setActiveFilter(filter)}
-                            >
-                                <Text style={[styles.filterText, activeFilter === filter && styles.filterTextActive]}>{filter}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
-
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Patient Feedbacks</Text>
-                </View>
-
-                <FlatList
-                    data={MOCK_REVIEWS}
-                    renderItem={renderReviewItem}
-                    keyExtractor={(item) => item.id}
-                    scrollEnabled={false}
-                    contentContainerStyle={styles.listContent}
-                />
-            </ScrollView>
+                    {visibleReviews.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyStateText}>No reviews yet. They'll show up here once patients start leaving feedback.</Text>
+                        </View>
+                    ) : (
+                        <FlatList
+                            data={visibleReviews}
+                            renderItem={renderReviewItem}
+                            keyExtractor={(item) => item.id}
+                            scrollEnabled={false}
+                            contentContainerStyle={styles.listContent}
+                        />
+                    )}
+                </ScrollView>
+            )}
         </View>
     );
 }
@@ -172,6 +197,7 @@ const styles = StyleSheet.create({
     backButton: { padding: 8, marginLeft: -8 },
     headerTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
     scrollContent: { paddingBottom: 40 },
+    loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
     statsSection: { padding: 20, gap: 20 },
     ratingMainRow: {
@@ -228,6 +254,9 @@ const styles = StyleSheet.create({
     sectionHeader: { paddingHorizontal: 20, marginBottom: 12 },
     sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
 
+    emptyState: { paddingHorizontal: 20, paddingVertical: 32, alignItems: 'center' },
+    emptyStateText: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', lineHeight: 20 },
+
     listContent: { paddingHorizontal: 20, gap: 12 },
     reviewCard: {
         backgroundColor: '#fff',
@@ -259,13 +288,5 @@ const styles = StyleSheet.create({
         borderRadius: 8
     },
     ratingText: { fontSize: 13, fontWeight: '700', color: '#D97706' },
-    comment: { fontSize: 14, color: '#4B5563', lineHeight: 20, marginVertical: 12 },
-    tagContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    tag: {
-        backgroundColor: '#F3F4F6',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 6
-    },
-    tagText: { fontSize: 11, color: '#6B7280', fontWeight: '600' }
+    comment: { fontSize: 14, color: '#4B5563', lineHeight: 20, marginTop: 12 },
 });

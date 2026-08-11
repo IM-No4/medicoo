@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StatusModal, { StatusType } from '../../../components/modals/StatusModal';
+import { DOCUMENT_TYPES, DocumentTypeValue, getDocumentTypeMeta } from '../documentTypes';
 
 interface Props {
     visible: boolean;
@@ -24,19 +25,22 @@ interface Props {
         uri: string;
         name?: string;
     } | null;
+    // Pre-selects the category when opened from a category's own drill-down
+    // screen, so the user doesn't have to re-pick the type they already
+    // navigated into.
+    initialType?: DocumentTypeValue;
+    // When true, the document is being added from a specific folder's
+    // context (a category screen's own FAB, or a folder card's "Add
+    // Document" action) - the type picker is replaced with a static badge
+    // so the record is guaranteed to land in that folder, not just default
+    // to it while still being changeable.
+    lockType?: boolean;
 }
 
-const RECORD_TYPES = [
-    { label: 'Lab Report', value: 'lab_report' },
-    { label: 'Scan', value: 'scan' },
-    { label: 'Prescription', value: 'prescription' },
-    { label: 'Other', value: 'other' },
-];
-
-export default function EditRecordModal({ visible, onClose, onSubmit, initialData }: Props) {
+export default function EditRecordModal({ visible, onClose, onSubmit, initialData, initialType, lockType }: Props) {
     const insets = useSafeAreaInsets();
     const [title, setTitle] = useState('');
-    const [type, setType] = useState('prescription');
+    const [type, setType] = useState<DocumentTypeValue>('prescription');
     const [source, setSource] = useState('');
     const [extension, setExtension] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,22 +66,26 @@ export default function EditRecordModal({ visible, onClose, onSubmit, initialDat
 
     useEffect(() => {
         if (visible && initialData) {
-            const rawName = initialData.name || 'New Document';
+            // Only the extension is taken from the raw filename (needed to
+            // keep the stored document name correctly suffixed) - the
+            // visible field is left blank so the record's title is always a
+            // name the user actually typed, never a raw upload filename
+            // like "Screenshot_20260803-172133_...".
+            const rawName = initialData.name || '';
             const lastDotIndex = rawName.lastIndexOf('.');
 
             if (lastDotIndex > 0) {
-                setTitle(rawName.substring(0, lastDotIndex));
                 setExtension(rawName.substring(lastDotIndex));
             } else {
-                setTitle(rawName);
                 setExtension('');
             }
+            setTitle('');
 
-            setType('prescription');
+            setType(initialType || 'prescription');
             setSource('');
             setIsSubmitting(false);
         }
-    }, [visible, initialData]);
+    }, [visible, initialData, initialType]);
 
     const handleSubmit = async () => {
         if (!title.trim()) {
@@ -94,7 +102,11 @@ export default function EditRecordModal({ visible, onClose, onSubmit, initialDat
                 subtitle: source.trim() || 'User Uploaded',
             });
         } catch (error: any) {
-            showStatus('error', 'Upload Failed', error.message || 'We couldn\'t save your record. Please check your connection and try again.');
+            // error.message is just axios's generic "Request failed with
+            // status code 400" - the server's actual reason (e.g. an
+            // unsupported file type) lives in the response body instead.
+            const serverMessage = error?.response?.data?.error || error?.response?.data?.message;
+            showStatus('error', 'Upload Failed', serverMessage || 'We couldn\'t save your record. Please check your connection and try again.');
             setIsSubmitting(false);
         }
     };
@@ -137,26 +149,32 @@ export default function EditRecordModal({ visible, onClose, onSubmit, initialDat
                     {/* Document Type */}
                     <View style={styles.field}>
                         <Text style={styles.label}>Document Type <Text style={styles.required}>*</Text></Text>
-                        <View style={styles.typeContainer}>
-                            {RECORD_TYPES.map((t) => (
-                                <TouchableOpacity
-                                    key={t.value}
-                                    style={[
-                                        styles.typePill,
-                                        type === t.value && styles.typePillActive
-                                    ]}
-                                    onPress={() => setType(t.value)}
-                                    disabled={isSubmitting}
-                                >
-                                    <Text style={[
-                                        styles.typeText,
-                                        type === t.value && styles.typeTextActive
-                                    ]}>
-                                        {t.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
+                        {lockType ? (
+                            <View style={styles.lockedTypeBadge}>
+                                <Text style={styles.lockedTypeText}>{getDocumentTypeMeta(type).label}</Text>
+                            </View>
+                        ) : (
+                            <View style={styles.typeContainer}>
+                                {DOCUMENT_TYPES.map((t) => (
+                                    <TouchableOpacity
+                                        key={t.value}
+                                        style={[
+                                            styles.typePill,
+                                            type === t.value && styles.typePillActive
+                                        ]}
+                                        onPress={() => setType(t.value)}
+                                        disabled={isSubmitting}
+                                    >
+                                        <Text style={[
+                                            styles.typeText,
+                                            type === t.value && styles.typeTextActive
+                                        ]}>
+                                            {t.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        )}
                     </View>
 
                     {/* Source */}
@@ -295,6 +313,20 @@ const styles = StyleSheet.create({
     },
     typeTextActive: {
         color: '#FFFFFF',
+    },
+    lockedTypeBadge: {
+        alignSelf: 'flex-start',
+        backgroundColor: '#EAFBF3',
+        borderWidth: 1,
+        borderColor: '#D1FAE5',
+        borderRadius: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+    },
+    lockedTypeText: {
+        fontSize: 14,
+        color: '#059669',
+        fontWeight: '700',
     },
     footer: {
         padding: 20,

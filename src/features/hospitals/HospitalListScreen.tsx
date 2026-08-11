@@ -7,6 +7,7 @@ import {
     Dimensions,
     FlatList,
     Image,
+    Linking,
     Modal,
     ScrollView,
     StyleSheet,
@@ -173,6 +174,12 @@ export default function HospitalListScreen() {
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
 
+    // 108 is India's national emergency ambulance/medical helpline - same
+    // number AmbulanceListScreen.tsx already dials for its SOS button.
+    const callEmergencyHelpline = () => {
+        Linking.openURL('tel:108').catch(() => {});
+    };
+
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [activeTab, setActiveTab] = useState<TabType>('nearby');
@@ -260,7 +267,7 @@ export default function HospitalListScreen() {
                     </View>
                 </View>
 
-                <TouchableOpacity style={styles.emergencyCallHeaderButton} onPress={() => { }}>
+                <TouchableOpacity style={styles.emergencyCallHeaderButton} onPress={callEmergencyHelpline}>
                     <AppIcon name="phone" size={20} color="#EF4444" />
                 </TouchableOpacity>
             </View>
@@ -362,7 +369,7 @@ export default function HospitalListScreen() {
                         </View>
                     </View>
 
-                    <TouchableOpacity style={styles.emergencyCallButton} activeOpacity={0.8}>
+                    <TouchableOpacity style={styles.emergencyCallButton} activeOpacity={0.8} onPress={callEmergencyHelpline}>
                         <AppIcon name="phone" size={16} color="#DC2626" />
                         <Text style={styles.emergencyCallText}>Call Helpline 108</Text>
                     </TouchableOpacity>

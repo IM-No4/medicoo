@@ -25,3 +25,20 @@ export const fetchCalendarData = async (
     progress: response.data?.progress ?? { taken: 0, total: 0 },
   };
 };
+
+export type DayEventStatus = {
+  medicine?: boolean;
+  appointment?: boolean;
+  lab?: boolean;
+};
+
+// Powers the calendar month grid's event dots - one lightweight call per
+// month instead of calling fetchCalendarData once per day.
+export const fetchCalendarMonthStatus = async (
+  month: string // 'YYYY-MM'
+): Promise<Record<string, DayEventStatus>> => {
+  const response = await apiClient.get('/api/user/calendar/month-status', {
+    params: { month },
+  });
+  return response.data?.data ?? {};
+};

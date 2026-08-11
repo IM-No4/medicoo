@@ -400,7 +400,7 @@ export default function AddressBookScreen() {
       <View
         style={[
           styles.footer,
-          { paddingBottom: Math.max(insets.bottom - 32, 0) },
+          { paddingBottom: Math.max(insets.bottom, 0) },
         ]}
       >
         <TouchableOpacity

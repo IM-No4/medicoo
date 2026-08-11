@@ -14,6 +14,13 @@ export interface FeedResponse {
     };
 }
 
+export interface ShopCategory {
+    id: string;
+    title: string;
+    imageUrl: string | null;
+    tags: string[];
+}
+
 // Config for Development
 const USE_MOCK = false;
 const MOCK_DELAY = 800; // Simulate network latency
@@ -61,5 +68,13 @@ export const feedApi = {
                 meta: meta
             }
         };
+    },
+
+    // Same admin-managed category list as the home feed's "Shop by
+    // Category" row, fetched standalone for screens (Search) that need it
+    // without loading the whole paginated home feed.
+    getShopCategories: async (): Promise<ShopCategory[]> => {
+        const response = await apiClient.get<{ status: string; data: ShopCategory[] }>('/api/v1/home/shop-categories');
+        return Array.isArray(response.data?.data) ? response.data.data : [];
     }
 };

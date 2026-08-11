@@ -1,6 +1,7 @@
-import { Activity, Clock, Droplet, Heart, Info, Pill, X } from 'lucide-react-native';
-import React, { useEffect, useRef } from 'react';
+import { Calendar, Clock, ShoppingBag, Star, Tag, Heart, Bell, X, Droplet } from 'lucide-react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     Animated,
     Dimensions,
     Modal,
@@ -12,57 +13,41 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useDispatch } from 'react-redux';
+
+import { clearUnread, setUnreadCount } from '../../../redux/slices/notificationSlice';
+import {
+    CustomerNotification,
+    getCustomerNotifications,
+    markAllCustomerNotificationsAsRead,
+} from '../../../services/api/notification.api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-interface HealthNotification {
+type NotificationItem = {
     id: string;
+    type: CustomerNotification['type'];
     title: string;
     message: string;
-    description: string;
     time: string;
-    type: 'hydration' | 'activity' | 'vitals' | 'medicine' | 'info';
     isRead: boolean;
-}
+};
 
-const MOCK_NOTIFICATIONS: HealthNotification[] = [
-    {
-        id: '1',
-        title: 'Hydration Target',
-        message: 'low water intake',
-        description: 'Drink 3 more glasses to stay on track',
-        time: '10 Minutes ago',
-        type: 'hydration',
-        isRead: false,
-    },
-    {
-        id: '2',
-        title: 'Steps Milestone',
-        message: '8,000 steps reached',
-        description: 'Only 2,000 left for your daily goal',
-        time: '1 Hour ago',
-        type: 'activity',
-        isRead: false,
-    },
-    {
-        id: '3',
-        title: 'Vitals Logged',
-        message: 'morning pulse',
-        description: '72 BPM recorded successfully',
-        time: '3 Hours ago',
-        type: 'vitals',
-        isRead: true,
-    },
-    {
-        id: '4',
-        title: 'Medicine Reminder',
-        message: 'Multivitamin alert',
-        description: 'Remember to take it with water',
-        time: '5 Hours ago',
-        type: 'medicine',
-        isRead: true,
-    },
-];
+const formatRelativeTime = (dateValue?: string) => {
+    if (!dateValue) return 'Just now';
+
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return 'Just now';
+
+    const diffMs = Date.now() - date.getTime();
+    const diffMins = Math.max(1, Math.floor(diffMs / 60000));
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+};
 
 interface Props {
     visible: boolean;
@@ -71,11 +56,44 @@ interface Props {
 
 export default function HealthNotificationsModal({ visible, onClose }: Props) {
     const insets = useSafeAreaInsets();
+    const dispatch = useDispatch();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
+    const [loading, setLoading] = useState(true);
+    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+    const loadNotifications = useCallback(async () => {
+        try {
+            setLoading(true);
+            const response = await getCustomerNotifications({ limit: 10 });
+            const items: NotificationItem[] = (response?.data?.notifications || []).map((item: CustomerNotification) => ({
+                id: item._id,
+                type: item.type,
+                title: item.title,
+                message: item.message,
+                time: formatRelativeTime(item.createdOn),
+                isRead: item.isRead,
+            }));
+
+            setNotifications(items);
+            dispatch(setUnreadCount(response?.data?.unreadCount || 0));
+
+            if (items.some(item => !item.isRead)) {
+                await markAllCustomerNotificationsAsRead();
+                dispatch(clearUnread());
+                setNotifications(prev => prev.map(item => ({ ...item, isRead: true })));
+            }
+        } catch {
+            setNotifications([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [dispatch]);
+
     useEffect(() => {
         if (visible) {
+            void loadNotifications();
             Animated.parallel([
                 Animated.timing(fadeAnim, {
                     toValue: 1,
@@ -103,29 +121,41 @@ export default function HealthNotificationsModal({ visible, onClose }: Props) {
                 }),
             ]).start();
         }
-    }, [visible, fadeAnim, scaleAnim]);
+    }, [visible, fadeAnim, scaleAnim, loadNotifications]);
 
-    const getIcon = (type: HealthNotification['type']) => {
+    // Matches NotificationsScreen.tsx's type->icon mapping, so a notification
+    // reads the same way whether seen from Home or from this Health popup.
+    const getIcon = (type: NotificationItem['type']) => {
         switch (type) {
-            case 'hydration': return <Droplet size={14} color="#3B82F6" />;
-            case 'activity': return <Activity size={14} color="#2FA561" />;
-            case 'vitals': return <Heart size={14} color="#EF4444" />;
-            case 'medicine': return <Pill size={14} color="#8B5CF6" />;
-            default: return <Info size={14} color="#6B7280" />;
+            case 'order': return <ShoppingBag size={14} color="#089643" />;
+            case 'appointment':
+            case 'consultation': return <Calendar size={14} color="#3B82F6" />;
+            case 'promotion': return <Tag size={14} color="#F59E0B" />;
+            case 'health_reminder':
+            case 'reminder':
+            case 'medicine': return <Heart size={14} color="#EC4899" />;
+            case 'review': return <Star size={14} color="#10B981" />;
+            case 'blood_request': return <Droplet size={14} color="#EF4444" />;
+            default: return <Bell size={14} color="#64748B" />;
         }
     };
 
-    const getIconBg = (type: HealthNotification['type']) => {
+    const getIconBg = (type: NotificationItem['type']) => {
         switch (type) {
-            case 'hydration': return '#EFF6FF';
-            case 'activity': return '#F0FDF4';
-            case 'vitals': return '#FEF2F2';
-            case 'medicine': return '#F5F3FF';
-            default: return '#F9FAFB';
+            case 'order': return '#E8F5E9';
+            case 'appointment':
+            case 'consultation': return '#EFF6FF';
+            case 'promotion': return '#FEF3C7';
+            case 'health_reminder':
+            case 'reminder':
+            case 'medicine': return '#FCE7F3';
+            case 'review': return '#D1FAE5';
+            case 'blood_request': return '#FEF2F2';
+            default: return '#F1F5F9';
         }
     };
 
-    const unreadCount = MOCK_NOTIFICATIONS.filter(n => !n.isRead).length;
+    const unreadCount = notifications.filter(n => !n.isRead).length;
 
     return (
         <Modal
@@ -150,7 +180,9 @@ export default function HealthNotificationsModal({ visible, onClose }: Props) {
                     <View style={styles.cardHeader}>
                         <View>
                             <Text style={styles.boldTitle}>Notification</Text>
-                            <Text style={styles.unreadSub}>You have {unreadCount} unread alerts</Text>
+                            <Text style={styles.unreadSub}>
+                                {loading ? 'Loading...' : `You have ${unreadCount} unread alerts`}
+                            </Text>
                         </View>
                         <TouchableOpacity
                             style={styles.closeBtn}
@@ -161,33 +193,36 @@ export default function HealthNotificationsModal({ visible, onClose }: Props) {
                         </TouchableOpacity>
                     </View>
 
-                    <View style={styles.newLabelContainer}>
-                        <Text style={styles.newLabel}>New</Text>
-                    </View>
-
-                    <ScrollView
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={styles.scrollContent}
-                    >
-                        {MOCK_NOTIFICATIONS.map((item) => (
-                            <View key={item.id} style={styles.notifItem}>
-                                <View style={[styles.iconCircle, { backgroundColor: getIconBg(item.type) }]}>
-                                    {getIcon(item.type)}
-                                </View>
-                                <View style={styles.textContent}>
-                                    <Text style={styles.itemTitle}>
-                                        <Text style={styles.boldText}>{item.title}</Text>
-                                        <Text style={styles.greyText}> {item.message}</Text>
-                                    </Text>
-                                    <Text style={styles.descriptionText}>{item.description}</Text>
-                                    <View style={styles.timeRow}>
-                                        <Clock size={12} color="#94A3B8" />
-                                        <Text style={styles.timeText}>{item.time}</Text>
+                    {loading ? (
+                        <View style={styles.centerState}>
+                            <ActivityIndicator color="#2FA561" />
+                        </View>
+                    ) : notifications.length === 0 ? (
+                        <View style={styles.centerState}>
+                            <Text style={styles.emptyText}>No notifications yet</Text>
+                        </View>
+                    ) : (
+                        <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={styles.scrollContent}
+                        >
+                            {notifications.map((item) => (
+                                <View key={item.id} style={styles.notifItem}>
+                                    <View style={[styles.iconCircle, { backgroundColor: getIconBg(item.type) }]}>
+                                        {getIcon(item.type)}
+                                    </View>
+                                    <View style={styles.textContent}>
+                                        <Text style={styles.boldText} numberOfLines={1}>{item.title}</Text>
+                                        <Text style={styles.descriptionText} numberOfLines={2}>{item.message}</Text>
+                                        <View style={styles.timeRow}>
+                                            <Clock size={12} color="#94A3B8" />
+                                            <Text style={styles.timeText}>{item.time}</Text>
+                                        </View>
                                     </View>
                                 </View>
-                            </View>
-                        ))}
-                    </ScrollView>
+                            ))}
+                        </ScrollView>
+                    )}
                 </Animated.View>
             </View>
         </Modal>
@@ -204,6 +239,7 @@ const styles = StyleSheet.create({
         right: 20,
         width: SCREEN_WIDTH * 0.85,
         maxWidth: 320,
+        maxHeight: 420,
         backgroundColor: '#fff',
         borderRadius: 20,
         paddingTop: 16,
@@ -242,24 +278,23 @@ const styles = StyleSheet.create({
     closeBtn: {
         padding: 4,
     },
-    newLabelContainer: {
-        paddingHorizontal: 20,
-        paddingTop: 12,
-        paddingBottom: 4,
-    },
-    newLabel: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#94A3B8',
-        textTransform: 'uppercase',
-    },
     scrollContent: {
         paddingHorizontal: 20,
+        paddingTop: 12,
         paddingBottom: 16,
+    },
+    centerState: {
+        paddingVertical: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyText: {
+        fontSize: 13,
+        color: '#94A3B8',
     },
     notifItem: {
         flexDirection: 'row',
-        marginTop: 16,
+        marginBottom: 16,
         alignItems: 'flex-start',
     },
     iconCircle: {
@@ -274,21 +309,15 @@ const styles = StyleSheet.create({
         flex: 1,
         marginLeft: 12,
     },
-    itemTitle: {
-        fontSize: 13,
-        lineHeight: 18,
-    },
     boldText: {
+        fontSize: 13,
         fontWeight: '700',
         color: '#334155',
-    },
-    greyText: {
-        color: '#64748B',
     },
     descriptionText: {
         fontSize: 12,
         color: '#94A3B8',
-        marginTop: 1,
+        marginTop: 2,
     },
     timeRow: {
         flexDirection: 'row',

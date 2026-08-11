@@ -22,11 +22,6 @@ export const cancelOrder = async (id: string) => {
     return res.data;
 };
 
-export const trackOrder = async (id: string) => {
-    const res = await apiClient.get(`/api/user/orders/${id}/track`);
-    return res.data;
-};
-
 export const getOrderChatOptions = async (orderId: string) => {
     const res = await apiClient.get(`/api/user/orders/${orderId}/chat/options`);
     return res.data;

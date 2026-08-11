@@ -29,6 +29,19 @@ let handlingUnauthorized = false;
 apiClient.interceptors.response.use(
   (res) => res,
   async (error) => {
+    // "Network Error" (no response at all - DNS/connection/timeout/thrown
+    // before the request was ever sent) vs a real HTTP error status is a
+    // useful distinction that's otherwise easy to lose by the time an error
+    // reaches a screen's catch block.
+    if (!error.response) {
+      console.log('[apiClient] Request failed with no response:', {
+        url: `${error.config?.baseURL || ''}${error.config?.url || ''}`,
+        method: error.config?.method,
+        code: error.code,
+        message: error.message,
+      });
+    }
+
     // Only force a logout for a request that was actually sent with a token -
     // pre-login endpoints (send-otp, verify-otp, ...) never attach one, so a
     // 401 there means bad credentials, not a revoked/expired session.

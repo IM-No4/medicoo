@@ -17,6 +17,7 @@ export const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     // Dynamically set padding for Android Status Bar
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    paddingBottom: 60,
   },
 
   // Section Headers
@@ -24,14 +25,16 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginHorizontal: 24,
+    marginHorizontal: 18,
     marginTop: 24,
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 13,
     fontWeight: '700',
-    color: COLORS.text,
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 1
   },
   seeAllText: {
     fontSize: 14,
@@ -39,26 +42,27 @@ export const styles = StyleSheet.create({
     color: COLORS.text,
   },
 
-  // Buttons
-  addButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
+  // Small inline "Manage" button used next to a section title (e.g.
+  // Medications, matching the Active Goals section's own manage button).
+  manageBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: COLORS.lightTeal,
   },
-  addButtonText: {
-    color: '#FFF',
-    fontWeight: '600',
-    fontSize: 14,
+  manageBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
 
   // Helper for small text headers like "Morning"
   subSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 24,
+    marginHorizontal: 18,
     marginBottom: 12,
     marginTop: 8,
   },

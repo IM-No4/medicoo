@@ -32,66 +32,76 @@ export default function ManageRemindersSheet({
             onRequestClose={onClose}
             statusBarTranslucent
         >
-            <Pressable style={styles.overlay} onPress={onClose} />
-            <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom + 8, 24) }]}>
-                {/* Handle */}
-                <View style={styles.handle} />
+            {/* Backdrop and sheet must share one wrapping view - as separate
+                top-level siblings, the native modal window's own opaque
+                background shows through right at the sheet's rounded
+                corners, making them look squared off instead of rounded. */}
+            <View style={styles.backdrop}>
+                <Pressable style={styles.backdropTouchable} onPress={onClose} />
+                <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom + 8, 24) }]}>
+                    {/* Handle */}
+                    <View style={styles.handle} />
 
-                <Text style={styles.title}>Manage Reminders</Text>
-                <Text style={styles.subtitle}>Select a category to manage</Text>
+                    <Text style={styles.title}>Manage Reminders</Text>
+                    <Text style={styles.subtitle}>Select a category to manage</Text>
 
-                <View style={styles.options}>
-                    <TouchableOpacity
-                        style={styles.optionRow}
-                        activeOpacity={0.7}
-                        onPress={() => {
-                            onClose();
-                            onGoToMedications();
-                        }}
-                    >
-                        <View style={[styles.optionIcon, { backgroundColor: '#F0FDF4' }]}>
-                            <Pill size={22} color="#2FA561" />
-                        </View>
-                        <View style={styles.optionText}>
-                            <Text style={styles.optionTitle}>Medications</Text>
-                            <Text style={styles.optionDesc}>Pause, delete or add new medications</Text>
-                        </View>
-                        <ChevronRight size={20} color="#CBD5E1" />
-                    </TouchableOpacity>
+                    <View style={styles.options}>
+                        <TouchableOpacity
+                            style={styles.optionRow}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                                onClose();
+                                onGoToMedications();
+                            }}
+                        >
+                            <View style={[styles.optionIcon, { backgroundColor: '#F0FDF4' }]}>
+                                <Pill size={22} color="#2FA561" />
+                            </View>
+                            <View style={styles.optionText}>
+                                <Text style={styles.optionTitle}>Medications</Text>
+                                <Text style={styles.optionDesc}>Pause, delete or add new medications</Text>
+                            </View>
+                            <ChevronRight size={20} color="#CBD5E1" />
+                        </TouchableOpacity>
 
-                    <View style={styles.separator} />
+                        <View style={styles.separator} />
 
-                    <TouchableOpacity
-                        style={styles.optionRow}
-                        activeOpacity={0.7}
-                        onPress={() => {
-                            onClose();
-                            onGoToGoals();
-                        }}
-                    >
-                        <View style={[styles.optionIcon, { backgroundColor: '#EFF6FF' }]}>
-                            <Target size={22} color="#3B82F6" />
-                        </View>
-                        <View style={styles.optionText}>
-                            <Text style={styles.optionTitle}>Goals</Text>
-                            <Text style={styles.optionDesc}>Pause, delete or add new daily habits</Text>
-                        </View>
-                        <ChevronRight size={20} color="#CBD5E1" />
+                        <TouchableOpacity
+                            style={styles.optionRow}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                                onClose();
+                                onGoToGoals();
+                            }}
+                        >
+                            <View style={[styles.optionIcon, { backgroundColor: '#EFF6FF' }]}>
+                                <Target size={22} color="#3B82F6" />
+                            </View>
+                            <View style={styles.optionText}>
+                                <Text style={styles.optionTitle}>Goals</Text>
+                                <Text style={styles.optionDesc}>Pause, delete or add new daily habits</Text>
+                            </View>
+                            <ChevronRight size={20} color="#CBD5E1" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.8}>
+                        <Text style={styles.cancelText}>Cancel</Text>
                     </TouchableOpacity>
                 </View>
-
-                <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.8}>
-                    <Text style={styles.cancelText}>Cancel</Text>
-                </TouchableOpacity>
             </View>
         </Modal>
     );
 }
 
 const styles = StyleSheet.create({
-    overlay: {
+    backdrop: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.35)',
+        justifyContent: 'flex-end',
+    },
+    backdropTouchable: {
+        flex: 1,
     },
     sheet: {
         backgroundColor: '#FFFFFF',

@@ -32,14 +32,12 @@ export const uploadPrescription = async ({
   formData.append("latitude", String(latitude));
   formData.append("longitude", String(longitude));
 
+  // See document.api.ts's uploadDocument for why this Content-Type must be
+  // set explicitly (confirmed via a live device trace).
   const response = await apiClient.post(
     "/api/user/prescription/upload",
     formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    },
+    { headers: { "Content-Type": "multipart/form-data" } },
   );
 
   console.log("Upload Prescription Response", response.data);

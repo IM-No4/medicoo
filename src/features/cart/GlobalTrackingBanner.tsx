@@ -21,6 +21,8 @@ const STATUS_LABELS: Record<string, string> = {
   pickedUp:       'Out for Delivery',
   dispatched:     'Out for Delivery',
   delivered:      'Delivered!',
+  rejected:       'Order Rejected',
+  cancelled:      'Order Cancelled',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -31,13 +33,30 @@ const STATUS_COLORS: Record<string, string> = {
   pickedUp:       '#10B981',
   dispatched:     '#10B981',
   delivered:      '#10B981',
+  rejected:       '#EF4444',
+  cancelled:      '#6B7280',
 };
 
+// Terminal states - once an order lands here, the banner should stop
+// showing (same as it already did for 'delivered'). Without this, a
+// rejected/cancelled order used to keep showing "Tracking Order"
+// indefinitely, since only 'delivered' was ever excluded.
+const TERMINAL_STATUSES = ['delivered', 'rejected', 'cancelled'];
+
 // Screens where a floating "your medicine order" banner doesn't belong: the
-// patient's own Profile area, and the entire doctor experience
-// (browsing/booking, in-call, in-chat) - all top-level siblings of "Tabs" in
-// MainStack, so none of them are reachable via the tab-root check below.
-const EXCLUDED_ROUTE_NAMES = ['Profile', 'DoctorStack', 'DoctorCall', 'DoctorChat'];
+// patient's own Profile area, the entire doctor experience (browsing/
+// booking, in-call, in-chat), a consultation's own detail screen, the
+// entire blood donation flow, and the Search flow - all top-level siblings
+// of "Tabs" in MainStack, so none of them are reachable via the tab-root
+// check below.
+const EXCLUDED_ROUTE_NAMES = ['Profile', 'DoctorStack', 'DoctorCall', 'DoctorChat', 'ConsultationDetail', 'BloodDonationStack', 'SearchStack'];
+
+// Unlike the stacks above, Calendar/Records/Health are tabs *within* "Tabs"
+// itself (Home stays visible), so they're matched by route name directly
+// rather than the excluded-stack tree walk. RecordDetail is nested inside
+// the Records tab's own stack the same way - not a top-level MainStack
+// sibling - so it's matched the same way as its tab root.
+const EXCLUDED_TAB_ROOT_SCREENS = ['CalendarMain', 'Calendar', 'RecordsHome', 'Records', 'RecordsCategory', 'HealthMain', 'Health', 'RecordDetail'];
 
 export default function GlobalTrackingBanner() {
   const insets = useSafeAreaInsets();
@@ -132,7 +151,7 @@ export default function GlobalTrackingBanner() {
 
   // Slide in / slide out
   useEffect(() => {
-    const shouldShow = !!activeOrder && activeOrder.status !== 'delivered' && currentRouteName !== 'LiveTracking' && !isInExcludedScreen;
+    const shouldShow = !!activeOrder && !TERMINAL_STATUSES.includes(activeOrder.status) && currentRouteName !== 'LiveTracking' && !isInExcludedScreen && !(currentRouteName && EXCLUDED_TAB_ROOT_SCREENS.includes(currentRouteName));
     if (shouldShow === prevVisible.current) return;
     prevVisible.current = shouldShow;
 
@@ -156,7 +175,13 @@ export default function GlobalTrackingBanner() {
     return () => loop.stop();
   }, [pulseAnim]);
 
-  if (!activeOrder || activeOrder.status === 'delivered' || currentRouteName === 'LiveTracking' || isInExcludedScreen) {
+  if (
+    !activeOrder ||
+    TERMINAL_STATUSES.includes(activeOrder.status) ||
+    currentRouteName === 'LiveTracking' ||
+    isInExcludedScreen ||
+    (currentRouteName && EXCLUDED_TAB_ROOT_SCREENS.includes(currentRouteName))
+  ) {
     return null;
   }
 

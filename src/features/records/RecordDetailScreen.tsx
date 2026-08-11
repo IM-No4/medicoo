@@ -25,6 +25,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StatusModal, { StatusType } from '@/src/components/modals/StatusModal';
 import { deleteDocument, getDocumentViewUrl } from '@/src/services/api/document.api';
 import { getToken } from '@/src/utils/tokenManagement';
+import { getDocumentTypeMeta } from './documentTypes';
+import { RecordItem } from './types';
 
 const { width } = Dimensions.get('window');
 
@@ -32,7 +34,7 @@ export default function RecordDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
-  const { record } = route.params;
+  const record: RecordItem = route.params.record;
   const [isDeleting, setIsDeleting] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [imageAspectRatio, setImageAspectRatio] = useState(0.75); // Default to ~3:4 (A4ish)
@@ -185,7 +187,7 @@ export default function RecordDetailScreen() {
         </View>
         <Text style={styles.fallbackTitle}>Preview Unavailable</Text>
         <Text style={styles.fallbackSubtitle}>
-          This file type ({record.type}) cannot be previewed directly.
+          This file type ({typeMeta.label}) cannot be previewed directly.
         </Text>
         <TouchableOpacity style={styles.downloadBtnPlaceholder} onPress={handleDownload}>
           <Download size={18} color="#2FA561" style={{ marginRight: 8 }} />
@@ -195,16 +197,7 @@ export default function RecordDetailScreen() {
     );
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type?.toLowerCase()) {
-      case 'prescription': return { bg: '#ECFDF5', text: '#059669' };
-      case 'lab_report': return { bg: '#F5F3FF', text: '#7C3AED' };
-      case 'scan': return { bg: '#F0F9FF', text: '#0284C7' };
-      default: return { bg: '#F3F4F6', text: '#4B5563' };
-    }
-  };
-
-  const typeStyle = getTypeColor(record.type);
+  const typeMeta = getDocumentTypeMeta(record.type);
 
   return (
     <View style={styles.container}>
@@ -243,8 +236,8 @@ export default function RecordDetailScreen() {
         {/* Document Header Info - Cleaner, Left Aligned */}
         <View style={styles.docHeader}>
           <View style={styles.badgeRow}>
-            <View style={[styles.typeBadge, { backgroundColor: typeStyle.bg }]}>
-              <Text style={[styles.typeText, { color: typeStyle.text }]}>{record.type?.toUpperCase() || 'DOC'}</Text>
+            <View style={[styles.typeBadge, { backgroundColor: typeMeta.bg }]}>
+              <Text style={[styles.typeText, { color: typeMeta.color }]}>{typeMeta.label.toUpperCase()}</Text>
             </View>
           </View>
 

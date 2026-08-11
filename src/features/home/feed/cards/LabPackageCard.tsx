@@ -2,6 +2,7 @@ import React from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { LabPackage, LabPackageShowcaseFeedItem } from '../feed.types';
+import SectionHeader from './SectionHeader';
 
 import { FeedAction } from '../feed.actions';
 
@@ -75,17 +76,11 @@ function LabPackageCard({ data, onAction }: Props) {
 
     return (
         <View style={styles.container}>
-            <View style={styles.sectionHeader}>
-                <View>
-                    <Text style={styles.sectionTitle}>{data.title}</Text>
-                    {data.subtitle && <Text style={styles.sectionSubtitle}>{data.subtitle}</Text>}
-                </View>
-                {data.seeAllAction && (
-                    <TouchableOpacity onPress={handleSeeAll}>
-                        <Text style={styles.seeAll}>See All</Text>
-                    </TouchableOpacity>
-                )}
-            </View>
+            <SectionHeader
+                title={data.title}
+                subtitle={data.subtitle}
+                onSeeAll={data.seeAllAction ? handleSeeAll : undefined}
+            />
 
             <FlatList
                 data={data.packages}
@@ -104,28 +99,6 @@ export default React.memo(LabPackageCard);
 const styles = StyleSheet.create({
     container: {
         marginBottom: 28,
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 24,
-        marginBottom: 16,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#111827',
-    },
-    sectionSubtitle: {
-        fontSize: 12,
-        color: '#6B7280',
-        marginTop: 2,
-    },
-    seeAll: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#2563EB',
     },
     listContent: {
         paddingHorizontal: 16,

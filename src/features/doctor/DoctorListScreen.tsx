@@ -85,7 +85,7 @@ export default function DoctorListScreen() {
     const [filterModalVisible, setFilterModalVisible] = useState(false);
     const [stagedSpecialty, setStagedSpecialty] = useState('All');
     const [sortModalVisible, setSortModalVisible] = useState(false);
-    const [sortBy, setSortBy] = useState<'rating_low_to_high' | 'rating_high_to_low' | 'price_low_to_high' | 'price_high_to_low'>('rating_high_to_low');
+    const [sortBy, setSortBy] = useState<'rating_low_to_high' | 'rating_high_to_low' | 'price_low_to_high' | 'price_high_to_low' | 'responsiveness_high_to_low'>('rating_high_to_low');
 
     // Debounce search query
     useEffect(() => {
@@ -193,6 +193,7 @@ export default function DoctorListScreen() {
             case 'rating_high_to_low': return 'Rating: High to Low';
             case 'price_low_to_high': return 'Price: Low to High';
             case 'price_high_to_low': return 'Price: High to Low';
+            case 'responsiveness_high_to_low': return 'Fastest to Respond';
             default: return 'Sort';
         }
     };
@@ -531,6 +532,7 @@ export default function DoctorListScreen() {
                             { id: 'rating_low_to_high', label: 'Rating: Low to High' },
                             { id: 'price_high_to_low', label: 'Price: High to Low' },
                             { id: 'price_low_to_high', label: 'Price: Low to High' },
+                            { id: 'responsiveness_high_to_low', label: 'Fastest to Respond' },
                         ].map(opt => (
                             <TouchableOpacity
                                 key={opt.id}

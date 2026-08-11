@@ -47,7 +47,7 @@ export default function TermsPrivacyScreen() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
                 <View style={styles.heroSection}>
                     <View style={styles.shieldCircle}>
                         <ShieldCheck size={40} color="#fff" />
@@ -72,10 +72,6 @@ export default function TermsPrivacyScreen() {
                     <Text style={styles.noteTitle}>Questions?</Text>
                     <Text style={styles.noteText}>If you have any questions regarding our terms, please contact our legal team at legal@medicoo.in</Text>
                 </View>
-
-                <TouchableOpacity style={styles.acceptButton} onPress={() => navigation.goBack()}>
-                    <Text style={styles.acceptButtonText}>I Understand</Text>
-                </TouchableOpacity>
             </ScrollView>
         </View>
     );
@@ -183,17 +179,4 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         lineHeight: 20,
     },
-    acceptButton: {
-        backgroundColor: '#2FA561',
-        marginHorizontal: 30,
-        marginTop: 40,
-        paddingVertical: 18,
-        borderRadius: 18,
-        alignItems: 'center',
-    },
-    acceptButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '700',
-    }
 });

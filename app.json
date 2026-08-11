@@ -30,7 +30,8 @@
         "MODIFY_AUDIO_SETTINGS",
         "ACCESS_NETWORK_STATE",
         "ACCESS_WIFI_STATE",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "android.permission.health.READ_STEPS"
       ],
       "googleServicesFile": "./firebase/google-services.json"
     },
@@ -43,7 +44,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./src/assets/images/splash-icon.png",
+          "image": "./src/assets/images/android-icon-foreground.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
@@ -81,6 +82,23 @@
         "expo-contacts",
         {
           "contactsPermission": "Medicoo needs access to your contacts so you can quickly add a family member or delivery address."
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Medicoo uses your phone's motion data to count your daily steps for goal tracking when no fitness device is connected."
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "minSdkVersion": 26
+          }
         }
       ],
       "./plugins/withRazorpayCheckoutTheme.js"

@@ -18,6 +18,62 @@ export function onConsultationChatMessage(handler: ConsultationChatMessageHandle
   };
 }
 
+type LiveChatMessagePayload = { chatId: string; message: { _id: string; sender: 'user' | 'bot' | 'agent'; text: string; timestamp: string } };
+type LiveChatMessageHandler = (payload: LiveChatMessagePayload) => void;
+const liveChatMessageHandlers = new Set<LiveChatMessageHandler>();
+
+/** Subscribe to real-time live-chat messages (support executive replies). Returns an unsubscribe function. */
+export function onLiveChatMessage(handler: LiveChatMessageHandler) {
+  liveChatMessageHandlers.add(handler);
+  return () => {
+    liveChatMessageHandlers.delete(handler);
+  };
+}
+
+type LiveChatStatusPayload = { chatId: string; agentName?: string; closedBy?: string };
+type LiveChatStatusHandler = (payload: LiveChatStatusPayload) => void;
+const liveChatAgentJoinedHandlers = new Set<LiveChatStatusHandler>();
+const liveChatClosedHandlers = new Set<LiveChatStatusHandler>();
+
+/** Subscribe to a live chat being claimed by a support executive. Returns an unsubscribe function. */
+export function onLiveChatAgentJoined(handler: LiveChatStatusHandler) {
+  liveChatAgentJoinedHandlers.add(handler);
+  return () => {
+    liveChatAgentJoinedHandlers.delete(handler);
+  };
+}
+
+/** Subscribe to a live chat being closed. Returns an unsubscribe function. */
+export function onLiveChatClosed(handler: LiveChatStatusHandler) {
+  liveChatClosedHandlers.add(handler);
+  return () => {
+    liveChatClosedHandlers.delete(handler);
+  };
+}
+
+/** Send a live chat message over the already-authenticated customer socket. Returns false if not connected. */
+export function emitLiveChatMessage(chatId: string, text: string): boolean {
+  if (!socket?.connected) return false;
+  socket.emit('live_chat:message', { chatId, text });
+  return true;
+}
+
+type DeliveryLocationPayload = {
+  partnerId: string;
+  location: { latitude: number; longitude: number; accuracy?: number | null; speed?: number | null; heading?: number | null };
+  timestamp: number;
+};
+type DeliveryLocationHandler = (payload: DeliveryLocationPayload) => void;
+const deliveryLocationHandlers = new Set<DeliveryLocationHandler>();
+
+/** Subscribe to a delivery partner's live GPS pings while an order is out for delivery. Returns an unsubscribe function. */
+export function onDeliveryLocationUpdate(handler: DeliveryLocationHandler) {
+  deliveryLocationHandlers.add(handler);
+  return () => {
+    deliveryLocationHandlers.delete(handler);
+  };
+}
+
 export async function initializeSocket() {
   if (socket?.connected) return;
 
@@ -92,6 +148,22 @@ export async function initializeSocket() {
 
     socket.on('consultation_chat:new_message', (payload: ConsultationChatMessagePayload) => {
       chatMessageHandlers.forEach((handler) => handler(payload));
+    });
+
+    socket.on('live_chat:message', (payload: LiveChatMessagePayload) => {
+      liveChatMessageHandlers.forEach((handler) => handler(payload));
+    });
+
+    socket.on('live_chat:agent_joined', (payload: LiveChatStatusPayload) => {
+      liveChatAgentJoinedHandlers.forEach((handler) => handler(payload));
+    });
+
+    socket.on('live_chat:closed', (payload: LiveChatStatusPayload) => {
+      liveChatClosedHandlers.forEach((handler) => handler(payload));
+    });
+
+    socket.on('delivery_location_update', (payload: DeliveryLocationPayload) => {
+      deliveryLocationHandlers.forEach((handler) => handler(payload));
     });
 
     socket.on('disconnect', (reason) => {

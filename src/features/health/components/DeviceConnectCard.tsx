@@ -1,5 +1,6 @@
 import { disconnectDevice, updateDeviceData } from '@/src/redux/slices/deviceSlice';
 import { RootState } from '@/src/redux/store';
+import { bluetoothService } from '@/src/services/health/BluetoothService';
 import { Battery, Link as LinkIcon, RefreshCw, Smartphone, Watch, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -12,25 +13,28 @@ export function DeviceConnectCard() {
     const [modalVisible, setModalVisible] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
 
-    const handleSync = () => {
+    const handleSync = async () => {
+        if (!connectedDevice) return;
         setIsSyncing(true);
-        // Simulate data sync
-        setTimeout(() => {
+        try {
+            const [data, batteryLevel] = await Promise.all([
+                bluetoothService.syncDeviceData(connectedDevice.id),
+                bluetoothService.getBatteryLevel(connectedDevice.id),
+            ]);
             dispatch(updateDeviceData({
                 lastSynced: new Date().toISOString(),
-                data: {
-                    steps: Math.floor(Math.random() * 2000) + 8000,
-                    heartRate: Math.floor(Math.random() * 10) + 70,
-                    calories: Math.floor(Math.random() * 100) + 400
-                },
-                batteryLevel: Math.max(0, (connectedDevice?.batteryLevel || 100) - 1)
+                data,
+                batteryLevel: batteryLevel ?? connectedDevice.batteryLevel,
             }));
+        } catch (error) {
+            console.warn('[DeviceConnectCard] Sync failed', error);
+        } finally {
             setIsSyncing(false);
-        }, 2000);
+        }
     };
 
     if (connectedDevice) {
-        const isLowBattery = (connectedDevice.batteryLevel || 0) < 20;
+        const isLowBattery = connectedDevice.batteryLevel !== undefined && connectedDevice.batteryLevel < 20;
 
         return (
             <View style={styles.deviceCardConnected}>
@@ -66,7 +70,7 @@ export function DeviceConnectCard() {
                                     style={{ transform: [{ rotate: '-90deg' }] }}
                                 />
                                 <Text style={[styles.statusText, isLowBattery && { color: '#EF4444' }]}>
-                                    {connectedDevice.batteryLevel}%
+                                    {connectedDevice.batteryLevel !== undefined ? `${connectedDevice.batteryLevel}%` : '--'}
                                 </Text>
                             </View>
                             <View style={styles.dotSeparator} />
@@ -91,8 +95,8 @@ export function DeviceConnectCard() {
 
                 <View style={styles.statsPreview}>
                     <StatItem value={connectedDevice.data?.steps?.toLocaleString()} label="Steps" />
-                    <StatItem value={`${connectedDevice.data?.heartRate}`} label="BPM" />
-                    <StatItem value={`${connectedDevice.data?.calories}`} label="kcal" />
+                    <StatItem value={connectedDevice.data?.heartRate?.toString()} label="BPM" />
+                    <StatItem value={connectedDevice.data?.calories?.toString()} label="kcal" />
                 </View>
 
                 <BluetoothDeviceModal

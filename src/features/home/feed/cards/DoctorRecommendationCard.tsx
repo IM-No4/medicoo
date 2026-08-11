@@ -2,6 +2,7 @@ import React from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { Doctor, DoctorRecommendationFeedItem } from '../feed.types';
+import SectionHeader from './SectionHeader';
 
 import { FeedAction } from '../feed.actions';
 
@@ -60,17 +61,11 @@ function DoctorRecommendationCard({ data, onAction }: Props) {
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                <View>
-                    <Text style={styles.title}>{data.title}</Text>
-                    {data.subtitle && <Text style={styles.subtitle}>{data.subtitle}</Text>}
-                </View>
-                {data.seeAllAction && (
-                    <TouchableOpacity onPress={handleSeeAll}>
-                        <Text style={styles.seeAll}>See All</Text>
-                    </TouchableOpacity>
-                )}
-            </View>
+            <SectionHeader
+                title={data.title}
+                subtitle={data.subtitle}
+                onSeeAll={data.seeAllAction ? handleSeeAll : undefined}
+            />
 
             <FlatList
                 data={data.doctors}
@@ -89,28 +84,6 @@ export default React.memo(DoctorRecommendationCard);
 const styles = StyleSheet.create({
     container: {
         marginBottom: 28,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 24,
-        marginBottom: 16,
-    },
-    title: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#111827',
-    },
-    subtitle: {
-        fontSize: 12,
-        color: '#6B7280',
-        marginTop: 2,
-    },
-    seeAll: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#2563EB',
     },
     listContent: {
         paddingHorizontal: 16,

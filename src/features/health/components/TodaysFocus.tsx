@@ -7,6 +7,8 @@ import { RootState } from '../../../redux/store';
 import { HealthSection } from './HealthSection';
 import RecordVitalsModal from '../../../components/modals/RecordVitalsModal';
 import BluetoothDeviceModal from './BluetoothDeviceModal';
+import { selectTodaySteps } from '../../../redux/slices/deviceSlice';
+import { timeToMinutes } from '../../calendar/utils/scheduleSort';
 
 export function TodaysFocus() {
     const navigation = useNavigation<any>();
@@ -15,7 +17,11 @@ export function TodaysFocus() {
 
     const { records } = useSelector((state: RootState) => state.vitals);
     const { data: calendarData } = useSelector((state: RootState) => state.calendar);
-    const { connectedDevice } = useSelector((state: RootState) => state.device);
+    const { connectedDevice, onDeviceSteps } = useSelector((state: RootState) => state.device);
+    // A connected device OR the phone's own step sensor (iOS) both count as
+    // "steps are being tracked" - only prompt to pair a wearable when
+    // neither source has anything.
+    const hasStepsSource = !!connectedDevice || onDeviceSteps !== null;
 
     // Dynamic BP logic
     const bpLoggedToday = records.some(r => {
@@ -27,20 +33,28 @@ export function TodaysFocus() {
             recordDate.getFullYear() === today.getFullYear();
     });
 
-    // Dynamic Medications logic
+    // Dynamic Medications logic. Note: calendarData.medicines has one entry
+    // per scheduled dose time, not one per distinct medication - a single
+    // medicine taken 3x/day produces 3 entries here.
     const medicines = calendarData?.medicines ?? [];
     const pendingMeds = medicines.filter((m: any) => m.status === 'pending');
     const pendingCount = pendingMeds.length;
 
-    const nextMedTime = pendingMeds.length > 0 
-        ? [...pendingMeds].sort((a: any, b: any) => a.time.localeCompare(b.time))[0].time 
+    // Times are 12h "h:mm A" strings ("9:30 AM", "2:00 PM") - a plain
+    // string sort/localeCompare orders them lexicographically ("2:00 PM"
+    // before "9:30 AM"), not chronologically, which is what was showing the
+    // wrong "next" dose time. timeToMinutes normalizes to minutes-since-
+    // midnight first, matching how CalendarScreen/CalendarModal already
+    // sort this same data.
+    const nextMedTime = pendingMeds.length > 0
+        ? [...pendingMeds].sort((a: any, b: any) => timeToMinutes(a.time) - timeToMinutes(b.time))[0].time
         : '';
 
     const medsCompleted = medicines.length > 0 && pendingCount === 0;
     const noMedsScheduled = medicines.length === 0;
 
     // Dynamic Steps logic
-    const stepsVal = connectedDevice?.data?.steps ?? 0;
+    const stepsVal = useSelector(selectTodaySteps);
     const targetStepsVal = 10000;
     const stepsGoalCompleted = stepsVal >= targetStepsVal;
 
@@ -60,9 +74,9 @@ export function TodaysFocus() {
     } else {
         focusItems.push({
             id: 'meds',
-            title: pendingCount > 0 
-                ? `${pendingCount} medication${pendingCount > 1 ? 's' : ''} due today` 
-                : 'All medications taken',
+            title: pendingCount > 0
+                ? `${pendingCount} dose${pendingCount > 1 ? 's' : ''} due today`
+                : 'All doses taken',
             icon: Pill,
             urgent: pendingCount > 0,
             time: pendingCount > 0 ? `Next: ${nextMedTime}` : 'Completed',
@@ -83,7 +97,7 @@ export function TodaysFocus() {
     });
 
     // 3. Smart Wearable Sync Item / Daily Steps Tracker
-    if (!connectedDevice) {
+    if (!hasStepsSource) {
         focusItems.push({
             id: 'wearable',
             title: 'Pair a wearable device',
@@ -116,6 +130,7 @@ export function TodaysFocus() {
                             key={item.id}
                             style={[
                                 styles.row,
+                                item.completed && styles.rowCompleted,
                                 index !== focusItems.length - 1 && styles.divider
                             ]}
                             disabled={item.completed}
@@ -125,8 +140,8 @@ export function TodaysFocus() {
                             <View
                                 style={[
                                     styles.iconBox,
-                                    item.completed 
-                                        ? { backgroundColor: '#F0FDF4' } 
+                                    item.completed
+                                        ? { backgroundColor: '#DCFCE7' }
                                         : (item.urgent ? styles.urgentBg : styles.normalBg)
                                 ]}
                             >
@@ -134,12 +149,18 @@ export function TodaysFocus() {
                             </View>
 
                             <View style={{ flex: 1 }}>
-                                <Text style={[styles.rowText, item.completed && { color: '#6B7280', textDecorationLine: 'line-through' }]}>
+                                <Text style={[styles.rowText, item.completed && styles.rowTextCompleted]}>
                                     {item.title}
                                 </Text>
                                 <Text style={[styles.timeText, item.completed && { color: '#10B981' }]}>{item.time}</Text>
                             </View>
-                            {!item.completed && <ChevronRight size={18} color="#D1D5DB" />}
+                            {item.completed ? (
+                                <View style={styles.completedBadge}>
+                                    <Check size={13} color="#fff" strokeWidth={3} />
+                                </View>
+                            ) : (
+                                <ChevronRight size={18} color="#D1D5DB" />
+                            )}
                         </TouchableOpacity>
                     );
                 })}
@@ -167,8 +188,17 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#F3F4F6'
     },
-    row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14 },
+    // Completed rows get a tinted highlight instead of struck-through text -
+    // strikethrough reads as "cancelled/removed", not "accomplished".
+    rowCompleted: {
+        backgroundColor: '#F0FDF4',
+        paddingVertical: 10,
+        paddingHorizontal: 10,
+        marginHorizontal: -10,
+    },
     rowText: { fontSize: 15, fontWeight: '700', color: '#111827' },
+    rowTextCompleted: { color: '#059669' },
     timeText: { fontSize: 12, color: '#6B7280', marginTop: 2, fontWeight: '500' },
     iconBox: {
         width: 44,
@@ -179,6 +209,14 @@ const styles = StyleSheet.create({
     },
     urgentBg: { backgroundColor: '#FEF2F2' },
     normalBg: { backgroundColor: '#F0FDF4' },
+    completedBadge: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#2FA561',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     divider: {
         borderBottomWidth: 1,
         borderBottomColor: '#F9FAFB',

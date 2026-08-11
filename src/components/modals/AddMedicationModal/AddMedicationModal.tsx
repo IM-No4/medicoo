@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -25,7 +25,7 @@ import ScheduleStep from './steps/ScheduleStep';
 import ShapeStep from './steps/ShapeStep';
 import StrengthStep from './steps/StrengthStep';
 
-import { createMedicineSchedule } from '../../../services/api/medicine.api';
+import { createMedicineSchedule, updateMedicineSchedule } from '../../../services/api/medicine.api';
 import { styles } from './styles';
 
 const STEPS = [
@@ -39,12 +39,89 @@ const STEPS = [
   ReviewStep,
 ];
 
+// Strength/unit are entered as separate fields in StrengthStep but stored
+// server-side as one combined string (e.g. "500 mg") - split that back
+// apart so editing an existing schedule pre-fills both. Falls back to
+// leaving strength blank (dosage alone still carries the original value
+// into the submit payload, see handleNext) for dosages that don't match
+// this shape, e.g. "1 tablet".
+const UNIT_SUFFIXES = ['mcg', 'mg', 'ml', 'g', '%'];
+function parseDosage(dosage?: string): { strength: string; unit: string } {
+  if (!dosage) return { strength: '', unit: 'mg' };
+  const match = dosage.trim().match(/^(\d+(?:\.\d+)?)\s*([a-zA-Z%]+)$/);
+  if (match && UNIT_SUFFIXES.includes(match[2].toLowerCase())) {
+    return { strength: match[1], unit: match[2].toLowerCase() };
+  }
+  return { strength: '', unit: 'mg' };
+}
+
+function buildDefaultForm() {
+  return {
+    medicineName: '',
+    type: '',
+    strength: '',
+    unit: 'mg',
+    dosage: '',
+    shape: '',
+    color: '',
+    leftColor: '',
+    rightColor: '',
+    times: [] as string[],
+    startDate: new Date(),
+    endDate: null as Date | null,
+    frequency: 'Every Day',
+    displayName: '',
+    notes: '',
+    familyVisible: true,
+    scheduleType: 'Every Day',
+    selectedDays: [] as number[], // [0, 1, 2]
+    intervalValue: 1,
+    intervalType: 'Day', // 'Day' | 'Week'
+    cycleDaysOn: 21,
+    cycleDaysOff: 7,
+    isActive: true,
+  };
+}
+
+function buildFormFromSchedule(schedule: any) {
+  const { strength, unit } = parseDosage(schedule.dosage);
+  return {
+    ...buildDefaultForm(),
+    medicineName: schedule.medicineName || '',
+    type: schedule.medicineType || '',
+    strength,
+    unit,
+    dosage: schedule.dosage || '',
+    shape: schedule.shape || '',
+    color: schedule.color || '',
+    leftColor: schedule.leftColor || '',
+    rightColor: schedule.rightColor || '',
+    times: schedule.times || [],
+    startDate: schedule.startDate ? new Date(schedule.startDate) : new Date(),
+    endDate: schedule.endDate ? new Date(schedule.endDate) : null,
+    frequency: schedule.frequency || 'Every Day',
+    notes: schedule.notes || '',
+    familyVisible: schedule.familyVisible ?? true,
+    scheduleType: schedule.scheduleType || 'Every Day',
+    selectedDays: schedule.selectedDays || [],
+    intervalValue: schedule.intervalValue || 1,
+    intervalType: schedule.intervalType || 'Day',
+    cycleDaysOn: schedule.cycleDaysOn || 21,
+    cycleDaysOff: schedule.cycleDaysOff || 7,
+    isActive: schedule.isActive ?? true,
+  };
+}
+
 interface AddMedicationModalProps {
   visible: boolean;
   onClose: () => void;
+  // When set, the modal edits this existing schedule instead of creating a
+  // new one - pre-fills every step from its data and PUTs on submit.
+  editingSchedule?: any | null;
 }
 
-export default function AddMedicationModal({ visible, onClose }: AddMedicationModalProps) {
+export default function AddMedicationModal({ visible, onClose, editingSchedule }: AddMedicationModalProps) {
+  const isEditing = !!editingSchedule;
   const [stepIndex, setStepIndex] = useState(0);
   const insets = useSafeAreaInsets();
   const translateY = useState(new Animated.Value(0))[0];
@@ -64,31 +141,18 @@ export default function AddMedicationModal({ visible, onClose }: AddMedicationMo
     setStatus({ visible: true, type, title, message });
   };
 
-  const [form, setForm] = useState({
-    medicineName: '',
-    type: '',
-    strength: '',
-    unit: 'mg',
-    dosage: '',
-    shape: '',
-    color: '',
-    leftColor: '',
-    rightColor: '',
-    times: [],
-    startDate: new Date(),
-    endDate: null,
-    frequency: 'Every Day',
-    displayName: '',
-    notes: '',
-    familyVisible: true,
-    scheduleType: 'Every Day',
-    selectedDays: [], // [0, 1, 2]
-    intervalValue: 1,
-    intervalType: 'Day', // 'Day' | 'Week'
-    cycleDaysOn: 21,
-    cycleDaysOff: 7,
-    isActive: true,
-  });
+  const [form, setForm] = useState(buildDefaultForm());
+
+  // The modal stays mounted across opens (parent toggles `visible`, not
+  // conditional rendering), so state has to be reset explicitly each time
+  // it opens rather than relying on useState's initializer - otherwise a
+  // second edit (or an edit right after an add) would reuse stale form data.
+  useEffect(() => {
+    if (visible) {
+      setStepIndex(0);
+      setForm(editingSchedule ? buildFormFromSchedule(editingSchedule) : buildDefaultForm());
+    }
+  }, [visible, editingSchedule]);
 
   // Cast to any to avoid prop type mismatch issues across varied step components
   const StepComponent = STEPS[stepIndex] as any;
@@ -190,12 +254,18 @@ export default function AddMedicationModal({ visible, onClose }: AddMedicationMo
           frequency,
         };
 
-        await createMedicineSchedule(payload);
-        setLoading(false);
-        showStatus('success', 'Medication Saved', 'Your prescription schedule has been updated.');
+        if (isEditing) {
+          await updateMedicineSchedule(editingSchedule._id, payload);
+          setLoading(false);
+          showStatus('success', 'Medication Updated', 'Your medication schedule has been updated.');
+        } else {
+          await createMedicineSchedule(payload);
+          setLoading(false);
+          showStatus('success', 'Medication Saved', 'Your prescription schedule has been updated.');
+        }
       } catch (error: any) {
         setLoading(false);
-        showStatus('error', 'Update Failed', error.response?.data?.message || 'Failed to create medication schedule. Please try again.');
+        showStatus('error', 'Update Failed', error.response?.data?.message || `Failed to ${isEditing ? 'update' : 'create'} medication schedule. Please try again.`);
       }
     } else {
       setStepIndex((i) => Math.min(i + 1, STEPS.length - 1));
@@ -250,7 +320,7 @@ export default function AddMedicationModal({ visible, onClose }: AddMedicationMo
                   <View style={styles.headerCenter}>
                     <Text style={styles.headerTitle}>
                       {stepIndex === 0
-                        ? 'Add Medication'
+                        ? (isEditing ? 'Edit Medication' : 'Add Medication')
                         : form.medicineName || 'Medication'}
                     </Text>
                     {(form.type && stepIndex > 1) && (

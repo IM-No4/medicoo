@@ -201,13 +201,17 @@ const calendarSlice = createSlice({
 
       /* ---------- Mark Intake (Optimistic) ---------- */
       .addCase(markMedicineIntake.pending, (state, action) => {
-        const { scheduleId, status } = action.meta.arg;
+        const { scheduleId, time, status } = action.meta.arg;
 
-        // Find medicine with flexible ID matching
-        // scheduleId passed is typically just the UUID prefix (before underscore)
-        const medicine = state.data.medicines.find((m: any) =>
-          m.id === scheduleId || m.id.startsWith(scheduleId + '_')
-        );
+        // Medicine ids are built server-side as `${scheduleId}_${time}` - a
+        // schedule with more than one dose per day (e.g. 8 AM and 8 PM)
+        // produces multiple entries sharing the same scheduleId prefix, so
+        // matching on prefix alone grabbed whichever entry came first in
+        // the array instead of the exact dose that was tapped. That entry
+        // would flip optimistically while the tapped card sat unchanged
+        // until the next real fetch corrected both.
+        const exactId = `${scheduleId}_${time}`;
+        const medicine = state.data.medicines.find((m: any) => m.id === exactId);
 
         if (medicine) {
           const oldStatus = medicine.status;

@@ -10,8 +10,15 @@ export function MedicationsSummary() {
     const navigation = useNavigation<any>();
     const { data: calendarData } = useSelector((state: RootState) => state.calendar);
 
-    // Dynamic calculations from calendar data
-    const activeMedsCount = calendarData?.medicines?.length ?? 0;
+    // Dynamic calculations from calendar data. calendarData.medicines has
+    // one entry per scheduled dose time (e.g. a 3x/day medicine produces 3
+    // entries), not one per distinct medication - counting entries directly
+    // would show "3 Active Medications" for what's really 1 medication with
+    // 3 doses. ids are `${scheduleId}_${time}`, so the part before the
+    // first underscore identifies the distinct medication.
+    const activeMedsCount = new Set(
+        (calendarData?.medicines ?? []).map((m: any) => m.id?.split('_')[0])
+    ).size;
     const takenDoses = calendarData?.progress?.taken ?? 0;
     const totalDoses = calendarData?.progress?.total ?? 0;
     const adherencePercent = totalDoses > 0 ? Math.round((takenDoses / totalDoses) * 100) : 100;

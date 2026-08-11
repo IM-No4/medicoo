@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
-    KeyboardAvoidingView,
+    Keyboard,
     Platform,
     ScrollView,
     StyleSheet,
@@ -44,6 +44,25 @@ export default function OrderSupportScreen() {
   const [activeOptions, setActiveOptions] = useState<Option[]>([]);
   const [chatStatus, setChatStatus] = useState<"open" | "closed">("open");
   const [loading, setLoading] = useState(true);
+
+  // KeyboardAvoidingView's built-in behavior wasn't reliably resizing/
+  // repositioning this screen (Android's adjustResize isn't actually
+  // kicking in here, likely due to edge-to-edge display), so this tracks
+  // the keyboard's real, OS-reported height directly instead of guessing.
+  // The footer gets pushed up by exactly that amount via marginBottom - a
+  // plain flex sibling shrinks to make room, no animation heuristics from
+  // KeyboardAvoidingView involved at all.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showSub = Keyboard.addListener(showEvent, (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const loadChatData = async () => {
     try {
@@ -241,14 +260,7 @@ export default function OrderSupportScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "padding"}
-      keyboardVerticalOffset={Platform.select({
-        ios: insets.top + 60,
-        android: 0,
-      })}
-    >
+    <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity
@@ -323,7 +335,15 @@ export default function OrderSupportScreen() {
         <View
           style={[
             styles.footer,
-            { paddingBottom: Math.max(insets.bottom - 32, 12) },
+            {
+              // On Android's edge-to-edge display, the keyboard's reported
+              // height doesn't include the transparent gesture-nav bar
+              // overlaying the very bottom of the screen, so the push falls
+              // short by exactly that inset - add it back in when the
+              // keyboard is up.
+              paddingBottom: keyboardHeight > 0 ? 12 : insets.bottom + 12,
+              marginBottom: keyboardHeight > 0 ? keyboardHeight + insets.bottom : 0,
+            },
           ]}
         >
           <TextInput
@@ -343,7 +363,7 @@ export default function OrderSupportScreen() {
           </TouchableOpacity>
         </View>
       )}
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

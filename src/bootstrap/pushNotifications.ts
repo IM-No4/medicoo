@@ -75,10 +75,9 @@ const goToDoctorChat = (requestId: string, senderName?: string) => {
 // approved, or the rejection status, for this specific request.
 const goToConsultationDetail = (requestId: string) => {
   if (!navigationRef.isReady()) return;
-  navigationRef.navigate('Tabs', {
-    screen: 'Profile',
-    params: { screen: 'ConsultationDetail', params: { requestId } },
-  });
+  // Top-level MainStack screen, not nested in the Profile tab's stack - see
+  // ActionRegistry's OPEN_CONSULTATION_DETAIL for why.
+  navigationRef.navigate('ConsultationDetail', { requestId });
 };
 
 // Doctor's side of the same reminder - there's no single-request detail
@@ -102,6 +101,15 @@ const goToIncomingCall = (requestId: string, consultationType?: string, callerNa
     type: consultationType === 'voice' ? 'voice' : 'video',
     displayName: callerName,
   });
+};
+
+// Handles all three blood-request notification types (nearby fan-out to a
+// donor, filled notice to a donor who lost the race, accepted notice to the
+// requester) - the same top-level screen renders the right view for
+// whichever role the tapping user actually has, see BloodRequestDetailScreen.
+const goToBloodRequestDetail = (requestId: string) => {
+  if (!navigationRef.isReady()) return;
+  navigationRef.navigate('BloodRequestDetail', { requestId });
 };
 
 function routeNotificationTap(data?: { [key: string]: string | object } | undefined) {
@@ -160,6 +168,15 @@ function routeNotificationTap(data?: { [key: string]: string | object } | undefi
     const consultationType = typeof data?.consultationType === 'string' ? data.consultationType : undefined;
     const callerName = typeof data?.callerName === 'string' ? data.callerName : undefined;
     goToIncomingCall(data.requestId, consultationType, callerName);
+    return;
+  }
+
+  if (
+    (type === 'blood_request_nearby' || type === 'blood_request_filled' || type === 'blood_request_accepted') &&
+    typeof data?.requestId === 'string' &&
+    data.requestId
+  ) {
+    goToBloodRequestDetail(data.requestId);
     return;
   }
 

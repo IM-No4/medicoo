@@ -2,7 +2,7 @@ import { apiClient } from './client';
 
 export type CustomerNotification = {
   _id: string;
-  type: 'appointment' | 'consultation' | 'order' | 'medicine' | 'reminder' | 'system' | 'promotion' | 'health_reminder' | 'support_request' | 'review';
+  type: 'appointment' | 'consultation' | 'order' | 'medicine' | 'reminder' | 'system' | 'promotion' | 'health_reminder' | 'support_request' | 'review' | 'blood_request';
   title: string;
   message: string;
   isRead: boolean;

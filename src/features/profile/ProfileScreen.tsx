@@ -8,7 +8,6 @@ import {
   ChevronRight,
   Clock,
   Copy,
-  Droplet,
   FileText,
   FlaskConical,
   HelpCircle,
@@ -381,11 +380,6 @@ export default function ProfileScreen() {
             icon={FlaskConical}
             label="Lab Tests"
             onPress={() => executeAction('OPEN_MY_LAB_TESTS')}
-          />
-          <MenuItem
-            icon={Droplet}
-            label="Blood Donation"
-            onPress={() => executeAction('OPEN_BLOOD_DONATION')}
             last
           />
         </GroupLayout>

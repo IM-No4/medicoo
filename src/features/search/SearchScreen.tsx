@@ -67,6 +67,17 @@ export default function SearchScreen() {
     setRecentSearches([]);
   };
 
+  const handleCategorySelect = (title: string, tags: string[]) => {
+    Keyboard.dismiss();
+    dispatch(setQuery(title));
+    hasSearchedRef.current = true;
+    lastDispatchedQueryRef.current = title;
+    // Category taps aren't a user-typed search term - same reasoning as
+    // the tags-driven params.query handling below, don't pollute recent
+    // searches with it.
+    dispatch(executeGlobalSearch({ query: title, tags, recordRecent: false }));
+  };
+
   useEffect(() => {
     // If we have initial query params, execute search immediately
     if (params.query) {
@@ -208,7 +219,7 @@ export default function SearchScreen() {
             onSelect={handleManualSearch}
             onClear={handleClearRecent}
           />
-          <SearchCategories />
+          <SearchCategories onSelectCategory={handleCategorySelect} />
         </ScrollView>
       ) : !hasSearchedRef.current && query.trim().length > 0 ? (
         <ScrollView style={styles.flex} keyboardShouldPersistTaps="handled">

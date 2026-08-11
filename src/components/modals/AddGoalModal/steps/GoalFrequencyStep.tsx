@@ -105,12 +105,12 @@ export default function GoalFrequencyStep({ data, onChange }: Props) {
                                         styles.colorSwatch,
                                         { backgroundColor: c.hex },
                                         isSelected && {
-                                            transform: [{ scale: 1.15 }],
+                                            transform: [{ scale: 1.1 }],
                                             shadowColor: c.hex,
-                                            shadowOffset: { width: 0, height: 4 },
-                                            shadowOpacity: 0.5,
+                                            shadowOffset: { width: 0, height: 2 },
+                                            shadowOpacity: 0.3,
                                             shadowRadius: 6,
-                                            elevation: 6,
+                                            elevation: 4,
                                         },
                                     ]}>
                                         {isSelected && <View style={styles.colorCheck} />}
@@ -171,8 +171,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
-        borderWidth: 1.5,
-        borderColor: '#E2E8F0',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
         paddingHorizontal: 16,
         paddingVertical: 14,
     },

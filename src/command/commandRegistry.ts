@@ -19,10 +19,4 @@ export const STATIC_COMMANDS: CommandItem[] = [
     actionKey: 'OPEN_CALENDAR',
     keywords: ['appointments'],
   },
-  {
-    id: 'upload',
-    title: 'Upload Prescription',
-    actionKey: 'UPLOAD_RECORD',
-    keywords: ['rx', 'scan'],
-  },
 ];

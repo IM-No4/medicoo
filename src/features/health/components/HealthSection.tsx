@@ -20,7 +20,7 @@ export function HealthSection({ title, icon, children }: SectionProps) {
 }
 
 const styles = StyleSheet.create({
-    section: { marginBottom: 32, paddingHorizontal: 20 },
+    section: { marginVertical: 16, paddingHorizontal: 20 },
     sectionHeader: {
         flexDirection: 'row',
         alignItems: 'center',

@@ -13,7 +13,7 @@ export interface ActiveOrder {
     latitude?: number;
     longitude?: number;
   } | null;
-  status: 'pending' | 'accepted' | 'preparing' | 'readyForPickup' | 'pickedUp' | 'dispatched' | 'delivered';
+  status: 'pending' | 'accepted' | 'preparing' | 'readyForPickup' | 'pickedUp' | 'dispatched' | 'delivered' | 'rejected' | 'cancelled';
   timestamp: number;
   items?: any[];
   deliveryLocation?: {

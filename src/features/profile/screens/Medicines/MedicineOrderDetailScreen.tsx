@@ -108,20 +108,20 @@ export default function MedicineOrderDetailScreen() {
       "Cancel Order?",
       "Are you sure you want to cancel this order? This action can only be performed before shipping.",
       async () => {
+        hideStatus();
         try {
-          hideStatus();
           await cancelOrder(orderId);
+          await fetchDetail();
           showStatus(
             "success",
             "Order Cancelled",
             "Your order has been cancelled successfully.",
           );
-        } catch (e) {
-          hideStatus();
+        } catch (e: any) {
           showStatus(
-            "success",
-            "Order Cancelled",
-            "Your order has been cancelled successfully.",
+            "error",
+            "Could Not Cancel",
+            e?.response?.data?.message || "This order can no longer be cancelled. Please check its current status.",
           );
         }
       },

@@ -23,6 +23,7 @@ interface Props {
 }
 
 import { bluetoothService } from '@/src/services/health/BluetoothService';
+import StatusModal, { StatusType } from '@/src/components/modals/StatusModal';
 
 export default function BluetoothDeviceModal({ visible, onClose }: Props) {
     const insets = useSafeAreaInsets();
@@ -30,6 +31,11 @@ export default function BluetoothDeviceModal({ visible, onClose }: Props) {
     const { isScanning, availableDevices } = useSelector((state: RootState) => state.device);
     const [connectingId, setConnectingId] = useState<string | null>(null);
     const [bluetoothOff, setBluetoothOff] = useState(false);
+    const [connectError, setConnectError] = useState<{ visible: boolean; title: string; message: string }>({
+        visible: false,
+        title: '',
+        message: '',
+    });
 
     // Mock scanning logic replaced with actual service call
     // Monitor Bluetooth state changes
@@ -107,9 +113,27 @@ export default function BluetoothDeviceModal({ visible, onClose }: Props) {
         setConnectingId(device.id);
 
         try {
-            const connected = await bluetoothService.connectToDevice(device.id);
+            await bluetoothService.connectToDevice(device.id);
             const battery = await bluetoothService.getBatteryLevel(device.id);
             const data = await bluetoothService.syncDeviceData(device.id);
+
+            // A raw BLE connection can succeed at the transport level even
+            // for a device we can't actually read anything useful from -
+            // e.g. one that requires vendor-specific authentication we
+            // don't implement (like Mi Band). Every read then just
+            // gracefully resolves to undefined instead of throwing, so
+            // without this check the device would show up "Connected"
+            // with a card full of blank stats. Treat that the same as a
+            // failed connection instead.
+            const hasUsableData =
+                battery !== undefined ||
+                data.heartRate !== undefined ||
+                data.steps !== undefined ||
+                data.calories !== undefined;
+            if (!hasUsableData) {
+                await bluetoothService.disconnectDevice(device.id);
+                throw new Error('Connected, but no usable health data was available from this device.');
+            }
 
             dispatch(connectDevice({
                 id: device.id,
@@ -123,9 +147,19 @@ export default function BluetoothDeviceModal({ visible, onClose }: Props) {
 
             setConnectingId(null);
             onClose();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Connection failed', error);
             setConnectingId(null);
+            // A raw BLE error (e.g. "Device was disconnected") isn't
+            // meaningful to a non-technical user - most devices that fail
+            // here simply aren't supported for health tracking (they
+            // disconnect because they require a vendor-specific pairing
+            // protocol we don't implement), so say that plainly instead.
+            setConnectError({
+                visible: true,
+                title: 'Device Not Supported',
+                message: `${device.name} couldn't be connected for health tracking. It may require its own companion app to pair, or isn't a supported device yet.`,
+            });
         }
     };
 
@@ -218,6 +252,14 @@ export default function BluetoothDeviceModal({ visible, onClose }: Props) {
                     </View>
                 </View>
             </View>
+
+            <StatusModal
+                visible={connectError.visible}
+                status={'error' as StatusType}
+                title={connectError.title}
+                message={connectError.message}
+                onClose={() => setConnectError((prev) => ({ ...prev, visible: false }))}
+            />
         </Modal>
     );
 }

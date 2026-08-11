@@ -202,7 +202,7 @@ export const getMyConsultationHistoryWithDoctor = async (doctorId: string, exclu
 export type PatientDocumentSummary = {
     _id: string;
     name: string;
-    documentType: 'lab_report' | 'scan' | 'prescription' | 'other';
+    documentType: 'lab_report' | 'scan' | 'xray' | 'diagnostic_report' | 'prescription' | 'other';
     sourceName?: string;
     fileType: 'image' | 'pdf' | 'document';
     mimeType: string;
@@ -304,4 +304,30 @@ export const addUpiAccount = async (upiId: string) => {
 export const requestDoctorPayout = async (amount: number, fundAccountId: string) => {
     const res = await apiClient.post('/api/doctor-payout/create-payout-order', { amount, fundAccountId });
     return res.data;
+};
+
+// --- Doctor's own reviews (DoctorReviewsScreen.tsx) ---
+
+export type DoctorReviewItem = {
+    id: string;
+    patientName: string;
+    rating: number;
+    date: string;
+    comment: string;
+};
+
+export type DoctorRatingBreakdown = {
+    stars: number;
+    count: number;
+    percentage: number;
+};
+
+export const getMyDoctorReviews = async () => {
+    const res = await apiClient.get('/api/user/my-doctor-reviews');
+    return res.data.data as {
+        reviews: DoctorReviewItem[];
+        ratingBreakdown: DoctorRatingBreakdown[];
+        averageRating: number;
+        totalReviews: number;
+    };
 };

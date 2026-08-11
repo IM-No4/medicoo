@@ -8,9 +8,11 @@ import {
   Calendar,
   CheckCircle,
   ChevronRight,
+  Clock,
   MapPin,
   RefreshCw,
   Scan,
+  ShieldAlert,
   ShieldCheck,
   Stethoscope,
   User,
@@ -254,8 +256,16 @@ export default function PrescriptionResultScreen() {
     patientName,
     prescriptionValidity,
     prescriptionAuthenticity,
+    prescriptionStatus,
     stores,
   } = result;
+
+  // Our own fraud engine can flag a prescription after OCR - 'revoked' means
+  // it's auto-blocked (do not let the patient proceed to order at all),
+  // 'pending_review' means a pharmacist has to clear it manually before
+  // dispensing. Anything else (verified/uploaded/etc.) is the normal path.
+  const isRevoked = prescriptionStatus === "revoked";
+  const isPendingReview = prescriptionStatus === "pending_review";
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
@@ -304,7 +314,13 @@ export default function PrescriptionResultScreen() {
             }}
           >
             <LinearGradient
-              colors={["#2FA561", "#0E7439"]}
+              colors={
+                isRevoked
+                  ? ["#EF4444", "#B91C1C"]
+                  : isPendingReview
+                    ? ["#F59E0B", "#B45309"]
+                    : ["#2FA561", "#0E7439"]
+              }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.heroCard}
@@ -312,9 +328,21 @@ export default function PrescriptionResultScreen() {
               <View style={styles.heroContent}>
                 <View>
                   <Text style={styles.heroSub}>Verification Status</Text>
-                  <Text style={styles.heroTitle}>Authentic & Verified</Text>
+                  <Text style={styles.heroTitle}>
+                    {isRevoked
+                      ? "Could Not Be Verified"
+                      : isPendingReview
+                        ? "Pending Manual Review"
+                        : "Authentic & Verified"}
+                  </Text>
                 </View>
-                <ShieldCheck color="#fff" size={48} strokeWidth={1.5} />
+                {isRevoked ? (
+                  <ShieldAlert color="#fff" size={48} strokeWidth={1.5} />
+                ) : isPendingReview ? (
+                  <Clock color="#fff" size={48} strokeWidth={1.5} />
+                ) : (
+                  <ShieldCheck color="#fff" size={48} strokeWidth={1.5} />
+                )}
               </View>
               <View style={styles.heroFooter}>
                 <View style={styles.trustBadge}>
@@ -330,6 +358,20 @@ export default function PrescriptionResultScreen() {
                 </Text>
               </View>
             </LinearGradient>
+            {(isRevoked || isPendingReview) && (
+              <View
+                style={[
+                  styles.reviewNotice,
+                  isRevoked ? styles.reviewNoticeError : styles.reviewNoticeWarn,
+                ]}
+              >
+                <Text style={styles.reviewNoticeText}>
+                  {isRevoked
+                    ? "We couldn't verify this prescription, so it can't be used to order medicines. Please upload a clearer photo of a valid, original prescription."
+                    : "This prescription needs to be manually reviewed before it can be dispensed. You can still browse matching pharmacies, but your order may be held until review is complete."}
+                </Text>
+              </View>
+            )}
           </Animated.View>
 
           <Animated.View
@@ -382,7 +424,10 @@ export default function PrescriptionResultScreen() {
               </View>
             </View>
 
-            {/* Pharmacies Section */}
+            {/* Pharmacies Section - hidden entirely for a revoked/blocked
+                prescription, since there's nothing valid to order against. */}
+            {!isRevoked && (
+              <>
             <View style={styles.sectionTitleRow}>
               <View style={styles.titleWithCount}>
                 <Text style={styles.sectionTitle}>Pharmacies found</Text>
@@ -458,6 +503,8 @@ export default function PrescriptionResultScreen() {
                 </Text>
               </View>
             )}
+              </>
+            )}
           </Animated.View>
         </ScrollView>
       </View>
@@ -473,7 +520,9 @@ export default function PrescriptionResultScreen() {
           <TouchableOpacity
             style={styles.mainActionBtn}
             onPress={() => {
-              if (stores && stores.length > 0) {
+              if (isRevoked) {
+                navigation.goBack();
+              } else if (stores && stores.length > 0) {
                 navigation.navigate("PharmacyDetail", {
                   pharmacyId: stores[0].storeId,
                 });
@@ -483,13 +532,17 @@ export default function PrescriptionResultScreen() {
             }}
           >
             <LinearGradient
-              colors={["#2FA561", "#0E7439"]}
+              colors={isRevoked ? ["#EF4444", "#B91C1C"] : ["#2FA561", "#0E7439"]}
               style={StyleSheet.absoluteFill}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             />
             <Text style={styles.mainActionText}>
-              {stores && stores.length > 0 ? "Order from Best Match" : "Done"}
+              {isRevoked
+                ? "Go Back"
+                : stores && stores.length > 0
+                  ? "Order from Best Match"
+                  : "Done"}
             </Text>
             <AppIcon name="arrow-right" size={20} color="#fff" />
           </TouchableOpacity>
@@ -657,6 +710,25 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.15)",
+  },
+  reviewNotice: {
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 12,
+    borderWidth: 1,
+  },
+  reviewNoticeError: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
+  },
+  reviewNoticeWarn: {
+    backgroundColor: "#FFFBEB",
+    borderColor: "#FDE68A",
+  },
+  reviewNoticeText: {
+    fontSize: 13,
+    color: "#374151",
+    lineHeight: 18,
   },
   trustBadge: {
     flexDirection: "row",

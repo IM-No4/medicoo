@@ -71,13 +71,13 @@ export const ActionRegistry: Record<ActionKey, any> = {
     stack: 'BloodDonationStack',
     screen: 'BloodDonationHistory',
   },
+  OPEN_BLOOD_REQUEST_SUBMIT: {
+    stack: 'BloodDonationStack',
+    screen: 'BloodRequestSubmit',
+  },
 
   OPEN_RECORDS: {
     tab: 'Records',
-  },
-  UPLOAD_RECORD: {
-    stack: 'RecordsStack',
-    screen: 'UploadRecord',
   },
 
   OPEN_PROFILE: {
@@ -111,8 +111,10 @@ export const ActionRegistry: Record<ActionKey, any> = {
     tab: 'Profile',
     screen: 'ConsultationModal',
   },
+  // Top-level MainStack screen (not tab-owned) so the back button returns
+  // to whichever screen/tab actually opened it (Calendar, Home, Doctor list)
+  // instead of always landing inside the Profile tab's own stack.
   OPEN_CONSULTATION_DETAIL: {
-    tab: 'Profile',
     screen: 'ConsultationDetail',
   },
   OPEN_DOCTOR_FEEDBACK: {

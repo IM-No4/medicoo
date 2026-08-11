@@ -2,7 +2,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { executeAction } from '../../../actions/ActionExecutor';
 import AppIcon from '../../../components/icons/AppIcon';
@@ -23,6 +23,16 @@ export default function BloodDonationDashboardScreen() {
     const handleCheckEligibility = () => executeAction('OPEN_BLOOD_ELIGIBILITY');
     const handleApply = () => executeAction('OPEN_BLOOD_APPLICATION');
     const handleHistory = () => executeAction('OPEN_BLOOD_HISTORY');
+    const handleRequestBlood = () => executeAction('OPEN_BLOOD_REQUEST_SUBMIT');
+    const handleNearbyRequests = () => {
+        // No request-list endpoint yet - donors are notified directly by
+        // push the moment a matching request comes in nearby, so this is
+        // an informational stop rather than a browsable list for now.
+        Alert.alert(
+            'Nearby Requests',
+            "You'll get a notification here the moment a matching blood request comes in near you."
+        );
+    };
 
     const renderNonDonorView = () => (
         <View style={styles.content}>
@@ -68,7 +78,16 @@ export default function BloodDonationDashboardScreen() {
                 <AppIcon name="arrow-right" size={20} color="#FFFFFF" />
             </TouchableOpacity>
 
-
+            <TouchableOpacity style={styles.requestBloodBanner} onPress={handleRequestBlood}>
+                <View style={styles.requestBloodIcon}>
+                    <AppIcon name="droplet" size={22} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.requestBloodTitle}>Need blood urgently?</Text>
+                    <Text style={styles.requestBloodDesc}>Notify nearby donors instantly</Text>
+                </View>
+                <AppIcon name="chevron-right" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
         </View>
     );
 
@@ -84,7 +103,7 @@ export default function BloodDonationDashboardScreen() {
                         <Text style={styles.actionLabel}>Donation History</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.actionCard}>
+                    <TouchableOpacity style={styles.actionCard} onPress={handleNearbyRequests}>
                         <View style={[styles.iconWrapper, { backgroundColor: '#FEF2F2' }]}>
                             <AppIcon name="map-pin" size={24} color="#EF4444" />
                         </View>
@@ -92,6 +111,17 @@ export default function BloodDonationDashboardScreen() {
                     </TouchableOpacity>
                 </View>
             </View>
+
+            <TouchableOpacity style={styles.requestBloodBanner} onPress={handleRequestBlood}>
+                <View style={styles.requestBloodIcon}>
+                    <AppIcon name="droplet" size={22} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.requestBloodTitle}>Need blood urgently?</Text>
+                    <Text style={styles.requestBloodDesc}>Notify nearby donors instantly</Text>
+                </View>
+                <AppIcon name="chevron-right" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
 
             <View style={styles.pointsBanner}>
                 <View style={styles.pointsBannerIcon}>
@@ -443,6 +473,38 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#FFFFFF',
         textTransform: 'uppercase',
+    },
+    requestBloodBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        backgroundColor: '#DC2626',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 24,
+        shadowColor: '#EF4444',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    requestBloodIcon: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    requestBloodTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#FFFFFF',
+    },
+    requestBloodDesc: {
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.85)',
+        marginTop: 2,
     },
     pointsBanner: {
         backgroundColor: '#FFFBEB',

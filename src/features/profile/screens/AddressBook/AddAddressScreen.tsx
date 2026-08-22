@@ -18,9 +18,11 @@ import {
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
 import { API_BASE_URL } from '../../../../config/env';
 import { addUserAddress, updateUserAddress } from '../../../../services/api/address.api';
+import { getProfileDetails } from '../../../../services/api/user.api';
 import { getToken } from '../../../../utils/tokenManagement';
 
 type FloatingLabelInputProps = {
@@ -94,6 +96,17 @@ export default function AddAddressScreen() {
     const navigation = useNavigation();
     const route = useRoute<any>();
     const insets = useSafeAreaInsets();
+    const authMobile = useSelector((state: any) => state.auth.mobile);
+
+    // Fetched once so "I am the receiver" can actually show/save the
+    // logged-in user's own name and number instead of leaving them blank.
+    const [myProfile, setMyProfile] = useState<{ name?: string; mobile?: string } | null>(null);
+    useEffect(() => {
+        getProfileDetails().then((p: any) => {
+            setMyProfile({ name: p?.name, mobile: p?.mobile || p?.phone });
+        }).catch(() => {});
+    }, []);
+    const myMobile = myProfile?.mobile || authMobile;
 
     const [loadingLocation, setLoadingLocation] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -291,8 +304,15 @@ export default function AddAddressScreen() {
                 flatHouseNumber: formData.houseNo,
                 nearBy: formData.landmark,
                 fullAddress: formData.fullAddress,
-                receiverName: formData.receiverName,
-                receiverPhone: formData.receiverPhone,
+                // "I am the receiver" means the logged-in user's own name/
+                // number, not blank fields - previously this saved nothing
+                // at all for that case.
+                receiverName: formData.isMyAddress ? (myProfile?.name || '') : formData.receiverName,
+                // Backend's CustomerAddress schema field is receiverNumber -
+                // sending receiverPhone here was a silent no-op (Mongoose
+                // strict mode drops unknown fields), so the number never
+                // actually persisted no matter what was typed.
+                receiverNumber: formData.isMyAddress ? (myMobile || '') : formData.receiverPhone,
                 isDefault: false,
                 location: { 
                     type: "Point", 
@@ -506,7 +526,13 @@ export default function AddAddressScreen() {
                     <Text style={styles.checkboxLabel}>I am the receiver</Text>
                 </TouchableOpacity>
 
-                {!formData.isMyAddress && (
+                {formData.isMyAddress ? (
+                    <View style={styles.myReceiverBox}>
+                        <Text style={styles.myReceiverText}>
+                            {myProfile?.name || 'Loading…'}{myMobile ? `, ${myMobile}` : ''}
+                        </Text>
+                    </View>
+                ) : (
                     <View style={{ marginTop: 16 }}>
                         <FloatingLabelInput
                             label="Receiver Name"
@@ -556,7 +582,7 @@ export default function AddAddressScreen() {
                 )}
             </View>
 
-            <View style={[styles.footer, { paddingBottom: insets.bottom - 24 }]}>
+            <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
                 <TouchableOpacity
                     style={styles.saveButton}
                     onPress={step === 1 ? handleNext : handleSave}
@@ -772,6 +798,19 @@ const styles = StyleSheet.create({
     checkboxLabel: {
         fontSize: 15,
         color: '#374151',
+    },
+    myReceiverBox: {
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
+        borderRadius: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+    },
+    myReceiverText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#334155',
     },
     inputWithIconContainer: {
         flexDirection: 'row',

@@ -1,5 +1,7 @@
 import { executeAction } from '@/src/actions/ActionExecutor';
 import AppIcon from '@/src/components/icons/AppIcon';
+import QuantityControl from '@/src/features/pharmacy/components/QuantityControl';
+import { RootState } from '@/src/redux/store';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
@@ -10,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSelector } from 'react-redux';
 
 type MedicineItem = {
   id: string;
@@ -61,6 +64,8 @@ export default function PharmacyListingCard({
   isLast,
   variant = 'list',
 }: Props) {
+  const carts = useSelector((state: RootState) => state.cart);
+
   const getUnavailableText = () => {
     if (pharmacy.todayOpenHours?.openTime && pharmacy.storeStatus === 'offline') {
       try {
@@ -85,44 +90,84 @@ export default function PharmacyListingCard({
     return 'Currently Unavailable';
   };
 
-  const renderMedicineCard = ({ item }: { item: MedicineItem }) => (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      style={styles.medicineCard}
-      onPress={() => onMedicinePress(item)}
-    >
-      <View style={styles.medicineImageContainer}>
-        {item.pharmacy.storeImageUrl ? (
-          <Image
-            source={{ uri: item.pharmacy.storeImageUrl }}
-            style={styles.medicineImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.medicineDefaultImage}>
-            <AppIcon name="pill" size={24} color="#CBD5E1" />
+  const renderMedicineCard = ({ item }: { item: MedicineItem }) => {
+    const originalPrice = item.price ?? 0;
+    const discountAmount = item.discountPrice ?? 0;
+    const hasDiscount = discountAmount > 0 && originalPrice > 0;
+    const finalPrice = hasDiscount ? originalPrice - discountAmount : originalPrice;
+
+    const sku = String(item.sku ?? item.id);
+    const cartItem = carts[item.pharmacy.pharmacyId]?.items?.[sku];
+    const isInCart = !!cartItem;
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={styles.medicineCard}
+        onPress={() => onMedicinePress(item)}
+      >
+        <View style={styles.medicineImageContainer}>
+          {item.images?.[0] ? (
+            <Image
+              source={{ uri: item.images[0] }}
+              style={styles.medicineImage}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={styles.medicineDefaultImage}>
+              <AppIcon name="pill" size={24} color="#9CA3AF" />
+            </View>
+          )}
+          {hasDiscount && (
+            <View style={styles.medicineDiscountBadge}>
+              <Text style={styles.medicineDiscountBadgeText}>
+                {Math.round((discountAmount / originalPrice) * 100)}% OFF
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.medicineInfo}>
+          <Text style={styles.medicineName} numberOfLines={1}>
+            {item.name}
+          </Text>
+
+          <View style={styles.medicineFooterRow}>
+            <View style={styles.medicinePriceRow}>
+              <Text style={styles.medicinePrice}>₹{finalPrice}</Text>
+            </View>
+
+            {isInCart ? (
+              <QuantityControl
+                storeId={item.pharmacy.pharmacyId}
+                sku={sku}
+                productId={item.id}
+                quantity={cartItem.quantity}
+                disabled={!item.pharmacy.isOpen}
+                size="xsmall"
+              />
+            ) : (
+              <TouchableOpacity
+                style={[styles.medicineAddIcon, !item.pharmacy.isOpen && styles.medicineAddIconDisabled]}
+                disabled={!item.pharmacy.isOpen}
+                onPress={() => {
+                  // Adds one unit and redirects to that store - see
+                  // ActionExecutor.ts's ADD_MEDICINE_FROM_SEARCH handler.
+                  executeAction('ADD_MEDICINE_FROM_SEARCH', {
+                    pharmacyId: item.pharmacy.pharmacyId,
+                    pharmacyName: item.pharmacy.pharmacyName,
+                    medicine: item,
+                  });
+                }}
+              >
+                <AppIcon name="plus" size={14} color={item.pharmacy.isOpen ? '#10B981' : '#9CA3AF'} />
+              </TouchableOpacity>
+            )}
           </View>
-        )}
-        <TouchableOpacity
-          style={styles.smallAddButton}
-          onPress={() => {
-            executeAction('ADD_MEDICINE_FROM_SEARCH', {
-              pharmacyId: item.pharmacy.pharmacyId,
-              pharmacyName: item.pharmacy.pharmacyName,
-              medicine: item,
-            });
-          }}
-        >
-          <AppIcon name="plus" size={14} color="#10B981" />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.medicineInfo}>
-        <Text style={styles.medicineName} numberOfLines={2}>
-          {item.name}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -187,6 +232,20 @@ export default function PharmacyListingCard({
           style={styles.pharmacyHeader}
           onPress={onPress}
         >
+          <View style={styles.pharmacyImageWrapper}>
+            {pharmacy.storeImageUrl ? (
+              <Image
+                source={{ uri: pharmacy.storeImageUrl }}
+                style={styles.pharmacyImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.pharmacyDefaultImage}>
+                <AppIcon name="store" size={32} color="#CBD5E1" />
+              </View>
+            )}
+          </View>
+
           <View style={styles.pharmacyInfo}>
             <View style={styles.titleRow}>
               <Text style={styles.pharmacyName} numberOfLines={1}>
@@ -200,55 +259,19 @@ export default function PharmacyListingCard({
                 <Text style={styles.ratingText}>
                   {pharmacy.rating > 0 ? pharmacy.rating.toFixed(1) : 'New'}
                 </Text>
-                <Text style={styles.countText}>(200+)</Text>
               </View>
-              <View style={styles.dot} />
-              <Text style={styles.timeText}>
-                {pharmacy.deliveryTime || '25-30 mins'}
-              </Text>
-              <View style={styles.dot} />
-              <Text style={styles.timeText}>
-                {pharmacy.distanceKm !== undefined ? `${pharmacy.distanceKm} km` : (pharmacy.distance || '2.5 km')}
-              </Text>
-            </View>
-
-            <View style={styles.offersContainer}>
-              <View style={styles.offerRow}>
-                <View style={styles.offerBadge}>
-                  <AppIcon name="tag" size={12} color="#EB6E25" />
-                </View>
-                <Text style={styles.offerText}>Items at ₹59</Text>
-              </View>
-              <View style={styles.offerRow}>
-                <View style={styles.offerBadge}>
-                  <AppIcon name="tag" size={12} color="#EB6E25" />
-                </View>
-                <Text style={styles.offerText}>Free Delivery</Text>
-              </View>
-            </View>
-
-            <View style={styles.benefitsRow}>
-              <View style={styles.benefitTag}>
-                <Text style={styles.benefitText}>one</Text>
-              </View>
-              <Text style={styles.benefitDetail}>BENEFITS</Text>
-            </View>
-          </View>
-
-          <View style={styles.pharmacyImageWrapper}>
-            {pharmacy.storeImageUrl ? (
-              <Image
-                source={{ uri: pharmacy.storeImageUrl }}
-                style={styles.pharmacyImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={styles.pharmacyDefaultImage}>
-                <AppIcon name="store" size={32} color="#CBD5E1" />
-              </View>
-            )}
-            <View style={styles.imageOverlayBadge}>
-              <Text style={styles.overlayBadgeText}>30% OFF</Text>
+              {!!pharmacy.deliveryTime && (
+                <>
+                  <View style={styles.dot} />
+                  <Text style={styles.timeText}>{pharmacy.deliveryTime}</Text>
+                </>
+              )}
+              {pharmacy.distanceKm !== undefined && (
+                <>
+                  <View style={styles.dot} />
+                  <Text style={styles.timeText}>{pharmacy.distanceKm} km</Text>
+                </>
+              )}
             </View>
           </View>
 
@@ -290,7 +313,9 @@ const styles = StyleSheet.create({
   },
   pharmacyHeader: {
     flexDirection: 'row',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
     gap: 12,
   },
   pharmacyInfo: {
@@ -303,7 +328,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   pharmacyName: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '800',
     color: '#1F2937',
     letterSpacing: -0.5,
@@ -311,13 +336,12 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
+    gap: 3,
   },
   ratingBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
   },
   starCircle: {
     backgroundColor: '#10B981',
@@ -328,68 +352,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ratingText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '800',
     color: '#1F2937',
-  },
-  countText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#6B7280',
-    marginLeft: 2,
   },
   dot: {
     width: 3,
     height: 3,
     borderRadius: 2,
     backgroundColor: '#9CA3AF',
-    marginHorizontal: 4,
+    marginHorizontal: 2,
   },
   timeText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#6B7280',
-  },
-  offersContainer: {
-    gap: 4,
-    marginBottom: 8,
-  },
-  offerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  offerBadge: {
-    padding: 2,
-  },
-  offerText: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-  benefitsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  benefitTag: {
-    backgroundColor: '#EB6E25',
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  benefitText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '900',
-    fontStyle: 'italic',
-  },
-  benefitDetail: {
-    fontSize: 10,
-    color: '#EB6E25',
-    fontWeight: '800',
-    letterSpacing: 1,
   },
   pharmacyImageWrapper: {
     width: 90,
@@ -399,7 +376,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     position: 'relative',
   },
-  imageOverlayBadge: {
+  medicineDiscountBadge: {
     position: 'absolute',
     top: 6,
     left: 6,
@@ -408,9 +385,9 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 4,
   },
-  overlayBadgeText: {
+  medicineDiscountBadgeText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '900',
   },
   pharmacyImage: {
@@ -438,57 +415,80 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   medicinesList: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 16,
     gap: 16,
   },
   medicineCard: {
-    width: 130,
-  },
-  medicineImageContainer: {
-    width: 130,
-    height: 100,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#F9FAFB',
-    marginBottom: 8,
-    position: 'relative',
+    width: 140,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#F3F4F6',
+  },
+  medicineImageContainer: {
+    width: '100%',
+    height: 85,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    marginBottom: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
   },
   medicineImage: {
     width: '100%',
     height: '100%',
+    borderRadius: 10,
   },
   medicineDefaultImage: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
   },
-  smallAddButton: {
-    position: 'absolute',
-    right: 6,
-    bottom: 6,
-    backgroundColor: '#FFFFFF',
+  medicineInfo: {
+    flex: 1,
+  },
+  medicineName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  medicineFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  medicinePriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+    flexShrink: 1,
+  },
+  medicinePrice: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  medicineAddIcon: {
+    backgroundColor: '#ffffff',
     width: 24,
     height: 24,
-    borderRadius: 6,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
   },
-  medicineInfo: {
-    paddingHorizontal: 2,
-  },
-  medicineName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-    lineHeight: 18,
+  medicineAddIconDisabled: {
+    opacity: 0.5,
   },
   // Hero Variant Styles
   heroCard: {

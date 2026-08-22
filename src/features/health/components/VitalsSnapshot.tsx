@@ -1,34 +1,38 @@
+import { useNavigation } from '@react-navigation/native';
+import { Activity, Plus, TrendingUp, Weight } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
-import { Activity, Heart, TrendingUp, Weight, Plus } from 'lucide-react-native';
+import RecordVitalsModal from '../../../components/modals/RecordVitalsModal';
 import { RootState } from '../../../redux/store';
 import { HealthSection } from './HealthSection';
-import RecordVitalsModal from '../../../components/modals/RecordVitalsModal';
-import HealthHistoryModal from '../../../components/modals/HealthHistoryModal';
 
 export function VitalsSnapshot() {
+  const navigation = useNavigation<any>();
   const { records } = useSelector((state: RootState) => state.vitals);
-  const { connectedDevice } = useSelector((state: RootState) => state.device);
-  
-  const [modalVisible, setModalVisible] = useState(false);
-  const [historyVisible, setHistoryVisible] = useState(false);
 
-  // Find latest recorded vitals
+  const [modalVisible, setModalVisible] = useState(false);
+
+  // Find latest recorded vitals. Heart Rate and Temperature are shown
+  // higher up on this screen already (the ring, and the summary row), so
+  // this snapshot only covers the two vitals that aren't shown anywhere
+  // else - showing them again here would just be the same number twice.
   const latestManual = records[0];
-  
-  const latestHeartRate = latestManual?.heartRate ?? connectedDevice?.data?.heartRate;
   const latestSystolic = latestManual?.systolic;
   const latestDiastolic = latestManual?.diastolic;
   const latestWeight = latestManual?.weight;
 
+  const openHistory = (metric: 'weight' | 'blood_pressure') => {
+    navigation.navigate('VitalsHistory', { metric });
+  };
+
   return (
-    <HealthSection 
-      title="Vitals Snapshot" 
+    <HealthSection
+      title="Vitals Snapshot"
       icon={
         <View style={styles.headerActionsContainer}>
-          <TouchableOpacity 
-            style={styles.headerActionBtn} 
+          <TouchableOpacity
+            style={styles.headerActionBtn}
             onPress={() => setModalVisible(true)}
             activeOpacity={0.7}
           >
@@ -36,9 +40,9 @@ export function VitalsSnapshot() {
             <Text style={styles.headerActionBtnText}>Log</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.headerActionBtn} 
-            onPress={() => setHistoryVisible(true)}
+          <TouchableOpacity
+            style={styles.headerActionBtn}
+            onPress={() => navigation.navigate('VitalsHistory')}
             activeOpacity={0.7}
           >
             <Text style={styles.headerActionBtnText}>History</Text>
@@ -48,16 +52,6 @@ export function VitalsSnapshot() {
     >
       <View style={styles.vitalsContainer}>
         <View style={styles.topRow}>
-          {/* Heart Rate */}
-          <VitalCard
-            label="Heart Rate"
-            value={latestHeartRate !== undefined ? `${latestHeartRate}` : '--'}
-            unit="BPM"
-            icon={<Heart size={16} color="#EF4444" />}
-            bgColor="#FEF2F2"
-            onPress={() => setModalVisible(true)}
-          />
-
           {/* Weight */}
           <VitalCard
             label="Weight"
@@ -65,41 +59,33 @@ export function VitalsSnapshot() {
             unit="KG"
             icon={<Weight size={16} color="#8B5CF6" />}
             bgColor="#F5F3FF"
-            onPress={() => setModalVisible(true)}
+            onPress={() => openHistory('weight')}
+          />
+
+          {/* Blood Pressure */}
+          <VitalCard
+            label="Blood Pressure"
+            value={latestSystolic !== undefined && latestDiastolic !== undefined ? `${latestSystolic}/${latestDiastolic}` : '--'}
+            unit="mmHg"
+            icon={<Activity size={16} color="#3B82F6" />}
+            bgColor="#EFF6FF"
+            onPress={() => openHistory('blood_pressure')}
           />
         </View>
-
-        {/* Blood Pressure */}
-        <VitalCard
-          label="Blood Pressure"
-          value={latestSystolic !== undefined && latestDiastolic !== undefined ? `${latestSystolic}/${latestDiastolic}` : '--'}
-          unit="mmHg"
-          icon={<Activity size={16} color="#3B82F6" />}
-          bgColor="#EFF6FF"
-          fullWidth
-          onPress={() => setModalVisible(true)}
-        />
       </View>
 
       <RecordVitalsModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
       />
-
-      <HealthHistoryModal
-        visible={historyVisible}
-        onClose={() => setHistoryVisible(false)}
-        records={records}
-        connectedDeviceHeartRate={connectedDevice?.data?.heartRate}
-      />
     </HealthSection>
   );
 }
 
-function VitalCard({ label, value, unit, icon, bgColor, fullWidth, onPress }: any) {
+function VitalCard({ label, value, unit, icon, bgColor, onPress }: any) {
   return (
-    <TouchableOpacity 
-      style={[styles.vitalCard, fullWidth && styles.fullWidthCard]} 
+    <TouchableOpacity
+      style={styles.vitalCard}
       onPress={onPress}
       activeOpacity={0.85}
     >
@@ -155,15 +141,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  fullWidthCard: {
-    width: '100%',
+    borderColor: '#e5e7eb76',
   },
   vitalTop: {
     flexDirection: 'row',

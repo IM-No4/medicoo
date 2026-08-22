@@ -23,8 +23,16 @@ export function MedicationsSummary() {
     const totalDoses = calendarData?.progress?.total ?? 0;
     const adherencePercent = totalDoses > 0 ? Math.round((takenDoses / totalDoses) * 100) : 100;
 
-    const handleNavigate = () => {
+    const handleViewSchedule = () => {
         navigation.navigate('Calendar');
+    };
+
+    // "Add Medication" should open the actual medication-management screen
+    // directly (it already has its own "Add First Medication" flow), not
+    // the Calendar screen, which is for viewing/checking off today's
+    // schedule rather than adding a new one.
+    const handleAddMedication = () => {
+        navigation.navigate('ManageMedications');
     };
 
     return (
@@ -33,7 +41,7 @@ export function MedicationsSummary() {
                 <TouchableOpacity
                     style={styles.emptyCard}
                     activeOpacity={0.8}
-                    onPress={handleNavigate}
+                    onPress={handleAddMedication}
                 >
                     <View style={styles.emptyIconBox}>
                         <Pill size={24} color="#2FA561" />
@@ -51,7 +59,7 @@ export function MedicationsSummary() {
                 <TouchableOpacity
                     style={styles.card}
                     activeOpacity={0.8}
-                    onPress={handleNavigate}
+                    onPress={handleViewSchedule}
                 >
                     <View style={styles.content}>
                         <View style={styles.medIconBox}>
@@ -91,9 +99,9 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#F3F4F6'
+        borderColor: '#e5e7eb76',
     },
-    content: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+    content: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 0 },
     medIconBox: {
         width: 48,
         height: 48,
@@ -145,12 +153,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#F3F4F6',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.02,
-        shadowRadius: 8,
-        elevation: 2,
+        borderColor: '#e5e7eb76',
     },
     emptyIconBox: {
         width: 52,

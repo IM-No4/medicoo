@@ -7,12 +7,14 @@ import {
   getStoreDetails,
   getStoreMedicines,
 } from "@/src/services/api/pharmacy.api";
+import { getMedicinePrescriptions } from "@/src/services/api/prescription.api";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   StyleSheet,
   Text,
   TextInput,
@@ -40,6 +42,8 @@ export default function PharmacyDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [isSearchSticky, setIsSearchSticky] = useState(false);
+  const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
+  const searchModalInputRef = useRef<TextInput>(null);
   const [headerHeight, setHeaderHeight] = useState(160);
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -145,6 +149,27 @@ export default function PharmacyDetailScreen() {
 
   /* ------------------ PRESCRIPTION UPLOAD ------------------ */
 
+  // "Recent Prescriptions" in the modal below used to be a single
+  // hardcoded fake entry with no working tap handler at all - fetched here
+  // (real doctor-issued records) whenever the modal opens, and kept
+  // alongside its raw source so selecting one can look up its medicines.
+  const [existingPrescriptions, setExistingPrescriptions] = useState<any[]>([]);
+  useEffect(() => {
+    if (!isUploadModalVisible) return;
+    getMedicinePrescriptions()
+      .then(setExistingPrescriptions)
+      .catch((e) => console.warn("Failed to load existing prescriptions", e));
+  }, [isUploadModalVisible]);
+
+  const handleSelectExistingPrescription = (prescriptionId: string) => {
+    const prescription = existingPrescriptions.find((p) => p._id === prescriptionId);
+    const firstMedicineName = prescription?.prescribedMedicines?.[0]?.medicineName;
+    setIsUploadModalVisible(false);
+    if (firstMedicineName) {
+      executeAction("OPEN_GLOBAL_SEARCH", { query: firstMedicineName });
+    }
+  };
+
   const handlePrescriptionUpload = async (image: any) => {
     // Robustly extract coordinates
     const finalLat = selectedAddress?.latitude ?? currentLocation?.latitude;
@@ -204,21 +229,22 @@ export default function PharmacyDetailScreen() {
           ]}
         >
           <View style={styles.searchWrapper}>
-            <View style={styles.searchContainer}>
+            <TouchableOpacity
+              style={styles.searchContainer}
+              activeOpacity={0.7}
+              onPress={() => setIsSearchModalVisible(true)}
+            >
               <AppIcon name="search" size={20} color="#8A8A8E" />
-              <TextInput
-                placeholder="Search medicines..."
-                value={query}
-                onChangeText={setQuery}
-                style={styles.searchInput}
-                placeholderTextColor="#8A8A8E"
-              />
-              {query.length > 0 && (
-                <TouchableOpacity onPress={() => setQuery("")}>
-                  <AppIcon name="x" size={18} color="#8A8A8E" />
-                </TouchableOpacity>
-              )}
-            </View>
+              <Text
+                style={[
+                  styles.searchInput,
+                  !query && styles.searchPlaceholder,
+                ]}
+                numberOfLines={1}
+              >
+                {query || "Search medicines..."}
+              </Text>
+            </TouchableOpacity>
           </View>
           <TouchableOpacity
             style={styles.scanIconButton}
@@ -279,21 +305,22 @@ export default function PharmacyDetailScreen() {
               {/* SEARCH BAR */}
               <View style={styles.searchRowWrapper}>
                 <View style={styles.searchWrapperInline}>
-                  <View style={styles.searchContainer}>
+                  <TouchableOpacity
+                    style={styles.searchContainer}
+                    activeOpacity={0.7}
+                    onPress={() => setIsSearchModalVisible(true)}
+                  >
                     <AppIcon name="search" size={20} color="#8A8A8E" />
-                    <TextInput
-                      placeholder="Search medicines..."
-                      value={query}
-                      onChangeText={setQuery}
-                      style={styles.searchInput}
-                      placeholderTextColor="#8A8A8E"
-                    />
-                    {query.length > 0 && (
-                      <TouchableOpacity onPress={() => setQuery("")}>
-                        <AppIcon name="x" size={18} color="#8A8A8E" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                    <Text
+                      style={[
+                        styles.searchInput,
+                        !query && styles.searchPlaceholder,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {query || "Search medicines..."}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
                 <TouchableOpacity
                   style={styles.scanIconButton}
@@ -309,6 +336,7 @@ export default function PharmacyDetailScreen() {
             {/* CART ITEMS HORIZONTAL SCROLL */}
             <CartItemsHorizontalScroll
               storeId={pharmacyId}
+              isStoreOpen={pharmacy?.status === "online"}
               onItemPress={(item) => {
                 const medicine = medicines.find(
                   (m) =>
@@ -343,6 +371,97 @@ export default function PharmacyDetailScreen() {
         showsVerticalScrollIndicator={false}
       />
 
+      {/* ------------------ FULL-SCREEN SEARCH MODAL ------------------ */}
+      <Modal
+        visible={isSearchModalVisible}
+        animationType="slide"
+        onRequestClose={() => setIsSearchModalVisible(false)}
+        onShow={() => {
+          // Focusing (and so raising the keyboard) only once the slide-up
+          // has actually finished, instead of via autoFocus firing the
+          // instant this mounts, is what stops the modal's own entrance
+          // animation and the keyboard's animation from racing each other.
+          setTimeout(() => searchModalInputRef.current?.focus(), 50);
+        }}
+      >
+        <View style={[styles.searchModalContainer, { paddingTop: insets.top }]}>
+          <View style={styles.searchModalHeader}>
+            <TouchableOpacity
+              style={styles.searchModalBackBtn}
+              onPress={() => setIsSearchModalVisible(false)}
+            >
+              <AppIcon name="arrow-left" size={22} color="#1C1C1E" />
+            </TouchableOpacity>
+            <View style={[styles.searchContainer, { flex: 1 }]}>
+              <AppIcon name="search" size={20} color="#8A8A8E" />
+              <TextInput
+                ref={searchModalInputRef}
+                placeholder="Search medicines..."
+                value={query}
+                onChangeText={setQuery}
+                style={styles.searchInput}
+                placeholderTextColor="#8A8A8E"
+              />
+              {query.length > 0 && (
+                <TouchableOpacity onPress={() => setQuery("")}>
+                  <AppIcon name="x" size={18} color="#8A8A8E" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          <FlatList
+            data={filteredMedicines}
+            keyExtractor={(item, index) => {
+              const key =
+                item.inventoryId ||
+                item.medicineId ||
+                item.sku ||
+                item._id ||
+                item.id;
+              return key ? `${String(key)}-${index}` : `search-med-${index}`;
+            }}
+            keyboardShouldPersistTaps="handled"
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconCircle}>
+                  <AppIcon
+                    name={query.trim() ? "search" : "pill"}
+                    size={40}
+                    color="#9CA3AF"
+                  />
+                </View>
+                <Text style={styles.emptyTitle}>
+                  {query.trim() ? "No Medicines Found" : "Search this pharmacy"}
+                </Text>
+                <Text style={styles.emptySubtitle}>
+                  {query.trim()
+                    ? `We couldn't find any medicines matching "${query}". Try searching for something else.`
+                    : "Start typing to search medicines available at this pharmacy."}
+                </Text>
+              </View>
+            }
+            renderItem={({ item, index }) => (
+              <MedicineRow
+                medicine={item}
+                isStoreOpen={pharmacy?.status === "online"}
+                storeId={pharmacyId}
+                storeName={pharmacy?.storeName || ""}
+                isFirst={index === 0}
+                isLast={index === filteredMedicines.length - 1}
+                onPress={() => {
+                  setIsSearchModalVisible(false);
+                  setSelectedMedicine(item);
+                  setIsMedicineDetailVisible(true);
+                }}
+              />
+            )}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+      </Modal>
+
       {/* ------------------ STICKY CART BAR ------------------ */}
       <StickyCartBar
         onPress={(storeId) =>
@@ -358,15 +477,13 @@ export default function PharmacyDetailScreen() {
         isLoading={isUploading}
         onClose={() => !isUploading && setIsUploadModalVisible(false)}
         onImageSelected={handlePrescriptionUpload}
-        existingPrescriptions={[
-          {
-            id: "RX001",
-            doctorName: "Dr. Rajesh Kumar",
-            prescriptionDate: "2025-01-15",
-            items: 3,
-            diagnosis: "Common Cold & Fever",
-          },
-        ]}
+        onPrescriptionSelected={handleSelectExistingPrescription}
+        existingPrescriptions={existingPrescriptions.map((p) => ({
+          id: p._id,
+          doctorName: p.doctorName || "Doctor",
+          prescriptionDate: p.createdAt,
+          items: p.prescribedMedicines?.length || 0,
+        }))}
       />
 
       {/* ------------------ MEDICINE DETAIL BOTTOM SHEET ------------------ */}
@@ -376,6 +493,8 @@ export default function PharmacyDetailScreen() {
         storeId={pharmacyId}
         storeName={pharmacy?.storeName || ""}
         isStoreOpen={pharmacy?.status === "online"}
+        allMedicines={medicines}
+        onSelectMedicine={(m) => setSelectedMedicine(m)}
         onClose={() => {
           setIsMedicineDetailVisible(false);
           setSelectedMedicine(null);
@@ -444,6 +563,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#1c1c1e",
   },
+  searchPlaceholder: {
+    color: "#8A8A8E",
+  },
   scanIconButton: {
     width: 48,
     height: 48,
@@ -511,5 +633,21 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: "#FFFFFF",
     zIndex: 999,
+  },
+  searchModalContainer: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  searchModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  searchModalBackBtn: {
+    padding: 4,
   },
 });

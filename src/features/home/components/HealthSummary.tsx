@@ -1,10 +1,9 @@
 import { Activity, Heart, TrendingUp, Weight, PlusCircle } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import { RootState } from '../../../redux/store';
-import HealthHistoryModal from '../../../components/modals/HealthHistoryModal';
 
 interface Props {
   title?: string;
@@ -12,7 +11,6 @@ interface Props {
 
 function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
   const navigation = useNavigation<any>();
-  const [historyVisible, setHistoryVisible] = useState(false);
 
   const { records } = useSelector((state: RootState) => state.vitals);
   const { connectedDevice } = useSelector((state: RootState) => state.device);
@@ -29,12 +27,16 @@ function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
     navigation.navigate('Tabs', { screen: 'Health' });
   };
 
+  const openHistory = (metric: 'heart_rate' | 'blood_pressure' | 'weight') => {
+    navigation.navigate('VitalsHistory', { metric });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>{title.toUpperCase()}</Text>
         {hasVitals && (
-          <TouchableOpacity onPress={() => setHistoryVisible(true)}>
+          <TouchableOpacity onPress={() => navigation.navigate('VitalsHistory')}>
             <Text style={styles.seeAll}>History</Text>
           </TouchableOpacity>
         )}
@@ -68,7 +70,7 @@ function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
               bgColor: '#FEF2F2',
               icon: Heart
             }}
-            onPress={() => setHistoryVisible(true)}
+            onPress={() => openHistory('heart_rate')}
           />
 
           {/* BP */}
@@ -81,7 +83,7 @@ function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
               bgColor: '#EFF6FF',
               icon: Activity
             }}
-            onPress={() => setHistoryVisible(true)}
+            onPress={() => openHistory('blood_pressure')}
           />
 
           {/* Weight */}
@@ -94,17 +96,10 @@ function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
               bgColor: '#F5F3FF',
               icon: Weight
             }}
-            onPress={() => setHistoryVisible(true)}
+            onPress={() => openHistory('weight')}
           />
         </View>
       )}
-
-      <HealthHistoryModal
-        visible={historyVisible}
-        onClose={() => setHistoryVisible(false)}
-        records={records}
-        connectedDeviceHeartRate={connectedDevice?.data?.heartRate}
-      />
     </View>
   );
 }

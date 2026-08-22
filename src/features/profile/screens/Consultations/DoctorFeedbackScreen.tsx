@@ -3,6 +3,7 @@ import { ChevronLeft, Star, Stethoscope } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -15,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
 import { getMyDoctorReview, submitDoctorFeedback } from '../../../../services/api';
+import { API_BASE_URL } from '../../../../services/api/client';
 import { formatDoctorName } from '../../../../utils/formatters';
 
 export default function DoctorFeedbackScreen() {
@@ -82,8 +84,18 @@ export default function DoctorFeedbackScreen() {
                 isUpdate ? 'Review Updated' : 'Review Submitted',
                 'Thank you for your valuable feedback! It helps other patients find the best care.'
             );
-        } catch (error) {
-            showStatus('error', 'Could Not Submit', 'We could not save your review right now. Please try again.');
+        } catch (error: any) {
+            // Temporary: pins down whether this is still a missing-doctorId
+            // 400 (e.g. a stale backend process that hasn't picked up the
+            // controller fix yet) or a genuinely different failure.
+            console.warn('[DoctorFeedbackScreen] submit failed', {
+                doctorId: doctor?._id,
+                status: error?.response?.status,
+                data: error?.response?.data,
+                message: error?.message,
+            });
+            const serverMessage = error?.response?.data?.message;
+            showStatus('error', 'Could Not Submit', serverMessage || 'We could not save your review right now. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -104,9 +116,20 @@ export default function DoctorFeedbackScreen() {
 
             <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                 <View style={styles.doctorInfo}>
-                    <View style={[styles.avatar, styles.placeholderAvatar]}>
-                        <Stethoscope size={32} color="#2FA561" />
-                    </View>
+                    {doctor.image || doctor.uniformPhoto ? (
+                        <Image
+                            source={{
+                                uri: (doctor.image || doctor.uniformPhoto).startsWith('http')
+                                    ? (doctor.image || doctor.uniformPhoto)
+                                    : `${API_BASE_URL}/${doctor.image || doctor.uniformPhoto}`
+                            }}
+                            style={styles.avatar}
+                        />
+                    ) : (
+                        <View style={[styles.avatar, styles.placeholderAvatar]}>
+                            <Stethoscope size={32} color="#2FA561" />
+                        </View>
+                    )}
                     <Text style={styles.doctorName}>{formatDoctorName(doctor.name)}</Text>
                     <Text style={styles.specialtyText}>{doctor.specialty || doctor.specialization}</Text>
                 </View>

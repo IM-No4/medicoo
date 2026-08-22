@@ -36,6 +36,12 @@ type Props = {
   dynamicConfig?: DynamicHeaderFeedItem;
 };
 
+// Manually bounding the length (rather than leaning on numberOfLines'
+// pixel-width ellipsis alone) is what lets the chevron sit right beside
+// the label instead of miles away at the end of a flexed, full-width row.
+const truncateAddressLabel = (label: string): string =>
+  label.length > 25 ? `${label.slice(0, 25)}...` : label;
+
 const getDistance = (
   lat1: number,
   lon1: number,
@@ -111,6 +117,14 @@ export default function HomeHeader({
 
   const selectedAddress = useSelector(
     (state: RootState) => state.address.selectedAddress,
+  );
+  const carts = useSelector((state: RootState) => state.cart);
+  // Distinct items across every store's cart - same count CartScreen.tsx
+  // itself uses ("Medicine Order (N items)"), so the badge always agrees
+  // with what the Cart screen shows.
+  const cartItemCount = Object.values(carts).reduce(
+    (sum: number, c: any) => sum + Object.keys(c.items).length,
+    0,
   );
 
   React.useEffect(() => {
@@ -303,36 +317,75 @@ export default function HomeHeader({
           ]}
         />
 
+        {/* Top row: address dropdown (fades on scroll) and cart/bell icons
+            (always visible) side by side - these used to be laid out as an
+            absolutely-positioned icon row floating over the bottom-anchored
+            address block, which overlapped it (worst on Android's shorter
+            status bar inset), making the address row's own chevron-down
+            appear to sit right on top of the bell icon. */}
+        <View style={styles.topRow}>
+          <Animated.View style={{ opacity: contentOpacity, flex: 1 }}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setAddressSelectorVisible(true)}
+            >
+              <View style={styles.addressRow}>
+                <AppIcon
+                  name={getAddressIcon(selectedAddress?.label)}
+                  size={20}
+                  color="#ffffff"
+                />
+
+                <Text style={styles.addressText} numberOfLines={1}>
+                  {truncateAddressLabel(
+                    isFetchingLocation
+                      ? "Fetching location..."
+                      : selectedAddress?.label ||
+                          selectedAddress?.fullAddress ||
+                          "Delivering to current location",
+                  )}
+                </Text>
+
+                <AppIcon name="chevron-down" size={16} color="#ffffff" />
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+
+          <View style={styles.iconWrapper}>
+            <TouchableOpacity
+              style={styles.cartIconBtn}
+              activeOpacity={0.7}
+              onPress={() => executeAction("OPEN_CART")}
+              hitSlop={10}
+            >
+              <AppIcon name="shopping-cart" size={20} color="#ffffff" />
+              {cartItemCount > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>
+                    {cartItemCount > 9 ? "9+" : cartItemCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <NotificationBell
+              onPress={() => executeAction("OPEN_NOTIFICATIONS")}
+            />
+          </View>
+        </View>
+
         <Animated.View style={{ opacity: contentOpacity }}>
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => setAddressSelectorVisible(true)}
           >
-            <View style={styles.addressRow}>
-              <AppIcon
-                name={getAddressIcon(selectedAddress?.label)}
-                size={20}
-                color="#ffffff"
-              />
-
-              <Text style={styles.addressText} numberOfLines={1}>
-                {isFetchingLocation
-                  ? "Fetching location..."
-                  : selectedAddress?.label ||
-                    selectedAddress?.fullAddress ||
-                    "Delivering to current location"}
-              </Text>
-
-              <AppIcon name="chevron-down" size={16} color="#ffffff" />
-            </View>
-
             <Text style={styles.addressSub} numberOfLines={1}>
               {isFetchingLocation
                 ? "Please wait..."
                 : selectedAddress?.fullAddress &&
                     selectedAddress?.label !== selectedAddress?.fullAddress
-                  ? selectedAddress.fullAddress.length > 50
-                    ? selectedAddress.fullAddress.substring(0, 50) + "..."
+                  ? selectedAddress.fullAddress.length > 25
+                    ? selectedAddress.fullAddress.substring(0, 25) + "..."
                     : selectedAddress.fullAddress
                   : "Tap to change delivery address"}
             </Text>
@@ -361,12 +414,6 @@ export default function HomeHeader({
             </TouchableOpacity>
           </View>
         </Animated.View>
-
-        <View style={styles.iconWrapper}>
-          <NotificationBell
-            onPress={() => executeAction("OPEN_NOTIFICATIONS")}
-          />
-        </View>
       </Animated.View>
 
       <AddressSelectorBottomSheet
@@ -433,10 +480,40 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   iconWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginLeft: 12,
+  },
+  cartIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cartBadge: {
     position: "absolute",
-    right: 16,
-    top: 52,
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#FF3B30",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  cartBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "600",
   },
   addressRow: {
     flexDirection: "row",
@@ -446,10 +523,10 @@ const styles = StyleSheet.create({
   },
 
   addressText: {
+    flexShrink: 1,
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "700",
-    maxWidth: "80%",
   },
 
   addressSub: {

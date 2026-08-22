@@ -16,16 +16,13 @@ import MedicineCard from './components/MedicineCard';
 
 import AddActionModal from '../../components/modals/AddActionModal';
 import AddMedicationModal from '../../components/modals/AddMedicationModal/AddMedicationModal';
-import ManageRemindersSheet from '../../components/modals/ManageRemindersSheet';
 
 import { executeAction } from '../../actions/ActionExecutor';
 import { loadCalendarCache, loadCalendarData, markMedicineIntake } from '@/src/redux/slices/calendarSlice';
-import { selectActiveGoals } from '@/src/redux/slices/goalsSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import EmptyState from '../../components/layout/EmptyState';
 import ErrorState from '../../components/layout/ErrorState';
 import AddGoalModal from '../../components/modals/AddGoalModal/AddGoalModal';
-import { GoalsCard } from '../health/components/GoalsCard';
 import { AppDispatch, RootState } from '../../redux/store';
 import { useNavigation } from '@react-navigation/native';
 import { Settings } from 'lucide-react-native';
@@ -48,15 +45,10 @@ export default function CalendarScreen() {
         (state: RootState) => state.calendar
     );
 
-    // Read active goals to conditionally show goals card
-    const activeGoals = useSelector(selectActiveGoals);
-    const hasActiveGoals = activeGoals.length > 0;
-
     const [isCalendarVisible, setCalendarVisible] = useState(false);
     const [showAddAction, setShowAddAction] = useState(false);
     const [showAddMedication, setShowAddMedication] = useState(false);
     const [showAddGoal, setShowAddGoal] = useState(false);
-    const [showManageSheet, setShowManageSheet] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
     // Tracks only pull-to-refresh gestures, separate from the redux `loading`
     // flag - initial loads and date-switch loads show the skeleton instead,
@@ -143,7 +135,6 @@ export default function CalendarScreen() {
             <CalendarHeader
                 selectedDate={selectedDate}
                 onOpenCalendar={() => setCalendarVisible(true)}
-                onOpenManage={() => setShowManageSheet(true)}
             />
             <DateStrip
                 selectedDate={selectedDate}
@@ -235,11 +226,6 @@ export default function CalendarScreen() {
                             </>
                         )}
 
-                        {/* Only show Goals Card when there are active goals */}
-                        {hasActiveGoals && (
-                            <GoalsCard />
-                        )}
-
                         {/* Empty State */}
                         {medicines.length === 0 && appointments.length === 0 && (
                             <EmptyState
@@ -294,14 +280,6 @@ export default function CalendarScreen() {
             <AddGoalModal
                 visible={showAddGoal}
                 onClose={() => setShowAddGoal(false)}
-            />
-
-            {/* Manage Reminders Bottom Sheet */}
-            <ManageRemindersSheet
-                visible={showManageSheet}
-                onClose={() => setShowManageSheet(false)}
-                onGoToMedications={() => navigation.navigate('ManageMedications' as never)}
-                onGoToGoals={() => navigation.navigate('ManageGoals' as never)}
             />
         </View>
     );

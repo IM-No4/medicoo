@@ -96,6 +96,11 @@ export default function AddressSelectorBottomSheet({ visible, onClose }: Props) 
         fullAddress: item.fullAddress,
         latitude: item.location?.coordinates?.[1] || item.latitude,
         longitude: item.location?.coordinates?.[0] || item.longitude,
+        // Was dropped entirely here before, wiping out any receiver info
+        // the address actually had whenever it was selected from this
+        // sheet instead of the Address Book screen.
+        receiverName: item.receiverName,
+        receiverNumber: item.receiverNumber || item.receiverPhone,
       })
     );
     onClose();

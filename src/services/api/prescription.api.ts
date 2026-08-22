@@ -1,6 +1,46 @@
 import { Platform } from "react-native";
 import { apiClient } from "./client";
 
+export interface DoctorPrescribedMedicine {
+  _id: string;
+  patientId: string;
+  doctorId: string;
+  doctorName?: string;
+  specialization?: string;
+  profileImage?: string;
+  createdAt: string;
+  prescribedMedicines: {
+    medicineSku?: string;
+    medicineName: string;
+    intakeDetails?: {
+      dosage?: string;
+      period?: string;
+      instructions?: string;
+      extra?: string;
+    };
+  }[];
+}
+
+// GET /api/user/get-medicine-prescription - the logged-in patient's
+// doctor-issued prescriptions from the last 3 months. The backend returns a
+// bare 404 with {message: 'No prescriptions found'} when there are none
+// (not an error condition for this screen) and a plain array (no
+// {success, data} envelope) otherwise - both handled here so callers just
+// get a list, empty or not.
+export const getMedicinePrescriptions = async (): Promise<DoctorPrescribedMedicine[]> => {
+  try {
+    const response = await apiClient.get<DoctorPrescribedMedicine[]>(
+      "/api/user/get-medicine-prescription",
+    );
+    return response.data ?? [];
+  } catch (error: any) {
+    if (error?.response?.status === 404) {
+      return [];
+    }
+    throw error;
+  }
+};
+
 export const uploadPrescription = async ({
   prescriptionImage,
   storeId,

@@ -1,5 +1,5 @@
 import { disconnectDevice, updateDeviceData } from '@/src/redux/slices/deviceSlice';
-import { RootState } from '@/src/redux/store';
+import { AppDispatch, RootState } from '@/src/redux/store';
 import { bluetoothService } from '@/src/services/health/BluetoothService';
 import { Battery, Link as LinkIcon, RefreshCw, Smartphone, Watch, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -8,7 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import BluetoothDeviceModal from './BluetoothDeviceModal';
 
 export function DeviceConnectCard() {
-    const dispatch = useDispatch();
+    const dispatch = useDispatch<AppDispatch>();
     const { connectedDevice } = useSelector((state: RootState) => state.device);
     const [modalVisible, setModalVisible] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -166,12 +166,7 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         padding: 20,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 8,
+        borderColor: 'rgba(255,255,255,0.15)',
     },
     cardHeader: {
         flexDirection: 'row',

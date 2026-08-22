@@ -1,19 +1,20 @@
 import { executeAction } from '@/src/actions/ActionExecutor';
+import { RootState } from '@/src/redux/store';
+import { getStoreDetails } from '@/src/services/api/pharmacy.api';
 import { SearchResult } from '@/src/search/search.types';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  FlatList,
   ScrollView,
   StyleSheet,
   Text,
   View
 } from 'react-native';
+import { useSelector } from 'react-redux';
 import { SearchTab } from '../SearchScreen';
 import { groupMedicinesByPharmacy } from '../utils/groupMedicinesByPharmacy';
 import { saveRecentSearch } from '../utils/recentSearches';
 
 import DoctorResultCard from './DoctorResultCard';
-import FeaturedMedicineCard from './FeaturedMedicineCard';
 import LabTestListingCard from './LabTestListingCard';
 import PharmacyListingCard from './PharmacyListingCard';
 
@@ -89,86 +90,6 @@ export default function SearchResults({ results, activeTab }: Props) {
     };
   }, []);
 
-  // Mock data for prominent carousel
-  const featuredMedicines = useMemo(() => [
-    {
-      id: 'f1',
-      name: 'Amoxicillin 500mg',
-      pharmacy: {
-        pharmacyId: 'p1',
-        pharmacyName: 'Apollo Pharmacy',
-        rating: 4.8,
-        isOpen: true,
-        deliveryTime: '15-20 mins',
-        storeImageUrl: 'https://images.unsplash.com/photo-1583324113626-70df0f43aa2b?q=80&w=100&auto=format&fit=crop',
-      }
-    },
-    {
-      id: 'f2',
-      name: 'Dolo 650',
-      pharmacy: {
-        pharmacyId: 'p2',
-        pharmacyName: 'MedPlus',
-        rating: 4.5,
-        isOpen: true,
-        deliveryTime: '20-25 mins',
-        storeImageUrl: 'https://images.unsplash.com/photo-1471864190281-ad5f9f81ce4a?q=80&w=600&auto=format&fit=crop',
-      }
-    }
-  ], []);
-
-  // Mock medicines to show when a pharmacy is matched but no specific products are returned
-  const mockPharmacyMedicines = useMemo(() => [
-    {
-      id: 'm1',
-      title: 'Crocin Advance 650mg',
-      domain: 'medicine' as const,
-      meta: {
-        id: 'm1',
-        name: 'Crocin Advance 650mg',
-        price: 58,
-        discountPrice: 49,
-        isOpen: true,
-        storeRating: 4.5,
-        pharmacyId: 'p1',
-        pharmacyName: 'Pharmacy',
-      },
-      action: { key: 'OPEN_PHARMACY' as any, params: { pharmacyId: 'p1', medicineId: 'm1' } }
-    },
-    {
-      id: 'm2',
-      title: 'Vicks Vaporub 25g',
-      domain: 'medicine' as const,
-      meta: {
-        id: 'm2',
-        name: 'Vicks Vaporub 25g',
-        price: 95,
-        discountPrice: 85,
-        isOpen: true,
-        storeRating: 4.7,
-        pharmacyId: 'p1',
-        pharmacyName: 'Pharmacy',
-      },
-      action: { key: 'OPEN_PHARMACY' as any, params: { pharmacyId: 'p1', medicineId: 'm2' } }
-    },
-    {
-      id: 'm3',
-      title: 'Dolo 650mg Tablet',
-      domain: 'medicine' as const,
-      meta: {
-        id: 'm3',
-        name: 'Dolo 650mg Tablet',
-        price: 30,
-        discountPrice: 28,
-        isOpen: true,
-        storeRating: 4.8,
-        pharmacyId: 'p1',
-        pharmacyName: 'Pharmacy',
-      },
-      action: { key: 'OPEN_PHARMACY' as any, params: { pharmacyId: 'p1', medicineId: 'm3' } }
-    }
-  ], []);
-
   // Merged groups: real medicine matches + direct pharmacy matches
   const mergedPharmacyGroups = useMemo(() => {
     const groups = pharmacyGroups.map(g => ({ ...g, distanceKm: undefined as number | undefined }));
@@ -200,90 +121,67 @@ export default function SearchResults({ results, activeTab }: Props) {
     return groups;
   }, [pharmacyGroups, pharmacies]);
 
-  // Mock data for previous orders
-  const previousOrders = useMemo(() => [
-    {
-      id: 'o1',
-      pharmacyName: "Wellness Forever",
-      deliveryTime: "25-30 mins",
-      itemName: "Crocin Advance 650mg",
-      price: 58,
-      pharmacyLogo: "https://images.unsplash.com/photo-1583324113626-70df0f43aa2b?q=80&w=100&auto=format&fit=crop",
-    }
-  ], []);
+  // Real per-store distance/ETA - same source (getStoreDetails) and ETA
+  // formula CartScreen.tsx uses, rather than the hardcoded "25-30 mins" /
+  // "2.5 km" fallbacks these cards used to show whenever the search
+  // response itself didn't carry distance/delivery-time (which is every
+  // medicine-domain result - only direct pharmacy-name matches get that
+  // from the backend).
+  const selectedAddress = useSelector((state: RootState) => state.address.selectedAddress);
+  const currentLocation = useSelector((state: RootState) => state.location.currentLocation);
+  const lat = selectedAddress?.latitude ?? currentLocation?.latitude;
+  const long = selectedAddress?.longitude ?? currentLocation?.longitude;
+
+  const [storeLiveInfo, setStoreLiveInfo] = useState<
+    Record<string, { distanceKm: number; deliveryEtaMins: number }>
+  >({});
+
+  const visiblePharmacyIds = useMemo(() => {
+    const ids =
+      activeTab === 'Medicines'
+        ? mergedPharmacyGroups.map((g) => g.pharmacyId)
+        : pharmacies.map((p) => p.id);
+    return Array.from(new Set(ids.filter(Boolean)));
+  }, [activeTab, mergedPharmacyGroups, pharmacies]);
+
+  useEffect(() => {
+    if (!lat || !long || visiblePharmacyIds.length === 0) return;
+    let active = true;
+
+    (async () => {
+      const settled = await Promise.all(
+        visiblePharmacyIds.map(async (storeId) => {
+          try {
+            const details = await getStoreDetails({ storeId, lat, long });
+            const distanceKm =
+              details?.distance !== undefined ? parseFloat(details.distance) : NaN;
+            if (isNaN(distanceKm)) return null;
+            // Same formula as CartScreen.tsx's deliveryEtaMins.
+            const deliveryEtaMins = Math.round(20 + distanceKm * 3);
+            return [storeId, { distanceKm, deliveryEtaMins }] as const;
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      if (!active) return;
+      setStoreLiveInfo((prev) => {
+        const next = { ...prev };
+        settled.forEach((entry) => {
+          if (entry) next[entry[0]] = entry[1];
+        });
+        return next;
+      });
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [visiblePharmacyIds, lat, long]);
 
   const renderMedicineTab = () => (
     <>
-      {/* Prominent Carousel */}
-      <View style={styles.carouselContainer}>
-        <FlatList
-          horizontal
-          data={featuredMedicines}
-          keyExtractor={(item, index) => item.id ? `${item.id}-${index}` : `feat-${index}`}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalList}
-          renderItem={({ item }) => (
-            <FeaturedMedicineCard
-              medicine={item as any}
-              onPress={() => executeAction('OPEN_PHARMACY', {
-                pharmacyId: (item as any).pharmacy?.pharmacyId || 'p1',
-                medicineId: item.id
-              })}
-            />
-          )}
-        />
-      </View>
-
-      {/* Previous Orders Section */}
-      {/* <View style={styles.section}>
-        <Text style={styles.sectionMainTitle}>Your previous orders</Text>
-        {previousOrders.map(order => (
-          <PreviousOrderCard
-            key={order.id}
-            order={order}
-            onPress={() => executeAction('OPEN_PHARMACY', { pharmacyId: 'p1' })}
-          />
-        ))}
-      </View> */}
-
-      {/* {medicines.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionMainTitle}>Individual results</Text>
-          {medicines.slice(0, 5).map((item) => {
-            if (item.domain !== 'medicine') return null;
-            const meta = item.meta;
-            return (
-              <MedicineResultCard
-                key={item.id}
-                medicine={{
-                  id: meta.id,
-                  sku: meta.sku,
-                  name: meta.name,
-                  form: meta.form ?? '',
-                  price: meta.price,
-                  discountPrice: meta.discountPrice,
-                  images: meta.images,
-                  composition: meta.composition,
-                  prescriptionRequired: meta.prescriptionRequired,
-                  batchNum: meta.batchNum,
-                  expiryDate: meta.expiryDate,
-                  manufacturer: meta.manufacturer,
-                  pharmacy: {
-                    pharmacyId: meta.pharmacyId,
-                    pharmacyName: meta.pharmacyName,
-                    rating: meta.storeRating ?? 0,
-                    unitsAvailable: meta.unitsAvailable ?? 0,
-                    isOpen: meta.isOpen ?? false,
-                    storeImageUrl: meta.storeImageUrl,
-                  },
-                }}
-                onPress={() => handleResultPress(item)}
-              />
-            );
-          })}
-        </View>
-      )} */}
-
       {mergedPharmacyGroups.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeaderContainer}>
@@ -291,27 +189,30 @@ export default function SearchResults({ results, activeTab }: Props) {
             <View style={styles.headerLine} />
           </View>
           <View style={styles.pharmacyListContainer}>
-            {mergedPharmacyGroups.map((group, index) => (
-              <PharmacyListingCard
-                key={`${group.pharmacyId}-${index}`}
-                pharmacy={{
-                  id: group.pharmacyId,
-                  name: group.pharmacyName,
-                  rating: group.rating,
-                  isOpen: group.isOpen,
-                  deliveryTime: group.totalDeliveryTime ? `${group.totalDeliveryTime}-${group.totalDeliveryTime + 5} mins` : (group.isOpen ? '30-35 mins' : undefined),
-                  storeImageUrl: group.storeImageUrl,
-                  distanceKm: (group as any).distanceKm,
-                  todayOpenHours: (group as any).todayOpenHours,
-                  totalDeliveryTime: (group as any).totalDeliveryTime,
-                  storeStatus: (group as any).storeStatus,
-                  medicines: group.medicines.map(mapSearchResultToMedicineItem),
-                }}
-                onPress={() => handlePharmacyPress(group.pharmacyId)}
-                onMedicinePress={handleMedicinePress}
-                isLast={index === mergedPharmacyGroups.length - 1}
-              />
-            ))}
+            {mergedPharmacyGroups.map((group, index) => {
+              const live = storeLiveInfo[group.pharmacyId];
+              return (
+                <PharmacyListingCard
+                  key={`${group.pharmacyId}-${index}`}
+                  pharmacy={{
+                    id: group.pharmacyId,
+                    name: group.pharmacyName,
+                    rating: group.rating,
+                    isOpen: group.isOpen,
+                    deliveryTime: live ? `${live.deliveryEtaMins} mins` : undefined,
+                    storeImageUrl: group.storeImageUrl,
+                    distanceKm: live?.distanceKm,
+                    todayOpenHours: (group as any).todayOpenHours,
+                    totalDeliveryTime: (group as any).totalDeliveryTime,
+                    storeStatus: (group as any).storeStatus,
+                    medicines: group.medicines.map(mapSearchResultToMedicineItem),
+                  }}
+                  onPress={() => handlePharmacyPress(group.pharmacyId)}
+                  onMedicinePress={handleMedicinePress}
+                  isLast={index === mergedPharmacyGroups.length - 1}
+                />
+              );
+            })}
           </View>
         </View>
       )}
@@ -329,6 +230,7 @@ export default function SearchResults({ results, activeTab }: Props) {
         {pharmacies.map((item, index) => {
           if (item.domain !== 'pharmacy') return null;
           const meta = item.meta;
+          const live = storeLiveInfo[item.id];
           return (
             <PharmacyListingCard
               key={item.id}
@@ -337,9 +239,9 @@ export default function SearchResults({ results, activeTab }: Props) {
                 name: meta.name,
                 rating: meta.rating ?? 4.2,
                 isOpen: meta.isOpen ?? true,
-                deliveryTime: meta.totalDeliveryTime ? `${meta.totalDeliveryTime}-${meta.totalDeliveryTime + 5} mins` : (meta.deliveryTime ?? '15-20 mins'),
+                deliveryTime: live ? `${live.deliveryEtaMins} mins` : undefined,
                 storeImageUrl: meta.storeImageUrl,
-                distanceKm: meta.distanceKm,
+                distanceKm: live?.distanceKm,
                 todayOpenHours: meta.todayOpenHours,
                 totalDeliveryTime: meta.totalDeliveryTime,
                 storeStatus: meta.storeStatus,
@@ -425,10 +327,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
-  carouselContainer: {
-    marginTop: 16,
-    marginBottom: 24,
-  },
   section: {
     marginTop: 8,
     backgroundColor: 'transparent',
@@ -439,14 +337,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingRight: 16,
     marginBottom: 8,
-  },
-  sectionMainTitle: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
-    letterSpacing: -0.5,
   },
   sectionFeaturedTitle: {
     paddingHorizontal: 16,
@@ -479,11 +369,9 @@ const styles = StyleSheet.create({
     borderColor: '#F3F4F6',
     paddingTop: 8,
   },
-  horizontalList: {
-    paddingLeft: 16,
-    paddingRight: 4,
-  },
   bottomSpacer: {
-    height: 40,
+    // Tall enough to clear the floating MultiStoreCartBar (SearchScreen.tsx)
+    // that now overlays the bottom of this screen once there are cart items.
+    height: 140,
   },
 });

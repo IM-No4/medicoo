@@ -1,4 +1,5 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import * as Location from "expo-location";
 import {
   Briefcase,
   Check,
@@ -10,7 +11,7 @@ import {
   Share2,
   Trash2,
 } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -35,6 +36,8 @@ import {
   deleteUserAddress,
   getUserAddresses,
 } from "../../../../services/api/address.api";
+import { getProfileDetails } from "../../../../services/api/user.api";
+import { getDistanceKm } from "../../../../utils/geo";
 
 type AddressType = "Home" | "Work" | "Other";
 
@@ -45,9 +48,46 @@ export default function AddressBookScreen() {
   const selectedAddress = useSelector(
     (state: RootState) => state.address.selectedAddress,
   );
+  // Redux's currentLocation is only ever set once, at app launch
+  // (HomeHeader.tsx's fetch is gated behind a module-level "run once per
+  // session" flag) - it never updates again as the user actually moves, so
+  // the distance-to-address shown here was always stuck at wherever the
+  // app happened to be opened. liveLocation is a fresh GPS fix fetched
+  // every time this screen gains focus, and takes priority when available.
+  const currentLocation = useSelector(
+    (state: RootState) => state.location.currentLocation,
+  );
+  const [liveLocation, setLiveLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const effectiveLocation = liveLocation || currentLocation;
+  const authMobile = useSelector((state: any) => state.auth.mobile);
+
+  // Fallback so a "receiver" line still shows for addresses saved as
+  // "I am the receiver" - those store the user's own name/number now (see
+  // AddAddressScreen.tsx), but older addresses saved before that fix have
+  // nothing stored, so this fills in from the live profile instead.
+  const [myProfile, setMyProfile] = useState<{ name?: string; mobile?: string } | null>(null);
+  useEffect(() => {
+    getProfileDetails().then((p: any) => {
+      setMyProfile({ name: p?.name, mobile: p?.mobile || p?.phone });
+    }).catch(() => {});
+  }, []);
+  const myMobile = myProfile?.mobile || authMobile;
 
   const handleSelectAddress = (item: any) => {
-    dispatch(setSelectedAddress(item));
+    // Normalized before it goes into redux - the raw item has GeoJSON
+    // location.coordinates (not flat latitude/longitude), which is why
+    // distance/delivery-time never changed when the delivery address was
+    // switched: every consumer reading selectedAddress.latitude was
+    // silently getting undefined regardless of which address was picked.
+    dispatch(setSelectedAddress({
+      id: item._id || item.id,
+      label: item.label || item.type,
+      fullAddress: item.fullAddress || item.address,
+      latitude: item.location?.coordinates?.[1] || item.latitude,
+      longitude: item.location?.coordinates?.[0] || item.longitude,
+      receiverName: item.receiverName || myProfile?.name,
+      receiverNumber: item.receiverNumber || item.receiverPhone || myMobile,
+    }));
     navigation.goBack();
   };
 
@@ -92,6 +132,23 @@ export default function AddressBookScreen() {
   useFocusEffect(
     React.useCallback(() => {
       fetchAddresses();
+
+      (async () => {
+        try {
+          const { status: permStatus } = await Location.requestForegroundPermissionsAsync();
+          if (permStatus !== "granted") return;
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          setLiveLocation({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          });
+        } catch {
+          // Keep whatever we already have (redux's stale snapshot, or
+          // nothing) rather than blocking the screen on a location error.
+        }
+      })();
     }, []),
   );
 
@@ -271,6 +328,23 @@ export default function AddressBookScreen() {
                     item.longitude &&
                     selectedAddress.longitude === item.longitude))
               );
+
+              const itemLat = item.location?.coordinates?.[1] || item.latitude;
+              const itemLong = item.location?.coordinates?.[0] || item.longitude;
+              const distanceKm =
+                effectiveLocation?.latitude && effectiveLocation?.longitude && itemLat && itemLong
+                  ? getDistanceKm(
+                      effectiveLocation.latitude,
+                      effectiveLocation.longitude,
+                      itemLat,
+                      itemLong,
+                    )
+                  : null;
+
+              const receiverName = item.receiverName || myProfile?.name;
+              const receiverContact =
+                item.receiverNumber || item.receiverPhone || myMobile;
+
               return (
                 <View
                   key={item._id || item.id}
@@ -291,9 +365,18 @@ export default function AddressBookScreen() {
                         {getIcon(item.label || item.type)}
                       </View>
                       <View>
-                        <Text style={styles.typeText}>
-                          {item.label || item.type}
-                        </Text>
+                        <View style={styles.typeRow}>
+                          <Text style={styles.typeText}>
+                            {item.label || item.type}
+                          </Text>
+                          {distanceKm !== null && (
+                            <Text style={styles.distanceText}>
+                              {distanceKm < 1
+                                ? `${Math.round(distanceKm * 1000)}m away`
+                                : `${distanceKm.toFixed(1)}km away`}
+                            </Text>
+                          )}
+                        </View>
                         <View
                           style={{ flexDirection: "row", gap: 6, marginTop: 2 }}
                         >
@@ -359,14 +442,11 @@ export default function AddressBookScreen() {
                       {item.fullAddress || item.address}
                     </Text>
 
-                    {item.receiverName && (
-                      <View style={styles.receiverBadge}>
-                        <MapPin size={10} color="#64748B" />
-                        <Text style={styles.receiverText}>
-                          Deliver to: {item.receiverName} (
-                          {item.receiverNumber || item.receiverPhone})
-                        </Text>
-                      </View>
+                    {receiverName && (
+                      <Text style={styles.receiverText}>
+                        {receiverName}
+                        {receiverContact ? `, ${receiverContact}` : ""}
+                      </Text>
                     )}
 
                     <View style={styles.cardActionsRow}>
@@ -488,10 +568,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  typeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   typeText: {
     fontSize: 15,
     fontWeight: "700",
     color: "#1E293B",
+  },
+  distanceText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#2FA561",
   },
   rightBadges: {
     flexDirection: "row",
@@ -534,7 +624,6 @@ const styles = StyleSheet.create({
   },
   flatText: {
     fontSize: 14,
-    fontWeight: "600",
     color: "#334155",
     marginBottom: 4,
   },
@@ -543,21 +632,12 @@ const styles = StyleSheet.create({
     color: "#64748B",
     lineHeight: 18,
   },
-  receiverBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    gap: 4,
-    marginTop: 10,
-    alignSelf: "flex-start",
-  },
   receiverText: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: "#64748B",
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1F2937",
+    lineHeight: 18,
+    marginTop: 4,
   },
   emptyState: {
     alignItems: "center",

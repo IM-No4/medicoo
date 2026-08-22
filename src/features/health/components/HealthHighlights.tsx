@@ -108,15 +108,15 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         padding: 16,
         borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.02)'
+        borderColor: '#e5e7eb76',
     },
     highlightText: { fontSize: 14, fontWeight: '600', flex: 1 },
     emptyState: {
         borderRadius: 16,
         padding: 20,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: '#FFF',
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: '#e5e7eb76',
     },
     emptyText: {
         fontSize: 13,

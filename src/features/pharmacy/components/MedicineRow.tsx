@@ -46,8 +46,6 @@ export default function MedicineRow({
   const discount = hasDiscount
     ? Math.round((discountAmount / originalPrice) * 100)
     : 0;
-  const rating = medicine.rating || 4.8;
-  const ratingCount = medicine.ratingCount || 36;
   const storeOpen = isStoreOpen ?? true; // Default to open if not provided
   const isInCart = !!cartItem;
 
@@ -189,13 +187,6 @@ export default function MedicineRow({
                 by {medicine.brand}
               </Text>
             )}
-
-            {/* Ratings */}
-            <View style={styles.ratingRow}>
-              <AppIcon name="star" size={12} color="#16A34A" fill="#16A34A" />
-              <Text style={styles.rating}>{rating}</Text>
-              <Text style={styles.ratingCount}>({ratingCount})</Text>
-            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -391,20 +382,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#6B7280",
     marginBottom: 2,
-  },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  rating: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#16A34A",
-  },
-  ratingCount: {
-    fontSize: 11,
-    color: "#6B7280",
   },
   descriptionSection: {
     marginTop: 10,

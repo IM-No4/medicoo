@@ -13,7 +13,7 @@ interface Props {
   sku: string | number;
   quantity: number;
   disabled?: boolean;
-  size?: "small" | "medium" | "large";
+  size?: "xsmall" | "small" | "medium" | "large";
   productId: string;
   onQuantityChange?: (newQuantity: number) => void;
 }
@@ -87,6 +87,12 @@ export default function QuantityControl({
   };
 
   const sizeStyles = {
+    xsmall: {
+      container: styles.xsmallContainer,
+      button: styles.xsmallButton,
+      icon: 11,
+      text: styles.xsmallText,
+    },
     small: {
       container: styles.smallContainer,
       button: styles.smallButton,
@@ -134,7 +140,7 @@ export default function QuantityControl({
         />
       </TouchableOpacity>
 
-      <Text style={[currentSize.text, styles.quantityText]}>{quantity}</Text>
+      <Text style={[styles.quantityText, currentSize.text]}>{quantity}</Text>
 
       <TouchableOpacity
         style={[
@@ -181,6 +187,19 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "700",
     color: "#1C1C1E",
+  },
+  // Extra-small size (compact card footers, e.g. search result item cards)
+  xsmallContainer: {
+    height: 22,
+    borderRadius: 5,
+  },
+  xsmallButton: {
+    width: 20,
+    height: 22,
+  },
+  xsmallText: {
+    fontSize: 11,
+    minWidth: 16,
   },
   // Small size
   smallContainer: {

@@ -18,6 +18,9 @@ import SearchStack from './SearchStack';
 import ComingSoonScreen from '../features/home/ComingSoonScreen';
 import ManageGoalsScreen from '../features/health/ManageGoalsScreen';
 import FriendsScreen from '../features/health/FriendsScreen';
+import ActivityHistoryScreen from '../features/health/ActivityHistoryScreen';
+import NotificationsScreen from '../features/notifications/NotificationsScreen';
+import VitalsHistoryScreen from '../features/health/VitalsHistoryScreen';
 import ManageMedicationsScreen from '../features/calendar/ManageMedicationsScreen';
 import ConsultationDetailScreen from '../features/profile/screens/Consultations/ConsultationDetailScreen';
 import BloodRequestDetailScreen from '../features/bloodDonation/screens/BloodRequestDetailScreen';
@@ -129,6 +132,21 @@ export default function MainStack({
       <Stack.Screen
         name="Friends"
         component={FriendsScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="ActivityHistory"
+        component={ActivityHistoryScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="VitalsHistory"
+        component={VitalsHistoryScreen}
         options={{ presentation: 'card', headerShown: false }}
       />
       {/* Top-level (not nested under any tab's own stack) so opening it from

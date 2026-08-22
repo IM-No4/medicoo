@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import { Activity, Check, Heart, Minus, Plus, Weight, X } from 'lucide-react-native';
+import { Activity, Check, Heart, Minus, Plus, Thermometer, Weight, X } from 'lucide-react-native';
 import { addVitalRecord } from '../../redux/slices/vitalsSlice';
 import { AppDispatch } from '../../redux/store';
 
@@ -30,6 +30,7 @@ type FieldErrors = {
   heartRate?: string;
   bp?: string;
   weight?: string;
+  temperature?: string;
 };
 
 // Weight slider spans the range real users actually fall in - values
@@ -44,6 +45,10 @@ const WEIGHT_DEFAULT = 65;
 const HR_DEFAULT = 72;
 const SYSTOLIC_DEFAULT = 120;
 const DIASTOLIC_DEFAULT = 80;
+
+const TEMP_MIN = 90;
+const TEMP_MAX = 110;
+const TEMP_DEFAULT = 98.6;
 
 export default function RecordVitalsModal({ visible, onClose }: Props) {
   const dispatch = useDispatch<AppDispatch>();
@@ -60,6 +65,9 @@ export default function RecordVitalsModal({ visible, onClose }: Props) {
   const [bpTouched, setBpTouched] = useState(false);
   const [systolicVal, setSystolicVal] = useState(SYSTOLIC_DEFAULT);
   const [diastolicVal, setDiastolicVal] = useState(DIASTOLIC_DEFAULT);
+
+  const [tempTouched, setTempTouched] = useState(false);
+  const [tempVal, setTempVal] = useState(TEMP_DEFAULT);
 
   const [weightTouched, setWeightTouched] = useState(false);
   const [weightVal, setWeightVal] = useState(WEIGHT_DEFAULT);
@@ -82,6 +90,8 @@ export default function RecordVitalsModal({ visible, onClose }: Props) {
     setBpTouched(false);
     setSystolicVal(SYSTOLIC_DEFAULT);
     setDiastolicVal(DIASTOLIC_DEFAULT);
+    setTempTouched(false);
+    setTempVal(TEMP_DEFAULT);
     setWeightTouched(false);
     setWeightVal(WEIGHT_DEFAULT);
     setWeightSyncToken(t => t + 1);
@@ -101,8 +111,9 @@ export default function RecordVitalsModal({ visible, onClose }: Props) {
     const systolic = bpTouched ? systolicVal : undefined;
     const diastolic = bpTouched ? diastolicVal : undefined;
     const weight = weightTouched ? weightVal : undefined;
+    const temperature = tempTouched ? tempVal : undefined;
 
-    if (!heartRate && !systolic && !diastolic && !weight) {
+    if (!heartRate && !systolic && !diastolic && !weight && !temperature) {
       setFormError('Log at least one vital before saving.');
       return;
     }
@@ -116,6 +127,9 @@ export default function RecordVitalsModal({ visible, onClose }: Props) {
     }
     if (weight !== undefined && (weight < 2 || weight > 500)) {
       errors.weight = 'Enter a value between 2-500 kg';
+    }
+    if (temperature !== undefined && (temperature < TEMP_MIN || temperature > TEMP_MAX)) {
+      errors.temperature = `Enter a value between ${TEMP_MIN}-${TEMP_MAX}°F`;
     }
 
     if (Object.keys(errors).length > 0) {
@@ -133,6 +147,7 @@ export default function RecordVitalsModal({ visible, onClose }: Props) {
         systolic,
         diastolic,
         weight,
+        temperature,
       })).unwrap();
 
       resetForm();
@@ -155,6 +170,12 @@ export default function RecordVitalsModal({ visible, onClose }: Props) {
     if (!bpTouched) { setBpTouched(true); return; }
     if (which === 'systolic') setSystolicVal(v => Math.max(50, Math.min(250, v + delta)));
     else setDiastolicVal(v => Math.max(30, Math.min(150, v + delta)));
+  };
+
+  const tempStep = (delta: number) => {
+    setFieldErrors(prev => ({ ...prev, temperature: undefined }));
+    if (!tempTouched) { setTempTouched(true); return; }
+    setTempVal(v => Math.round(Math.max(TEMP_MIN, Math.min(TEMP_MAX, v + delta)) * 10) / 10);
   };
 
   return (
@@ -321,6 +342,66 @@ export default function RecordVitalsModal({ visible, onClose }: Props) {
               </View>
             </View>
             {fieldErrors.bp && <Text style={styles.fieldErrorText}>{fieldErrors.bp}</Text>}
+          </View>
+
+          {/* Temperature Card */}
+          <View style={styles.fieldCard}>
+            <View style={styles.fieldHeader}>
+              <View style={[styles.fieldIconBox, { backgroundColor: '#F0F9FF' }]}>
+                <Thermometer size={20} color="#0EA5E9" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldLabel}>Temperature</Text>
+                <Text style={styles.fieldHint}>
+                  {tempTouched ? 'Body temperature, in °F' : 'Tap + to log a reading'}
+                </Text>
+              </View>
+              {tempTouched && (
+                <TouchableOpacity onPress={() => { setTempTouched(false); setTempVal(TEMP_DEFAULT); }}>
+                  <Text style={styles.skipText}>Clear</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={[styles.stepperRow, fieldErrors.temperature && styles.cardError]}>
+              <TouchableOpacity
+                style={[styles.stepperBtn, { backgroundColor: '#E0F2FE' }]}
+                onPress={() => tempStep(-0.1)}
+                activeOpacity={0.7}
+                disabled={loading}
+              >
+                <Minus size={18} color="#0EA5E9" />
+              </TouchableOpacity>
+
+              <View style={styles.stepperCenter}>
+                <TextInput
+                  style={styles.bigNumber}
+                  keyboardType="decimal-pad"
+                  placeholder="--"
+                  placeholderTextColor="#CBD5E1"
+                  value={tempTouched ? tempVal.toFixed(1) : ''}
+                  onChangeText={(v) => {
+                    setTempTouched(true);
+                    setTempVal(parseFloat(v) || 0);
+                    setFieldErrors(prev => ({ ...prev, temperature: undefined }));
+                  }}
+                  textAlign="center"
+                  selectTextOnFocus
+                  editable={!loading}
+                />
+                <Text style={styles.unitLabel}>°F</Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.stepperBtn, { backgroundColor: '#E0F2FE' }]}
+                onPress={() => tempStep(0.1)}
+                activeOpacity={0.7}
+                disabled={loading}
+              >
+                <Plus size={18} color="#0EA5E9" />
+              </TouchableOpacity>
+            </View>
+            {fieldErrors.temperature && <Text style={styles.fieldErrorText}>{fieldErrors.temperature}</Text>}
           </View>
 
           {/* Weight Card */}

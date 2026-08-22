@@ -3,17 +3,17 @@ import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } fr
 import { useDispatch, useSelector } from 'react-redux';
 
 import { bootSuccess } from '../../bootstrap/boot.slice';
-import { navigationRef } from '../../navigation/navigationRef';
 import { AppDispatch, RootState } from '../../redux/store';
 import { logout as logoutRedux } from '../../redux/slices/authSlice';
 import { clearActiveOrder } from '../../redux/slices/orderSlice';
 import { clearRequired } from '../../redux/slices/legalSlice';
-import { acceptLegalDocuments } from '../../services/api/legal.api';
+import { acceptLegalDocuments, LegalDocumentType } from '../../services/api/legal.api';
 import { getFCMToken } from '../../utils/deviceUtils';
 import { clearToken } from '../../utils/tokenManagement';
 import { logoutApi } from '../../services/api';
 import { unregisterDeviceToken } from '../../services/api/pushNotification.api';
 import { isSnoozed, setSnoozeUntil } from '../../services/storage/legalStorage';
+import LegalDocumentModal from './LegalDocumentModal';
 
 const SNOOZE_HOURS = 6;
 
@@ -28,6 +28,7 @@ export default function LegalAcceptanceModal() {
 
     const [snoozed, setSnoozed] = useState(true);
     const [busy, setBusy] = useState<'accept' | 'decline' | null>(null);
+    const [docModalType, setDocModalType] = useState<LegalDocumentType | null>(null);
 
     useEffect(() => {
         if (!required) {
@@ -44,12 +45,6 @@ export default function LegalAcceptanceModal() {
     }, [required]);
 
     const visible = checked && required && !snoozed && !busy;
-
-    const handleReadDocument = (screen: 'TermsOfService' | 'PrivacyPolicy') => {
-        if (navigationRef.isReady()) {
-            (navigationRef as any).navigate(screen);
-        }
-    };
 
     const handleAccept = async () => {
         setBusy('accept');
@@ -102,10 +97,10 @@ export default function LegalAcceptanceModal() {
                     </Text>
 
                     <View style={styles.linksRow}>
-                        <TouchableOpacity onPress={() => handleReadDocument('TermsOfService')}>
+                        <TouchableOpacity onPress={() => setDocModalType('terms')}>
                             <Text style={styles.linkText}>Read Terms of Service</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => handleReadDocument('PrivacyPolicy')}>
+                        <TouchableOpacity onPress={() => setDocModalType('privacy')}>
                             <Text style={styles.linkText}>Read Privacy Policy</Text>
                         </TouchableOpacity>
                     </View>
@@ -143,6 +138,14 @@ export default function LegalAcceptanceModal() {
                     </TouchableOpacity>
                 </View>
             </View>
+
+            {/* Rendered on top of this Modal (stacks above it, unlike a
+                navigated-to screen) - see LegalDocumentModal for why. */}
+            <LegalDocumentModal
+                visible={!!docModalType}
+                documentType={docModalType}
+                onClose={() => setDocModalType(null)}
+            />
         </Modal>
     );
 }

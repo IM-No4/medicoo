@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     },
     detailContent: { flex: 1 },
     detailLabel: { fontSize: 12, color: '#6B7280' },
-    detailValue: { fontSize: 16, color: '#1F2937', fontWeight: '500', marginTop: 2 },
+    detailValue: { fontSize: 14, color: '#1F2937', fontWeight: '500', marginTop: 2 },
 
     verifiedBadge: {
         backgroundColor: '#DCFCE7',

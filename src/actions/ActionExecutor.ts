@@ -42,13 +42,24 @@ export async function executeAction(action: ActionKey, params?: any) {
         batchId = String(med.id);
       }
 
+      // med.discountPrice is a discount AMOUNT to subtract from price, not
+      // the final selling price - CartItem.discountPrice is the opposite:
+      // the already-discounted final price (see CartScreen's rendering and
+      // MedicineRow.tsx/MedicineDetailBottomSheet.tsx's add-to-cart, which
+      // both do this same subtraction). Copying med.discountPrice straight
+      // across meant the cart showed the raw discount amount as if it were
+      // the item's price.
+      const originalPrice = med.price ?? 0;
+      const discountAmount = med.discountPrice ?? 0;
+      const finalPrice = discountAmount > 0 ? originalPrice - discountAmount : originalPrice;
+
       const cartItem = {
         productId: med.id,
         medicineId: med.id, // Redux expects medicineId
         sku: med.sku || med.id,
         name: med.name,
-        price: med.price ?? 0,
-        discountPrice: med.discountPrice ?? med.price ?? 0,
+        price: originalPrice,
+        discountPrice: finalPrice,
         quantity: 1,
         brand: med.manufacturer || med.brand || '',
         composition: med.composition || '',

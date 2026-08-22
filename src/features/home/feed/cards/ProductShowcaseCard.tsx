@@ -140,9 +140,9 @@ const styles = StyleSheet.create({
     },
     imageContainer: {
         width: '100%',
-        height: 100,
+        height: 85,
         backgroundColor: '#F9FAFB',
-        borderRadius: 12,
+        borderRadius: 8,
         marginBottom: 12,
         justifyContent: 'center',
         alignItems: 'center',
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     image: {
         width: '100%',
         height: '100%',
-        borderRadius: 12,
+        borderRadius: 10,
     },
     placeholderImage: {
         alignItems: 'center',

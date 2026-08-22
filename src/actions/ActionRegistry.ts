@@ -193,8 +193,11 @@ export const ActionRegistry: Record<ActionKey, any> = {
   OPEN_HEALTH: {
     tab: 'Health',
   },
+  // Top-level (not nested under the Home tab's own stack) so opening it
+  // from any tab - Health, Calendar, etc. - pushes on top of wherever the
+  // user actually was, and the back button returns there, instead of
+  // force-switching to the Home tab first.
   OPEN_NOTIFICATIONS: {
-    tab: 'Home',
     screen: 'Notifications',
   },
   OPEN_RECENT_ACTIVITY: {

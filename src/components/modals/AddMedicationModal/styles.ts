@@ -70,7 +70,7 @@ export const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6', // Light Grey
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#e5e7eb76',
   },
 
   optionCardSelected: {
@@ -110,10 +110,10 @@ export const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 16,
-    fontSize: 17,
+    fontSize: 16,
     color: '#111827',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#e5e7eb76',
   },
 
   /* ---------- Modal Structure ---------- */
@@ -208,7 +208,7 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#e5e7eb76',
   },
   listItem: {
     paddingVertical: 16,
@@ -264,7 +264,7 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 'auto',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#e5e7eb76',
   },
   timePillText: {
     color: '#111827',
@@ -317,7 +317,7 @@ export const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#e5e7eb76',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -353,14 +353,15 @@ export const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 30,
     alignItems: 'center',
-    elevation: 2
+    borderWidth: 1,
+    borderColor: '#0E7439',
   },
   primaryButtonActive: {
     backgroundColor: '#0E7439',
   },
   primaryButtonDisabled: {
     backgroundColor: '#E5E7EB',
-    shadowOpacity: 0,
+    borderColor: '#CBD5E1',
   },
   primaryText: {
     color: '#FFFFFF',
@@ -398,7 +399,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#e5e7eb76',
   },
   shapeCircleSelected: {
     backgroundColor: '#ECFDF5',

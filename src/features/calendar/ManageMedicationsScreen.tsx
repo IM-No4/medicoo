@@ -1,19 +1,19 @@
+import { useNavigation } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
+import { ChevronLeft, Pencil, Pill, Plus, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
-    FlatList,
     ActivityIndicator,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, Pencil, Pill, Plus, Trash2 } from 'lucide-react-native';
-import { StatusBar } from 'expo-status-bar';
-import { getMedicineSchedules, deleteMedicineSchedule } from '../../services/api/medicine.api';
 import AddMedicationModal from '../../components/modals/AddMedicationModal/AddMedicationModal';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
+import { deleteMedicineSchedule, getMedicineSchedules } from '../../services/api/medicine.api';
 
 interface MedSchedule {
     _id: string;
@@ -21,6 +21,7 @@ interface MedSchedule {
     dosage: string;
     scheduleType: string;
     isActive: boolean;
+    isDeleted?: boolean;
     times?: string[];
     medicineType?: string;
     shape?: string;
@@ -37,6 +38,16 @@ interface MedSchedule {
     intervalType?: string;
     cycleDaysOn?: number;
     cycleDaysOff?: number;
+}
+
+// A schedule counts as "past" (removed from active management, kept
+// visible here for the same reason the calendar keeps showing it on past
+// dates - it's real history) once it's been deleted, or once its own
+// endDate has passed on its own.
+function isPastSchedule(schedule: MedSchedule): boolean {
+    if (schedule.isDeleted) return true;
+    if (schedule.endDate && new Date(schedule.endDate) < new Date()) return true;
+    return false;
 }
 
 export default function ManageMedicationsScreen() {
@@ -100,6 +111,50 @@ export default function ManageMedicationsScreen() {
         );
     };
 
+    const activeSchedules = schedules.filter(s => !isPastSchedule(s));
+    const pastSchedules = schedules.filter(isPastSchedule);
+
+    const renderMedCard = (item: MedSchedule, isPast: boolean) => (
+        <View key={item._id} style={[styles.medCard, (!item.isActive || isPast) && styles.disabledCard]}>
+            <View style={styles.medIconBox}>
+                <Pill size={20} color={!item.isActive || isPast ? '#94A3B8' : '#2FA561'} />
+            </View>
+
+            <View style={styles.medInfo}>
+                <Text style={[styles.medName, (!item.isActive || isPast) && styles.disabledText]}>
+                    {item.medicineName}
+                </Text>
+                <Text style={styles.medDosage}>
+                    {item.dosage} · {item.scheduleType}
+                    {item.times?.length ? ` · ${item.times.join(', ')}` : ''}
+                </Text>
+            </View>
+
+            {isPast ? (
+                <View style={styles.pastBadge}>
+                    <Text style={styles.pastBadgeText}>{item.isDeleted ? 'Removed' : 'Completed'}</Text>
+                </View>
+            ) : (
+                <View style={styles.medActions}>
+                    <TouchableOpacity
+                        style={styles.editBtn}
+                        onPress={() => handleEdit(item)}
+                        activeOpacity={0.7}
+                    >
+                        <Pencil size={16} color="#2FA561" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.deleteBtn}
+                        onPress={() => handleDelete(item._id, item.medicineName)}
+                        activeOpacity={0.7}
+                    >
+                        <Trash2 size={16} color="#EF4444" />
+                    </TouchableOpacity>
+                </View>
+            )}
+        </View>
+    );
+
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <StatusBar style="dark" />
@@ -135,49 +190,25 @@ export default function ManageMedicationsScreen() {
                     </TouchableOpacity>
                 </View>
             ) : (
-                <FlatList
-                    data={schedules}
-                    keyExtractor={item => item._id}
-                    contentContainerStyle={styles.list}
-                    showsVerticalScrollIndicator={false}
-                    ListHeaderComponent={
-                        <Text style={styles.sectionLabel}>EDIT OR REMOVE MEDICATION SCHEDULES</Text>
-                    }
-                    renderItem={({ item }) => (
-                        <View style={[styles.medCard, !item.isActive && styles.disabledCard]}>
-                            <View style={styles.medIconBox}>
-                                <Pill size={20} color={item.isActive ? '#2FA561' : '#94A3B8'} />
-                            </View>
-
-                            <View style={styles.medInfo}>
-                                <Text style={[styles.medName, !item.isActive && styles.disabledText]}>
-                                    {item.medicineName}
-                                </Text>
-                                <Text style={styles.medDosage}>
-                                    {item.dosage} · {item.scheduleType}
-                                    {item.times?.length ? ` · ${item.times.join(', ')}` : ''}
-                                </Text>
-                            </View>
-
-                            <View style={styles.medActions}>
-                                <TouchableOpacity
-                                    style={styles.editBtn}
-                                    onPress={() => handleEdit(item)}
-                                    activeOpacity={0.7}
-                                >
-                                    <Pencil size={16} color="#2FA561" />
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={styles.deleteBtn}
-                                    onPress={() => handleDelete(item._id, item.medicineName)}
-                                    activeOpacity={0.7}
-                                >
-                                    <Trash2 size={16} color="#EF4444" />
-                                </TouchableOpacity>
-                            </View>
-                        </View>
+                <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+                    {activeSchedules.length > 0 && (
+                        <>
+                            <Text style={styles.sectionLabel}>EDIT OR REMOVE MEDICATION SCHEDULES</Text>
+                            {activeSchedules.map(item => renderMedCard(item, false))}
+                        </>
                     )}
-                />
+
+                    {/* Kept visible (read-only) rather than disappearing once
+                        deleted or naturally ended - the calendar still shows
+                        these on the past dates they applied to as real
+                        history, so this list shouldn't hide them entirely. */}
+                    {pastSchedules.length > 0 && (
+                        <>
+                            <Text style={[styles.sectionLabel, styles.pastSectionLabel]}>PAST & REMOVED MEDICATIONS</Text>
+                            {pastSchedules.map(item => renderMedCard(item, true))}
+                        </>
+                    )}
+                </ScrollView>
             )}
 
             <AddMedicationModal
@@ -216,7 +247,7 @@ const styles = StyleSheet.create({
         height: 56,
         backgroundColor: '#FFFFFF',
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: '#e5e7eb76',
     },
     backBtn: {
         padding: 8,
@@ -244,6 +275,20 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
         marginBottom: 12,
     },
+    pastSectionLabel: {
+        marginTop: 20,
+    },
+    pastBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 8,
+        backgroundColor: '#F1F5F9',
+    },
+    pastBadgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#94A3B8',
+    },
     medCard: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -251,13 +296,8 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: '#E5E7EB',
         gap: 12,
-        shadowColor: '#0F172A',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.02,
-        shadowRadius: 8,
-        elevation: 1,
     },
     disabledCard: {
         backgroundColor: '#F8FAFC',
@@ -345,11 +385,8 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 24,
         borderRadius: 14,
-        shadowColor: '#2FA561',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-        elevation: 3,
+        borderWidth: 1,
+        borderColor: '#e5e7eb76',
     },
     emptyBtnText: {
         color: '#FFFFFF',

@@ -2,7 +2,6 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Linking,
   RefreshControl,
@@ -21,6 +20,7 @@ import {
   getCustomerNotifications,
   markAllCustomerNotificationsAsRead,
 } from '../../services/api/notification.api';
+import NotificationsSkeleton from './NotificationsSkeleton';
 
 type NotificationItem = {
   id: string;
@@ -159,25 +159,15 @@ export default function NotificationsScreen() {
     );
   }, [getNotificationIcon]);
 
-  const emptyState = useMemo(() => {
-    if (loading) {
-      return (
-        <View style={styles.centerState}>
-          <ActivityIndicator color="#2FA561" />
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.emptyState}>
-        <View style={styles.emptyIcon}>
-          <AppIcon name="bell" size={28} color="#2FA561" />
-        </View>
-        <Text style={styles.emptyTitle}>No notifications yet</Text>
-        <Text style={styles.emptyText}>We’ll show appointment updates, reminders, and important account alerts here.</Text>
+  const emptyState = useMemo(() => (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyIcon}>
+        <AppIcon name="bell" size={28} color="#2FA561" />
       </View>
-    );
-  }, [loading]);
+      <Text style={styles.emptyTitle}>No notifications yet</Text>
+      <Text style={styles.emptyText}>We’ll show appointment updates, reminders, and important account alerts here.</Text>
+    </View>
+  ), []);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -193,21 +183,25 @@ export default function NotificationsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <FlatList
-        data={notifications}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={notifications.length === 0 ? styles.emptyListContent : styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={emptyState}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#2FA561"
-          />
-        }
-      />
+      {loading ? (
+        <NotificationsSkeleton />
+      ) : (
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={notifications.length === 0 ? styles.emptyListContent : styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={emptyState}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#2FA561"
+            />
+          }
+        />
+      )}
     </View>
   );
 }
@@ -344,10 +338,5 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 20,
-  },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

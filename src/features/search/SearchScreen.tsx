@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 
 import AppIcon from '@/src/components/icons/AppIcon';
+import MultiStoreCartBar from '@/src/components/cart/MultiStoreCartBar';
 
 import { AppDispatch, RootState } from '@/src/redux/store';
 import {
@@ -254,6 +255,8 @@ export default function SearchScreen() {
           <SearchResults results={results} activeTab={activeTab!} />
         </View>
       ) : null}
+
+      <MultiStoreCartBar />
     </View>
   );
 }

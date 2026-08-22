@@ -1,5 +1,5 @@
 import { addAvailableDevice, connectDevice, setAvailableDevices, setScanning } from '@/src/redux/slices/deviceSlice';
-import { RootState } from '@/src/redux/store';
+import { AppDispatch, RootState } from '@/src/redux/store';
 import { Bluetooth, Info, RefreshCw, Smartphone, Watch, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
@@ -27,7 +27,7 @@ import StatusModal, { StatusType } from '@/src/components/modals/StatusModal';
 
 export default function BluetoothDeviceModal({ visible, onClose }: Props) {
     const insets = useSafeAreaInsets();
-    const dispatch = useDispatch();
+    const dispatch = useDispatch<AppDispatch>();
     const { isScanning, availableDevices } = useSelector((state: RootState) => state.device);
     const [connectingId, setConnectingId] = useState<string | null>(null);
     const [bluetoothOff, setBluetoothOff] = useState(false);
@@ -296,11 +296,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#2FA561',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#2FA561',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5,
     },
     title: {
         fontSize: 20,

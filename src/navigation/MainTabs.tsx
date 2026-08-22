@@ -36,7 +36,7 @@ export default function MainTabs({ onOpenCommandPalette }: Props) {
   const baseTabBarStyle = {
     backgroundColor: '#ffffff',
     borderTopWidth: 0,
-    height: 64 + insets.bottom,
+    height: 60 + insets.bottom,
     paddingBottom: insets.bottom,
     paddingTop: 8,
   };

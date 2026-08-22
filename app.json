@@ -23,7 +23,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.medicoo.consumer",
+      "package": "com.medicootech.medicoo",
       "permissions": [
         "RECORD_AUDIO",
         "CAMERA",
@@ -31,7 +31,10 @@
         "ACCESS_NETWORK_STATE",
         "ACCESS_WIFI_STATE",
         "POST_NOTIFICATIONS",
-        "android.permission.health.READ_STEPS"
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.WRITE_STEPS",
+        "android.permission.health.READ_TOTAL_CALORIES_BURNED",
+        "android.permission.ACTIVITY_RECOGNITION"
       ],
       "googleServicesFile": "./firebase/google-services.json"
     },
@@ -91,6 +94,7 @@
         }
       ],
       "react-native-health-connect",
+      "expo-background-task",
       [
         "expo-build-properties",
         {
@@ -101,7 +105,14 @@
           }
         }
       ],
-      "./plugins/withRazorpayCheckoutTheme.js"
+      "./plugins/withRazorpayCheckoutTheme.js",
+      [
+        "expo-navigation-bar",
+        {
+          "backgroundColor": "#00000000"
+        }
+      ],
+      "./plugins/withTransparentNavigationBar.js"
     ],
     "experiments": {
       "typedRoutes": true,

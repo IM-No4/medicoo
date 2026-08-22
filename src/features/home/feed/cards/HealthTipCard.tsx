@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 28,
     padding: 20,
-    borderRadius: 24,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.03)',
   },
@@ -52,20 +52,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   iconBox: {
-    width: 36,
-    height: 36,
+    width: 28,
+    height: 28,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   heading: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   content: {
-    fontSize: 16,
+    fontSize: 13,
     color: '#1F2937',
     fontWeight: '600',
     lineHeight: 24,
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.5)',
   },
   tagText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
 });

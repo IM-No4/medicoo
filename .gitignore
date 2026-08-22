@@ -17,6 +17,7 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+/credentials/
 
 # Metro
 .metro-health-check*
@@ -30,6 +31,9 @@ yarn-error.*
 .DS_Store
 *.pem
 
+# IDE
+/.idea/
+
 # local env files
 .env*.local
 
@@ -41,3 +45,8 @@ app-example
 # generated native folders
 /ios
 /android
+
+# local Expo module build output
+modules/*/android/build/
+modules/*/android/.cxx/
+modules/*/ios/build/

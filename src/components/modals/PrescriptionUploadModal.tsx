@@ -1,6 +1,6 @@
 import AppIcon from '@/src/components/icons/AppIcon';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -195,7 +195,7 @@ export default function PrescriptionUploadModal({
                   disabled={isLoading}
                 >
                   <LinearGradient
-                    colors={['#FF6B35', '#FF8C61']}
+                    colors={['#10B981', '#34D399']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.uploadIconContainer}
@@ -219,7 +219,7 @@ export default function PrescriptionUploadModal({
                   disabled={isLoading}
                 >
                   <LinearGradient
-                    colors={['#4F46E5', '#6366F1']}
+                    colors={['#0E7439', '#10B981']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.uploadIconContainer}
@@ -255,7 +255,7 @@ export default function PrescriptionUploadModal({
                       >
                         <View style={styles.prescriptionHeader}>
                           <View style={styles.prescriptionIdContainer}>
-                            <Text style={styles.prescriptionId}>{prescription.id}</Text>
+                            <Text style={styles.prescriptionId}>#{prescription.id}</Text>
                           </View>
                           <View
                             style={[
@@ -384,13 +384,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#1C1C1E',
     letterSpacing: 0.3,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '400',
     color: '#6B7280',
     letterSpacing: 0.2,
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1C1C1E',
     marginBottom: 12,
@@ -433,13 +433,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   uploadTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
     color: '#1C1C1E',
     letterSpacing: 0.2,
   },
   uploadDescription: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '400',
     color: '#6B7280',
     letterSpacing: 0.1,
@@ -460,8 +460,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   prescriptionCardSelected: {
-    backgroundColor: '#FFF7ED',
-    borderColor: '#FF6B35',
+    backgroundColor: '#F0FDF4',
+    borderColor: '#10B981',
   },
   prescriptionHeader: {
     flexDirection: 'row',
@@ -476,9 +476,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   prescriptionId: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#FF6B35',
+    color: '#10B981',
     letterSpacing: 0.5,
   },
   radioButton: {
@@ -491,16 +491,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   radioButtonSelected: {
-    borderColor: '#FF6B35',
+    borderColor: '#10B981',
   },
   radioButtonInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#10B981',
   },
   prescriptionBody: {
-    gap: 8,
+    gap: 6,
   },
   prescriptionRow: {
     flexDirection: 'row',
@@ -508,13 +508,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   prescriptionLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
     color: '#6B7280',
     letterSpacing: 0.1,
   },
   prescriptionValue: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#1C1C1E',
     letterSpacing: 0.1,
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   diagnosisText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '400',
     color: '#1C1C1E',
     letterSpacing: 0.1,
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1C1C1E',
     letterSpacing: 0.2,
@@ -572,13 +572,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: 16,
     borderRadius: 12,
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   confirmButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
     letterSpacing: 0.2,

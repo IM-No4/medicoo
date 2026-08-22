@@ -8,6 +8,7 @@ export interface VitalRecordDto {
   systolic?: number;
   diastolic?: number;
   weight?: number;
+  temperature?: number;
   source: 'manual' | 'device';
   createdAt: string;
   updatedAt: string;
@@ -19,6 +20,7 @@ export interface VitalRecordPayload {
   systolic?: number;
   diastolic?: number;
   weight?: number;
+  temperature?: number;
 }
 
 export const fetchVitalRecords = async (limit?: number): Promise<VitalRecordDto[]> => {

@@ -16,10 +16,11 @@ import { executeAction } from '@/src/actions/ActionExecutor';
 
 interface Props {
   storeId: string;
+  isStoreOpen?: boolean;
   onItemPress?: (item: CartItem) => void;
 }
 
-export default function CartItemsHorizontalScroll({ storeId, onItemPress }: Props) {
+export default function CartItemsHorizontalScroll({ storeId, isStoreOpen = true, onItemPress }: Props) {
   const carts = useSelector((state: RootState) => state.cart);
   const storeCart = carts[storeId];
 
@@ -77,6 +78,7 @@ export default function CartItemsHorizontalScroll({ storeId, onItemPress }: Prop
                 sku={item.sku}
                 productId={item.medicineId}
                 quantity={item.quantity}
+                disabled={!isStoreOpen}
                 size="small"
               />
             </View>

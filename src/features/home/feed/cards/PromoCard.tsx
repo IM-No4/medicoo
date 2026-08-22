@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   card: {
-    borderRadius: 24,
+    borderRadius: 16,
     padding: 24,
     minHeight: 160,
     // Add shadow

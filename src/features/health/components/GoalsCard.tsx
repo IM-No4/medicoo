@@ -1,12 +1,12 @@
-import { Droplets, Footprints, Moon, Activity, Target, Settings, Salad, Brain, Heart } from 'lucide-react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { Activity, Brain, Droplets, Footprints, Heart, Moon, Salad, Settings, Target } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useSelector, useDispatch } from 'react-redux';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useDispatch, useSelector } from 'react-redux';
+import { loadOnDeviceSteps, selectTodaySteps } from '../../../redux/slices/deviceSlice';
+import { updateGoalProgress } from '../../../redux/slices/goalsSlice';
 import { AppDispatch, RootState } from '../../../redux/store';
 import { HealthSection } from './HealthSection';
-import { updateGoalProgress } from '../../../redux/slices/goalsSlice';
-import { loadOnDeviceSteps, selectTodaySteps } from '../../../redux/slices/deviceSlice';
 
 export function GoalsCard() {
     const dispatch = useDispatch<AppDispatch>();
@@ -165,11 +165,10 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         padding: 16,
         paddingVertical: 12,
-        marginBottom: 12,
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: '#e5e7eb76',
     },
     goalInfo: {
         flex: 1,

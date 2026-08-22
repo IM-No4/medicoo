@@ -22,7 +22,6 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   InteractionManager,
   ScrollView,
   StyleSheet,
@@ -31,10 +30,12 @@ import {
   View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { executeAction } from '../../actions/ActionExecutor';
+import { ActionKey } from '../../actions/action.types';
 import { bootSuccess } from '../../bootstrap/boot.slice';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
+import { RootState } from '../../redux/store';
 import { logout as logoutRedux } from '../../redux/slices/authSlice';
 import { clearActiveOrder } from '../../redux/slices/orderSlice';
 import { getProfileDetails, logoutApi } from '../../services/api';
@@ -45,11 +46,13 @@ import { unregisterDeviceToken } from '../../services/api/pushNotification.api';
 import { clearToken } from '../../utils/tokenManagement';
 import { getFCMToken } from '../../utils/deviceUtils';
 import ProfileHeader from './components/ProfileHeader';
+import ProfileSkeleton from './ProfileSkeleton';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
+  const enabledServices = useSelector((state: RootState) => state.appConfig.enabledServices);
 
   const [loading, setLoading] = useState(true);
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -232,10 +235,40 @@ export default function ProfileScreen() {
     }
   };
 
+  // Launch state: pharmacy is the only live service, so "Orders" sits as a
+  // single Account-level link instead of a whole Activity & History
+  // section for just one item. Mirrors the backend's own definition of
+  // "pharmacy only" (appConfigController.js's deriveHomeLayoutMode) so this
+  // never disagrees with what the Home feed is doing.
+  const isOrdersOnlyMode = enabledServices.pharmacy
+    && !enabledServices.consultations
+    && !enabledServices.labTests
+    && !enabledServices.homeCare
+    && !enabledServices.bloodDonation
+    && !enabledServices.ambulance;
+
+  const accountItems: { icon: any; label: string; action: ActionKey }[] = [
+    { icon: BookOpen, label: 'Address Book', action: 'OPEN_ADDRESS_BOOK' },
+    { icon: Users, label: 'Family Members', action: 'OPEN_FAMILY_MEMBERS' },
+  ];
+  if (!isDoctor && (!approvalStatus || approvalStatus === 'not-applied')) {
+    accountItems.push({ icon: Stethoscope, label: 'Apply as Doctor', action: 'OPEN_DOCTOR_ONBOARDING' });
+  }
+  if (isOrdersOnlyMode) {
+    accountItems.push({ icon: Pill, label: 'Orders', action: 'OPEN_MY_MEDICINE_ORDERS' });
+  }
+
+  const activityItems: { icon: any; label: string; action: ActionKey }[] = isOrdersOnlyMode ? [] : [
+    ...(enabledServices.consultations ? [{ icon: Stethoscope, label: 'Consultations', action: 'OPEN_CONSULTATIONS' as ActionKey }] : []),
+    ...(enabledServices.pharmacy ? [{ icon: Pill, label: 'Medicine Orders', action: 'OPEN_MY_MEDICINE_ORDERS' as ActionKey }] : []),
+    ...(enabledServices.labTests ? [{ icon: FlaskConical, label: 'Lab Tests', action: 'OPEN_MY_LAB_TESTS' as ActionKey }] : []),
+  ];
+
   if (loading && !name) {
     return (
-      <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#2FA561" />
+      <View style={styles.container}>
+        <StatusBar style="dark" translucent backgroundColor="#F8F9FE" />
+        <ProfileSkeleton />
       </View>
     );
   }
@@ -343,46 +376,32 @@ export default function ProfileScreen() {
 
         {/* Account Group */}
         <GroupLayout title="Account">
-          <MenuItem
-            icon={BookOpen}
-            label="Address Book"
-            onPress={() => executeAction('OPEN_ADDRESS_BOOK')}
-          />
-          <MenuItem
-            icon={Users}
-            label="Family Members"
-            onPress={() => executeAction('OPEN_FAMILY_MEMBERS')}
-            last={!isDoctor && (!approvalStatus || approvalStatus === 'not-applied')}
-          />
-          {!isDoctor && (!approvalStatus || approvalStatus === 'not-applied') && (
+          {accountItems.map((item, i) => (
             <MenuItem
-              icon={Stethoscope}
-              label="Apply as Doctor"
-              onPress={() => executeAction('OPEN_DOCTOR_ONBOARDING')}
-              last
+              key={item.label}
+              icon={item.icon}
+              label={item.label}
+              onPress={() => executeAction(item.action)}
+              last={i === accountItems.length - 1}
             />
-          )}
+          ))}
         </GroupLayout>
 
-        {/* Activity & History Group */}
-        <GroupLayout title="Activity & History">
-          <MenuItem
-            icon={Stethoscope}
-            label="Consultations"
-            onPress={() => executeAction('OPEN_CONSULTATIONS')}
-          />
-          <MenuItem
-            icon={Pill}
-            label="Medicine Orders"
-            onPress={() => executeAction('OPEN_MY_MEDICINE_ORDERS')}
-          />
-          <MenuItem
-            icon={FlaskConical}
-            label="Lab Tests"
-            onPress={() => executeAction('OPEN_MY_LAB_TESTS')}
-            last
-          />
-        </GroupLayout>
+        {/* Activity & History Group - hidden entirely in single-service
+            (pharmacy-only) mode, where Orders lives under Account instead. */}
+        {activityItems.length > 0 && (
+          <GroupLayout title="Activity & History">
+            {activityItems.map((item, i) => (
+              <MenuItem
+                key={item.label}
+                icon={item.icon}
+                label={item.label}
+                onPress={() => executeAction(item.action)}
+                last={i === activityItems.length - 1}
+              />
+            ))}
+          </GroupLayout>
+        )}
 
         {/* Support Group */}
         <GroupLayout title="Support">
@@ -462,7 +481,6 @@ function MenuItem({ icon: Icon, label, onPress, last, isDestructive, style }: an
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FE' },
-  center: { justifyContent: 'center', alignItems: 'center' },
 
   content: { paddingBottom: 100 },
 

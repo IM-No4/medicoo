@@ -11,7 +11,10 @@ export type Address = {
   area?: string;
   city?: string;
   receiverName?: string;
-  receiverPhone?: string;
+  // Matches the backend CustomerAddress schema's field name - Mongoose
+  // strict mode silently drops anything sent as receiverPhone instead,
+  // which was why receiver numbers never actually persisted or displayed.
+  receiverNumber?: string;
 };
 
 type AddressState = {

@@ -3,6 +3,11 @@ import { registerRootComponent } from 'expo';
 import { FlatList, Platform, ScrollView, SectionList } from 'react-native';
 import App from './src/app/App';
 import { installGlobalMontserratFont } from './src/bootstrap/globalFont';
+// Registers TaskManager.defineTask as a side effect - must be imported
+// unconditionally at module scope, on every JS bundle load (including a
+// headless background-task execution that never goes through App.tsx's
+// boot effect), same reasoning as the FCM background handler below.
+import './src/services/health/nativeStepsBackgroundTask';
 
 // Must run before the app's first render - see globalFont.ts for why this
 // can't just be Text.defaultProps.

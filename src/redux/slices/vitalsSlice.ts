@@ -14,6 +14,7 @@ export interface VitalRecord {
   systolic?: number;
   diastolic?: number;
   weight?: number;
+  temperature?: number; // Fahrenheit
 }
 
 const mapDtoToRecord = (dto: VitalRecordDto): VitalRecord => ({
@@ -23,6 +24,7 @@ const mapDtoToRecord = (dto: VitalRecordDto): VitalRecord => ({
   systolic: dto.systolic,
   diastolic: dto.diastolic,
   weight: dto.weight,
+  temperature: dto.temperature,
 });
 
 interface VitalsState {

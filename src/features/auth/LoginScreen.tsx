@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   GoogleSignin,
   isErrorWithCode,
@@ -5,12 +6,12 @@ import {
 } from '@react-native-google-signin/google-signin';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
   Image,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ScrollView,
   StatusBar,
@@ -22,7 +23,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { bootSuccess } from '../../bootstrap/boot.slice';
 import { loginSuccess } from '../../redux/slices/authSlice';
@@ -50,6 +50,23 @@ export default function LoginScreen() {
   // const [otp, setOtp] = useState(''); // Moved to OtpVerificationScreen
   // const [step, setStep] = useState<'PHONE' | 'OTP'>('PHONE');
   const [loading, setLoading] = useState(false);
+
+  // KeyboardAvoidingView's Android "height" behavior doesn't reliably
+  // reset back to its original size once the keyboard hides, leaving a
+  // stuck gap below termsContainer - tracking the keyboard's real height
+  // manually and applying it as marginBottom resets deterministically
+  // instead (same fix already applied to LiveChatScreen/OrderSupportScreen).
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   React.useEffect(() => {
     GoogleSignin.configure({
@@ -118,10 +135,7 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
+      <View style={[styles.keyboardView, { marginBottom: keyboardHeight > 0 ? keyboardHeight + insets.bottom : 0 }]}>
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]} showsVerticalScrollIndicator={false}>
           {/* Hero Image Section - part of the scrollable content now, so it
               moves with everything else instead of staying pinned when the
@@ -210,7 +224,7 @@ export default function LoginScreen() {
             <Text onPress={() => navigation.navigate('TermsOfService')} style={styles.termLink}>Terms of Service</Text>  <Text onPress={() => navigation.navigate('PrivacyPolicy')} style={styles.termLink}>Privacy Policy</Text>  <Text onPress={() => navigation.navigate('ContentPolicy')} style={styles.termLink}>Content Policy</Text>
           </Text>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </View >
   );
 }
@@ -224,8 +238,6 @@ const styles = StyleSheet.create({
     height: HERO_HEIGHT,
     width: '100%',
     overflow: 'hidden',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
   },
   heroImage: {
     width: '100%',

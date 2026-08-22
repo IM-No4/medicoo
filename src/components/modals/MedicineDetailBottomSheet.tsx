@@ -3,12 +3,22 @@ import QuantityControl from "@/src/features/pharmacy/components/QuantityControl"
 import { addItemLocal } from "@/src/redux/slices/cartSlice";
 import { RootState } from "@/src/redux/store";
 import { addItemToCart } from "@/src/services/api/cart.api";
-import React, { useMemo } from "react";
 import {
+  getStockAlertStatus,
+  subscribeStockAlert,
+  unsubscribeStockAlert,
+} from "@/src/services/api/stockAlert.api";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Alert,
   Dimensions,
+  FlatList,
   Image,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -17,7 +27,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const formatExpiryDate = (expiryDateStr: string | null | undefined): string => {
   if (!expiryDateStr) return "";
@@ -36,12 +46,31 @@ const formatExpiryDate = (expiryDateStr: string | null | undefined): string => {
   return expiryDateStr;
 };
 
+const getMedicineImages = (medicine: any): string[] => {
+  if (!medicine) return [];
+  const fromArray = Array.isArray(medicine.images)
+    ? medicine.images.filter((img: any) => typeof img === "string" && img.trim() !== "")
+    : [];
+  if (fromArray.length > 0) return fromArray;
+  const single = medicine.imageUrl || medicine.firstImgUrl;
+  return single ? [single] : [];
+};
+
+const getMedicineId = (medicine: any) =>
+  medicine?.sku || medicine?.inventoryId || medicine?.medicineId || medicine?._id || medicine?.id;
+
 interface Props {
   visible: boolean;
   medicine: any;
   storeId: string;
   storeName: string;
   isStoreOpen?: boolean;
+  // Rest of the store's catalog, used to populate "Similar products" below
+  // the main details. Tapping one swaps the sheet to show that item
+  // instead of closing, so browsing related products doesn't interrupt
+  // the flow.
+  allMedicines?: any[];
+  onSelectMedicine?: (medicine: any) => void;
   onClose: () => void;
 }
 
@@ -51,22 +80,91 @@ export default function MedicineDetailBottomSheet({
   storeId,
   storeName,
   isStoreOpen = true,
+  allMedicines = [],
+  onSelectMedicine,
   onClose,
 }: Props) {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   const carts = useSelector((state: RootState) => state.cart);
   const storeCart = carts[storeId];
-  const [isDescriptionExpanded, setIsDescriptionExpanded] =
-    React.useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
+  const [likedSimilar, setLikedSimilar] = useState<Record<string, boolean>>({});
+  const [notifyEnabled, setNotifyEnabled] = useState(false);
 
   React.useEffect(() => {
     setIsDescriptionExpanded(false);
+    setImageIndex(0);
+    setNotifyEnabled(false);
   }, [medicine]);
+
+  // storeInventoryList (the endpoint this screen's medicine list comes
+  // from) only ever returns items with onlineStocks > 0, but data can go
+  // stale between fetching that list and viewing an item here (someone
+  // else buys the last unit) - unitsAvailable is checked too since some
+  // callers (search results) use that field name instead.
+  const isOutOfStock = medicine
+    ? (medicine.onlineStocks ?? medicine.unitsAvailable ?? 1) <= 0
+    : false;
+
+  // The real Medicine document id, distinct from getMedicineId() above
+  // (which prefers sku/inventoryId for cart purposes) - stock alerts are
+  // keyed against Medicine._id on the backend.
+  const realMedicineId = medicine?.medicineId || medicine?._id || medicine?.id;
+
+  // Restore whether the user is already subscribed (e.g. they backed out
+  // and reopened this item) rather than always starting the bell off.
+  useEffect(() => {
+    if (!isOutOfStock || !realMedicineId || !storeId) return;
+    let cancelled = false;
+    getStockAlertStatus(String(realMedicineId), String(storeId))
+      .then((res) => {
+        if (!cancelled) setNotifyEnabled(!!res.subscribed);
+      })
+      .catch((e) => console.warn("Failed to load stock alert status", e));
+    return () => {
+      cancelled = true;
+    };
+  }, [isOutOfStock, realMedicineId, storeId]);
+
+  const handleShare = async () => {
+    if (!medicine) return;
+    try {
+      await Share.share({
+        message: `${medicine.name}${storeName ? ` from ${storeName}` : ""} - ₹${price} on Medicoo`,
+      });
+    } catch (e) {
+      console.warn("Failed to open share sheet", e);
+    }
+  };
+
+  const handleNotifyMe = async () => {
+    if (!realMedicineId || !storeId) return;
+    const next = !notifyEnabled;
+    setNotifyEnabled(next);
+    try {
+      if (next) {
+        await subscribeStockAlert(String(realMedicineId), String(storeId));
+      } else {
+        await unsubscribeStockAlert(String(realMedicineId), String(storeId));
+      }
+      Alert.alert(
+        next ? "You're on the list" : "Notification cancelled",
+        next
+          ? `We'll let you know when ${medicine?.name || "this item"} is back in stock.`
+          : "You won't be notified when this item is back in stock.",
+      );
+    } catch (e) {
+      console.error("Failed to update stock alert subscription", e);
+      setNotifyEnabled(!next);
+      Alert.alert("Something went wrong", "Please try again.");
+    }
+  };
 
   const cartItem = useMemo(() => {
     if (!storeCart || !medicine) return null;
-    const sku = medicine.sku || medicine.inventoryId || medicine.medicineId;
+    const sku = getMedicineId(medicine);
     return storeCart.items[String(sku)] || null;
   }, [storeCart, medicine]);
 
@@ -81,32 +179,45 @@ export default function MedicineDetailBottomSheet({
     ? Math.round((discountAmount / originalPrice) * 100)
     : 0;
   const isInCart = !!cartItem;
-  const rating = medicine?.rating || 4.8;
 
-  const medicineImage = useMemo(() => {
-    if (!medicine) return null;
-    return (
-      medicine.imageUrl ||
-      medicine.firstImgUrl ||
-      (Array.isArray(medicine.images) &&
-        medicine.images.find(
-          (img: any) => typeof img === "string" && img.trim() !== "",
-        )) ||
-      null
-    );
+  const subtitle = useMemo(() => {
+    if (!medicine) return "";
+    return [medicine.category, medicine.form || medicine.brand]
+      .filter(Boolean)
+      .join(" / ");
   }, [medicine]);
+
+  const images = useMemo(() => getMedicineImages(medicine), [medicine]);
+
+  // "Similar" means a genuine substitute - same composition, same store -
+  // not just anything else in the catalog. No match -> no section, rather
+  // than falling back to unrelated items.
+  const similarMedicines = useMemo(() => {
+    if (!medicine || !medicine.composition) return [];
+    const currentId = String(getMedicineId(medicine));
+    const currentComposition = String(medicine.composition).trim().toLowerCase();
+    if (!currentComposition) return [];
+
+    return allMedicines
+      .filter((m) => {
+        if (String(getMedicineId(m)) === currentId) return false;
+        const composition = String(m.composition || "").trim().toLowerCase();
+        return composition === currentComposition;
+      })
+      .slice(0, 10);
+  }, [allMedicines, medicine]);
+
+  const handleImageScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    if (index !== imageIndex) setImageIndex(index);
+  };
 
   const handleAddToCart = async () => {
     if (!isStoreOpen || !medicine) return;
 
     try {
-      const sku =
-        medicine.sku ||
-        medicine.inventoryId ||
-        medicine.medicineId ||
-        medicine._id ||
-        medicine.id;
-      const cartItem = {
+      const sku = getMedicineId(medicine);
+      const cartItemPayload = {
         medicineId: medicine.medicineId || medicine._id || medicine.id,
         sku: sku,
         name: medicine.name,
@@ -118,7 +229,7 @@ export default function MedicineDetailBottomSheet({
         prescriptionRequired:
           (medicine.isPrescriptionRequired || medicine.prescriptionRequired) ??
           false,
-        image: medicineImage,
+        image: images[0] || undefined,
         batchId: Array.isArray(medicine.batchNum)
           ? String(medicine.batchNum[0] ?? "")
           : String(medicine.batchNum ?? ""),
@@ -129,15 +240,15 @@ export default function MedicineDetailBottomSheet({
 
       // Backend expects productId in the item argument
       await addItemToCart(storeId, storeName, {
-        ...cartItem,
-        productId: cartItem.medicineId,
+        ...cartItemPayload,
+        productId: cartItemPayload.medicineId,
       });
 
       dispatch(
         addItemLocal({
           storeId,
           storeName,
-          item: cartItem,
+          item: cartItemPayload,
         }),
       );
     } catch (e) {
@@ -151,84 +262,117 @@ export default function MedicineDetailBottomSheet({
     <Modal
       visible={visible}
       animationType="slide"
-      transparent
       onRequestClose={onClose}
     >
-      <View style={styles.backdrop}>
-        <TouchableOpacity
-          style={styles.backdropTouchable}
-          activeOpacity={1}
-          onPress={onClose}
-        />
-        <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-          {/* Floating Header Buttons */}
-          <View style={[styles.floatingHeader, { top: insets.top - 12 || 16 }]}>
-            <TouchableOpacity style={styles.circleButton} onPress={onClose}>
-              <AppIcon name="x" size={20} color="#1C1C1E" />
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+          {/* Top Bar */}
+          <View style={styles.topBar}>
+            <TouchableOpacity style={styles.iconCircle} onPress={onClose}>
+              <AppIcon name="arrow-left" size={20} color="#1C1C1E" />
             </TouchableOpacity>
-            {/* <TouchableOpacity style={styles.circleButton} onPress={onClose}>
-              <AppIcon name="shopping-bag" size={20} color="#1C1C1E" />
-            </TouchableOpacity> */}
+            <View style={styles.topBarRight}>
+              <TouchableOpacity style={styles.iconCircle} onPress={handleShare}>
+                <AppIcon name="share" size={18} color="#1C1C1E" />
+              </TouchableOpacity>
+              {isOutOfStock && (
+                <TouchableOpacity style={styles.iconCircle} onPress={handleNotifyMe}>
+                  <AppIcon
+                    name="bell"
+                    size={18}
+                    color={notifyEnabled ? "#16A34A" : "#1C1C1E"}
+                  />
+                  {notifyEnabled && <View style={styles.notificationDot} />}
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-
-          {/* Handle bar */}
-          <View style={styles.handleBar} />
 
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {/* Medicine Image */}
-            <View style={styles.imageContainer}>
-              {medicineImage ? (
-                <Image
-                  source={{ uri: medicineImage }}
-                  style={styles.image}
-                  resizeMode="cover"
+            {/* Image Carousel */}
+            <View style={styles.imageCard}>
+              {images.length > 0 ? (
+                <FlatList
+                  data={images}
+                  keyExtractor={(_, i) => String(i)}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onMomentumScrollEnd={handleImageScroll}
+                  renderItem={({ item }) => (
+                    <Image
+                      source={{ uri: item }}
+                      style={styles.image}
+                      resizeMode="contain"
+                    />
+                  )}
                 />
               ) : (
                 <View style={styles.placeholderImage}>
                   <AppIcon name="pill" size={80} color="#E5E7EB" />
                 </View>
               )}
+
+              {images.length > 1 && (
+                <View style={styles.dotsRow}>
+                  {images.map((_, i) => (
+                    <View
+                      key={i}
+                      style={[styles.dot, i === imageIndex && styles.dotActive]}
+                    />
+                  ))}
+                </View>
+              )}
             </View>
 
             {/* Medicine Info */}
             <View style={styles.infoContainer}>
-              <View style={styles.titleRow}>
-                <View style={{ flex: 1, paddingRight: 16 }}>
-                  <Text style={styles.name}>{medicine.name}</Text>
-                  {medicine.brand && (
-                    <Text style={styles.brand}>by {medicine.brand}</Text>
+              <Text style={styles.name}>{medicine.name}</Text>
+
+              {!!subtitle && (
+                <Text style={styles.subtitle} numberOfLines={1}>
+                  {subtitle}
+                </Text>
+              )}
+
+              {medicine.description && (
+                <Text style={styles.description}>
+                  {isDescriptionExpanded ||
+                  medicine.description.length <= 150 ? (
+                    medicine.description
+                  ) : (
+                    <>
+                      {medicine.description.slice(0, 150)}...{" "}
+                      <Text
+                        style={styles.readMoreText}
+                        onPress={() => setIsDescriptionExpanded(true)}
+                      >
+                        Read More
+                      </Text>
+                    </>
                   )}
-                </View>
+                  {isDescriptionExpanded &&
+                    medicine.description.length > 150 && (
+                      <>
+                        {" "}
+                        <Text
+                          style={styles.readMoreText}
+                          onPress={() => setIsDescriptionExpanded(false)}
+                        >
+                          Read Less
+                        </Text>
+                      </>
+                    )}
+                </Text>
+              )}
 
-                {isInCart && (
-                  <View style={styles.qtyPillContainer}>
-                    <QuantityControl
-                      storeId={storeId}
-                      sku={String(
-                        medicine.sku ||
-                          medicine.inventoryId ||
-                          medicine.medicineId ||
-                          medicine._id ||
-                          medicine.id,
-                      )}
-                      productId={
-                        medicine.medicineId || medicine._id || medicine.id
-                      }
-                      quantity={cartItem.quantity}
-                      disabled={!isStoreOpen}
-                      size="medium"
-                    />
-                  </View>
-                )}
-              </View>
-
-              {/* Price section */}
+              {/* Price */}
               <View style={styles.priceRow}>
                 <Text style={styles.price}>₹{price}</Text>
+                <Text style={styles.priceUnit}>/pack</Text>
                 {originalPriceToShow && (
                   <Text style={styles.originalPrice}>
                     ₹{originalPriceToShow}
@@ -241,45 +385,48 @@ export default function MedicineDetailBottomSheet({
                 )}
               </View>
 
+              {/* Add to cart - swaps for the increment/decrement counter
+                  once the item is actually in the cart, and swaps back the
+                  moment it's decremented away entirely (isInCart is derived
+                  straight from Redux cart state, so this happens on its
+                  own with no extra wiring needed here). */}
+              <View style={styles.addRow}>
+                {isInCart ? (
+                  <QuantityControl
+                    storeId={storeId}
+                    sku={String(getMedicineId(medicine))}
+                    productId={medicine.medicineId || medicine._id || medicine.id}
+                    quantity={cartItem.quantity}
+                    disabled={!isStoreOpen}
+                    size="large"
+                  />
+                ) : (
+                  <TouchableOpacity
+                    style={[
+                      styles.addButton,
+                      !isStoreOpen && styles.addButtonDisabled,
+                    ]}
+                    disabled={!isStoreOpen}
+                    onPress={handleAddToCart}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.addButtonText,
+                        !isStoreOpen && styles.addButtonTextDisabled,
+                      ]}
+                    >
+                      Add to cart
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
               {medicine.composition && (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Composition</Text>
                   <Text style={styles.sectionContent}>
                     {medicine.composition}
-                  </Text>
-                </View>
-              )}
-
-              {medicine.description && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Description</Text>
-                  <Text style={styles.sectionContent}>
-                    {isDescriptionExpanded ||
-                    medicine.description.length <= 150 ? (
-                      medicine.description
-                    ) : (
-                      <>
-                        {medicine.description.slice(0, 150)}...{" "}
-                        <Text
-                          style={styles.readMoreText}
-                          onPress={() => setIsDescriptionExpanded(true)}
-                        >
-                          Read More
-                        </Text>
-                      </>
-                    )}
-                    {isDescriptionExpanded &&
-                      medicine.description.length > 150 && (
-                        <>
-                          {" "}
-                          <Text
-                            style={styles.readMoreText}
-                            onPress={() => setIsDescriptionExpanded(false)}
-                          >
-                            Read Less
-                          </Text>
-                        </>
-                      )}
                   </Text>
                 </View>
               )}
@@ -317,114 +464,117 @@ export default function MedicineDetailBottomSheet({
                 </View>
               )}
             </View>
-          </ScrollView>
 
-          {/* Bottom Action Bar */}
-          <View style={styles.actionBar}>
-            {/* <TouchableOpacity
-              style={styles.secondaryButton}
-              activeOpacity={0.7}
-            >
-              <AppIcon name="phone" size={18} color="#0E7439" />
-              <Text style={styles.secondaryButtonText}>Call Pharmacy</Text>
-            </TouchableOpacity> */}
+            {/* Similar Products */}
+            {similarMedicines.length > 0 && (
+              <View style={styles.similarSection}>
+                <View style={styles.similarHeaderRow}>
+                  <Text style={styles.similarHeaderTitle}>Similar products</Text>
+                  <Text style={styles.similarSeeAll}>See all</Text>
+                </View>
 
-            <View
-              style={[
-                styles.primaryActionWrapper,
-                { paddingBottom: insets.bottom - 32 },
-              ]}
-            >
-              {isInCart ? (
-                <QuantityControl
-                  storeId={storeId}
-                  sku={String(
-                    medicine.sku ||
-                      medicine.inventoryId ||
-                      medicine.medicineId ||
-                      medicine._id ||
-                      medicine.id,
-                  )}
-                  productId={medicine.medicineId || medicine._id || medicine.id}
-                  quantity={cartItem.quantity}
-                  disabled={!isStoreOpen}
-                  size="large"
-                />
-              ) : (
-                <TouchableOpacity
-                  style={[
-                    styles.addButton,
-                    !isStoreOpen && styles.addButtonDisabled,
-                  ]}
-                  disabled={!isStoreOpen}
-                  onPress={handleAddToCart}
-                  activeOpacity={0.7}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.similarList}
                 >
-                  <Text
-                    style={[
-                      styles.addButtonText,
-                      !isStoreOpen && styles.addButtonTextDisabled,
-                    ]}
-                  >
-                    Add Cart
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
+                  {similarMedicines.map((item, index) => {
+                    const itemImages = getMedicineImages(item);
+                    const itemId = String(getMedicineId(item));
+                    const isLiked = !!likedSimilar[itemId];
+                    const itemOriginalPrice = item.price ?? 0;
+                    const itemDiscountAmount = item.discountPrice ?? 0;
+                    const itemPrice =
+                      itemDiscountAmount > 0
+                        ? itemOriginalPrice - itemDiscountAmount
+                        : itemOriginalPrice;
+
+                    return (
+                      <TouchableOpacity
+                        key={itemId || index}
+                        style={styles.similarCard}
+                        activeOpacity={0.8}
+                        onPress={() => onSelectMedicine?.(item)}
+                      >
+                        <View style={styles.similarImageWrapper}>
+                          {itemImages[0] ? (
+                            <Image
+                              source={{ uri: itemImages[0] }}
+                              style={styles.similarImage}
+                              resizeMode="contain"
+                            />
+                          ) : (
+                            <AppIcon name="pill" size={32} color="#E5E7EB" />
+                          )}
+                          <TouchableOpacity
+                            style={styles.similarHeartBtn}
+                            onPress={() =>
+                              setLikedSimilar((prev) => ({
+                                ...prev,
+                                [itemId]: !prev[itemId],
+                              }))
+                            }
+                          >
+                            <AppIcon
+                              name="heart"
+                              size={14}
+                              color={isLiked ? "#EF4444" : "#9CA3AF"}
+                              fill={isLiked ? "#EF4444" : "none"}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                        <Text style={styles.similarName} numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                        <Text style={styles.similarPrice}>₹{itemPrice}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            <View style={{ height: insets.bottom + 24 }} />
+          </ScrollView>
         </View>
-      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  backdropTouchable: {
-    ...StyleSheet.absoluteFillObject,
-  },
   container: {
+    flex: 1,
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: SCREEN_HEIGHT,
-    overflow: "hidden",
   },
-  handleBar: {
-    position: "absolute",
-    top: 12,
-    alignSelf: "center",
-    width: 40,
-    height: 4,
-    backgroundColor: "rgba(0, 0, 0, 0.2)",
-    borderRadius: 2,
-    zIndex: 10,
-  },
-  floatingHeader: {
-    position: "absolute",
-    left: 16,
-    right: 16,
+  topBar: {
     flexDirection: "row",
-    justifyContent: "flex-end",
     alignItems: "center",
-    zIndex: 20,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  circleButton: {
+  topBarRight: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  iconCircle: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F3F4F6",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  },
+  notificationDot: {
+    position: "absolute",
+    top: 9,
+    right: 10,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#EF4444",
+    borderWidth: 1.5,
+    borderColor: "#F3F4F6",
   },
   scrollView: {
     flex: 1,
@@ -432,50 +582,87 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 0,
   },
-  imageContainer: {
+  imageCard: {
     width: "100%",
-    height: SCREEN_HEIGHT * 0.42,
-    backgroundColor: "#F9FAFB",
-    borderBottomLeftRadius: 36,
-    borderBottomRightRadius: 36,
+    height: SCREEN_HEIGHT * 0.35,
+    backgroundColor: "#FFFFFF",
     overflow: "hidden",
-    position: "relative",
+    marginTop: 8,
   },
   image: {
-    width: "100%",
+    width: SCREEN_WIDTH,
     height: "100%",
   },
   placeholderImage: {
-    width: "100%",
+    width: SCREEN_WIDTH,
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
   },
-  titleRow: {
+  dotsRow: {
+    position: "absolute",
+    bottom: 12,
+    left: 0,
+    right: 0,
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
-  },
-  qtyPillContainer: {
     justifyContent: "center",
-    alignItems: "flex-end",
+    gap: 6,
   },
-  metadataRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#D1D5DB",
+  },
+  dotActive: {
+    backgroundColor: "#16A34A",
+    width: 16,
+  },
+  infoContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  name: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1C1C1E",
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#6B7280",
+    marginBottom: 12,
+  },
+  description: {
+    fontSize: 13,
+    fontWeight: "400",
+    color: "#6B7280",
+    lineHeight: 20,
     marginBottom: 16,
   },
-  metadataItem: {
+  priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
+    marginBottom: 16,
+    flexWrap: "wrap",
   },
-  metadataText: {
+  price: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#1C1C1E",
+  },
+  priceUnit: {
     fontSize: 13,
-    color: "#8A8A8E",
-    fontWeight: "500",
+    fontWeight: "600",
+    color: "#9CA3AF",
+    marginRight: 4,
+  },
+  originalPrice: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    textDecorationLine: "line-through",
   },
   discountBadge: {
     backgroundColor: "#FEE2E2",
@@ -488,38 +675,31 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#EF4444",
   },
-  infoContainer: {
-    paddingBottom: 16,
-    paddingHorizontal: 24,
-    marginTop: 20,
-  },
-  name: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#1C1C1E",
-    marginBottom: 2,
-  },
-  brand: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#8A8A8E",
-    marginBottom: 6,
-  },
-  priceRow: {
+  addRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  price: {
-    fontSize: 18,
+  addButton: {
+    flex: 1,
+    height: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#16A34A",
+    borderRadius: 12,
+  },
+  addButtonDisabled: {
+    backgroundColor: "#F3F4F6",
+  },
+  addButtonText: {
+    fontSize: 15,
     fontWeight: "700",
-    color: "#0E7439",
+    color: "#FFFFFF",
   },
-  originalPrice: {
-    fontSize: 13,
+  addButtonTextDisabled: {
     color: "#9CA3AF",
-    textDecorationLine: "line-through",
   },
   section: {
     marginBottom: 16,
@@ -550,59 +730,76 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#EF4444",
   },
-  actionBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 12,
-    paddingHorizontal: 16,
+  readMoreText: {
+    color: "#16A34A",
+    fontWeight: "700",
+  },
+  similarSection: {
+    marginTop: 8,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
+    borderTopColor: "#F3F4F6",
+  },
+  similarHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  similarHeaderTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1C1C1E",
+  },
+  similarSeeAll: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#16A34A",
+  },
+  similarList: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  similarCard: {
+    width: 110,
+  },
+  similarImageWrapper: {
+    width: 110,
+    height: 100,
+    borderRadius: 12,
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+    position: "relative",
+  },
+  similarImage: {
+    width: "80%",
+    height: "80%",
+  },
+  similarHeartBtn: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: "#FFFFFF",
-  },
-  secondaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    borderWidth: 1.5,
-    borderColor: "#0E7439",
-    borderRadius: 12,
-    paddingVertical: 14,
-    width: "40%",
-  },
-  secondaryButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0E7439",
-  },
-  primaryActionWrapper: {
-    width: "56%",
-  },
-  addButton: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#0E7439",
-    paddingVertical: 14,
-    borderRadius: 12,
-    width: "100%",
   },
-  addButtonDisabled: {
-    backgroundColor: "#F3F4F6",
+  similarName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1C1C1E",
   },
-  addButtonText: {
-    fontSize: 14,
+  similarPrice: {
+    fontSize: 12,
     fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  addButtonTextDisabled: {
-    color: "#9CA3AF",
-  },
-  readMoreText: {
-    color: "#0E7439",
-    fontWeight: "700",
+    color: "#16A34A",
+    marginTop: 2,
   },
 });

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react-native';
 import RazorpayCheckout from 'react-native-razorpay';
 import { apiClient } from '../../services/api/client';
+import { getDocumentViewUrl } from '../../services/api/document.api';
 import { clearCart } from '../../services/api/cart.api';
 import { createRazorpayOrder } from '../../services/api/payment.api';
 import { clearStoreCartLocal } from '../../redux/slices/cartSlice';
@@ -57,6 +58,10 @@ export default function PaymentScreen() {
     couponDiscount = 0,
     platformFee = 5,
     otherCharges = 2,
+    prescriptionMode,
+    prescriptionDocumentId,
+    prescriptionId,
+    prescriptionRequired = false,
   } = route.params || { storeId: '', amount: 0 };
   const carts = useSelector((state: RootState) => state.cart);
   const selectedAddress = useSelector((state: RootState) => state.address.selectedAddress);
@@ -111,16 +116,26 @@ export default function PaymentScreen() {
       fullAddress: selectedAddress.fullAddress || '',
       latitude: Number(selectedAddress.latitude) || 0,
       longitude: Number(selectedAddress.longitude) || 0,
-      receiverName: selectedAddress.receiverName || 'John Doe',
-      receiverPhone: selectedAddress.receiverPhone || '+91 9876543210',
+      // selectedAddress.receiverPhone doesn't exist - the real field is
+      // receiverNumber (matches the backend's CustomerAddress schema) - so
+      // this always fell through to the fake placeholder before, meaning
+      // real orders were recording a fabricated contact number.
+      receiverName: selectedAddress.receiverName || '',
+      receiverPhone: selectedAddress.receiverNumber || '',
     } : null,
     paymentMethod,
     razorpayOrderId: razorpayResult?.razorpay_order_id,
     razorpayPaymentId: razorpayResult?.razorpay_payment_id,
     razorpaySignature: razorpayResult?.razorpay_signature,
     mode: 'online',
-    prescription_mode: 'none',
-    prescription_required: false,
+    // 'doctor' points at a PrescribedMedicine record via prescription_id;
+    // 'image' covers both a freshly-uploaded prescription and one picked
+    // from the user's existing documents - both are backed by a
+    // UserDocument, viewable via prescription_uri.
+    prescription_mode: prescriptionMode === 'doctor' ? 'doctor' : prescriptionMode ? 'image' : 'none',
+    prescription_id: prescriptionMode === 'doctor' ? prescriptionId : prescriptionDocumentId,
+    prescription_uri: prescriptionMode === 'doctor' ? undefined : (prescriptionDocumentId ? getDocumentViewUrl(prescriptionDocumentId) : undefined),
+    prescription_required: !!prescriptionRequired,
   });
 
   const finalizeOrder = async (paymentMethod: 'online' | 'cod', razorpayResult?: RazorpayResult) => {
@@ -139,6 +154,12 @@ export default function PaymentScreen() {
     if (!selectedAddress) {
       setPaymentError('Please select a delivery address before paying.');
       navigation.navigate('AddressBookModal');
+      return;
+    }
+
+    if (prescriptionRequired && !prescriptionMode) {
+      setPaymentError('Please add a prescription before paying.');
+      navigation.goBack();
       return;
     }
 
@@ -168,7 +189,7 @@ export default function PaymentScreen() {
         description: `Order from ${pharmacyName}`,
         prefill: {
           name: selectedAddress?.receiverName || '',
-          contact: selectedAddress?.receiverPhone || '',
+          contact: selectedAddress?.receiverNumber || '',
         },
         theme: { color: '#089643' },
       });

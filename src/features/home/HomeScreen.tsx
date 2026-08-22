@@ -7,10 +7,17 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Animated, RefreshControl, View, Platform } from 'react-native';
+import {
+  Animated,
+  RefreshControl,
+  View,
+  Platform,
+} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { executeAction as runGlobalAction } from '../../actions/ActionExecutor';
+import MultiStoreCartBar from '../../components/cart/MultiStoreCartBar';
 import HomeHeader from './components/HomeHeader';
 import HomeFeedRenderer from './feed/HomeFeedRenderer';
 
@@ -24,7 +31,7 @@ import { AppDispatch, RootState } from '../../redux/store';
 import { setHomeBootstrapped, setPrescriptionModalVisible } from '../../redux/slices/appSlice';
 import { loadCalendarData } from '../../redux/slices/calendarSlice';
 import { selectActiveGoals } from '../../redux/slices/goalsSlice';
-import { uploadPrescription } from '@/src/services/api/prescription.api';
+import { getMedicinePrescriptions, uploadPrescription } from '@/src/services/api/prescription.api';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 import { DynamicHeaderFeedItem } from './feed/feed.types';
 import { useFeedActionExecutor } from './hooks/useFeedActionExecutor';
@@ -239,6 +246,31 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
   /* ------------------ PRESCRIPTION UPLOAD ------------------ */
 
   const [isUploading, setIsUploading] = useState(false);
+  const isPrescriptionModalVisible = useSelector(
+    (state: RootState) => state.app.prescriptionModalVisible
+  );
+
+  // "Recent Prescriptions" in the modal below used to be a single
+  // hardcoded fake entry with no working tap handler at all - fetched here
+  // (real doctor-issued records) whenever the modal opens, and kept
+  // alongside its raw source so selecting one can look up its medicines.
+  const [existingPrescriptions, setExistingPrescriptions] = useState<any[]>([]);
+  useEffect(() => {
+    if (!isPrescriptionModalVisible) return;
+    getMedicinePrescriptions()
+      .then(setExistingPrescriptions)
+      .catch((e) => console.warn('Failed to load existing prescriptions', e));
+  }, [isPrescriptionModalVisible]);
+
+  const handleSelectExistingPrescription = (prescriptionId: string) => {
+    const prescription = existingPrescriptions.find((p) => p._id === prescriptionId);
+    const firstMedicineName = prescription?.prescribedMedicines?.[0]?.medicineName;
+    dispatch(setPrescriptionModalVisible(false));
+    if (firstMedicineName) {
+      runGlobalAction('OPEN_GLOBAL_SEARCH', { query: firstMedicineName });
+    }
+  };
+
   const [statusModal, setStatusModal] = useState<{
     visible: boolean;
     status: StatusType;
@@ -333,7 +365,9 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingTop: HEADER_HEIGHT + 28,
-          paddingBottom: 0,
+          // Clears the floating MultiStoreCartBar rendered below once
+          // there are cart items.
+          paddingBottom: 100,
         }}
         scrollEventThrottle={8}
         onScroll={Animated.event(
@@ -349,20 +383,23 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
         }
       />
 
+      {/* The tab bar is always visible and already reserves its own bottom
+          safe-area padding right below this - adding the real inset here
+          too would double up as a visible gap. */}
+      <MultiStoreCartBar bottomInset={0} />
+
       <PrescriptionUploadModal
-        visible={useSelector((state: RootState) => state.app.prescriptionModalVisible)}
+        visible={isPrescriptionModalVisible}
         isLoading={isUploading}
         onClose={() => !isUploading && dispatch(setPrescriptionModalVisible(false))}
         onImageSelected={handlePrescriptionUpload}
-        existingPrescriptions={[
-          {
-            id: 'RX001',
-            doctorName: 'Dr. Rajesh Kumar',
-            prescriptionDate: '2025-01-15',
-            items: 3,
-            diagnosis: 'Common Cold & Fever',
-          },
-        ]}
+        onPrescriptionSelected={handleSelectExistingPrescription}
+        existingPrescriptions={existingPrescriptions.map((p) => ({
+          id: p._id,
+          doctorName: p.doctorName || 'Doctor',
+          prescriptionDate: p.createdAt,
+          items: p.prescribedMedicines?.length || 0,
+        }))}
       />
 
       <StatusModal

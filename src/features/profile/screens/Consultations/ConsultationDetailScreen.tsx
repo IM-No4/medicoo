@@ -593,7 +593,14 @@ export default function ConsultationDetailScreen() {
                             <Text style={styles.promptText}>Your feedback helps other patients find the best doctors.</Text>
                             <TouchableOpacity
                                 style={styles.reviewButton}
-                                onPress={() => executeAction('OPEN_DOCTOR_FEEDBACK', { consultationId: consultation.requestId, doctor: consultation.doctorDetails })}
+                                onPress={() => executeAction('OPEN_DOCTOR_FEEDBACK', {
+                                    consultationId: consultation.requestId,
+                                    // doctorDetails itself has no _id (see backend's
+                                    // getConsultationDetail) - it's a sibling top-level
+                                    // field that has to be merged in explicitly, or
+                                    // submitDoctorFeedback silently sends doctorId: undefined.
+                                    doctor: { ...consultation.doctorDetails, _id: consultation.doctorId },
+                                })}
                             >
                                 <Text style={styles.reviewButtonText}>Write a Review</Text>
                             </TouchableOpacity>

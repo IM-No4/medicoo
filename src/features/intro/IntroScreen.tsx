@@ -1,7 +1,9 @@
-import { ArrowRight } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as NavigationBar from 'expo-navigation-bar';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
+  Platform,
   StatusBar,
   StyleSheet,
   Text,
@@ -10,48 +12,50 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+// Full-width white card (rounded bottom corners only) over a full-bleed
+// brand gradient background - the gradient shows through the rounded
+// corner notches at the base of the white card, and fills the section
+// below it where the dots/button sit. Same brand gradient used elsewhere
+// in the app (HealthProfileScreen's header, the splash screen).
+const GRADIENT_COLORS = ['#2FA561', '#0E7439'] as const;
+
 const slides = [
   {
     id: 1,
     title: 'Book Doctors Instantly',
     description: 'Connect with verified doctors anytime, anywhere. Get instant consultations via chat, voice, or video call.',
     illustration: require('../../assets/images/doctor-consultation.png'),
-    blobStyle: {
-      width: '100%',
-      height: '90%',
-      borderRadius: 180,
-      transform: [{ scaleX: 1.2 }, { scaleY: 0.85 }, { rotate: '-15deg' }],
-    },
   },
   {
     id: 2,
     title: 'Order Medicines Easily',
     description: 'Browse thousands of medicines and healthcare products. Get them delivered to your doorstep quickly.',
     illustration: require('../../assets/images/medicine-delivery.png'),
-    blobStyle: {
-      width: '95%',
-      height: '95%',
-      borderRadius: 200,
-      transform: [{ scaleX: 0.9 }, { scaleY: 1.1 }, { rotate: '25deg' }],
-    },
   },
   {
     id: 3,
     title: 'Manage Your Health',
     description: 'Track appointments, medications, and health records all in one place. Your health, simplified.',
     illustration: require('../../assets/images/health-tracking.png'),
-    blobStyle: {
-      width: '105%',
-      height: '88%',
-      borderRadius: 190,
-      transform: [{ scaleX: 1.15 }, { scaleY: 0.95 }, { rotate: '10deg' }],
-    },
   },
 ];
 
 export default function IntroScreen({ onFinish }: { onFinish: () => void }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const insets = useSafeAreaInsets();
+
+  // This screen's gradient reaches the transparent system nav bar, so its
+  // default dark icons (set app-wide in useSystemUI.ts, for the mostly
+  // white-background rest of the app) would be nearly invisible here -
+  // switch to light icons while this screen is up, and restore dark on
+  // the way out.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    NavigationBar.setButtonStyleAsync('light');
+    return () => {
+      NavigationBar.setButtonStyleAsync('dark');
+    };
+  }, []);
 
   const handleNext = () => {
     if (currentIndex === slides.length - 1) {
@@ -62,42 +66,46 @@ export default function IntroScreen({ onFinish }: { onFinish: () => void }) {
   };
 
   const currentSlide = slides[currentIndex];
+  const isLastSlide = currentIndex === slides.length - 1;
 
   return (
     <View style={styles.container}>
+      <LinearGradient
+        colors={GRADIENT_COLORS}
+        start={Platform.select({ ios: { x: 0, y: 0 }, android: { x: 0.2, y: 0 } })}
+        end={Platform.select({ ios: { x: 1, y: 0.9 }, android: { x: 0.8, y: 1 } })}
+        style={StyleSheet.absoluteFill}
+      />
+
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-      {/* Skip Button - Top Right */}
-      <View style={[styles.skipContainer, { paddingTop: insets.top + 16 }]}>
-        <TouchableOpacity onPress={onFinish} style={styles.skipButton}>
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Main Content */}
-      <View style={styles.mainContent}>
-        {/* Illustration with unique organic blob background */}
-        <View style={styles.illustrationWrapper}>
-          {/* Unique organic blob shape for each slide */}
-          <View style={[styles.blobShape, currentSlide.blobStyle]} />
-
-          <Image
-            source={currentSlide.illustration}
-            style={styles.illustration}
-            resizeMode="contain"
-          />
+      {/* Top white card - illustration lives here, on its own natural
+          white background, instead of on the colored gradient where its
+          opaque white edges would show through as a mismatched shape. */}
+      <View style={[styles.topCard, { paddingTop: insets.top + 16 }]}>
+        <View style={styles.skipRow}>
+          <TouchableOpacity onPress={onFinish} style={styles.skipButton}>
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Title */}
-        <Text style={styles.title}>{currentSlide.title}</Text>
+        <View style={styles.contentGroup}>
+          <View style={styles.illustrationWrapper}>
+            <Image
+              source={currentSlide.illustration}
+              style={styles.illustration}
+              resizeMode="contain"
+            />
+          </View>
 
-        {/* Description */}
-        <Text style={styles.description}>{currentSlide.description}</Text>
+          <Text style={styles.title}>{currentSlide.title}</Text>
+          <Text style={styles.description}>{currentSlide.description}</Text>
+        </View>
       </View>
 
-      {/* Bottom Section */}
-      <View style={[styles.bottomContainer, { paddingBottom: insets.bottom + 24 }]}>
-        {/* Pagination Dots */}
+      {/* Bottom section - transparent, the gradient behind shows through
+          here and in the notches left by the card's rounded corners. */}
+      <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 36 }]}>
         <View style={styles.dotsContainer}>
           {slides.map((_, index) => (
             <View
@@ -110,13 +118,14 @@ export default function IntroScreen({ onFinish }: { onFinish: () => void }) {
           ))}
         </View>
 
-        {/* Large Circular Button */}
         <TouchableOpacity
           onPress={handleNext}
-          style={styles.circleButton}
-          activeOpacity={0.85}
+          style={styles.continueButton}
+          activeOpacity={0.8}
         >
-          <ArrowRight size={28} color="#ffffff" strokeWidth={2.5} />
+          <Text style={styles.continueButtonText}>
+            {isLastSlide ? 'Get Started' : 'Continue'}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -126,94 +135,101 @@ export default function IntroScreen({ onFinish }: { onFinish: () => void }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
   },
-  skipContainer: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    zIndex: 10,
-    paddingHorizontal: 20,
+  topCard: {
+    flex: 1.4,
+    backgroundColor: '#FFFFFF',
+    borderBottomLeftRadius: 44,
+    borderBottomRightRadius: 44,
+    alignItems: 'center',
+    paddingHorizontal: 36,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  contentGroup: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  skipRow: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
   skipButton: {
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
   skipText: {
-    fontSize: 16,
-    color: '#6B7280',
+    fontSize: 15,
+    color: '#9CA3AF',
     fontWeight: '600',
   },
-  mainContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-    paddingTop: 60,
-  },
   illustrationWrapper: {
-    width: '100%',
-    height: 320,
+    width: 360,
+    height: 360,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 32,
-    position: 'relative',
-  },
-  blobShape: {
-    position: 'absolute',
-    backgroundColor: '#E8F5E9',
+    marginBottom: 28,
   },
   illustration: {
-    width: '75%',
-    height: '75%',
-    zIndex: 1,
+    width: '100%',
+    height: '100%',
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 21,
+    fontWeight: '800',
     color: '#1F2937',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   description: {
     fontSize: 14,
     color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 8,
+    lineHeight: 21,
   },
-  bottomContainer: {
+  bottomSection: {
+    flex: 0.38,
     alignItems: 'center',
-    paddingTop: 20,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 32,
   },
   dotsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 24,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: 'rgba(255,255,255,0.35)',
     marginHorizontal: 4,
   },
   dotActive: {
-    width: 8,
+    width: 22,
     height: 8,
-    backgroundColor: '#2FA561',
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
   },
-  circleButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#2FA561',
+  continueButton: {
+    width: '100%',
+    paddingVertical: 17,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2FA561',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  continueButtonText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
 });

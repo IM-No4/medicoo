@@ -1,6 +1,6 @@
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { Activity, Bell, Flame, Heart } from 'lucide-react-native';
+import { Activity, Bell, Flame, Thermometer } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
 import {
   Platform,
@@ -13,23 +13,24 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '../../redux/store';
-import { loadOnDeviceSteps, selectTodaySteps } from '../../redux/slices/deviceSlice';
+import { executeAction } from '../../actions/ActionExecutor';
+import { loadOnDeviceSteps, selectTodayCalories, selectTodaySteps } from '../../redux/slices/deviceSlice';
 import { loadVitalRecords } from '../../redux/slices/vitalsSlice';
+import { AppDispatch, RootState } from '../../redux/store';
 import { watchLiveSteps } from '../../services/health/stepsService';
 import { DeviceConnectCard } from './components/DeviceConnectCard';
 import { GoalsCard } from './components/GoalsCard';
 import { HealthHighlights } from './components/HealthHighlights';
-import HealthNotificationsModal from './components/HealthNotificationsModal';
+import { HeartRateRing, isNormalHeartRate } from './components/HeartRateRing';
 import { MedicationsSummary } from './components/MedicationsSummary';
-import { TodaysFocus } from './components/TodaysFocus';
 import { VitalsSnapshot } from './components/VitalsSnapshot';
+import { WeeklyActivityCard } from './components/WeeklyActivityCard';
 
 export default function HealthScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const dispatch = useDispatch<AppDispatch>();
   const [isFocused, setIsFocused] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   // Android has no "steps since midnight" query without Health Connect (see
   // stepsService.ts), so with no wearable connected there's nothing for
   // selectTodaySteps to read - this is a live, session-only count from the
@@ -44,15 +45,19 @@ export default function HealthScreen() {
   const { connectedDevice, onDeviceSteps } = useSelector((state: RootState) => state.device);
   const { records } = useSelector((state: RootState) => state.vitals);
   const todaySteps = useSelector(selectTodaySteps);
+  const todayCalories = useSelector(selectTodayCalories);
   const unreadNotificationCount = useSelector((state: RootState) => state.notifications.unreadCount);
 
   const latestManual = records[0];
   const heartRate = latestManual?.heartRate ?? connectedDevice?.data?.heartRate ?? '--';
+  const heartRateNumeric = typeof heartRate === 'number' ? heartRate : (typeof heartRate === 'string' && heartRate !== '--' ? parseFloat(heartRate) : null);
+  const hasHeartRateData = heartRateNumeric !== null && !isNaN(heartRateNumeric);
   const isLiveStepsFallback = Platform.OS === 'android' && !connectedDevice && onDeviceSteps === null;
   const hasStepsData = connectedDevice?.data?.steps !== undefined || onDeviceSteps !== null || (isLiveStepsFallback && liveSteps !== null);
   const steps = hasStepsData ? (isLiveStepsFallback ? liveSteps! : todaySteps).toLocaleString() : '--';
   const stepsLabel = isLiveStepsFallback && hasStepsData ? 'Steps (live)' : 'Steps';
-  const calories = connectedDevice?.data?.calories !== undefined ? `${connectedDevice.data.calories}` : '--';
+  const calories = todayCalories !== null ? todayCalories.toLocaleString() : '--';
+  const temperature = latestManual?.temperature !== undefined ? latestManual.temperature.toFixed(1) : '--';
 
   const stepsSubscriptionRef = useRef<{ remove: () => void } | null>(null);
 
@@ -106,14 +111,14 @@ export default function HealthScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.greeting}>Daily Check-in</Text>
+          {/* <Text style={styles.greeting}>Daily Check-in</Text> */}
           <Text style={styles.headerTitle}>My Health</Text>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.headerIconBtn}
             activeOpacity={0.7}
-            onPress={() => setShowNotifications(true)}
+            onPress={() => executeAction('OPEN_NOTIFICATIONS')}
           >
             <Bell size={22} color="#1F2937" />
             {unreadNotificationCount > 0 && <View style={styles.notificationBadge} />}
@@ -128,13 +133,51 @@ export default function HealthScreen() {
           <RefreshControl refreshing={isManualRefreshing} onRefresh={onRefresh} />
         }
       >
+        {/* Heart Rate Ring */}
+        <TouchableOpacity
+          style={styles.heartRateSection}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('VitalsHistory', { metric: 'heart_rate' })}
+        >
+          <HeartRateRing heartRate={hasHeartRateData ? heartRateNumeric : null} />
+          <View style={styles.heartRateInfo}>
+            <Text style={styles.heartRateLabel}>Heart Rate</Text>
+            <Text style={styles.heartRateValue}>
+              {hasHeartRateData ? `${heartRateNumeric} bpm` : '--'}
+            </Text>
+            {hasHeartRateData && (
+              <View
+                style={[
+                  styles.heartRateStatusPill,
+                  { backgroundColor: isNormalHeartRate(heartRateNumeric!) ? '#F0FDF4' : '#FFFBEB' },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.heartRateStatusDot,
+                    { backgroundColor: isNormalHeartRate(heartRateNumeric!) ? '#2FA561' : '#F59E0B' },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.heartRateStatusText,
+                    { color: isNormalHeartRate(heartRateNumeric!) ? '#2FA561' : '#B45309' },
+                  ]}
+                >
+                  {isNormalHeartRate(heartRateNumeric!) ? 'Normal' : 'Outside normal range'}
+                </Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+
         {/* Activity Summary Row */}
         <View style={styles.activitySummary}>
           <SummaryCard
             icon={<Flame size={18} color="#EF4444" />}
             value={calories}
             unit="kcal"
-            label="Burned"
+            label="Calories"
             color="#FEF2F2"
           />
           <SummaryCard
@@ -145,34 +188,31 @@ export default function HealthScreen() {
             color="#F0FDF4"
           />
           <SummaryCard
-            icon={<Heart size={18} color="#EF4444" />}
-            value={heartRate !== '--' ? `${heartRate}` : '--'}
-            unit="bpm"
-            label="Heart Rate"
-            color="#FEF2F2"
+            icon={<Thermometer size={18} color="#0EA5E9" />}
+            value={temperature}
+            unit="°F"
+            label="Temperature"
+            color="#F0F9FF"
+            onPress={() => navigation.navigate('VitalsHistory', { metric: 'temperature' })}
           />
         </View>
 
-        <TodaysFocus />
+        <WeeklyActivityCard />
+
         <MedicationsSummary />
         <GoalsCard />
         <VitalsSnapshot />
         <HealthHighlights />
         <DeviceConnectCard />
       </ScrollView>
-
-      {/* Modals */}
-      <HealthNotificationsModal
-        visible={showNotifications}
-        onClose={() => setShowNotifications(false)}
-      />
     </View>
   );
 }
 
-function SummaryCard({ icon, value, unit, label, color }: any) {
+function SummaryCard({ icon, value, unit, label, color, onPress }: any) {
+  const Container = onPress ? TouchableOpacity : View;
   return (
-    <View style={[styles.summaryCard, { backgroundColor: color }]}>
+    <Container style={[styles.summaryCard]} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.summaryIcon}>{icon}</View>
       <View>
         <View style={styles.summaryRow}>
@@ -181,7 +221,7 @@ function SummaryCard({ icon, value, unit, label, color }: any) {
         </View>
         <Text style={styles.summaryLabel} numberOfLines={1}>{label}</Text>
       </View>
-    </View>
+    </Container>
   );
 }
 
@@ -197,13 +237,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
-      android: { elevation: 4 }
-    })
+    borderWidth: 1,
+    borderColor: '#e5e7eb76',
   },
   greeting: { fontSize: 13, fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 1 },
-  headerTitle: { fontSize: 24, fontWeight: '600', color: '#111827', marginTop: 4 },
+  headerTitle: { fontSize: 20, fontWeight: '600', color: '#111827', marginTop: 4 },
   headerActions: { flexDirection: 'row', gap: 12 },
   headerIconBtn: {
     width: 44,
@@ -227,6 +265,47 @@ const styles = StyleSheet.create({
     borderColor: '#F9FAFB'
   },
 
+  heartRateSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    gap: 20,
+  },
+  heartRateInfo: {
+    flex: 1,
+    gap: 0,
+  },
+  heartRateLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  heartRateValue: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  heartRateStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    marginTop: 2,
+  },
+  heartRateStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  heartRateStatusText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
   activitySummary: {
     flexDirection: 'row',
     padding: 20,
@@ -238,7 +317,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)'
+    borderColor: '#e5e7eb76',
+    backgroundColor: '#fff',
   },
   summaryIcon: {
     width: 32,

@@ -555,23 +555,38 @@ export default function PharmacyListScreen() {
     </View>
   );
 
-  const renderEmptyState = () => (
-    <View style={styles.emptyStateContainer}>
-      <AppIcon name="search" size={48} color="#C7C7CC" />
-      <Text style={styles.emptyStateTitle}>No Pharmacies Found</Text>
-      <Text style={styles.emptyStateText}>
-        We couldn't find any pharmacies matching "{searchQuery}"
-      </Text>
-      {searchQuery !== "" && (
-        <TouchableOpacity
-          style={styles.emptyStateButton}
-          onPress={() => setSearchQuery("")}
-        >
-          <Text style={styles.emptyStateButtonText}>Clear Search</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+  const renderEmptyState = () => {
+    const hasSearch = searchQuery.trim() !== "";
+    const hasCategoryFilter = activeCategory !== "All";
+
+    let message = "There are no pharmacies available in your area right now.";
+    if (hasSearch) {
+      message = `We couldn't find any pharmacies matching "${searchQuery}"`;
+    } else if (hasCategoryFilter) {
+      message = `We couldn't find any pharmacies for "${activeCategory}"`;
+    }
+
+    return (
+      <View style={styles.emptyStateContainer}>
+        <AppIcon name="search" size={48} color="#C7C7CC" />
+        <Text style={styles.emptyStateTitle}>No Pharmacies Found</Text>
+        <Text style={styles.emptyStateText}>{message}</Text>
+        {(hasSearch || hasCategoryFilter) && (
+          <TouchableOpacity
+            style={styles.emptyStateButton}
+            onPress={() => {
+              setSearchQuery("");
+              setActiveCategory("All");
+            }}
+          >
+            <Text style={styles.emptyStateButtonText}>
+              {hasSearch ? "Clear Search" : "Clear Filter"}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
 
   const renderEndOfList = () => {
     if (isLoading || sortedPharmacies.length === 0) return null;
@@ -808,8 +823,8 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
   },
   activeCategoryChip: {
-    backgroundColor: "#0E7439",
-    borderColor: "#0E7439",
+    backgroundColor: "#10B981",
+    borderColor: "#10B981",
   },
   categoryText: {
     fontSize: 12,

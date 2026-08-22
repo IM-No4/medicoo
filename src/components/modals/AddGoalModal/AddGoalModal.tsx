@@ -227,11 +227,15 @@ export default function AddGoalModal({ visible, onClose, onSuccess }: AddGoalMod
                 });
             }
         } catch (error: any) {
+            // addGoal's thunk rejects via rejectWithValue(string) - unwrap()
+            // throws that string directly, not an Error object, so
+            // error.message is always undefined here even when the backend
+            // sent a specific reason. Same fix as FriendsScreen.tsx.
             setStatus({
                 visible: true,
                 type: 'error',
                 title: 'Could not save goal',
-                message: error?.message || 'Something went wrong. Please try again.',
+                message: typeof error === 'string' ? error : 'Something went wrong. Please try again.',
                 closeOnDismiss: false,
             });
         } finally {

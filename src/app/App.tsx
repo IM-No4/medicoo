@@ -12,8 +12,9 @@ import { linking } from '../navigation/linking';
 import { navigationRef } from '../navigation/navigationRef';
 import { AppDispatch, store } from '../redux/store';
 import { loadGoalsCache, loadGoalsFromServer } from '../redux/slices/goalsSlice';
-import { loadOnDeviceSteps } from '../redux/slices/deviceSlice';
+import { loadOnDeviceSteps, loadConnectedDeviceCache } from '../redux/slices/deviceSlice';
 import { checkLegalAcceptance } from '../redux/slices/legalSlice';
+import { loadAppConfig } from '../redux/slices/appConfigSlice';
 
 import ErrorBoundary from '../components/ErrorBoundary';
 import { initCrashReporting } from '../bootstrap/crashReporting';
@@ -21,10 +22,17 @@ import { initPushNotifications, setupNotificationTapHandling } from '../bootstra
 import { syncCartOnBoot } from '../bootstrap/syncCartOnBoot';
 import { useBoot } from '../bootstrap/useBoot';
 import { usePostLoginEffects } from '../features/auth/usePostLoginEffects';
+import JSSplashScreen from '../features/splash/SplashScreen';
+import { isStepsTrackingEnabled, isNativeStepsWriteEnabled } from '../services/health/stepsTrackingFlags';
+import { ensureNativeStepsBackgroundTaskRegistered } from '../services/health/nativeStepsBackgroundTask';
 
-// Keep the native splash up until Montserrat is loaded AND boot has
-// resolved, so the native splash is the only screen ever visible before the
-// real app - no separate JS splash screen flashing in between.
+function AppSplash() {
+  return <JSSplashScreen />;
+}
+
+// Keep the native splash up until Montserrat is actually loaded, so no
+// screen ever gets a chance to flash the system font first - not even the
+// JS splash screen itself, which renders its own <Text>.
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 // Metro needs a static string literal to resolve/bundle each asset - it
@@ -57,15 +65,7 @@ const montserratFontMap = {
 function AppContent() {
   const boot = useBoot();
   const dispatch = useDispatch<AppDispatch>();
-  const [fontsLoaded, fontError] = useFonts(montserratFontMap);
   usePostLoginEffects();
-
-  useEffect(() => {
-    if ((fontsLoaded || fontError) && boot.status === 'ready') {
-      if (fontError) console.warn('[App] Montserrat failed to load, falling back to system font', fontError);
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [fontsLoaded, fontError, boot.status]);
 
   useEffect(() => {
     if (boot.status !== 'ready') return;
@@ -74,8 +74,17 @@ function AppContent() {
     syncCartOnBoot();
     dispatch(loadGoalsCache());
     dispatch(loadGoalsFromServer());
+    dispatch(loadConnectedDeviceCache());
     dispatch(loadOnDeviceSteps());
     dispatch(checkLegalAcceptance());
+    dispatch(loadAppConfig());
+
+    // Defensive re-registration in case the background task was ever lost
+    // (e.g. reinstall) - ensureNativeStepsBackgroundTaskRegistered() is a
+    // cheap no-op if it's already registered.
+    Promise.all([isStepsTrackingEnabled(), isNativeStepsWriteEnabled()]).then(([tracking, nativeWrite]) => {
+      if (tracking && nativeWrite) ensureNativeStepsBackgroundTaskRegistered();
+    });
   }, [boot.status, boot.isAuthenticated, dispatch]);
   /**
    * ✅ Handle deep links ONLY after boot is ready
@@ -103,21 +112,35 @@ function AppContent() {
     return () => sub.remove();
   }, [boot.status]);
 
-  // Native splash is still covering the screen until both fonts and boot
-  // are ready - nothing should render here, so no screen (not even a JS
-  // splash) ever gets a chance to flash before the real app does.
-  if ((!fontsLoaded && !fontError) || boot.status !== 'ready') {
-    return null;
+  // ⛔ Do NOT render navigation until boot is complete
+  if (boot.status !== 'ready') {
+    return <AppSplash />;
   }
 
   return <RootNavigator />;
 }
 
 export default function App() {
+  const [fontsLoaded, fontError] = useFonts(montserratFontMap);
+
   useEffect(() => {
     initCrashReporting();
     initPushNotifications();
   }, []);
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      if (fontError) console.warn('[App] Montserrat failed to load, falling back to system font', fontError);
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, fontError]);
+
+  // Keep the native splash on screen (nothing else renders) until
+  // Montserrat is ready or has definitively failed - avoids any screen,
+  // including the JS splash screen itself, ever flashing the system font.
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <ErrorBoundary>

@@ -12,7 +12,6 @@ import { StatusBar } from 'expo-status-bar';
 import { ArrowDownWideNarrow, ArrowUpWideNarrow, Eye, FolderOpen, FolderPlus, MoreVertical, Plus, Search, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Modal,
   Platform,
   RefreshControl,
@@ -29,6 +28,7 @@ import { uploadDocument } from '@/src/services/api/document.api';
 import AddRecordModal from './components/AddRecordModal';
 import EditRecordModal from './components/EditRecordModal';
 import { DOCUMENT_TYPES, DocumentTypeMeta, DocumentTypeValue, getDocumentTypeMeta } from './documentTypes';
+import RecordsSkeleton from './RecordsSkeleton';
 import { RecordItem } from './types';
 
 type Menu =
@@ -251,9 +251,7 @@ export default function RecordsHomeScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#2FA561" />
-        </View>
+        <RecordsSkeleton />
       ) : (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -646,12 +644,5 @@ const styles = StyleSheet.create({
   },
   menuRowTextDanger: {
     color: '#EF4444',
-  },
-
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 50,
   },
 });

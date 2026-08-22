@@ -17,6 +17,7 @@ import activityReducer from './slices/activitySlice';
 import orderReducer from './slices/orderSlice';
 import friendsReducer from './slices/friendsSlice';
 import legalReducer from './slices/legalSlice';
+import appConfigReducer from './slices/appConfigSlice';
 
 export const store = configureStore({
   reducer: {
@@ -37,6 +38,7 @@ export const store = configureStore({
     order: orderReducer,
     friends: friendsReducer,
     legal: legalReducer,
+    appConfig: appConfigReducer,
   },
 });
 

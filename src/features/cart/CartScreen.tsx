@@ -1,10 +1,13 @@
 import AppIcon from "@/src/components/icons/AppIcon";
+import SelectPrescriptionSheet from "@/src/components/modals/SelectPrescriptionSheet";
 import QuantityControl from "@/src/features/pharmacy/components/QuantityControl";
-import { CartItem, StoreCart } from "@/src/redux/slices/cart.types";
+import { AttachedPrescription, CartItem, StoreCart } from "@/src/redux/slices/cart.types";
 import { RootState } from "@/src/redux/store";
+import { uploadDocument } from "@/src/services/api/document.api";
 import { getStoreDetails } from "@/src/services/api/pharmacy.api";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import * as Contacts from "expo-contacts";
+import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 import {
   ArrowLeft,
@@ -13,15 +16,20 @@ import {
   ChevronRight,
   Clock,
   CreditCard,
+  FileText,
   Info,
   MapPin,
   Plus,
+  ShieldAlert,
   ShoppingBag,
   Ticket,
+  Upload,
   User,
 } from "lucide-react-native";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   Modal,
   ScrollView,
@@ -36,6 +44,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { executeAction } from "../../actions/ActionExecutor";
 import { useTrackActivity } from "../../hooks/useTrackActivity";
 import { setSelectedAddress } from "../../redux/slices/addressSlice";
+import { getProfileDetails } from "../../services/api/user.api";
 
 const formatPrice = (amount: number): string => {
   const parts = amount.toFixed(2).split(".");
@@ -61,9 +70,109 @@ export default function CartScreen() {
   const lat = selectedAddress?.latitude ?? currentLocation?.latitude ?? 0;
   const long = selectedAddress?.longitude ?? currentLocation?.longitude ?? 0;
 
+  const authMobile = useSelector((state: any) => state.auth.mobile);
+  // Fallback for addresses with no receiver stored at all (e.g. "I am the
+  // receiver" saved before that actually persisted the user's own info) -
+  // real profile data instead of the previous fake "John Doe" placeholder.
+  const [myProfile, setMyProfile] = useState<{ name?: string; mobile?: string } | null>(null);
+  useEffect(() => {
+    getProfileDetails().then((p: any) => {
+      setMyProfile({ name: p?.name, mobile: p?.mobile || p?.phone });
+    }).catch(() => {});
+  }, []);
+  const myMobile = myProfile?.mobile || authMobile;
+
+  // Prescription attached per-store-cart (each store's cart is checked out
+  // independently, so the requirement/attachment is scoped the same way).
+  const [attachedPrescriptions, setAttachedPrescriptions] = useState<
+    Record<string, AttachedPrescription>
+  >({});
+  const [uploadingPrescriptionFor, setUploadingPrescriptionFor] = useState<
+    string | null
+  >(null);
+  const [selectSheetStoreId, setSelectSheetStoreId] = useState<string | null>(
+    null,
+  );
+
+  const handleUploadNewPrescription = (storeId: string) => {
+    Alert.alert(
+      "Add Prescription",
+      "Choose how you'd like to add your prescription",
+      [
+        { text: "Take Photo", onPress: () => pickPrescriptionImage(storeId, "camera") },
+        { text: "Choose from Gallery", onPress: () => pickPrescriptionImage(storeId, "gallery") },
+        { text: "Cancel", style: "cancel" },
+      ],
+    );
+  };
+
+  const pickPrescriptionImage = async (
+    storeId: string,
+    source: "camera" | "gallery",
+  ) => {
+    try {
+      const permission =
+        source === "camera"
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permission.status !== "granted") {
+        alert("Permission is required to add a prescription this way.");
+        return;
+      }
+
+      const result =
+        source === "camera"
+          ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8 })
+          : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
+      if (result.canceled) return;
+
+      const asset = result.assets[0];
+      setUploadingPrescriptionFor(storeId);
+
+      const formData = new FormData();
+      const fileName = asset.uri.split("/").pop() || "prescription.jpg";
+      const match = /\.(\w+)$/.exec(fileName);
+      const type = match ? `image/${match[1]}` : "image/jpeg";
+      formData.append("file", { uri: asset.uri, name: fileName, type } as any);
+      formData.append("documentType", "prescription");
+      formData.append(
+        "name",
+        `Prescription - ${new Date().toLocaleDateString("en-IN")}`,
+      );
+
+      // Goes through the same document library as Records, so an uploaded
+      // prescription becomes a permanent, reusable document too - not a
+      // one-off attachment.
+      const doc = await uploadDocument(formData);
+      setAttachedPrescriptions((prev) => ({
+        ...prev,
+        [storeId]: { mode: "image", documentId: doc._id, label: doc.name },
+      }));
+    } catch (e) {
+      console.warn("Failed to upload prescription", e);
+      alert("Could not upload your prescription. Please try again.");
+    } finally {
+      setUploadingPrescriptionFor(null);
+    }
+  };
+
+  const handleSelectExistingPrescription = (prescription: AttachedPrescription) => {
+    if (!selectSheetStoreId) return;
+    setAttachedPrescriptions((prev) => ({
+      ...prev,
+      [selectSheetStoreId]: prescription,
+    }));
+  };
+
   const [offlineStores, setOfflineStores] = useState<Record<string, boolean>>(
     {},
   );
+  // Whether each store's online/distance/fee status has resolved at least
+  // once - offlineStores[id] defaults to falsy (not offline) before the
+  // fetch below ever settles, so without this the Pay button was live and
+  // clickable for the first few seconds even for a store that turns out to
+  // be offline.
+  const [loadedStoreStatus, setLoadedStoreStatus] = useState<Record<string, boolean>>({});
   const [storeDistances, setStoreDistances] = useState<Record<string, number>>({});
   const [storePlatformFees, setStorePlatformFees] = useState<Record<string, number>>({});
   const [isGstChargesExpanded, setIsGstChargesExpanded] = useState<Record<string, boolean>>({});
@@ -75,15 +184,12 @@ export default function CartScreen() {
     }));
   };
 
-  // Get all available carts
-  const storeCarts = useMemo(() => {
-    if (storeID) {
-      const storeCart = carts[storeID];
-      return storeCart ? [storeCart] : [];
-    } else {
-      return Object.values(carts);
-    }
-  }, [carts, storeID]);
+  // Always show every store the user has items in - storeID (passed when
+  // opening the cart from a specific pharmacy's sticky bar) previously
+  // filtered this down to just that one store, hiding any other carts
+  // entirely with no way to get back to them. It's now only used to pick
+  // which store tab starts selected, below.
+  const storeCarts = useMemo(() => Object.values(carts), [carts]);
 
   React.useEffect(() => {
     let active = true;
@@ -130,6 +236,10 @@ export default function CartScreen() {
             ...prev,
             [id]: false,
           }));
+        } finally {
+          if (active) {
+            setLoadedStoreStatus((prev) => ({ ...prev, [id]: true }));
+          }
         }
       }
     };
@@ -142,10 +252,10 @@ export default function CartScreen() {
 
   const [isReceiverModalVisible, setIsReceiverModalVisible] = useState(false);
   const [tempReceiverName, setTempReceiverName] = useState(
-    selectedAddress?.receiverName || "John Doe",
+    selectedAddress?.receiverName || "",
   );
   const [tempReceiverPhone, setTempReceiverPhone] = useState(
-    selectedAddress?.receiverPhone || "+91 9876543210",
+    selectedAddress?.receiverNumber || "",
   );
 
   const [contacts, setContacts] = useState<any[]>([]);
@@ -234,15 +344,22 @@ export default function CartScreen() {
 
   React.useEffect(() => {
     if (selectedAddress) {
-      setTempReceiverName(selectedAddress.receiverName || "John Doe");
-      setTempReceiverPhone(selectedAddress.receiverPhone || "+91 9876543210");
+      setTempReceiverName(selectedAddress.receiverName || myProfile?.name || "");
+      setTempReceiverPhone(selectedAddress.receiverNumber || myMobile || "");
     }
-  }, [selectedAddress]);
+  }, [selectedAddress, myProfile, myMobile]);
 
-  // Local state for which store is currently visible
+  // Local state for which store is currently visible - defaults to the
+  // store the cart was opened from (storeID), if it still has items,
+  // otherwise the first available cart.
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(
-    storeCarts.length > 0 ? storeCarts[0].storeId : null,
+    storeID && carts[storeID]
+      ? storeID
+      : storeCarts.length > 0
+        ? storeCarts[0].storeId
+        : null,
   );
+  const [isStoreSwitcherVisible, setIsStoreSwitcherVisible] = useState(false);
 
   React.useEffect(() => {
     if (storeCarts.length > 0) {
@@ -349,7 +466,17 @@ export default function CartScreen() {
       0,
     );
     const distanceKm = storeDistances[storeCart.storeId];
-    const deliveryFee = subtotal > 500 ? 0 : (distanceKm !== undefined ? Math.round(30 + distanceKm * 5) : 40);
+    // Flat ₹30 base regardless of distance made a store 10m away cost the
+    // same as one 5km away - a store under 1km gets a flat, much lower fee
+    // instead of the base-plus-per-km formula used for real distances.
+    const deliveryFee = subtotal > 500
+      ? 0
+      : distanceKm !== undefined
+        ? (distanceKm < 1 ? 10 : Math.round(30 + distanceKm * 5))
+        : 40;
+    // Same distance already driving deliveryFee above - was a flat "30
+    // mins" regardless of which store/address was actually selected.
+    const deliveryEtaMins = distanceKm !== undefined ? Math.round(20 + distanceKm * 3) : 30;
     const platformFee = storePlatformFees[storeCart.storeId] ?? 5;
     const otherCharges = 2; // Flat packing/handling fee of ₹2
     const taxes = subtotal * 0.18; // GST
@@ -372,10 +499,13 @@ export default function CartScreen() {
 
     const total = Math.max(subtotal + deliveryFee + gstAndOtherCharges - couponDiscount, 0);
 
-    const receiverName = selectedAddress?.receiverName || "John Doe";
-    const receiverPhone = selectedAddress?.receiverPhone || "+91 9876543210";
+    const receiverName = selectedAddress?.receiverName || myProfile?.name || "Add receiver details";
+    const receiverPhone = selectedAddress?.receiverNumber || myMobile || "";
 
     const isOffline = !!offlineStores[storeCart.storeId];
+    const needsPrescription = cartItems.some((item) => item.prescriptionRequired);
+    const attachedPrescription = attachedPrescriptions[storeCart.storeId];
+    const isUploadingForThisStore = uploadingPrescriptionFor === storeCart.storeId;
 
     return (
       <ScrollView
@@ -383,16 +513,6 @@ export default function CartScreen() {
         contentContainerStyle={{ paddingBottom: 140 }}
       >
         <View style={styles.pharmacyCard}>
-          {isOffline && (
-            <View style={styles.offlineBanner}>
-              <Info size={16} color="#EF4444" />
-              <Text style={styles.offlineBannerText}>
-                Currently Offline: This pharmacy is not accepting orders right
-                now.
-              </Text>
-            </View>
-          )}
-
           {/* Top Delivery Address & Time Row */}
           {!isOffline && (
             <TouchableOpacity
@@ -415,7 +535,7 @@ export default function CartScreen() {
               <View style={styles.topAddressRight}>
                 <View style={styles.topTimeBadge}>
                   <Clock size={12} color="#089643" />
-                  <Text style={styles.topTimeText}>30 mins</Text>
+                  <Text style={styles.topTimeText}>{deliveryEtaMins} mins</Text>
                 </View>
                 <ChevronDown size={16} color="#64748B" />
               </View>
@@ -424,15 +544,74 @@ export default function CartScreen() {
 
           {/* Pharmacy Header */}
           <View style={styles.pharmacyHeader}>
-            <View style={{ flex: 1 }}>
+            <TouchableOpacity
+              style={styles.pharmacyNameRow}
+              activeOpacity={0.7}
+              onPress={() =>
+                executeAction("OPEN_PHARMACY", { pharmacyId: storeCart.storeId })
+              }
+            >
+              <View style={styles.pharmacyIconBadge}>
+                <ShoppingBag size={16} color="#374151" />
+              </View>
               <Text style={styles.pharmacyNameText}>{storeCart.storeName}</Text>
-            </View>
+              <ChevronDown size={18} color="#6B7280" />
+            </TouchableOpacity>
           </View>
 
           {/* Items List */}
           <View style={styles.itemsListContainer}>
             {cartItems.map((item) => renderCartItem(item, storeCart.storeId))}
           </View>
+
+          {/* Prescription Requirement */}
+          {needsPrescription && (
+            <View style={styles.prescriptionSection}>
+              <View style={styles.prescriptionWarningRow}>
+                <ShieldAlert size={16} color="#B45309" />
+                <Text style={styles.prescriptionWarningText}>
+                  Some items in this order need a valid prescription
+                </Text>
+              </View>
+
+              {attachedPrescription ? (
+                <View style={styles.prescriptionAttachedCard}>
+                  <FileText size={18} color="#089643" />
+                  <Text style={styles.prescriptionAttachedLabel} numberOfLines={1}>
+                    {attachedPrescription.label}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setSelectSheetStoreId(storeCart.storeId)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.receiverChangeBtnText}>Change</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.prescriptionOptionsRow}>
+                  <TouchableOpacity
+                    style={styles.prescriptionOptionBtn}
+                    onPress={() => setSelectSheetStoreId(storeCart.storeId)}
+                    activeOpacity={0.8}
+                  >
+                    <FileText size={16} color="#089643" />
+                    <Text style={styles.prescriptionOptionText}>Select Existing</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.prescriptionOptionBtn}
+                    onPress={() => handleUploadNewPrescription(storeCart.storeId)}
+                    disabled={isUploadingForThisStore}
+                    activeOpacity={0.8}
+                  >
+                    <Upload size={16} color="#089643" />
+                    <Text style={styles.prescriptionOptionText}>
+                      {isUploadingForThisStore ? "Uploading..." : "Upload New"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Instructions */}
           {isEditingInstructions ? (
@@ -523,7 +702,7 @@ export default function CartScreen() {
               <User size={14} color="#64748B" />
               <Text style={styles.receiverLabelPrefix}>Receiver:</Text>
               <Text style={styles.receiverDetailsText} numberOfLines={1}>
-                {receiverName} ({receiverPhone})
+                {receiverName}{receiverPhone ? `, ${receiverPhone}` : ""}
               </Text>
             </View>
             <TouchableOpacity
@@ -631,12 +810,9 @@ export default function CartScreen() {
         </View>
 
         <View style={styles.emptyContent}>
-          <Image
-            source={{
-              uri: "https://cdn-icons-png.flaticon.com/512/11329/11329061.png",
-            }}
-            style={styles.emptyImage}
-          />
+          <View style={styles.emptyIconCircle}>
+            <ShoppingBag size={36} color="#2FA561" />
+          </View>
           <Text style={styles.emptyTitle}>Nothing in your cart</Text>
           <Text style={styles.emptySubtitle}>
             Browse our pharmacies and add medicines to your cart
@@ -644,7 +820,9 @@ export default function CartScreen() {
           <TouchableOpacity
             style={styles.browseButton}
             onPress={() => executeAction("OPEN_PHARMACY_LIST")}
+            activeOpacity={0.85}
           >
+            <ShoppingBag size={18} color="#fff" />
             <Text style={styles.browseButtonText}>Browse Pharmacies</Text>
           </TouchableOpacity>
         </View>
@@ -659,7 +837,7 @@ export default function CartScreen() {
         latitude: selectedAddress?.latitude ?? 0,
         longitude: selectedAddress?.longitude ?? 0,
         receiverName: tempReceiverName,
-        receiverPhone: tempReceiverPhone,
+        receiverNumber: tempReceiverPhone,
       }),
     );
     setIsReceiverModalVisible(false);
@@ -671,12 +849,22 @@ export default function CartScreen() {
     if (!storeCart) return null;
     const isOffline = !!offlineStores[storeCart.storeId];
     const cartItems = Object.values(storeCart.items);
+    const needsPrescription = cartItems.some((item) => item.prescriptionRequired);
+    const attachedPrescription = attachedPrescriptions[storeCart.storeId];
+    const isPrescriptionMissing = needsPrescription && !attachedPrescription;
     const subtotal = cartItems.reduce(
       (sum, item) => sum + (item.discountPrice || item.price) * item.quantity,
       0,
     );
     const distanceKm = storeDistances[storeCart.storeId];
-    const deliveryFee = subtotal > 500 ? 0 : (distanceKm !== undefined ? Math.round(30 + distanceKm * 5) : 40);
+    // Flat ₹30 base regardless of distance made a store 10m away cost the
+    // same as one 5km away - a store under 1km gets a flat, much lower fee
+    // instead of the base-plus-per-km formula used for real distances.
+    const deliveryFee = subtotal > 500
+      ? 0
+      : distanceKm !== undefined
+        ? (distanceKm < 1 ? 10 : Math.round(30 + distanceKm * 5))
+        : 40;
     const platformFee = storePlatformFees[storeCart.storeId] ?? 5;
     const otherCharges = 2; // Flat packing/handling fee of ₹2
     const taxes = subtotal * 0.18; // GST
@@ -709,6 +897,10 @@ export default function CartScreen() {
         navigation.navigate("AddressBookModal");
         return;
       }
+      if (isPrescriptionMissing) {
+        alert("Please add a prescription for the items that require one before proceeding to pay.");
+        return;
+      }
       executeAction("OPEN_CHECKOUT", {
         storeId: storeCart.storeId,
         amount: total,
@@ -718,6 +910,10 @@ export default function CartScreen() {
         couponDiscount: couponDiscount,
         platformFee: platformFee,
         otherCharges: otherCharges,
+        prescriptionMode: attachedPrescription?.mode,
+        prescriptionDocumentId: attachedPrescription?.documentId,
+        prescriptionId: attachedPrescription?.prescriptionId,
+        prescriptionRequired: needsPrescription,
       });
     };
 
@@ -728,38 +924,48 @@ export default function CartScreen() {
           { paddingBottom: insets.bottom > 0 ? insets.bottom : 16 },
         ]}
       >
-        <View style={styles.stickyFooterRow}>
-          {/* Left Division: Payment Details */}
-          <TouchableOpacity
-            style={styles.paymentCol}
-            onPress={handleProceedToCheckout}
-            activeOpacity={0.7}
-          >
-            <CreditCard size={18} color="#089643" />
-            <View style={styles.paymentTextCol}>
-              <Text style={styles.selectedPaymentText}>
-                Payment Options
-              </Text>
-              <Text style={styles.changePaymentLink}>UPI, Cards, COD</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Right Division: Pay Button */}
-          <TouchableOpacity
-            style={[
-              styles.payBtnRight,
-              isOffline && styles.payBtnRightDisabled,
-            ]}
-            activeOpacity={isOffline ? 1 : 0.8}
-            disabled={isOffline}
-            onPress={handleProceedToCheckout}
-          >
-            <Text style={styles.payBtnText}>
-              {isOffline ? "Store Offline" : `Pay ₹${formatPrice(total)}`}
+        {isOffline ? (
+          <View style={styles.offlineFooterRow}>
+            <Info size={18} color="#EF4444" />
+            <Text style={styles.offlineFooterText}>
+              This store is currently offline
             </Text>
-            {!isOffline && <ChevronRight size={16} color="#FFFFFF" />}
-          </TouchableOpacity>
-        </View>
+          </View>
+        ) : (
+          <View style={styles.stickyFooterRow}>
+            {/* Left Division: Payment Details */}
+            <TouchableOpacity
+              style={styles.paymentCol}
+              onPress={handleProceedToCheckout}
+              activeOpacity={0.7}
+            >
+              <CreditCard size={18} color="#089643" />
+              <View style={styles.paymentTextCol}>
+                <Text style={styles.selectedPaymentText}>
+                  Payment Options
+                </Text>
+                <Text style={styles.changePaymentLink}>UPI, Cards, COD</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Right Division: Pay Button */}
+            <TouchableOpacity
+              style={[
+                styles.payBtnRight,
+                isPrescriptionMissing && styles.payBtnRightDisabled,
+              ]}
+              activeOpacity={0.8}
+              onPress={handleProceedToCheckout}
+            >
+              <Text style={styles.payBtnText}>
+                {isPrescriptionMissing
+                  ? "Add Prescription to Pay"
+                  : `Pay ₹${formatPrice(total)}`}
+              </Text>
+              {!isPrescriptionMissing && <ChevronRight size={16} color="#FFFFFF" />}
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     );
   };
@@ -776,91 +982,36 @@ export default function CartScreen() {
         >
           <ArrowLeft size={24} color="#1F2937" />
         </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>My Carts</Text>
+        <TouchableOpacity
+          style={styles.headerTitleContainer}
+          activeOpacity={storeCarts.length > 1 ? 0.7 : 1}
+          onPress={() => storeCarts.length > 1 && setIsStoreSwitcherVisible(true)}
+        >
+          <Text style={styles.headerTitle}>
+            {storeCarts.length > 1 ? `My Carts (${storeCarts.length})` : "My Cart"}
+          </Text>
           {storeCarts.length > 1 && (
-            <View style={styles.headerBadge}>
-              <Text style={styles.headerBadgeText}>{storeCarts.length}</Text>
-            </View>
+            <ChevronDown size={18} color="#111827" />
           )}
-        </View>
+        </TouchableOpacity>
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Store Selector Buttons */}
-      {storeCarts.length > 1 && (
-        <View style={styles.selectorWrapper}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.selectorContent}
-          >
-            {storeCarts.map((item) => {
-              const itemIsOffline = !!offlineStores[item.storeId];
-              return (
-                <TouchableOpacity
-                  key={item.storeId}
-                  style={[
-                    styles.selectorTab,
-                    selectedStoreId === item.storeId &&
-                      styles.selectorTabActive,
-                    itemIsOffline && styles.selectorTabOffline,
-                  ]}
-                  onPress={() => setSelectedStoreId(item.storeId)}
-                  activeOpacity={0.8}
-                >
-                  <ShoppingBag
-                    size={14}
-                    color={
-                      selectedStoreId === item.storeId
-                        ? "#fff"
-                        : itemIsOffline
-                          ? "#EF4444"
-                          : "#6B7280"
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.selectorTabText,
-                      selectedStoreId === item.storeId &&
-                        styles.selectorTabTextActive,
-                      itemIsOffline && styles.selectorTabTextOffline,
-                    ]}
-                  >
-                    {item.storeName}
-                    {itemIsOffline ? " (Offline)" : ""}
-                  </Text>
-                  <View
-                    style={[
-                      styles.selectorBadge,
-                      selectedStoreId === item.storeId &&
-                        styles.selectorBadgeActive,
-                      itemIsOffline && styles.selectorBadgeOffline,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.selectorBadgeText,
-                        selectedStoreId === item.storeId &&
-                          styles.selectorBadgeTextActive,
-                        itemIsOffline && styles.selectorBadgeTextOffline,
-                      ]}
-                    >
-                      {Object.keys(item.items).length}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
-
       {/* Content Wrapper */}
-      <View style={styles.contentWrapper}>{renderActiveCart(activeCart)}</View>
+      <View style={styles.contentWrapper}>
+        {activeCart && !loadedStoreStatus[activeCart.storeId] ? (
+          <View style={styles.statusLoadingContainer}>
+            <ActivityIndicator size="large" color="#10B981" />
+          </View>
+        ) : (
+          renderActiveCart(activeCart)
+        )}
+      </View>
 
-      {/* Sticky Order Bar */}
-      {activeCart && renderStickyFooter(activeCart)}
+      {/* Sticky Order Bar - held back until the store's online/offline
+          status has actually resolved, so the Pay button can't be tapped
+          against a stale "not offline yet" default while that's loading. */}
+      {activeCart && loadedStoreStatus[activeCart.storeId] && renderStickyFooter(activeCart)}
 
       {/* Receiver Edit Bottom Sheet Modal */}
       <Modal
@@ -1021,7 +1172,80 @@ export default function CartScreen() {
         </TouchableOpacity>
       </Modal>
 
+      {/* Prescription Selection Bottom Sheet */}
+      <SelectPrescriptionSheet
+        visible={!!selectSheetStoreId}
+        onClose={() => setSelectSheetStoreId(null)}
+        onSelect={handleSelectExistingPrescription}
+      />
 
+      {/* Store Switcher Bottom Sheet - tap the "My Carts (N)" header to
+          switch which store's cart is showing. */}
+      <Modal
+        visible={isStoreSwitcherVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsStoreSwitcherVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.bottomSheetOverlay}
+          activeOpacity={1}
+          onPress={() => setIsStoreSwitcherVisible(false)}
+        >
+          <TouchableOpacity style={styles.bottomSheetContent} activeOpacity={1}>
+            <View style={styles.dragHandle} />
+            <Text style={styles.modalTitle}>Switch Cart</Text>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {storeCarts.map((item) => {
+                const itemIsOffline = !!offlineStores[item.storeId];
+                const isActive = selectedStoreId === item.storeId;
+                return (
+                  <TouchableOpacity
+                    key={item.storeId}
+                    style={[
+                      styles.storeSwitcherRow,
+                      isActive && styles.storeSwitcherRowActive,
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setSelectedStoreId(item.storeId);
+                      setIsStoreSwitcherVisible(false);
+                    }}
+                  >
+                    <View
+                      style={[
+                        styles.storeSwitcherIconWrap,
+                        itemIsOffline && styles.storeSwitcherIconWrapOffline,
+                      ]}
+                    >
+                      <ShoppingBag
+                        size={18}
+                        color={itemIsOffline ? "#EF4444" : "#0E7439"}
+                      />
+                    </View>
+                    <View style={styles.storeSwitcherTextCol}>
+                      <Text style={styles.storeSwitcherName} numberOfLines={1}>
+                        {item.storeName}
+                      </Text>
+                      <Text style={styles.storeSwitcherSubtext}>
+                        {Object.keys(item.items).length} item
+                        {Object.keys(item.items).length !== 1 ? "s" : ""}
+                        {itemIsOffline ? " · Offline" : ""}
+                      </Text>
+                    </View>
+                    {isActive && (
+                      <View style={styles.storeSwitcherCheck}>
+                        <AppIcon name="check" size={12} color="#FFFFFF" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -1047,77 +1271,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "800",
     color: "#111827",
-  },
-  headerBadge: {
-    backgroundColor: "#2FA561",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  headerBadgeText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "800",
   },
   backButton: {
     padding: 8,
     marginLeft: -12,
   },
-  selectorWrapper: {
-    backgroundColor: "#fff",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  selectorContent: {
-    paddingHorizontal: 20,
-    gap: 10,
-  },
-  selectorTab: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  selectorTabActive: {
-    backgroundColor: "#111827",
-    borderColor: "#111827",
-  },
-  selectorTabText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#6B7280",
-  },
-  selectorTabTextActive: {
-    color: "#fff",
-  },
-  selectorBadge: {
-    backgroundColor: "#E5E7EB",
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 6,
-  },
-  selectorBadgeActive: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-  },
-  selectorBadgeText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#6B7280",
-  },
-  selectorBadgeTextActive: {
-    color: "#fff",
-  },
   contentWrapper: {
     flex: 1,
+  },
+  statusLoadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   pharmacyCard: {
     backgroundColor: "#FFFFFF",
@@ -1135,6 +1303,20 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     padding: 20,
     paddingBottom: 12,
+  },
+  pharmacyNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 8,
+  },
+  pharmacyIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
   },
   pharmacyNameText: {
     fontSize: 18,
@@ -1233,6 +1415,68 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
+  prescriptionSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+  },
+  prescriptionWarningRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  prescriptionWarningText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#B45309",
+  },
+  prescriptionOptionsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  prescriptionOptionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  prescriptionOptionText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#089643",
+  },
+  prescriptionAttachedCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  prescriptionAttachedLabel: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#166534",
+  },
   instructionButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -1321,7 +1565,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   billingTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "800",
     color: "#111827",
     marginBottom: 12,
@@ -1385,12 +1629,12 @@ const styles = StyleSheet.create({
     borderTopColor: "#F3F4F6",
   },
   grandTotalLabel: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "900",
     color: "#111827",
   },
   grandTotalValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "900",
     color: "#111827",
   },
@@ -1431,7 +1675,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   payPrice: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "900",
     color: "#FFFFFF",
   },
@@ -1446,7 +1690,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   placeOrderText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "800",
     color: "#FFFFFF",
   },
@@ -1472,33 +1716,42 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 40,
   },
-  emptyImage: {
-    width: 200,
-    height: 200,
+  emptyIconCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1,
+    borderColor: "#DCFCE7",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 24,
   },
   emptyTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "800",
     color: "#111827",
     marginBottom: 8,
   },
   emptySubtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: "#6B7280",
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 20,
     marginBottom: 32,
   },
   browseButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     backgroundColor: "#2FA561",
-    paddingHorizontal: 30,
+    paddingHorizontal: 28,
     paddingVertical: 16,
-    borderRadius: 20,
+    borderRadius: 16,
   },
   browseButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
   },
   stickyFooter: {
@@ -1521,6 +1774,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  offlineFooterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+  },
+  offlineFooterText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#374151",
   },
   paymentCol: {
     flexDirection: "row",
@@ -1548,7 +1813,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    backgroundColor: "#0E7439",
+    backgroundColor: "#10B981",
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -1579,11 +1844,59 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "800",
     color: "#111827",
     marginBottom: 20,
     textAlign: "center",
+  },
+  storeSwitcherRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    marginBottom: 10,
+  },
+  storeSwitcherRowActive: {
+    backgroundColor: "#F0FDF4",
+    borderColor: "#2FA561",
+  },
+  storeSwitcherIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  storeSwitcherIconWrapOffline: {
+    backgroundColor: "#FEF2F2",
+  },
+  storeSwitcherTextCol: {
+    flex: 1,
+    marginRight: 8,
+  },
+  storeSwitcherName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1F2937",
+    marginBottom: 2,
+  },
+  storeSwitcherSubtext: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  storeSwitcherCheck: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#2FA561",
+    alignItems: "center",
+    justifyContent: "center",
   },
   inputLabel: {
     fontSize: 12,
@@ -1819,24 +2132,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#089643",
   },
-  offlineBanner: {
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FEE2E2",
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginHorizontal: 20,
-    marginTop: 16,
-  },
-  offlineBannerText: {
-    color: "#EF4444",
-    fontSize: 13,
-    fontWeight: "600",
-    flex: 1,
-  },
   offlineCartBadge: {
     backgroundColor: "#FEE2E2",
     borderRadius: 6,
@@ -1849,19 +2144,6 @@ const styles = StyleSheet.create({
     color: "#EF4444",
     fontSize: 12,
     fontWeight: "700",
-  },
-  selectorTabOffline: {
-    borderColor: "#FEE2E2",
-    backgroundColor: "#FEF2F2",
-  },
-  selectorTabTextOffline: {
-    color: "#EF4444",
-  },
-  selectorBadgeOffline: {
-    backgroundColor: "#FEE2E2",
-  },
-  selectorBadgeTextOffline: {
-    color: "#EF4444",
   },
   payBtnRightDisabled: {
     backgroundColor: "#9CA3AF",
@@ -1984,7 +2266,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   modalHeaderTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "800",
     color: "#111827",
   },

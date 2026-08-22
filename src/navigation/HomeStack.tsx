@@ -2,12 +2,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 
 import HomeScreen from '../features/home/HomeScreen';
-import NotificationsScreen from '../features/notifications/NotificationsScreen';
 import RecentActivityScreen from '../features/home/screens/RecentActivityScreen';
 
 export type HomeStackParamList = {
   HomeMain: undefined;
-  Notifications: undefined;
   RecentActivity: { activities?: any[] } | undefined;
 };
 
@@ -28,11 +26,6 @@ export default function HomeStack({ onOpenCommandPalette }: Props) {
           />
         )}
       </Stack.Screen>
-
-      <Stack.Screen
-        name="Notifications"
-        component={NotificationsScreen}
-      />
 
       <Stack.Screen
         name="RecentActivity"

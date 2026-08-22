@@ -20,6 +20,7 @@ import { formatDoctorName } from '../../../../utils/formatters';
 
 interface Consultation {
     requestId: string;
+    doctorId?: string;
     doctorName: string;
     doctorSpecialization: string;
     doctorImage?: string;
@@ -150,7 +151,15 @@ export default function ConsultationsScreen() {
             {item.status === 'completed' && (
                 <TouchableOpacity
                     style={styles.feedbackBanner}
-                    onPress={() => executeAction('OPEN_DOCTOR_FEEDBACK', { consultationId: item.requestId, doctor: { name: formatDoctorName(item.doctorName) } })}
+                    onPress={() => executeAction('OPEN_DOCTOR_FEEDBACK', {
+                        consultationId: item.requestId,
+                        doctor: {
+                            _id: item.doctorId,
+                            name: formatDoctorName(item.doctorName),
+                            image: item.doctorImage,
+                            specialty: item.doctorSpecialization,
+                        },
+                    })}
                 >
                     <Text style={styles.feedbackText}>Share your experience. Rate the doctor</Text>
                     <ChevronRight size={16} color="#2FA561" />

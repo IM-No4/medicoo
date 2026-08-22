@@ -17,12 +17,23 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_PADDING = 20;
-const CARD_SPACING = 12;
+const CARD_PADDING = 18;
+const CARD_SPACING = 0;
 const CARD_WIDTH = SCREEN_WIDTH - (CARD_PADDING * 2);
 
-export default function MultiStoreCartBar() {
+type Props = {
+  // Screens where this sits directly above the visible bottom tab bar
+  // (which already reserves its own safe-area padding) shouldn't also add
+  // the device's bottom inset here - that doubles up as visible empty
+  // space between the widget and the tab bar. Defaults to the real inset,
+  // which is correct wherever this renders as the true bottom-most element
+  // (tab bar hidden/not present).
+  bottomInset?: number;
+};
+
+export default function MultiStoreCartBar({ bottomInset }: Props) {
   const insets = useSafeAreaInsets();
+  const resolvedBottomInset = bottomInset ?? insets.bottom;
   const listRef = useRef<FlatList>(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -65,8 +76,8 @@ export default function MultiStoreCartBar() {
     <View
       style={[
         styles.wrapper,
-        { 
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 12,
+        {
+          paddingBottom: resolvedBottomInset > 0 ? resolvedBottomInset : 4,
         },
       ]}
     >
@@ -173,15 +184,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 8,
   },
   listContent: {
     paddingHorizontal: CARD_PADDING,
-    paddingTop: 4,
+    paddingTop: 0,
   },
   cardWrapper: {
     paddingRight: CARD_SPACING,

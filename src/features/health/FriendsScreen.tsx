@@ -104,7 +104,12 @@ export default function FriendsScreen() {
             );
             dispatch(loadFriendsData());
         } catch (error: any) {
-            showStatus('error', 'Could not send request', error?.message || 'Something went wrong. Please try again.');
+            // sendFriendRequest's thunk rejects via rejectWithValue(string) -
+            // unwrap() throws that string directly, not an Error object, so
+            // error.message is always undefined here even when the backend
+            // sent a specific, useful reason (e.g. "No user found with that
+            // MED ID"). Same fix already applied in RecordVitalsModal.tsx.
+            showStatus('error', 'Could not send request', typeof error === 'string' ? error : 'Something went wrong. Please try again.');
         } finally {
             setSending(false);
         }

@@ -64,21 +64,21 @@ const STATUS_LABELS: Record<string, string> = {
 
 const CONSULTATION_TYPE_META: Record<'chat' | 'voice' | 'video', { label: string; color: string; bg: string; Icon: typeof MessageCircle }> = {
     chat: { label: 'Chat', color: '#1C6ED5', bg: '#EAF4FF', Icon: MessageCircle },
-    voice: { label: 'Voice', color: '#0E7439', bg: '#EAFBF3', Icon: Phone },
+    voice: { label: 'Voice', color: '#007C69', bg: '#EAFBF3', Icon: Phone },
     video: { label: 'Video', color: '#C47A16', bg: '#FFF6EA', Icon: Video },
 };
 
 const TIMELINE_META: Record<string, { label: string; Icon: typeof FileText; color: string; fallbackSubtitle: string }> = {
-    pending: { label: 'Request Created', Icon: FilePlus, color: '#2FA561', fallbackSubtitle: 'Your request was sent to the doctor.' },
-    approved: { label: 'Request Approved', Icon: CheckCircle2, color: '#2FA561', fallbackSubtitle: 'The doctor approved your request.' },
+    pending: { label: 'Request Created', Icon: FilePlus, color: '#0FBBA1', fallbackSubtitle: 'Your request was sent to the doctor.' },
+    approved: { label: 'Request Approved', Icon: CheckCircle2, color: '#0FBBA1', fallbackSubtitle: 'The doctor approved your request.' },
     rejected: { label: 'Request Rejected', Icon: XCircle, color: '#DC2626', fallbackSubtitle: 'The doctor was unable to accept this request.' },
     cancelled: { label: 'Request Cancelled', Icon: XCircle, color: '#9CA3AF', fallbackSubtitle: 'This request was cancelled.' },
-    paid: { label: 'Payment Confirmed', Icon: CreditCard, color: '#2FA561', fallbackSubtitle: 'Payment was received and the slot was confirmed.' },
-    completed: { label: 'Consultation Completed', Icon: Award, color: '#2FA561', fallbackSubtitle: 'The consultation was marked as completed.' },
+    paid: { label: 'Payment Confirmed', Icon: CreditCard, color: '#0FBBA1', fallbackSubtitle: 'Payment was received and the slot was confirmed.' },
+    completed: { label: 'Consultation Completed', Icon: Award, color: '#0FBBA1', fallbackSubtitle: 'The consultation was marked as completed.' },
     expired: { label: 'Request Expired', Icon: XCircle, color: '#9CA3AF', fallbackSubtitle: 'This request was automatically terminated after too much time passed.' },
     no_show: { label: 'Consultation Missed', Icon: XCircle, color: '#DC2626', fallbackSubtitle: 'Neither party joined the consultation in time.' },
     reschedule_requested: { label: 'Reschedule Requested', Icon: Clock, color: '#1D4ED8', fallbackSubtitle: 'You proposed a new time for this consultation.' },
-    rescheduled: { label: 'Reschedule Accepted', Icon: CheckCircle2, color: '#2FA561', fallbackSubtitle: 'The doctor confirmed your new time.' },
+    rescheduled: { label: 'Reschedule Accepted', Icon: CheckCircle2, color: '#0FBBA1', fallbackSubtitle: 'The doctor confirmed your new time.' },
 };
 
 const formatTimelineDate = (timestamp: string) => {
@@ -256,7 +256,7 @@ export default function ConsultationDetailScreen() {
                 currency,
                 name: 'Medicoo',
                 description: `Consultation with ${formatDoctorName(consultation?.doctorDetails?.name) || 'your doctor'}`,
-                theme: { color: '#2FA561' },
+                theme: { color: '#0FBBA1' },
             });
         } catch (error: any) {
             const { title, message } = getPaymentErrorDetails(error);
@@ -349,7 +349,7 @@ export default function ConsultationDetailScreen() {
         return (
             <View style={styles.center}>
                 <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-                <ActivityIndicator size="large" color="#2FA561" />
+                <ActivityIndicator size="large" color="#0FBBA1" />
             </View>
         );
     }
@@ -403,7 +403,7 @@ export default function ConsultationDetailScreen() {
                             />
                         ) : (
                             <View style={[styles.avatar, styles.placeholderAvatar]}>
-                                <Stethoscope size={26} color="#2FA561" />
+                                <Stethoscope size={26} color="#0FBBA1" />
                             </View>
                         )}
                         <View style={styles.doctorInfo}>
@@ -418,7 +418,7 @@ export default function ConsultationDetailScreen() {
                                 style={styles.messageButton}
                                 onPress={() => executeAction('OPEN_DOCTOR_CHAT', { requestId: consultation.requestId, title: doctorDisplayName, image: consultation.doctorDetails?.image })}
                             >
-                                <MessageCircle size={16} color="#2FA561" />
+                                <MessageCircle size={16} color="#0FBBA1" />
                                 <Text style={styles.messageButtonText}>Message</Text>
                             </TouchableOpacity>
                             {consultation.consultationType !== 'chat' && (
@@ -483,7 +483,7 @@ export default function ConsultationDetailScreen() {
                 {isAwaitingPayment && (
                     <View style={styles.payCard}>
                         <View style={styles.payCardHeader}>
-                            <CreditCard size={20} color="#2FA561" />
+                            <CreditCard size={20} color="#0FBBA1" />
                             <Text style={styles.payCardTitle}>Payment Required</Text>
                         </View>
                         <Text style={styles.payCardText}>
@@ -562,7 +562,7 @@ export default function ConsultationDetailScreen() {
                 {consultation.paymentStatus === 'refunded' && consultation.refundDetails && (
                     <View style={styles.refundCard}>
                         <View style={styles.payCardHeader}>
-                            <CreditCard size={20} color="#2FA561" />
+                            <CreditCard size={20} color="#0FBBA1" />
                             <Text style={styles.payCardTitle}>Refund Issued</Text>
                         </View>
                         <Text style={styles.payCardText}>
@@ -813,7 +813,7 @@ const styles = StyleSheet.create({
         borderColor: '#DCFCE7',
     },
     messageButtonText: {
-        color: '#2FA561',
+        color: '#0FBBA1',
         fontSize: 14,
         fontWeight: '700',
     },
@@ -826,7 +826,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 12,
         borderRadius: 14,
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
     },
     callButtonText: {
         color: '#fff',
@@ -1045,7 +1045,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingVertical: 12,
         borderRadius: 12,
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
     },
     refundChoiceButtonText: {
         color: '#fff',
@@ -1097,7 +1097,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     payButton: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         borderRadius: 14,
         paddingVertical: 14,
         alignItems: 'center',
@@ -1147,7 +1147,7 @@ const styles = StyleSheet.create({
         marginBottom: 18,
     },
     reviewButton: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         paddingHorizontal: 30,
         paddingVertical: 14,
         borderRadius: 16,

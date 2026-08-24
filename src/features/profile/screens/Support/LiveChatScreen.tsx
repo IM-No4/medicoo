@@ -194,7 +194,7 @@ export default function LiveChatScreen() {
     if (loading) {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color="#2FA561" />
+                <ActivityIndicator size="large" color="#0FBBA1" />
             </View>
         );
     }
@@ -286,7 +286,7 @@ export default function LiveChatScreen() {
                                 })}
                             </View>
                         </View>
-                        {starting && <ActivityIndicator color="#2FA561" style={{ marginTop: 12 }} />}
+                        {starting && <ActivityIndicator color="#0FBBA1" style={{ marginTop: 12 }} />}
 
                         {chat?.status === "closed" && (
                             <View style={styles.closedNotice}>
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     messageContentRow: { flexDirection: "row", alignItems: "flex-end", gap: 6, alignSelf: "flex-start" },
     bubble: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 16 },
     agentBubble: { backgroundColor: "#FFFFFF", borderTopLeftRadius: 4, borderWidth: 1, borderColor: "#E5E7EB" },
-    userBubble: { backgroundColor: "#2FA561", borderTopRightRadius: 4 },
+    userBubble: { backgroundColor: "#0FBBA1", borderTopRightRadius: 4 },
     botBubble: { backgroundColor: "#EFF6FF", borderTopLeftRadius: 4, borderWidth: 1, borderColor: "#DBEAFE" },
     botAvatar: {
         width: 24,
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     input: { flex: 1, height: 40, backgroundColor: "#F3F4F6", borderRadius: 20, paddingHorizontal: 16, color: "#1F2937", fontSize: 14 },
-    sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#2FA561", alignItems: "center", justifyContent: "center" },
+    sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#0FBBA1", alignItems: "center", justifyContent: "center" },
     closedNotice: { backgroundColor: "#F0FDF4", borderRadius: 12, padding: 12, marginBottom: 16 },
     closedNoticeText: { fontSize: 12, color: "#166534", fontWeight: "600" },
     categoryPickerBox: { paddingTop: 12, marginBottom: 12 },

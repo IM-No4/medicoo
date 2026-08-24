@@ -47,7 +47,7 @@ export default function PatientReportsModal({ visible, onClose, customerId }: Pr
         if (loading) {
             return (
                 <View style={styles.centerState}>
-                    <ActivityIndicator size="small" color="#2FA561" />
+                    <ActivityIndicator size="small" color="#0FBBA1" />
                 </View>
             );
         }
@@ -69,7 +69,7 @@ export default function PatientReportsModal({ visible, onClose, customerId }: Pr
         return documents.map((doc) => (
             <TouchableOpacity key={doc._id} style={styles.docRow} onPress={() => setSelected(doc)}>
                 <View style={styles.docIconBox}>
-                    <FileText size={20} color="#2FA561" />
+                    <FileText size={20} color="#0FBBA1" />
                 </View>
                 <View style={styles.docInfo}>
                     <Text style={styles.docTitle} numberOfLines={1}>{doc.name}</Text>
@@ -87,7 +87,7 @@ export default function PatientReportsModal({ visible, onClose, customerId }: Pr
         return (
             <View>
                 <TouchableOpacity style={styles.backRow} onPress={() => setSelected(null)}>
-                    <ChevronLeft size={18} color="#2FA561" />
+                    <ChevronLeft size={18} color="#0FBBA1" />
                     <Text style={styles.backRowText}>All Reports</Text>
                 </TouchableOpacity>
                 <Text style={styles.viewerTitle}>{selected.name}</Text>
@@ -99,7 +99,7 @@ export default function PatientReportsModal({ visible, onClose, customerId }: Pr
                     />
                 ) : (
                     <View style={styles.fallbackCard}>
-                        <FileText size={40} color="#2FA561" />
+                        <FileText size={40} color="#0FBBA1" />
                         <Text style={styles.fallbackText}>
                             This file type can't be previewed here.
                         </Text>
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     docTitle: { fontSize: 14, fontWeight: '600', color: '#111827' },
     docSub: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
     backRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-    backRowText: { color: '#2FA561', fontSize: 14, fontWeight: '600', marginLeft: 2 },
+    backRowText: { color: '#0FBBA1', fontSize: 14, fontWeight: '600', marginLeft: 2 },
     viewerTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 12 },
     previewImage: { width: '100%', height: 320, borderRadius: 12, backgroundColor: '#F3F4F6' },
     fallbackCard: {

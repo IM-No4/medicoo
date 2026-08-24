@@ -18,7 +18,7 @@ interface Props {
 // same way everywhere in the app.
 const TYPE_META: Record<ConsultationType, { color: string; bg: string; Icon: typeof MessageCircle }> = {
     chat: { color: '#1C6ED5', bg: '#EAF4FF', Icon: MessageCircle },
-    voice: { color: '#0E7439', bg: '#EAFBF3', Icon: Phone },
+    voice: { color: '#007C69', bg: '#EAFBF3', Icon: Phone },
     video: { color: '#C47A16', bg: '#FFF6EA', Icon: Video },
 };
 
@@ -26,7 +26,7 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string }> 
     pending: { label: 'Pending', color: '#B45309', bg: '#FEF3C7' },
     approved: { label: 'Upcoming', color: '#1C6ED5', bg: '#EAF4FF' },
     booked: { label: 'Upcoming', color: '#1C6ED5', bg: '#EAF4FF' },
-    completed: { label: 'Completed', color: '#0E7439', bg: '#EAFBF3' },
+    completed: { label: 'Completed', color: '#007C69', bg: '#EAFBF3' },
     cancelled: { label: 'Cancelled', color: '#DC2626', bg: '#FEF2F2' },
     rejected: { label: 'Rejected', color: '#DC2626', bg: '#FEF2F2' },
     expired: { label: 'Expired', color: '#6B7280', bg: '#F3F4F6' },

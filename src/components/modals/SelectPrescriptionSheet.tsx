@@ -91,7 +91,7 @@ export default function SelectPrescriptionSheet({ visible, onClose, onSelect }: 
           >
             <Text style={styles.sectionTitle}>My Documents</Text>
             {loadingDocuments ? (
-              <ActivityIndicator size="small" color="#2FA561" style={{ marginVertical: 20 }} />
+              <ActivityIndicator size="small" color="#0FBBA1" style={{ marginVertical: 20 }} />
             ) : documents.length === 0 ? (
               <Text style={styles.emptyText}>No uploaded prescriptions yet.</Text>
             ) : (
@@ -103,7 +103,7 @@ export default function SelectPrescriptionSheet({ visible, onClose, onSelect }: 
                   activeOpacity={0.7}
                 >
                   <View style={styles.iconContainer}>
-                    <AppIcon name="file-text" size={20} color="#2FA561" />
+                    <AppIcon name="file-text" size={20} color="#0FBBA1" />
                   </View>
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle} numberOfLines={1}>{doc.name}</Text>
@@ -123,7 +123,7 @@ export default function SelectPrescriptionSheet({ visible, onClose, onSelect }: 
                 <Text style={styles.comingSoonText}>Coming soon</Text>
               </View>
             ) : loadingDoctorPrescriptions ? (
-              <ActivityIndicator size="small" color="#2FA561" style={{ marginVertical: 20 }} />
+              <ActivityIndicator size="small" color="#0FBBA1" style={{ marginVertical: 20 }} />
             ) : doctorPrescriptions.length === 0 ? (
               <Text style={styles.emptyText}>No prescriptions from your doctor yet.</Text>
             ) : (
@@ -135,7 +135,7 @@ export default function SelectPrescriptionSheet({ visible, onClose, onSelect }: 
                   activeOpacity={0.7}
                 >
                   <View style={styles.iconContainer}>
-                    <AppIcon name="stethoscope" size={20} color="#2FA561" />
+                    <AppIcon name="stethoscope" size={20} color="#0FBBA1" />
                   </View>
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle} numberOfLines={1}>

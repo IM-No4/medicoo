@@ -326,9 +326,9 @@ export default function AddGoalModal({ visible, onClose, onSuccess }: AddGoalMod
                                 <TouchableOpacity
                                     style={[
                                         styles.nextBtn,
-                                        { backgroundColor: isNextDisabled() ? '#E2E8F0' : '#2FA561' },
+                                        { backgroundColor: isNextDisabled() ? '#E2E8F0' : '#0FBBA1' },
                                         !isNextDisabled() && {
-                                            shadowColor: '#2FA561',
+                                            shadowColor: '#0FBBA1',
                                             shadowOffset: { width: 0, height: 6 },
                                             shadowOpacity: 0.35,
                                             shadowRadius: 12,

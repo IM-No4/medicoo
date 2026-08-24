@@ -36,7 +36,7 @@ export function MedicationsSummary() {
     };
 
     return (
-        <HealthSection title="Medications" icon={<Pill size={14} color="#2FA561" />}>
+        <HealthSection title="Medications" icon={<Pill size={14} color="#0FBBA1" />}>
             {activeMedsCount === 0 ? (
                 <TouchableOpacity
                     style={styles.emptyCard}
@@ -44,7 +44,7 @@ export function MedicationsSummary() {
                     onPress={handleAddMedication}
                 >
                     <View style={styles.emptyIconBox}>
-                        <Pill size={24} color="#2FA561" />
+                        <Pill size={24} color="#0FBBA1" />
                     </View>
                     <Text style={styles.emptyTitle}>No Medications Configured</Text>
                     <Text style={styles.emptySubtitle}>
@@ -63,7 +63,7 @@ export function MedicationsSummary() {
                 >
                     <View style={styles.content}>
                         <View style={styles.medIconBox}>
-                            <Pill size={24} color="#2FA561" />
+                            <Pill size={24} color="#0FBBA1" />
                         </View>
 
                         <View style={{ flex: 1 }}>
@@ -85,7 +85,7 @@ export function MedicationsSummary() {
 
                     <View style={styles.cardFooter}>
                         <Text style={styles.footerLink}>View Schedule</Text>
-                        <ChevronRight size={16} color="#2FA561" />
+                        <ChevronRight size={16} color="#0FBBA1" />
                     </View>
                 </TouchableOpacity>
             )}
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         borderRadius: 6
     },
-    badgeText: { fontSize: 11, color: '#2FA561', fontWeight: '700' },
+    badgeText: { fontSize: 11, color: '#0FBBA1', fontWeight: '700' },
 
     progressSection: { marginBottom: 16 },
     progressBg: {
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     },
     progressFill: {
         height: '100%',
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         borderRadius: 4
     },
     progressLabel: { fontSize: 12, color: '#9CA3AF', marginTop: 6, fontWeight: '500' },
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: '#F9FAFB'
     },
-    footerLink: { fontSize: 14, fontWeight: '700', color: '#2FA561' },
+    footerLink: { fontSize: 14, fontWeight: '700', color: '#0FBBA1' },
     
     /* Empty State styles */
     emptyCard: {
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     emptyBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 10,

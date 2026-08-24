@@ -206,7 +206,7 @@ export default function PharmacyDetailScreen() {
   if (loading || !pharmacy) {
     return (
       <View style={styles.loader}>
-        <ActivityIndicator size="large" color="#0E7439" />
+        <ActivityIndicator size="large" color="#007C69" />
       </View>
     );
   }

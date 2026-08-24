@@ -165,7 +165,7 @@ export default function DoctorSettingsScreen() {
     if (loading) {
         return (
             <View style={[styles.container, styles.center]}>
-                <ActivityIndicator size="large" color="#2FA561" />
+                <ActivityIndicator size="large" color="#0FBBA1" />
             </View>
         );
     }
@@ -210,7 +210,7 @@ export default function DoctorSettingsScreen() {
                                     value={isOnline}
                                     onValueChange={setIsOnline}
                                     trackColor={{ false: '#D1D5DB', true: '#A7F3D0' }}
-                                    thumbColor={isOnline ? '#2FA561' : '#F3F4F6'}
+                                    thumbColor={isOnline ? '#0FBBA1' : '#F3F4F6'}
                                 />
                             </View>
                         </View>
@@ -248,7 +248,7 @@ export default function DoctorSettingsScreen() {
                                                 value={item.isEnabled}
                                                 onValueChange={() => toggleFeeEnabled(t)}
                                                 trackColor={{ false: '#E5E7EB', true: '#BBF7D0' }}
-                                                thumbColor={item.isEnabled ? '#2FA561' : '#fff'}
+                                                thumbColor={item.isEnabled ? '#0FBBA1' : '#fff'}
                                             />
                                         </View>
                                     </View>
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
         borderBottomColor: '#F3F4F6'
     },
     backButton: { padding: 8, marginLeft: -8 },
-    backText: { fontSize: 16, color: '#2FA561', fontWeight: '500' },
+    backText: { fontSize: 16, color: '#0FBBA1', fontWeight: '500' },
     headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
 
     content: {
@@ -478,12 +478,12 @@ const styles = StyleSheet.create({
         borderTopColor: '#F3F4F6'
     },
     saveButton: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         height: 50,
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#2FA561',
+        shadowColor: '#0FBBA1',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,

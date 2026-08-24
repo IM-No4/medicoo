@@ -129,7 +129,7 @@ const PharmacyCard = memo(
           activeOpacity={0.7}
         >
           {isFavoriteLoading ? (
-            <ActivityIndicator size="small" color="#0E7439" />
+            <ActivityIndicator size="small" color="#007C69" />
           ) : (
             <AppIcon
               name="heart"
@@ -396,7 +396,7 @@ export default function PharmacyListScreen() {
           style={styles.locationButton}
           onPress={() => setIsLocationVisible(true)}
         >
-          <AppIcon name="map-pin" size={16} color="#0E7439" />
+          <AppIcon name="map-pin" size={16} color="#007C69" />
           <Text style={styles.locationTextHeader} numberOfLines={1}>
             {selectedAddress?.label ||
               selectedAddress?.fullAddress ||
@@ -409,7 +409,7 @@ export default function PharmacyListScreen() {
         style={styles.iconButton}
         onPress={() => setIsFilterVisible(true)}
       >
-        <AppIcon name="sliders" size={24} color="#0E7439" />
+        <AppIcon name="sliders" size={24} color="#007C69" />
       </TouchableOpacity>
     </View>
   );
@@ -612,7 +612,7 @@ export default function PharmacyListScreen() {
     if (isLoadingMore) {
       return (
         <View style={styles.loadingFooter}>
-          <ActivityIndicator size="small" color="#0E7439" />
+          <ActivityIndicator size="small" color="#007C69" />
         </View>
       );
     }
@@ -906,17 +906,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   radioButtonSelected: {
-    borderColor: "#0E7439",
+    borderColor: "#007C69",
   },
   radioButtonInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: "#0E7439",
+    backgroundColor: "#007C69",
   },
   applyButton: {
     alignItems: "center",
-    backgroundColor: "#0E7439",
+    backgroundColor: "#007C69",
     paddingHorizontal: 18,
     paddingRight: 12,
     paddingVertical: 16,
@@ -1147,7 +1147,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: "#0E7439",
+    backgroundColor: "#007C69",
     borderRadius: 12,
   },
   emptyStateButtonText: {

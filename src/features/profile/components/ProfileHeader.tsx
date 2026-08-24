@@ -17,7 +17,7 @@ export default function ProfileHeader({ name, profileImage, onEditPress }: Profi
             onPress={onEditPress}
         >
             <LinearGradient
-                colors={['#2FA561', '#0E7439']}
+                colors={['#0FBBA1', '#007C69']}
                 start={Platform.select({ ios: { x: 0, y: 0 }, android: { x: 0.2, y: 0 } })}
                 end={Platform.select({ ios: { x: 1, y: 0.9 }, android: { x: 0.8, y: 1 } })}
                 style={StyleSheet.absoluteFill}

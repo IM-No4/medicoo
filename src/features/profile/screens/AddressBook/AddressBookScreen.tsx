@@ -292,7 +292,7 @@ export default function AddressBookScreen() {
               marginTop: 100,
             }}
           >
-            <ActivityIndicator size="large" color="#2FA561" />
+            <ActivityIndicator size="large" color="#0FBBA1" />
           </View>
         ) : addresses.length === 0 ? (
           <View style={styles.emptyState}>
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   distanceText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#2FA561",
+    color: "#0FBBA1",
   },
   rightBadges: {
     flexDirection: "row",
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#2FA561",
+    backgroundColor: "#0FBBA1",
     paddingVertical: 16,
     borderRadius: 14,
     gap: 8,

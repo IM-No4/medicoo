@@ -29,9 +29,9 @@ export function HealthHighlights() {
         if (takenDoses >= totalDoses) {
             highlights.push({
                 text: 'All doses taken today',
-                color: '#2FA561',
+                color: '#0FBBA1',
                 bgColor: '#F0FDF4',
-                icon: <CheckCircle2 size={18} color="#2FA561" />,
+                icon: <CheckCircle2 size={18} color="#0FBBA1" />,
             });
         } else {
             const missed = totalDoses - takenDoses;

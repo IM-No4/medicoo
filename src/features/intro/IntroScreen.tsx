@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // corner notches at the base of the white card, and fills the section
 // below it where the dots/button sit. Same brand gradient used elsewhere
 // in the app (HealthProfileScreen's header, the splash screen).
-const GRADIENT_COLORS = ['#2FA561', '#0E7439'] as const;
+const GRADIENT_COLORS = ['#0FBBA1', '#007C69'] as const;
 
 const slides = [
   {

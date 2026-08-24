@@ -63,14 +63,14 @@ function FloatingLabelInput({
         }),
         color: animatedValue.interpolate({
             inputRange: [0, 1],
-            outputRange: ['#6B7280', '#2FA561'],
+            outputRange: ['#6B7280', '#0FBBA1'],
         }),
         backgroundColor: '#fff',
         paddingHorizontal: 4,
         zIndex: 1,
     };
 
-    const borderColor = isFocused ? '#2FA561' : '#E5E7EB';
+    const borderColor = isFocused ? '#0FBBA1' : '#E5E7EB';
 
     return (
         <View style={{ paddingTop: 0, marginBottom: 20 }}>
@@ -442,7 +442,7 @@ export default function AddAddressScreen() {
                 {/* Bottom Address Preview */}
                 <View style={styles.addressPreviewCard}>
                     <View style={styles.addressPreviewHeader}>
-                        <MapPin size={20} color="#2FA561" />
+                        <MapPin size={20} color="#0FBBA1" />
                         <Text style={styles.addressPreviewTitle}>Selected Location</Text>
                     </View>
                     <Text style={styles.addressPreviewText} numberOfLines={2}>
@@ -492,7 +492,7 @@ export default function AddAddressScreen() {
                                     ]}
                                     onPress={() => setFormData({ ...formData, tag })}
                                 >
-                                    <Icon size={16} color={isActive ? '#2FA561' : '#6B7280'} />
+                                    <Icon size={16} color={isActive ? '#0FBBA1' : '#6B7280'} />
                                     <Text style={[
                                         styles.tagText,
                                         isActive && styles.tagTextActive
@@ -540,7 +540,7 @@ export default function AddAddressScreen() {
                             onChangeText={(t: string) => setFormData({ ...formData, receiverName: t })}
                             rightIcon={
                                 <TouchableOpacity onPress={handleContactPick} style={styles.inputIconBox}>
-                                    <Contact size={20} color="#2FA561" />
+                                    <Contact size={20} color="#0FBBA1" />
                                 </TouchableOpacity>
                             }
                         />
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         right: 20,
         bottom: 160, // Moved up
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         width: 48,
         height: 48,
         borderRadius: 24,
@@ -697,7 +697,7 @@ const styles = StyleSheet.create({
     addressPreviewTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#2FA561',
+        color: '#0FBBA1',
     },
     addressPreviewText: {
         fontSize: 15,
@@ -727,7 +727,7 @@ const styles = StyleSheet.create({
     changeLink: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#2FA561',
+        color: '#0FBBA1',
     },
     inputGroup: {
         marginBottom: 20,
@@ -765,7 +765,7 @@ const styles = StyleSheet.create({
     },
     tagChipActive: {
         backgroundColor: '#F0FDF4',
-        borderColor: '#2FA561',
+        borderColor: '#0FBBA1',
     },
     tagText: {
         fontSize: 14,
@@ -773,7 +773,7 @@ const styles = StyleSheet.create({
         color: '#6B7280',
     },
     tagTextActive: {
-        color: '#2FA561',
+        color: '#0FBBA1',
         fontWeight: '600',
     },
     checkboxRow: {
@@ -792,8 +792,8 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     checkboxActive: {
-        backgroundColor: '#2FA561',
-        borderColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
+        borderColor: '#0FBBA1',
     },
     checkboxLabel: {
         fontSize: 15,
@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
         borderTopColor: '#F3F4F6',
     },
     saveButton: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         paddingVertical: 16,
         borderRadius: 14,
         alignItems: 'center',

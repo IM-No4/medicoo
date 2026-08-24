@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#6EE7B7',
   },
   barHighlighted: {
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
   },
   label: {
     fontSize: 10,

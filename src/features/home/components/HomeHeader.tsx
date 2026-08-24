@@ -281,7 +281,7 @@ export default function HomeHeader({
     void loadUnreadCount();
   }, [dispatch]);
 
-  const headerColors = dynamicConfig?.colors || ["#2FA561", "#0E7439"];
+  const headerColors = dynamicConfig?.colors || ["#0FBBA1", "#007C69"];
 
   return (
     <>

@@ -92,7 +92,7 @@ export default function BookingSuccessScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0E7439" />
+      <StatusBar barStyle="light-content" backgroundColor="#007C69" />
       
       {/* Confetti Particles */}
       {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
@@ -122,7 +122,7 @@ export default function BookingSuccessScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#2FA561', justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: '#0FBBA1', justifyContent: 'center', alignItems: 'center' },
   content: { alignItems: 'center', paddingHorizontal: 40 },
   iconContainer: {
     width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.2)',
@@ -137,5 +137,5 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8,
     elevation: 4,
   },
-  buttonText: { fontSize: 16, fontWeight: '700', color: '#0E7439' },
+  buttonText: { fontSize: 16, fontWeight: '700', color: '#007C69' },
 });

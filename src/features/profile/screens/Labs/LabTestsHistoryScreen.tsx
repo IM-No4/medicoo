@@ -140,7 +140,7 @@ export default function LabTestsHistoryScreen() {
                 keyExtractor={item => item._id}
                 contentContainerStyle={styles.listContent}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2FA561']} />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0FBBA1']} />
                 }
                 ListEmptyComponent={
                     !loading ? (
@@ -153,7 +153,7 @@ export default function LabTestsHistoryScreen() {
                         </View>
                     ) : (
                         <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color="#2FA561" />
+                            <ActivityIndicator size="large" color="#0FBBA1" />
                         </View>
                     )
                 }

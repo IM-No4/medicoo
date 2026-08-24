@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   },
   doctorImage: { width: '100%', height: '100%', borderRadius: 30 },
   verifiedBadge: {
-    position: 'absolute', bottom: 0, right: 0, backgroundColor: '#2FA561',
+    position: 'absolute', bottom: 0, right: 0, backgroundColor: '#0FBBA1',
     borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center',
     borderWidth: 1.5, borderColor: '#fff'
   },
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     width: 64, height: 76, borderRadius: 16, borderWidth: 1, borderColor: '#E5E5EA',
     justifyContent: 'center', alignItems: 'center', marginRight: 12, backgroundColor: '#fff',
   },
-  dateCardSelected: { backgroundColor: '#2FA561', borderColor: '#2FA561' },
+  dateCardSelected: { backgroundColor: '#0FBBA1', borderColor: '#0FBBA1' },
   dayText: { fontSize: 12, color: '#8e8e93', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
   dateText: { fontSize: 18, fontWeight: '700', color: '#1c1c1e' },
   textSelected: { color: '#fff' },
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: '#E5E5EA',
     marginRight: 10, marginBottom: 10, backgroundColor: '#fff',
   },
-  slotChipSelected: { backgroundColor: '#2FA561', borderColor: '#2FA561' },
+  slotChipSelected: { backgroundColor: '#0FBBA1', borderColor: '#0FBBA1' },
   slotText: { fontSize: 14, color: '#1c1c1e' },
   slotTextSelected: { color: '#fff', fontWeight: '600' },
 
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff',
     borderWidth: 1, borderColor: '#E5E5EA'
   },
-  prefChipSelected: { backgroundColor: '#2FA561', borderColor: '#2FA561' },
+  prefChipSelected: { backgroundColor: '#0FBBA1', borderColor: '#0FBBA1' },
   prefText: { fontSize: 14, color: '#3A3A3C' },
   prefTextSelected: { color: '#fff', fontWeight: '600' },
 
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     padding: 20, paddingBottom: 32, borderTopWidth: 1, borderTopColor: '#E5E5EA',
   },
   confirmButton: {
-    backgroundColor: '#2FA561', borderRadius: 24, paddingVertical: 16, alignItems: 'center',
+    backgroundColor: '#0FBBA1', borderRadius: 24, paddingVertical: 16, alignItems: 'center',
   },
   disabledButton: { backgroundColor: '#A0A0A0' },
   confirmButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },

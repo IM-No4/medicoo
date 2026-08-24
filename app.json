@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "medicoo",
-    "slug": "medicoo",
+    "name": "Medicoo",
+    "slug": "Medicoo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./src/assets/images/icon.png",
-    "scheme": "medicoo",
+    "scheme": "Medicoo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -16,7 +16,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0FBBA1",
         "foregroundImage": "./src/assets/images/android-icon-foreground.png",
         "backgroundImage": "./src/assets/images/android-icon-background.png",
         "monochromeImage": "./src/assets/images/android-icon-monochrome.png"
@@ -47,12 +47,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./src/assets/images/android-icon-foreground.png",
+          "image": "./src/assets/images/logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#0FBBA1",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#0FBBA1"
           }
         }
       ],
@@ -106,6 +106,7 @@
         }
       ],
       "./plugins/withRazorpayCheckoutTheme.js",
+      "./plugins/withLowMemoryGradleTuning.js",
       [
         "expo-navigation-bar",
         {

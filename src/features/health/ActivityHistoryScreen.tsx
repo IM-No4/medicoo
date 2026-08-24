@@ -96,7 +96,7 @@ export default function ActivityHistoryScreen() {
 
       {trackingEnabled === false ? (
         <View style={styles.emptyState}>
-          <Footprints size={36} color="#2FA561" />
+          <Footprints size={36} color="#0FBBA1" />
           <Text style={styles.emptyTitle}>Step tracking isn&apos;t enabled</Text>
           <Text style={styles.emptySubtitle}>
             Turn on the Steps goal from Manage Goals to start seeing your activity history here.
@@ -121,7 +121,7 @@ export default function ActivityHistoryScreen() {
 
           {loading || !data ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator color="#2FA561" />
+              <ActivityIndicator color="#0FBBA1" />
             </View>
           ) : (
             <>
@@ -158,7 +158,7 @@ export default function ActivityHistoryScreen() {
                   value={data.bestBucket ? `${data.bestBucket.value.toLocaleString()} · ${data.bestBucket.label}` : '--'}
                 />
                 <InfoRow
-                  icon={<CheckCircle2 size={16} color="#2FA561" />}
+                  icon={<CheckCircle2 size={16} color="#0FBBA1" />}
                   iconBg="#F0FDF4"
                   label={`Active ${BUCKET_UNIT[rangeType].plural}`}
                   value={`${data.activeCount}/${data.elapsedCount}`}

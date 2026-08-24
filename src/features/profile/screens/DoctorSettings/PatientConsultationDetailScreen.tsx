@@ -37,7 +37,7 @@ const STATUS_LABELS: Record<AppointmentStatus, string> = {
 
 const STATUS_TONES: Record<AppointmentStatus, { bg: string; fg: string; dot: string }> = {
     pending: { bg: '#FEF3C7', fg: '#92400E', dot: '#F59E0B' },
-    approved: { bg: '#DCFCE7', fg: '#166534', dot: '#2FA561' },
+    approved: { bg: '#DCFCE7', fg: '#166534', dot: '#0FBBA1' },
     rejected: { bg: '#FEE2E2', fg: '#B91C1C', dot: '#DC2626' },
     cancelled: { bg: '#E5E7EB', fg: '#374151', dot: '#9CA3AF' },
     completed: { bg: '#E0E7FF', fg: '#3730A3', dot: '#6366F1' },
@@ -47,7 +47,7 @@ const STATUS_TONES: Record<AppointmentStatus, { bg: string; fg: string; dot: str
 
 const CONSULTATION_TYPE_META: Record<'chat' | 'voice' | 'video', { label: string; color: string; bg: string; Icon: typeof MessageCircle }> = {
     chat: { label: 'Chat', color: '#1C6ED5', bg: '#EAF4FF', Icon: MessageCircle },
-    voice: { label: 'Voice', color: '#0E7439', bg: '#EAFBF3', Icon: Phone },
+    voice: { label: 'Voice', color: '#007C69', bg: '#EAFBF3', Icon: Phone },
     video: { label: 'Video', color: '#C47A16', bg: '#FFF6EA', Icon: Video },
 };
 
@@ -496,8 +496,8 @@ export default function PatientConsultationDetailScreen() {
                                 style={[styles.actionButton, styles.secondaryButton]}
                                 onPress={() => executeAction('OPEN_DOCTOR_CHAT', { requestId: appointment.requestId, title: patientData.name, image: patientData.image })}
                             >
-                                <MessageSquare size={18} color="#2FA561" />
-                                <Text style={[styles.buttonText, { color: '#2FA561' }]}>Message</Text>
+                                <MessageSquare size={18} color="#0FBBA1" />
+                                <Text style={[styles.buttonText, { color: '#0FBBA1' }]}>Message</Text>
                             </TouchableOpacity>
                             {appointment?.consultationType !== 'chat' && (
                                 <TouchableOpacity
@@ -540,7 +540,7 @@ export default function PatientConsultationDetailScreen() {
 
             {busy && (
                 <View style={styles.busyOverlay} pointerEvents="none">
-                    <ActivityIndicator color="#2FA561" size="large" />
+                    <ActivityIndicator color="#0FBBA1" size="large" />
                 </View>
             )}
         </View>
@@ -701,8 +701,8 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     primaryButton: {
-        backgroundColor: '#2FA561',
-        shadowColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
+        shadowColor: '#0FBBA1',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
@@ -728,8 +728,8 @@ const styles = StyleSheet.create({
     },
     rejectButtonText: { fontSize: 15, fontWeight: '800', color: '#DC2626' },
     approveButton: {
-        backgroundColor: '#2FA561',
-        shadowColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
+        shadowColor: '#0FBBA1',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,

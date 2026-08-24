@@ -56,7 +56,7 @@ export default function PrivacyPolicyScreen() {
 
                 <View style={styles.center}>
                     {loading ? (
-                        <ActivityIndicator size="large" color="#2FA561" />
+                        <ActivityIndicator size="large" color="#0FBBA1" />
                     ) : (
                         <ErrorState message="Couldn't load Privacy Policy." onRetry={load} />
                     )}
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F9FAFB',
     },
     header: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',

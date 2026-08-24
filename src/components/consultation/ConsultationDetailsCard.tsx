@@ -33,7 +33,7 @@ export default function ConsultationDetailsCard({ details }: Props) {
             {hasMedicines && (
                 <View style={styles.block}>
                     <View style={styles.blockHeaderRow}>
-                        <Pill size={14} color="#2FA561" />
+                        <Pill size={14} color="#0FBBA1" />
                         <Text style={styles.blockLabel}>Prescribed Medicines</Text>
                     </View>
                     {details.prescribedMedicines.map((med, index) => (

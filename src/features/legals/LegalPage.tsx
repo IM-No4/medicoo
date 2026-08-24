@@ -28,7 +28,7 @@ export default function LegalPage({ title, lastUpdated, sections }: LegalPagePro
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#2FA561" />
+            <StatusBar barStyle="light-content" backgroundColor="#0FBBA1" />
             {/* Header */}
             <View style={[styles.header, { paddingTop: insets.top }]}>
                 <TouchableOpacity
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F9FAFB', // Slightly off-white background
     },
     header: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',

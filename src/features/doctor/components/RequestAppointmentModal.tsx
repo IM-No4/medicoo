@@ -41,7 +41,7 @@ const CONSULTATION_TYPES = [
 ];
 
 // Theme Color
-const THEME_COLOR = '#2FA561'; // Doctor Onboarding Green / Branding Color
+const THEME_COLOR = '#0FBBA1'; // Doctor Onboarding Green / Branding Color
 
 export default function RequestAppointmentModal({
     visible,
@@ -298,7 +298,7 @@ export default function RequestAppointmentModal({
                                             iconBg = '#EAF4FF';
                                             break;
                                         case 'voice':
-                                            iconColor = '#0E7439';
+                                            iconColor = '#007C69';
                                             iconBg = '#EAFBF3';
                                             break;
                                         case 'video':

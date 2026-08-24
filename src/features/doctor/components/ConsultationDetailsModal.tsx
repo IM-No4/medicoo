@@ -101,7 +101,7 @@ export default function ConsultationDetailsModal({ visible, onClose, onSubmit, m
                             <Text style={styles.sectionLabel}>Prescribed Medicines</Text>
                             {!addingMedicine && (
                                 <TouchableOpacity style={styles.addChip} onPress={() => setAddingMedicine(true)}>
-                                    <Plus size={14} color="#2FA561" />
+                                    <Plus size={14} color="#0FBBA1" />
                                     <Text style={styles.addChipText}>Add</Text>
                                 </TouchableOpacity>
                             )}
@@ -131,7 +131,7 @@ export default function ConsultationDetailsModal({ visible, onClose, onSubmit, m
                             <Text style={styles.sectionLabel}>Recommended Lab Tests</Text>
                             {!addingLabTest && (
                                 <TouchableOpacity style={styles.addChip} onPress={() => setAddingLabTest(true)}>
-                                    <Plus size={14} color="#2FA561" />
+                                    <Plus size={14} color="#0FBBA1" />
                                     <Text style={styles.addChipText}>Add</Text>
                                 </TouchableOpacity>
                             )}
@@ -222,7 +222,7 @@ function AddMedicineForm({ onAdd, onCancel }: {
                         onChangeText={setQuery}
                         autoFocus
                     />
-                    {searching && <ActivityIndicator size="small" color="#2FA561" />}
+                    {searching && <ActivityIndicator size="small" color="#0FBBA1" />}
                 </View>
                 {results.map((r) => (
                     <TouchableOpacity
@@ -334,7 +334,7 @@ function AddLabTestForm({ onAdd, onCancel }: {
                         onChangeText={setQuery}
                         autoFocus
                     />
-                    {searching && <ActivityIndicator size="small" color="#2FA561" />}
+                    {searching && <ActivityIndicator size="small" color="#0FBBA1" />}
                 </View>
                 {results.map((r) => (
                     <TouchableOpacity key={r.testName} style={styles.resultRow} onPress={() => setSelected(r.testName)}>
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 6,
     },
-    addChipText: { color: '#2FA561', fontSize: 12, fontWeight: '700' },
+    addChipText: { color: '#0FBBA1', fontSize: 12, fontWeight: '700' },
     itemCard: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -468,11 +468,11 @@ const styles = StyleSheet.create({
     inlineButtonRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
     cancelInlineBtn: { flex: 1, alignItems: 'center', paddingVertical: 10 },
     cancelInlineText: { color: '#6B7280', fontSize: 13, fontWeight: '600' },
-    addInlineBtn: { flex: 1, backgroundColor: '#2FA561', borderRadius: 10, alignItems: 'center', paddingVertical: 10 },
+    addInlineBtn: { flex: 1, backgroundColor: '#0FBBA1', borderRadius: 10, alignItems: 'center', paddingVertical: 10 },
     addInlineBtnDisabled: { backgroundColor: '#A7D6BB' },
     addInlineText: { color: '#fff', fontSize: 13, fontWeight: '700' },
     submitButton: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         borderRadius: 16,
         paddingVertical: 16,
         alignItems: 'center',

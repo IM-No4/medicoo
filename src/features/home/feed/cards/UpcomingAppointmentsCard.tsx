@@ -17,7 +17,7 @@ type AppointmentItem = {
 
 const TYPE_META: Record<'chat' | 'voice' | 'video', { color: string; bg: string; Icon: typeof MessageCircle }> = {
     chat: { color: '#1C6ED5', bg: '#EAF4FF', Icon: MessageCircle },
-    voice: { color: '#0E7439', bg: '#EAFBF3', Icon: Phone },
+    voice: { color: '#007C69', bg: '#EAFBF3', Icon: Phone },
     video: { color: '#C47A16', bg: '#FFF6EA', Icon: Video },
 };
 

@@ -29,7 +29,7 @@ export default function SearchCategories({ onSelectCategory }: Props) {
     return (
       <View style={styles.section}>
         <Text style={styles.title}>Browse by Category</Text>
-        <ActivityIndicator color="#2FA561" style={{ marginTop: 12 }} />
+        <ActivityIndicator color="#0FBBA1" style={{ marginTop: 12 }} />
       </View>
     );
   }

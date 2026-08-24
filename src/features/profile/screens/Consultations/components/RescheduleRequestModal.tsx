@@ -94,7 +94,7 @@ export default function RescheduleRequestModal({ visible, onClose, onSubmit }: P
 
                     <Text style={styles.sectionLabel}>Time</Text>
                     <TouchableOpacity style={styles.timeButton} onPress={() => setShowTimePicker(true)}>
-                        <Clock size={16} color="#2FA561" />
+                        <Clock size={16} color="#0FBBA1" />
                         <Text style={styles.timeButtonText}>
                             {selectedTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                         </Text>
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 4,
     },
-    dateChipActive: { backgroundColor: '#2FA561', borderColor: '#2FA561' },
+    dateChipActive: { backgroundColor: '#0FBBA1', borderColor: '#0FBBA1' },
     dateChipDay: { fontSize: 11, color: '#6B7280', fontWeight: '600' },
     dateChipNum: { fontSize: 16, color: '#111827', fontWeight: '700' },
     dateChipTextActive: { color: '#fff' },
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     },
     timeButtonText: { fontSize: 15, fontWeight: '700', color: '#111827' },
     submitButton: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         borderRadius: 16,
         paddingVertical: 16,
         alignItems: 'center',

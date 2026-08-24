@@ -377,7 +377,7 @@ export default function DoctorDetailsScreen() {
                   if (isVoiceEnabled) return (
                     <View style={styles.feeItem}>
                       <View style={[styles.feeIcon, { backgroundColor: '#EAFBF3' }]}>
-                        <AppIcon name="phone" size={20} color="#0E7439" />
+                        <AppIcon name="phone" size={20} color="#007C69" />
                       </View>
                       <View>
                         <Text style={styles.feeLabel}>Voice</Text>
@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   verifiedBadge: {
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
     borderRadius: 9,
     width: 18,
     height: 18,
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bookButton: {
-    backgroundColor: '#2FA561', borderRadius: 24, paddingVertical: 16, alignItems: 'center',
+    backgroundColor: '#0FBBA1', borderRadius: 24, paddingVertical: 16, alignItems: 'center',
   },
   bookButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   disabledButton: { backgroundColor: '#A0C4F2' },

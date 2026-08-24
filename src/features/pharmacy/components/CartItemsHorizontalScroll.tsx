@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
   itemPrice: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0E7439',
+    color: '#007C69',
   },
   quantityControlContainer: {
     alignItems: 'center',

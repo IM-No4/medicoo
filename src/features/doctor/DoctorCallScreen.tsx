@@ -384,7 +384,7 @@ export default function DoctorCallScreen() {
                             style={[styles.iconCircle, isMicOn ? styles.iconActive : styles.iconInactive]}
                             onPress={toggleMic}
                         >
-                            {isMicOn ? <Mic size={22} color="#2FA561" /> : <MicOff size={22} color="#fff" />}
+                            {isMicOn ? <Mic size={22} color="#0FBBA1" /> : <MicOff size={22} color="#fff" />}
                         </TouchableOpacity>
 
                         {/* Video Button */}
@@ -393,7 +393,7 @@ export default function DoctorCallScreen() {
                                 style={[styles.iconCircle, isVideoOn ? styles.iconActive : styles.iconInactive]}
                                 onPress={toggleVideo}
                             >
-                                {isVideoOn ? <VideoIcon size={22} color="#2FA561" /> : <VideoOff size={22} color="#fff" />}
+                                {isVideoOn ? <VideoIcon size={22} color="#0FBBA1" /> : <VideoOff size={22} color="#fff" />}
                             </TouchableOpacity>
                         )}
 
@@ -402,7 +402,7 @@ export default function DoctorCallScreen() {
                             style={[styles.iconCircle, isSpeakerOn ? styles.iconActive : styles.iconInactive]}
                             onPress={toggleSpeaker}
                         >
-                            {isSpeakerOn ? <Volume2 size={22} color="#2FA561" /> : <VolumeX size={22} color="#fff" />}
+                            {isSpeakerOn ? <Volume2 size={22} color="#0FBBA1" /> : <VolumeX size={22} color="#fff" />}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
     },
     connectionLostTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginTop: 4 },
     connectionLostText: { color: '#9CA3AF', fontSize: 14, textAlign: 'center', marginTop: 8, lineHeight: 20 },
-    retryButton: { backgroundColor: '#2FA561', borderRadius: 24, paddingHorizontal: 28, paddingVertical: 12, marginTop: 20 },
+    retryButton: { backgroundColor: '#0FBBA1', borderRadius: 24, paddingHorizontal: 28, paddingVertical: 12, marginTop: 20 },
     retryButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
     reconnectingBanner: {
         position: 'absolute', alignSelf: 'center', zIndex: 45,
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
     },
     actionRowBackground: {
         flexDirection: 'row',
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         width: '100%',
         alignItems: 'center',
         justifyContent: 'space-evenly',

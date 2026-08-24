@@ -155,13 +155,13 @@ export default function HealthScreen() {
                 <View
                   style={[
                     styles.heartRateStatusDot,
-                    { backgroundColor: isNormalHeartRate(heartRateNumeric!) ? '#2FA561' : '#F59E0B' },
+                    { backgroundColor: isNormalHeartRate(heartRateNumeric!) ? '#0FBBA1' : '#F59E0B' },
                   ]}
                 />
                 <Text
                   style={[
                     styles.heartRateStatusText,
-                    { color: isNormalHeartRate(heartRateNumeric!) ? '#2FA561' : '#B45309' },
+                    { color: isNormalHeartRate(heartRateNumeric!) ? '#0FBBA1' : '#B45309' },
                   ]}
                 >
                   {isNormalHeartRate(heartRateNumeric!) ? 'Normal' : 'Outside normal range'}
@@ -181,7 +181,7 @@ export default function HealthScreen() {
             color="#FEF2F2"
           />
           <SummaryCard
-            icon={<Activity size={18} color="#2FA561" />}
+            icon={<Activity size={18} color="#0FBBA1" />}
             value={steps}
             unit="steps"
             label={stepsLabel}

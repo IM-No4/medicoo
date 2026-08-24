@@ -269,7 +269,7 @@ export default function MedicineOrdersScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#2FA561"]}
+            colors={["#0FBBA1"]}
           />
         }
         ListEmptyComponent={
@@ -289,7 +289,7 @@ export default function MedicineOrdersScreen() {
             </View>
           ) : (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#2FA561" />
+              <ActivityIndicator size="large" color="#0FBBA1" />
             </View>
           )
         }

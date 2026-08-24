@@ -102,7 +102,7 @@ export default function DoctorReviewsScreen() {
 
             {loading ? (
                 <View style={styles.loadingState}>
-                    <ActivityIndicator color="#2FA561" />
+                    <ActivityIndicator color="#0FBBA1" />
                 </View>
             ) : (
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -245,8 +245,8 @@ const styles = StyleSheet.create({
         borderColor: '#E5E7EB'
     },
     filterChipActive: {
-        backgroundColor: '#2FA561',
-        borderColor: '#2FA561'
+        backgroundColor: '#0FBBA1',
+        borderColor: '#0FBBA1'
     },
     filterText: { fontSize: 13, color: '#6B7280', fontWeight: '600' },
     filterTextActive: { color: '#fff' },

@@ -23,7 +23,7 @@ const DEFAULT_TITLES: Partial<Record<StatusType, string>> = {
 };
 
 const PRIMARY_COLORS: Partial<Record<StatusType, string>> = {
-    success: '#2FA561',
+    success: '#0FBBA1',
     error: '#EF4444',
     date_error: '#EF4444',
     info: '#3B82F6',
@@ -62,7 +62,7 @@ export default function StatusModal({
             <Modal transparent visible={visible} animationType="fade" statusBarTranslucent>
                 <View style={styles.overlay}>
                     <View style={[styles.card, styles.loadingCard]}>
-                        <ActivityIndicator size="large" color="#2FA561" />
+                        <ActivityIndicator size="large" color="#0FBBA1" />
                         <Text style={styles.loadingText}>{message || 'Processing...'}</Text>
                     </View>
                 </View>

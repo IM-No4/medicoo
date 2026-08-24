@@ -177,7 +177,7 @@ export default function DoctorEarningsScreen() {
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2FA561']} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0FBBA1']} />}
             >
                 {/* Main Balance Card */}
                 <View style={styles.balanceContainer}>
@@ -266,7 +266,7 @@ export default function DoctorEarningsScreen() {
 
                 <View style={styles.transactionList}>
                     {loading ? (
-                        <ActivityIndicator color="#2FA561" style={{ marginTop: 20 }} />
+                        <ActivityIndicator color="#0FBBA1" style={{ marginTop: 20 }} />
                     ) : filteredTransactions.length === 0 ? (
                         <Text style={styles.emptyText}>No transactions yet.</Text>
                     ) : (
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
     upcomingLabel: { fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: '600', textTransform: 'uppercase' },
     upcomingValue: { fontSize: 13, color: '#fff', fontWeight: '500', marginTop: 2 },
     withdrawBtn: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         borderRadius: 10,
         paddingHorizontal: 16,
         paddingVertical: 10,

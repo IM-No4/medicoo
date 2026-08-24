@@ -93,7 +93,7 @@ const STATUS_LABELS: Record<AppointmentRequestItem['status'], string> = {
 
 const CONSULTATION_TYPE_META: Record<'chat' | 'voice' | 'video', { label: string; color: string; bg: string; Icon: typeof MessageCircle }> = {
   chat: { label: 'Chat', color: '#1C6ED5', bg: '#EAF4FF', Icon: MessageCircle },
-  voice: { label: 'Voice', color: '#0E7439', bg: '#EAFBF3', Icon: Phone },
+  voice: { label: 'Voice', color: '#007C69', bg: '#EAFBF3', Icon: Phone },
   video: { label: 'Video', color: '#C47A16', bg: '#FFF6EA', Icon: Video },
 };
 
@@ -115,7 +115,7 @@ const getUrgencyTone = (urgency?: string) => {
     case 'medium':
       return { color: '#2563EB', bg: '#DBEAFE' };
     default:
-      return { color: '#2FA561', bg: '#DCFCE7' };
+      return { color: '#0FBBA1', bg: '#DCFCE7' };
   }
 };
 
@@ -124,7 +124,7 @@ const getStatusTone = (status: AppointmentRequestItem['status']) => {
     case 'pending':
       return { bg: '#FEF3C7', fg: '#92400E', dot: '#F59E0B' };
     case 'approved':
-      return { bg: '#DCFCE7', fg: '#166534', dot: '#2FA561' };
+      return { bg: '#DCFCE7', fg: '#166534', dot: '#0FBBA1' };
     case 'rejected':
       return { bg: '#FEE2E2', fg: '#B91C1C', dot: '#DC2626' };
     case 'cancelled':
@@ -410,7 +410,7 @@ export default function AppointmentRequestsScreen() {
     if (loading) {
       return (
         <View style={styles.centerState}>
-          <ActivityIndicator color="#2FA561" />
+          <ActivityIndicator color="#0FBBA1" />
         </View>
       );
     }
@@ -420,7 +420,7 @@ export default function AppointmentRequestsScreen() {
     return (
       <View style={styles.emptyState}>
         <View style={styles.emptyIcon}>
-          <Inbox size={30} color="#2FA561" />
+          <Inbox size={30} color="#0FBBA1" />
         </View>
         <Text style={styles.emptyTitle}>No {activeLabel.toLowerCase()}</Text>
         <Text style={styles.emptyText}>
@@ -449,7 +449,7 @@ export default function AppointmentRequestsScreen() {
           </Text>
         </View>
         <TouchableOpacity style={styles.iconButton} onPress={onRefresh}>
-          <RefreshCw size={18} color="#2FA561" />
+          <RefreshCw size={18} color="#0FBBA1" />
         </TouchableOpacity>
       </View>
 
@@ -491,7 +491,7 @@ export default function AppointmentRequestsScreen() {
         keyExtractor={(item) => item.requestId}
         renderItem={renderItem}
         contentContainerStyle={filteredRequests.length === 0 ? styles.emptyListContent : styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2FA561" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0FBBA1" />}
         ListEmptyComponent={emptyState}
         showsVerticalScrollIndicator={false}
       />
@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
   },
   countPillActive: {
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
   },
   countPillText: {
     fontSize: 10.5,
@@ -763,7 +763,7 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
   approveButton: {
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
   },
   approveButtonText: {
     fontSize: 13,

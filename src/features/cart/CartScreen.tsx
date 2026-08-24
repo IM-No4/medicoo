@@ -665,7 +665,7 @@ export default function CartScreen() {
           {appliedCoupon ? (
             <View style={styles.appliedCouponContainer}>
               <View style={styles.appliedCouponInfo}>
-                <Ticket size={20} color="#0E7439" />
+                <Ticket size={20} color="#007C69" />
                 <View style={{ marginLeft: 12 }}>
                   <Text style={styles.appliedCouponCode}>
                     Code {appliedCoupon.code} applied!
@@ -725,7 +725,7 @@ export default function CartScreen() {
                 <Text
                   style={[
                     styles.billLabel,
-                    { color: "#0E7439", fontWeight: "700" },
+                    { color: "#007C69", fontWeight: "700" },
                   ]}
                 >
                   Coupon Discount ({appliedCoupon.code})
@@ -733,7 +733,7 @@ export default function CartScreen() {
                 <Text
                   style={[
                     styles.billValue,
-                    { color: "#0E7439", fontWeight: "700" },
+                    { color: "#007C69", fontWeight: "700" },
                   ]}
                 >
                   -₹{formatPrice(couponDiscount)}
@@ -811,7 +811,7 @@ export default function CartScreen() {
 
         <View style={styles.emptyContent}>
           <View style={styles.emptyIconCircle}>
-            <ShoppingBag size={36} color="#2FA561" />
+            <ShoppingBag size={36} color="#0FBBA1" />
           </View>
           <Text style={styles.emptyTitle}>Nothing in your cart</Text>
           <Text style={styles.emptySubtitle}>
@@ -1221,7 +1221,7 @@ export default function CartScreen() {
                     >
                       <ShoppingBag
                         size={18}
-                        color={itemIsOffline ? "#EF4444" : "#0E7439"}
+                        color={itemIsOffline ? "#EF4444" : "#007C69"}
                       />
                     </View>
                     <View style={styles.storeSwitcherTextCol}>
@@ -1337,7 +1337,7 @@ const styles = StyleSheet.create({
   addMoreText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#2FA561",
+    color: "#0FBBA1",
     backgroundColor: "#F0FDF4",
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -1660,11 +1660,11 @@ const styles = StyleSheet.create({
     color: "#374151",
   },
   payButton: {
-    backgroundColor: "#2FA561",
+    backgroundColor: "#0FBBA1",
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 20,
-    shadowColor: "#2FA561",
+    shadowColor: "#0FBBA1",
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 8,
@@ -1744,7 +1744,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#2FA561",
+    backgroundColor: "#0FBBA1",
     paddingHorizontal: 28,
     paddingVertical: 16,
     borderRadius: 16,
@@ -1804,7 +1804,7 @@ const styles = StyleSheet.create({
   },
   changePaymentLink: {
     fontSize: 12,
-    color: "#0E7439",
+    color: "#007C69",
     fontWeight: "600",
     marginTop: 1,
   },
@@ -1862,7 +1862,7 @@ const styles = StyleSheet.create({
   },
   storeSwitcherRowActive: {
     backgroundColor: "#F0FDF4",
-    borderColor: "#2FA561",
+    borderColor: "#0FBBA1",
   },
   storeSwitcherIconWrap: {
     width: 40,
@@ -1894,7 +1894,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "#2FA561",
+    backgroundColor: "#0FBBA1",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1938,7 +1938,7 @@ const styles = StyleSheet.create({
     color: "#4B5563",
   },
   saveButton: {
-    backgroundColor: "#0E7439",
+    backgroundColor: "#007C69",
   },
   saveButtonText: {
     fontSize: 14,
@@ -1964,14 +1964,14 @@ const styles = StyleSheet.create({
     color: "#374151",
   },
   paymentOptionTextActive: {
-    color: "#0E7439",
+    color: "#007C69",
     fontWeight: "700",
   },
   checkMark: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#0E7439",
+    backgroundColor: "#007C69",
   },
   instructionsInputWrapper: {
     paddingHorizontal: 20,
@@ -2005,7 +2005,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   saveInstructionsBtn: {
-    backgroundColor: "#0E7439",
+    backgroundColor: "#007C69",
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 6,
@@ -2035,7 +2035,7 @@ const styles = StyleSheet.create({
   appliedCouponCode: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#0E7439",
+    color: "#007C69",
   },
   appliedCouponSavings: {
     fontSize: 12,
@@ -2237,7 +2237,7 @@ const styles = StyleSheet.create({
   contactAvatarText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#0E7439",
+    color: "#007C69",
   },
   contactName: {
     fontSize: 14,

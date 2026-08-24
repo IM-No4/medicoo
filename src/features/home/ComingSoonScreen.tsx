@@ -43,7 +43,7 @@ export default function ComingSoonScreen() {
         <View style={styles.graphicContainer}>
           <View style={styles.outerGlow}>
             <View style={styles.innerGlow}>
-              <Sparkles size={48} color="#2FA561" />
+              <Sparkles size={48} color="#0FBBA1" />
             </View>
           </View>
           <View style={styles.badge}>
@@ -131,12 +131,12 @@ const styles = StyleSheet.create({
     bottom: -10,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 999,
     gap: 4,
-    shadowColor: '#2FA561',
+    shadowColor: '#0FBBA1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,

@@ -190,7 +190,7 @@ export default function PrescriptionResultScreen() {
             />
           </Animated.View>
           <View style={styles.overlayText}>
-            <Scan color="#2FA561" size={40} />
+            <Scan color="#0FBBA1" size={40} />
             <Text style={styles.scanningLabel}>SCANNING</Text>
           </View>
         </View>
@@ -319,7 +319,7 @@ export default function PrescriptionResultScreen() {
                   ? ["#EF4444", "#B91C1C"]
                   : isPendingReview
                     ? ["#F59E0B", "#B45309"]
-                    : ["#2FA561", "#0E7439"]
+                    : ["#0FBBA1", "#007C69"]
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -387,7 +387,7 @@ export default function PrescriptionResultScreen() {
             <View style={styles.glassCard}>
               <View style={styles.dataRow}>
                 <View style={styles.iconCircle}>
-                  <User size={18} color="#2FA561" />
+                  <User size={18} color="#0FBBA1" />
                 </View>
                 <View style={styles.dataTexts}>
                   <Text style={styles.dataLabel}>Patient</Text>
@@ -532,7 +532,7 @@ export default function PrescriptionResultScreen() {
             }}
           >
             <LinearGradient
-              colors={isRevoked ? ["#EF4444", "#B91C1C"] : ["#2FA561", "#0E7439"]}
+              colors={isRevoked ? ["#EF4444", "#B91C1C"] : ["#0FBBA1", "#007C69"]}
               style={StyleSheet.absoluteFill}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 4,
-    backgroundColor: "#2FA561",
+    backgroundColor: "#0FBBA1",
     zIndex: 5,
   },
   lineGlow: {
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   scanningLabel: {
-    color: "#2FA561",
+    color: "#0FBBA1",
     fontSize: 16,
     fontWeight: "900",
     letterSpacing: 4,
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: "100%",
-    backgroundColor: "#2FA561",
+    backgroundColor: "#0FBBA1",
     borderRadius: 3,
   },
   statusText: {
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
     padding: 24,
     marginBottom: 20,
     elevation: 8,
-    shadowColor: "#2FA561",
+    shadowColor: "#0FBBA1",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 15,
@@ -874,7 +874,7 @@ const styles = StyleSheet.create({
   insightScore: {
     fontSize: 32,
     fontWeight: "900",
-    color: "#2FA561",
+    color: "#0FBBA1",
     marginRight: 8,
   },
   insightScoreLabel: {
@@ -966,7 +966,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#2FA561",
+    backgroundColor: "#0FBBA1",
   },
   medTagName: {
     fontSize: 12,
@@ -997,7 +997,7 @@ const styles = StyleSheet.create({
     gap: 12,
     overflow: "hidden",
     elevation: 8,
-    shadowColor: "#2FA561",
+    shadowColor: "#0FBBA1",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1060,7 +1060,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   retryBtn: {
-    backgroundColor: "#2FA561",
+    backgroundColor: "#0FBBA1",
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 14,

@@ -219,7 +219,7 @@ export default function PrescriptionUploadModal({
                   disabled={isLoading}
                 >
                   <LinearGradient
-                    colors={['#0E7439', '#10B981']}
+                    colors={['#007C69', '#10B981']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.uploadIconContainer}

@@ -136,7 +136,7 @@ export default function ManageGoalsScreen() {
           onPress={() => setAddGoalVisible(true)}
           activeOpacity={0.7}
         >
-          <Plus size={22} color="#2FA561" />
+          <Plus size={22} color="#0FBBA1" />
         </TouchableOpacity>
       </View>
 
@@ -162,7 +162,7 @@ export default function ManageGoalsScreen() {
               else gets added later) in one sync. */}
           {isHealthConnectSupported && (
             <TouchableOpacity onPress={handleSyncHealthData} style={styles.syncLink} activeOpacity={0.7}>
-              <RefreshCw size={13} color={healthDataSynced ? '#2FA561' : '#94A3B8'} />
+              <RefreshCw size={13} color={healthDataSynced ? '#0FBBA1' : '#94A3B8'} />
               <Text style={[styles.syncLinkText, healthDataSynced && styles.syncLinkTextActive]}>Sync</Text>
             </TouchableOpacity>
           )}
@@ -171,7 +171,7 @@ export default function ManageGoalsScreen() {
         {goals.length === 0 ? (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconBox}>
-              <Target size={36} color="#2FA561" />
+              <Target size={36} color="#0FBBA1" />
             </View>
             <Text style={styles.emptyTitle}>No Goals Configured</Text>
             <Text style={styles.emptySubtitleText}>
@@ -221,7 +221,7 @@ export default function ManageGoalsScreen() {
 
                   <View style={styles.actionsToolbar}>
                     <TouchableOpacity style={styles.actionCol} onPress={() => handleToggleShared(goal.id)} activeOpacity={0.7}>
-                      <Users size={17} color={goal.sharedWithFriends ? '#2FA561' : '#94A3B8'} />
+                      <Users size={17} color={goal.sharedWithFriends ? '#0FBBA1' : '#94A3B8'} />
                       <Text style={[styles.actionColText, goal.sharedWithFriends && styles.actionColTextActive]}>
                         Share
                       </Text>
@@ -299,12 +299,12 @@ const styles = StyleSheet.create({
   friendsCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
     borderRadius: 20,
     padding: 16,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#0E7439',
+    borderColor: '#007C69',
   },
   friendsIconBox: {
     width: 46,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
   },
   syncLinkTextActive: {
-    color: '#2FA561',
+    color: '#0FBBA1',
   },
   list: {
     gap: 14,
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
   },
   actionColTextActive: {
-    color: '#2FA561',
+    color: '#0FBBA1',
   },
   actionColTextDanger: {
     color: '#EF4444',
@@ -463,12 +463,12 @@ const styles = StyleSheet.create({
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#0E7439',
+    borderColor: '#007C69',
   },
   emptyBtnText: {
     color: '#FFFFFF',

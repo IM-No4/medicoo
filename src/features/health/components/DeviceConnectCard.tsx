@@ -66,7 +66,7 @@ export function DeviceConnectCard() {
                             <View style={styles.batteryRow}>
                                 <Battery
                                     size={12}
-                                    color={isLowBattery ? '#EF4444' : '#2FA561'}
+                                    color={isLowBattery ? '#EF4444' : '#0FBBA1'}
                                     style={{ transform: [{ rotate: '-90deg' }] }}
                                 />
                                 <Text style={[styles.statusText, isLowBattery && { color: '#EF4444' }]}>
@@ -187,12 +187,12 @@ const styles = StyleSheet.create({
         width: 6,
         height: 6,
         borderRadius: 3,
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
     },
     badgeText: {
         fontSize: 10,
         fontWeight: '700',
-        color: '#2FA561',
+        color: '#0FBBA1',
         textTransform: 'uppercase',
     },
     disconnectBtn: {

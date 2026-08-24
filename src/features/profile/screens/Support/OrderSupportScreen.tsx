@@ -254,7 +254,7 @@ export default function OrderSupportScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2FA561" />
+        <ActivityIndicator size="large" color="#0FBBA1" />
       </View>
     );
   }
@@ -294,7 +294,7 @@ export default function OrderSupportScreen() {
       {/* Typing Loader */}
       {typing && (
         <View style={styles.typingContainer}>
-          <ActivityIndicator size="small" color="#2FA561" />
+          <ActivityIndicator size="small" color="#0FBBA1" />
           <Text style={styles.typingText}>Agent is typing...</Text>
         </View>
       )}
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
   },
   userBubble: {
-    backgroundColor: "#2FA561",
+    backgroundColor: "#0FBBA1",
     borderTopRightRadius: 4,
   },
   agentBubble: {
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#2FA561",
+    backgroundColor: "#0FBBA1",
     alignItems: "center",
     justifyContent: "center",
   },

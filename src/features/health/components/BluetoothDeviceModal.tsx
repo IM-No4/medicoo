@@ -178,7 +178,7 @@ export default function BluetoothDeviceModal({ visible, onClose }: Props) {
                 <Text style={styles.deviceStatus}>Ready to pair</Text>
             </View>
             {connectingId === item.id ? (
-                <ActivityIndicator size="small" color="#2FA561" />
+                <ActivityIndicator size="small" color="#0FBBA1" />
             ) : (
                 <Text style={styles.connectText}>Connect</Text>
             )}
@@ -214,9 +214,9 @@ export default function BluetoothDeviceModal({ visible, onClose }: Props) {
                             <Text style={styles.sectionLabel}>Available Devices</Text>
                             <TouchableOpacity onPress={checkAndStartScan} disabled={isScanning || bluetoothOff}>
                                 {isScanning ? (
-                                    <ActivityIndicator size="small" color="#2FA561" />
+                                    <ActivityIndicator size="small" color="#0FBBA1" />
                                 ) : (
-                                    <RefreshCw size={16} color={bluetoothOff ? "#94A3B8" : "#2FA561"} />
+                                    <RefreshCw size={16} color={bluetoothOff ? "#94A3B8" : "#0FBBA1"} />
                                 )}
                             </TouchableOpacity>
                         </View>
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     connectText: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#2FA561',
+        color: '#0FBBA1',
     },
     emptyState: {
         flex: 1,
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     enableBtnText: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#2FA561',
+        color: '#0FBBA1',
     },
     footer: {
         flexDirection: 'row',

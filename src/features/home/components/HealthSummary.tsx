@@ -49,7 +49,7 @@ function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
           activeOpacity={0.8}
         >
           <View style={styles.placeholderIconWrapper}>
-            <PlusCircle size={28} color="#2FA561" />
+            <PlusCircle size={28} color="#0FBBA1" />
           </View>
           <View style={styles.placeholderTextWrapper}>
             <Text style={styles.placeholderTitle}>Record Vitals</Text>
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   seeAll: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#2FA561',
+    color: '#0FBBA1',
   },
   row: {
     flexDirection: 'row',

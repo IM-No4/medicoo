@@ -138,8 +138,8 @@ export default function MedicineOrderDetailScreen() {
                     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
                     <style>
                         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 24px; color: #1F2937; }
-                        .header { border-bottom: 2px solid #2FA561; padding-bottom: 12px; margin-bottom: 20px; }
-                        .title { font-size: 24px; font-weight: bold; color: #2FA561; }
+                        .header { border-bottom: 2px solid #0FBBA1; padding-bottom: 12px; margin-bottom: 20px; }
+                        .title { font-size: 24px; font-weight: bold; color: #0FBBA1; }
                         .order-details { margin-bottom: 20px; font-size: 14px; color: #4B5563; line-height: 1.5; }
                         .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
                         .th { border-bottom: 1px solid #D1D5DB; padding: 8px; text-align: left; font-weight: bold; color: #374151; }
@@ -148,7 +148,7 @@ export default function MedicineOrderDetailScreen() {
                         .total-row { display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 8px; }
                         .total-label { color: #6B7280; width: 150px; text-align: right; }
                         .total-val { font-weight: bold; color: #1F2937; width: 100px; text-align: right; }
-                        .grand-total { font-size: 18px; font-weight: bold; color: #2FA561; margin-top: 12px; }
+                        .grand-total { font-size: 18px; font-weight: bold; color: #0FBBA1; margin-top: 12px; }
                     </style>
                 </head>
                 <body>
@@ -264,7 +264,7 @@ export default function MedicineOrderDetailScreen() {
   if (loading || !order) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2FA561" />
+        <ActivityIndicator size="large" color="#0FBBA1" />
       </View>
     );
   }
@@ -335,7 +335,7 @@ export default function MedicineOrderDetailScreen() {
                   <Text style={styles.storeNameText}>{order.pharmacyName}</Text>
                   <ChevronRight
                     size={14}
-                    color="#2FA561"
+                    color="#0FBBA1"
                     style={{ marginLeft: 4 }}
                   />
                 </View>
@@ -389,7 +389,7 @@ export default function MedicineOrderDetailScreen() {
               <View key={index} style={styles.billItemRow}>
                 <View style={styles.billItemLeft}>
                   <View style={styles.pillIconCircle}>
-                    <Pill size={12} color="#2FA561" />
+                    <Pill size={12} color="#0FBBA1" />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.billItemName}>
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     borderWidth: 2,
-    borderColor: "#2FA561",
+    borderColor: "#0FBBA1",
     backgroundColor: "#FFFFFF",
     marginTop: 6,
   },
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
   storeNameText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#2FA561",
+    color: "#0FBBA1",
   },
   homeNameText: {
     fontSize: 14,
@@ -687,7 +687,7 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     borderWidth: 2,
-    borderColor: "#2FA561",
+    borderColor: "#0FBBA1",
     borderTopColor: "transparent",
   },
   greyDividerBlock: {
@@ -823,7 +823,7 @@ const styles = StyleSheet.create({
     borderTopColor: "#EEEEEE",
   },
   reorderButton: {
-    backgroundColor: "#2FA561",
+    backgroundColor: "#0FBBA1",
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: "center",

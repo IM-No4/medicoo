@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
   },
   statusDotLive: {
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
   },
   infoContainer: {
     flex: 1,
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   slotDotLive: {
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
   },
   slotDotSoon: {
     backgroundColor: '#F59E0B',

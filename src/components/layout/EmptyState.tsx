@@ -16,7 +16,7 @@ export default function EmptyState({
   title,
   message,
   icon: Icon = CalendarClock,
-  iconColor = '#2FA561',
+  iconColor = '#0FBBA1',
   iconBg = '#EAFBF3',
   actionLabel,
   onAction,
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
 
   actionButton: {
     marginTop: 20,
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 14,

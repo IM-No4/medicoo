@@ -17,7 +17,7 @@ export default function TermsPrivacyScreen() {
     const sections = [
         {
             title: 'Terms of Service',
-            icon: <FileText size={20} color="#2FA561" />,
+            icon: <FileText size={20} color="#0FBBA1" />,
             content: 'By using Medicoo, you agree to comply with our terms of use. Our platform acts as a facilitator between healthcare providers and patients. While we strive for accuracy, the medical advice provided by doctors is their sole responsibility. Users must provide accurate information and maintain confidentiality of their account credentials.'
         },
         {
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
     },
     heroSection: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         paddingVertical: 40,
         alignItems: 'center',
         borderBottomLeftRadius: 40,

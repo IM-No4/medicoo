@@ -215,7 +215,7 @@ export default function EditRecordModal({ visible, onClose, onSubmit, initialDat
                 {isSubmitting && (
                     <View style={styles.overlay}>
                         <View style={styles.overlayContent}>
-                            <ActivityIndicator size="large" color="#2FA561" />
+                            <ActivityIndicator size="large" color="#0FBBA1" />
                             <Text style={styles.overlayText}>Saving...</Text>
                         </View>
                     </View>
@@ -335,11 +335,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
     },
     submitButton: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         paddingVertical: 16,
         borderRadius: 14,
         alignItems: 'center',
-        shadowColor: "#2FA561",
+        shadowColor: "#0FBBA1",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,

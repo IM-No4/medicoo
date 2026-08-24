@@ -271,7 +271,7 @@ export default function EditProfileScreen() {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Edit Profile</Text>
                 <TouchableOpacity onPress={handleSave} disabled={loading}>
-                    {loading ? <ActivityIndicator size="small" color="#2FA561" /> : <Text style={styles.saveText}>Save</Text>}
+                    {loading ? <ActivityIndicator size="small" color="#0FBBA1" /> : <Text style={styles.saveText}>Save</Text>}
                 </TouchableOpacity>
             </View>
 
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
     },
     backButton: { padding: 8, marginLeft: -8 },
     headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
-    saveText: { fontSize: 16, fontWeight: '600', color: '#2FA561' },
+    saveText: { fontSize: 16, fontWeight: '600', color: '#0FBBA1' },
 
     content: { padding: 20 },
 
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 0,
         right: 0,
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         width: 32,
         height: 32,
         borderRadius: 16,
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#fff',
     },
-    changePhotoText: { color: '#2FA561', fontSize: 14, fontWeight: '600', marginTop: 12 },
+    changePhotoText: { color: '#0FBBA1', fontSize: 14, fontWeight: '600', marginTop: 12 },
 
     inputGroup: { marginBottom: 20 },
     label: { fontSize: 13, fontWeight: '500', color: '#374151', marginBottom: 8 },
@@ -621,12 +621,12 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     optionText: { fontSize: 16, color: '#374151' },
-    selectedOptionText: { color: '#2FA561', fontWeight: '600' },
-    selectedDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2FA561' },
+    selectedOptionText: { color: '#0FBBA1', fontWeight: '600' },
+    selectedDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#0FBBA1' },
 
     emailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     verifyButtonSmall: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         paddingVertical: 12,
         paddingHorizontal: 16,
         borderRadius: 12,

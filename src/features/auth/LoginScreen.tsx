@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   GoogleSignin,
@@ -194,6 +195,13 @@ export default function LoginScreen() {
                 )}
               </TouchableOpacity>
 
+              <View style={styles.whatsappNotice}>
+                <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                <Text style={styles.whatsappNoticeText}>
+                  We'll send your OTP via WhatsApp
+                </Text>
+              </View>
+
               {/* Hidden for now as per request
                 <View style={styles.orDividerContainer}>
                   <View style={styles.line} />
@@ -263,7 +271,7 @@ const styles = StyleSheet.create({
   },
   mainTitle: {
     fontSize: 26,
-    fontWeight: '900',
+    fontWeight: '700',
     textAlign: 'center',
     color: '#1C1C1C',
     marginBottom: 12,
@@ -332,7 +340,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   continueButton: {
-    backgroundColor: '#2FA561', // Medicoo Green
+    backgroundColor: '#0FBBA1', // Medicoo Teal
     borderRadius: 8,
     height: 50,
     alignItems: 'center',
@@ -347,6 +355,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
+  },
+  whatsappNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: -12,
+    marginBottom: 24,
+  },
+  whatsappNoticeText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   orDividerContainer: {
     flexDirection: 'row',

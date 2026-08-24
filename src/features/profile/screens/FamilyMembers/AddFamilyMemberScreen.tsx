@@ -387,7 +387,7 @@ export default function AddFamilyMemberScreen() {
                                 {profileImageUri ? (
                                     <Image source={{ uri: profileImageUri }} style={styles.avatarImage} />
                                 ) : (
-                                    <User size={40} color="#2FA561" />
+                                    <User size={40} color="#0FBBA1" />
                                 )}
                                 <TouchableOpacity
                                     style={styles.cameraButton}
@@ -727,7 +727,7 @@ const styles = StyleSheet.create({
         color: '#6B7280',
     },
     activeTabText: {
-        color: '#2FA561',
+        color: '#0FBBA1',
     },
     avatarSection: {
         alignItems: 'center',
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 0,
         right: 0,
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         width: 32,
         height: 32,
         borderRadius: 16,
@@ -766,7 +766,7 @@ const styles = StyleSheet.create({
     uploadText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#2FA561',
+        color: '#0FBBA1',
     },
     form: {
         gap: 20,
@@ -841,7 +841,7 @@ const styles = StyleSheet.create({
     },
     chipActive: {
         backgroundColor: '#F0FDF4',
-        borderColor: '#2FA561',
+        borderColor: '#0FBBA1',
     },
     chipText: {
         fontSize: 12,
@@ -849,11 +849,11 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     chipTextActive: {
-        color: '#2FA561',
+        color: '#0FBBA1',
         fontWeight: '600',
     },
     dropdownTriggerActive: {
-        borderColor: '#2FA561',
+        borderColor: '#0FBBA1',
         borderBottomLeftRadius: 0,
         borderBottomRightRadius: 0,
     },
@@ -881,7 +881,7 @@ const styles = StyleSheet.create({
         color: '#4B5563',
     },
     dropdownOptionTextActive: {
-        color: '#2FA561',
+        color: '#0FBBA1',
         fontWeight: '600',
     },
     dropdownText: {
@@ -905,7 +905,7 @@ const styles = StyleSheet.create({
         borderTopColor: '#F3F4F6',
     },
     saveButton: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         paddingVertical: 16,
         borderRadius: 14,
         alignItems: 'center',
@@ -950,13 +950,13 @@ const styles = StyleSheet.create({
         color: '#4B5563',
     },
     selectedOptionText: {
-        color: '#2FA561',
+        color: '#0FBBA1',
         fontWeight: '600',
     },
     selectedDot: {
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
     },
 });

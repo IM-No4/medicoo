@@ -162,7 +162,7 @@ export default function NotificationsScreen() {
   const emptyState = useMemo(() => (
     <View style={styles.emptyState}>
       <View style={styles.emptyIcon}>
-        <AppIcon name="bell" size={28} color="#2FA561" />
+        <AppIcon name="bell" size={28} color="#0FBBA1" />
       </View>
       <Text style={styles.emptyTitle}>No notifications yet</Text>
       <Text style={styles.emptyText}>We’ll show appointment updates, reminders, and important account alerts here.</Text>
@@ -197,7 +197,7 @@ export default function NotificationsScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#2FA561"
+              tintColor="#0FBBA1"
             />
           }
         />
@@ -303,13 +303,13 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#2FA561',
+    color: '#0FBBA1',
   },
   unreadDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
     marginTop: 6,
   },
   emptyState: {

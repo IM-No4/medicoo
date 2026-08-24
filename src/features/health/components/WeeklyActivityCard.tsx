@@ -36,7 +36,7 @@ export function WeeklyActivityCard() {
   const handleEnable = () => navigation.navigate('ManageGoals');
 
   return (
-    <HealthSection title="Weekly Activity" icon={<Footprints size={14} color="#2FA561" />}>
+    <HealthSection title="Weekly Activity" icon={<Footprints size={14} color="#0FBBA1" />}>
       {trackingEnabled === false ? (
         <TouchableOpacity style={styles.emptyCard} activeOpacity={0.8} onPress={handleEnable}>
           <Text style={styles.emptyTitle}>Step tracking isn&apos;t enabled yet</Text>
@@ -44,7 +44,7 @@ export function WeeklyActivityCard() {
         </TouchableOpacity>
       ) : trackingEnabled === null || data === null ? (
         <View style={[styles.card, styles.loadingCard]}>
-          <ActivityIndicator color="#2FA561" />
+          <ActivityIndicator color="#0FBBA1" />
         </View>
       ) : (
         <View style={styles.card}>
@@ -55,7 +55,7 @@ export function WeeklyActivityCard() {
             </View>
             <TouchableOpacity style={styles.viewAllLink} activeOpacity={0.7} onPress={handleViewAll}>
               <Text style={styles.viewAllText}>View All</Text>
-              <ChevronRight size={14} color="#2FA561" />
+              <ChevronRight size={14} color="#0FBBA1" />
             </TouchableOpacity>
           </View>
           <StepsBarChart buckets={data.buckets} highlightIndex={data.currentIndex} />
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingTop: 4,
   },
-  viewAllText: { fontSize: 13, fontWeight: '700', color: '#2FA561' },
+  viewAllText: { fontSize: 13, fontWeight: '700', color: '#0FBBA1' },
 
   emptyCard: {
     backgroundColor: '#fff',

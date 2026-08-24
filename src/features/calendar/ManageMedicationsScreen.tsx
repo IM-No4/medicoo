@@ -117,7 +117,7 @@ export default function ManageMedicationsScreen() {
     const renderMedCard = (item: MedSchedule, isPast: boolean) => (
         <View key={item._id} style={[styles.medCard, (!item.isActive || isPast) && styles.disabledCard]}>
             <View style={styles.medIconBox}>
-                <Pill size={20} color={!item.isActive || isPast ? '#94A3B8' : '#2FA561'} />
+                <Pill size={20} color={!item.isActive || isPast ? '#94A3B8' : '#0FBBA1'} />
             </View>
 
             <View style={styles.medInfo}>
@@ -141,7 +141,7 @@ export default function ManageMedicationsScreen() {
                         onPress={() => handleEdit(item)}
                         activeOpacity={0.7}
                     >
-                        <Pencil size={16} color="#2FA561" />
+                        <Pencil size={16} color="#0FBBA1" />
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.deleteBtn}
@@ -175,7 +175,7 @@ export default function ManageMedicationsScreen() {
 
             {loading ? (
                 <View style={styles.center}>
-                    <ActivityIndicator color="#2FA561" size="large" />
+                    <ActivityIndicator color="#0FBBA1" size="large" />
                 </View>
             ) : schedules.length === 0 ? (
                 <View style={styles.center}>
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     emptyBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         paddingVertical: 12,
         paddingHorizontal: 24,
         borderRadius: 14,

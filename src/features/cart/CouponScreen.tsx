@@ -93,7 +93,7 @@ export default function CouponScreen() {
           <View key={coupon.code} style={styles.couponCard}>
             <View style={styles.couponHeader}>
               <View style={styles.badgeWrapper}>
-                <Ticket size={16} color="#0E7439" />
+                <Ticket size={16} color="#007C69" />
                 <Text style={styles.couponCodeText}>{coupon.code}</Text>
               </View>
               <TouchableOpacity
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   promoApplyBtn: {
-    backgroundColor: '#0E7439',
+    backgroundColor: '#007C69',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   couponCodeText: {
-    color: '#0E7439',
+    color: '#007C69',
     fontWeight: '800',
     fontSize: 13,
   },
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   applyLinkText: {
-    color: '#0E7439',
+    color: '#007C69',
     fontWeight: '700',
     fontSize: 14,
   },

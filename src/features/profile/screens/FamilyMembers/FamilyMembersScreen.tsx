@@ -139,7 +139,7 @@ export default function FamilyMembersScreen() {
             {displayImage ? (
               <Image source={{ uri: displayImage }} style={styles.avatarFull} />
             ) : (
-              <User size={24} color="#2FA561" />
+              <User size={24} color="#0FBBA1" />
             )}
           </View>
           <View style={styles.memberInfo}>
@@ -242,13 +242,13 @@ export default function FamilyMembersScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#2FA561"]}
+            colors={["#0FBBA1"]}
           />
         }
       >
         {loading && !refreshing ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#2FA561" />
+            <ActivityIndicator size="large" color="#0FBBA1" />
             <Text style={styles.loadingText}>Fetching members...</Text>
           </View>
         ) : members.length === 0 && pendingRequests.length === 0 ? (
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
   },
   medIdText: {
     fontSize: 12,
-    color: "#2FA561",
+    color: "#0FBBA1",
     fontWeight: "600",
   },
   memberSubText: {
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#2FA561",
+    backgroundColor: "#0FBBA1",
     paddingVertical: 16,
     borderRadius: 14,
     gap: 8,

@@ -157,7 +157,7 @@ export default function RecordDetailScreen() {
     if (!token) {
       return (
         <View style={styles.loadingPreview}>
-          <ActivityIndicator size="small" color="#2FA561" />
+          <ActivityIndicator size="small" color="#0FBBA1" />
         </View>
       );
     }
@@ -183,14 +183,14 @@ export default function RecordDetailScreen() {
     return (
       <View style={styles.fallbackCard}>
         <View style={styles.fallbackIconBg}>
-          <FileText size={48} color="#2FA561" />
+          <FileText size={48} color="#0FBBA1" />
         </View>
         <Text style={styles.fallbackTitle}>Preview Unavailable</Text>
         <Text style={styles.fallbackSubtitle}>
           This file type ({typeMeta.label}) cannot be previewed directly.
         </Text>
         <TouchableOpacity style={styles.downloadBtnPlaceholder} onPress={handleDownload}>
-          <Download size={18} color="#2FA561" style={{ marginRight: 8 }} />
+          <Download size={18} color="#0FBBA1" style={{ marginRight: 8 }} />
           <Text style={styles.downloadBtnText}>Download File</Text>
         </TouchableOpacity>
       </View>
@@ -413,9 +413,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 24,
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
     borderRadius: 100,
-    shadowColor: '#2FA561',
+    shadowColor: '#0FBBA1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,

@@ -51,7 +51,7 @@ export const styles = StyleSheet.create({
 
     optionCardSelected: {
         backgroundColor: '#ECFDF5',
-        borderColor: '#2FA561',
+        borderColor: '#0FBBA1',
     },
 
     optionText: {
@@ -168,7 +168,7 @@ export const styles = StyleSheet.create({
         paddingTop: 12,
     },
     primaryButton: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         paddingVertical: 16,
         borderRadius: 30,
         alignItems: 'center',

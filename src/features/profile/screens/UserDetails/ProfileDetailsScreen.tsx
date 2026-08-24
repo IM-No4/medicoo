@@ -52,7 +52,7 @@ export default function ProfileDetailsScreen() {
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#2FA561" />
+                <ActivityIndicator size="large" color="#0FBBA1" />
             </View>
         );
     }
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     avatar: { width: '100%', height: '100%' },
-    placeholderAvatar: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2FA561' },
+    placeholderAvatar: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0FBBA1' },
     initials: { fontSize: 36, fontWeight: '600', color: '#fff' },
     nameText: { fontSize: 24, fontWeight: '700', color: '#111827' },
 
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
         borderTopColor: '#E5E7EB',
     },
     editButton: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         borderRadius: 12,
         paddingVertical: 16,
         flexDirection: 'row',

@@ -277,11 +277,11 @@ const styles = StyleSheet.create({
         color: '#111827',
     },
     otpBoxFilled: {
-        borderColor: '#2FA561',
+        borderColor: '#0FBBA1',
         backgroundColor: '#F0FDF4',
     },
     continueButton: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         borderRadius: 8,
         height: 50,
         alignItems: 'center',

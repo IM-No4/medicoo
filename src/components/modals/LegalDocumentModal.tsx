@@ -79,7 +79,7 @@ export default function LegalDocumentModal({ visible, documentType, onClose }: P
 
                 {loading ? (
                     <View style={styles.center}>
-                        <ActivityIndicator size="large" color="#2FA561" />
+                        <ActivityIndicator size="large" color="#0FBBA1" />
                     </View>
                 ) : error ? (
                     <View style={styles.center}>
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F9FAFB',
     },
     header: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',

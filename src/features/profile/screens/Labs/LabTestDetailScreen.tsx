@@ -94,7 +94,7 @@ export default function LabTestDetailScreen() {
     if (loading) {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color="#2FA561" />
+                <ActivityIndicator size="large" color="#0FBBA1" />
             </View>
         );
     }

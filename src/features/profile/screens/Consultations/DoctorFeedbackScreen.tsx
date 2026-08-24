@@ -127,7 +127,7 @@ export default function DoctorFeedbackScreen() {
                         />
                     ) : (
                         <View style={[styles.avatar, styles.placeholderAvatar]}>
-                            <Stethoscope size={32} color="#2FA561" />
+                            <Stethoscope size={32} color="#0FBBA1" />
                         </View>
                     )}
                     <Text style={styles.doctorName}>{formatDoctorName(doctor.name)}</Text>
@@ -302,11 +302,11 @@ const styles = StyleSheet.create({
         borderTopColor: '#F3F4F6',
     },
     submitButton: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         paddingVertical: 18,
         borderRadius: 18,
         alignItems: 'center',
-        shadowColor: '#2FA561',
+        shadowColor: '#0FBBA1',
         shadowOpacity: 0.3,
         shadowRadius: 10,
         elevation: 5,

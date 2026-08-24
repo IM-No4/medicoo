@@ -121,7 +121,7 @@ export default function ManageAvailabilityScreen() {
     if (loading) {
         return (
             <View style={[styles.container, styles.center]}>
-                <ActivityIndicator size="large" color="#2FA561" />
+                <ActivityIndicator size="large" color="#0FBBA1" />
             </View>
         );
     }
@@ -135,7 +135,7 @@ export default function ManageAvailabilityScreen() {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Manage Availability</Text>
                 <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-                    {saving ? <ActivityIndicator size="small" color="#2FA561" /> : <Text style={styles.saveText}>Save</Text>}
+                    {saving ? <ActivityIndicator size="small" color="#0FBBA1" /> : <Text style={styles.saveText}>Save</Text>}
                 </TouchableOpacity>
             </View>
 
@@ -158,7 +158,7 @@ export default function ManageAvailabilityScreen() {
                                 value={schedule[day].enabled}
                                 onValueChange={() => toggleDay(day)}
                                 trackColor={{ false: '#D1D5DB', true: '#A7F3D0' }}
-                                thumbColor={schedule[day].enabled ? '#2FA561' : '#F3F4F6'}
+                                thumbColor={schedule[day].enabled ? '#0FBBA1' : '#F3F4F6'}
                             />
                         </View>
 
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     backButton: { padding: 8, marginLeft: -8 },
     headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
     saveButton: { padding: 8, marginRight: -8, minWidth: 40, alignItems: 'flex-end' },
-    saveText: { color: '#2FA561', fontWeight: '600', fontSize: 16 },
+    saveText: { color: '#0FBBA1', fontWeight: '600', fontSize: 16 },
     content: { padding: 20, paddingBottom: 320 },
     description: { fontSize: 14, color: '#6B7280', marginBottom: 24, lineHeight: 20 },
     dayCard: {

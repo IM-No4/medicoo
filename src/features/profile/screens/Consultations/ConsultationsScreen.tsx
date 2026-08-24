@@ -120,7 +120,7 @@ export default function ConsultationsScreen() {
                             />
                         ) : (
                             <View style={[styles.avatar, styles.placeholderAvatar]}>
-                                <Stethoscope size={24} color="#2FA561" />
+                                <Stethoscope size={24} color="#0FBBA1" />
                             </View>
                         )}
                         <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
@@ -162,7 +162,7 @@ export default function ConsultationsScreen() {
                     })}
                 >
                     <Text style={styles.feedbackText}>Share your experience. Rate the doctor</Text>
-                    <ChevronRight size={16} color="#2FA561" />
+                    <ChevronRight size={16} color="#0FBBA1" />
                 </TouchableOpacity>
             )}
         </TouchableOpacity>
@@ -200,7 +200,7 @@ export default function ConsultationsScreen() {
                 keyExtractor={item => item.requestId}
                 contentContainerStyle={styles.listContent}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2FA561']} />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0FBBA1']} />
                 }
                 ListEmptyComponent={
                     !loading ? (
@@ -219,7 +219,7 @@ export default function ConsultationsScreen() {
                         </View>
                     ) : (
                         <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color="#2FA561" />
+                            <ActivityIndicator size="large" color="#0FBBA1" />
                         </View>
                     )
                 }
@@ -271,8 +271,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     filterChipSelected: {
-        backgroundColor: '#2FA561',
-        borderColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
+        borderColor: '#0FBBA1',
     },
     filterChipText: {
         fontSize: 13,

@@ -195,7 +195,7 @@ export default function PharmacyHeader({
             </View>
           ) : (
             <View style={styles.dealBanner}>
-              <AppIcon name="percent" size={16} color="#0E7439" />
+              <AppIcon name="percent" size={16} color="#007C69" />
               <Text style={styles.dealBannerText} numberOfLines={1}>
                 {DEALS[activeIndex].title}: {DEALS[activeIndex].discount} |{" "}
                 {DEALS[activeIndex].description}

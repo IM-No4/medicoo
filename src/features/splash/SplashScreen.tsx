@@ -15,11 +15,11 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2FA561" />
+      <StatusBar barStyle="light-content" backgroundColor="#0FBBA1" />
 
       {/* Gradient Background */}
       <LinearGradient
-        colors={['#2FA561', '#0E7439']}
+        colors={['#0FBBA1', '#007C69']}
         start={gradientStart}
         end={gradientEnd}
         style={StyleSheet.absoluteFill}
@@ -49,7 +49,7 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
   },
   content: {
     flex: 1,
@@ -60,8 +60,8 @@ const styles = StyleSheet.create({
   logoContainer: {
   },
   logo: {
-    width: 160,
-    height: 120,
+    width: 220,
+    height: 200,
   },
   tagline: {
     fontSize: 16,

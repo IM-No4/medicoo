@@ -146,7 +146,7 @@ export default function AddressSelectorBottomSheet({ visible, onClose }: Props) 
 
             {/* Saved Addresses List */}
             {loading ? (
-              <ActivityIndicator size="small" color="#2FA561" style={{ marginVertical: 20 }} />
+              <ActivityIndicator size="small" color="#0FBBA1" style={{ marginVertical: 20 }} />
             ) : addresses.length === 0 ? (
               <Text style={{ textAlign: 'center', color: '#6B7280', marginVertical: 20 }}>No saved addresses found.</Text>
             ) : (
@@ -170,7 +170,7 @@ export default function AddressSelectorBottomSheet({ visible, onClose }: Props) 
                     activeOpacity={0.7}
                   >
                     <View style={styles.iconContainer}>
-                      <AppIcon name={getIcon(item.label || item.type)} size={20} color={isActive ? "#2FA561" : "#6B7280"} />
+                      <AppIcon name={getIcon(item.label || item.type)} size={20} color={isActive ? "#0FBBA1" : "#6B7280"} />
                     </View>
                     <View style={styles.cardContent}>
                       <View style={styles.cardHeaderRow}>
@@ -204,7 +204,7 @@ export default function AddressSelectorBottomSheet({ visible, onClose }: Props) 
               onPress={handleAddNew}
               activeOpacity={0.7}
             >
-              <AppIcon name="plus" size={18} color="#2FA561" />
+              <AppIcon name="plus" size={18} color="#0FBBA1" />
               <Text style={styles.addButtonText}>
                 Add New Address
               </Text>
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   },
   activeCard: {
     backgroundColor: '#F0FDF4',
-    borderColor: '#2FA561',
+    borderColor: '#0FBBA1',
   },
   iconContainer: {
     width: 40,
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
@@ -356,12 +356,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2FA561',
+    borderColor: '#0FBBA1',
     width: '100%',
   },
   addButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2FA561',
+    color: '#0FBBA1',
   },
 });

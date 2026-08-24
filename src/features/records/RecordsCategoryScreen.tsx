@@ -263,7 +263,7 @@ export default function RecordsCategoryScreen() {
 
       {loading ? (
         <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#2FA561" />
+          <ActivityIndicator size="large" color="#0FBBA1" />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -284,7 +284,7 @@ export default function RecordsCategoryScreen() {
               {sortOrder === 'newest' ? (
                 <ArrowDownWideNarrow size={18} color="#374151" />
               ) : (
-                <ArrowUpWideNarrow size={18} color="#2FA561" />
+                <ArrowUpWideNarrow size={18} color="#0FBBA1" />
               )}
             </TouchableOpacity>
           </View>
@@ -313,7 +313,7 @@ export default function RecordsCategoryScreen() {
           {sections.length === 0 ? (
             <EmptyState
               icon={FolderOpen}
-              iconColor="#2FA561"
+              iconColor="#0FBBA1"
               iconBg="#EAFBF3"
               title="No records found"
               message={`Your ${label.toLowerCase()} will appear here.`}
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
     }),
   },
   chipActive: {
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
   },
   chipText: {
     fontSize: 13,
@@ -596,10 +596,10 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#2FA561',
+    backgroundColor: '#0FBBA1',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2FA561',
+    shadowColor: '#0FBBA1',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,

@@ -22,17 +22,13 @@ import { initPushNotifications, setupNotificationTapHandling } from '../bootstra
 import { syncCartOnBoot } from '../bootstrap/syncCartOnBoot';
 import { useBoot } from '../bootstrap/useBoot';
 import { usePostLoginEffects } from '../features/auth/usePostLoginEffects';
-import JSSplashScreen from '../features/splash/SplashScreen';
 import { isStepsTrackingEnabled, isNativeStepsWriteEnabled } from '../services/health/stepsTrackingFlags';
 import { ensureNativeStepsBackgroundTaskRegistered } from '../services/health/nativeStepsBackgroundTask';
 
-function AppSplash() {
-  return <JSSplashScreen />;
-}
-
-// Keep the native splash up until Montserrat is actually loaded, so no
-// screen ever gets a chance to flash the system font first - not even the
-// JS splash screen itself, which renders its own <Text>.
+// No JS splash screen in the flow anymore - the native splash (configured
+// in app.json, same logo/background as the app icon) stays up for the
+// entire loading period (fonts + boot sequence) and is hidden exactly once,
+// the instant real content is ready to render. One screen, one handoff.
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 // Metro needs a static string literal to resolve/bundle each asset - it
@@ -112,9 +108,21 @@ function AppContent() {
     return () => sub.remove();
   }, [boot.status]);
 
-  // ⛔ Do NOT render navigation until boot is complete
+  // Hide the native splash exactly once, the instant boot is ready - by
+  // this point fonts are already guaranteed ready too, since App() below
+  // doesn't mount this component (or the Provider it lives under) until
+  // fontsReady is true. Real content and splash removal land in the same
+  // render, so there's no gap where nothing (or the wrong font) is visible.
+  useEffect(() => {
+    if (boot.status === 'ready') {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [boot.status]);
+
+  // ⛔ Do NOT render navigation until boot is complete - render nothing,
+  // leaving the still-visible native splash as the only thing on screen.
   if (boot.status !== 'ready') {
-    return <AppSplash />;
+    return null;
   }
 
   return <RootNavigator />;
@@ -122,23 +130,21 @@ function AppContent() {
 
 export default function App() {
   const [fontsLoaded, fontError] = useFonts(montserratFontMap);
+  const fontsReady = fontsLoaded || !!fontError;
 
   useEffect(() => {
     initCrashReporting();
     initPushNotifications();
   }, []);
 
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      if (fontError) console.warn('[App] Montserrat failed to load, falling back to system font', fontError);
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [fontsLoaded, fontError]);
+  if (fontError) {
+    console.warn('[App] Montserrat failed to load, falling back to system font', fontError);
+  }
 
-  // Keep the native splash on screen (nothing else renders) until
-  // Montserrat is ready or has definitively failed - avoids any screen,
-  // including the JS splash screen itself, ever flashing the system font.
-  if (!fontsLoaded && !fontError) {
+  // Keep rendering nothing (native splash stays up) until fonts are ready.
+  // AppContent (below, once mounted) keeps the splash up further still,
+  // until boot is also ready.
+  if (!fontsReady) {
     return null;
   }
 

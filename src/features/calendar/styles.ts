@@ -1,12 +1,12 @@
 import { Platform, StatusBar, StyleSheet } from 'react-native';
 
 export const COLORS = {
-  primary: '#2FA561',
+  primary: '#0FBBA1',
   background: '#F8F9FE',
   card: '#FFFFFF',
   text: '#1D1D21',
   textSecondary: '#8F9BB3',
-  success: '#2FA561',
+  success: '#0FBBA1',
   danger: '#FF4D4D',
   lightTeal: '#F0FDF4',
 };

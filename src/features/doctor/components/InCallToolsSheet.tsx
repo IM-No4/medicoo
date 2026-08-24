@@ -42,7 +42,7 @@ export default function InCallToolsSheet({ visible, onClose, onOpenNotes, onOpen
                     {rows.map((row) => (
                         <TouchableOpacity key={row.key} style={styles.row} onPress={row.onPress}>
                             <View style={styles.iconBox}>
-                                <row.Icon size={20} color="#2FA561" />
+                                <row.Icon size={20} color="#0FBBA1" />
                             </View>
                             <Text style={styles.rowLabel}>{row.label}</Text>
                         </TouchableOpacity>
@@ -50,7 +50,7 @@ export default function InCallToolsSheet({ visible, onClose, onOpenNotes, onOpen
                     {onComplete && (
                         <TouchableOpacity style={[styles.row, styles.completeRow]} onPress={onComplete}>
                             <View style={styles.iconBox}>
-                                <CheckCircle2 size={20} color="#2FA561" />
+                                <CheckCircle2 size={20} color="#0FBBA1" />
                             </View>
                             <Text style={styles.rowLabel}>Complete Consultation</Text>
                         </TouchableOpacity>

@@ -207,7 +207,7 @@ export default function DoctorChatScreen() {
             >
                 {loading ? (
                     <View style={styles.center}>
-                        <ActivityIndicator size="large" color="#2FA561" />
+                        <ActivityIndicator size="large" color="#0FBBA1" />
                     </View>
                 ) : loadError ? (
                     <View style={styles.center}>
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
         borderBottomLeftRadius: 4
     },
     bubbleRight: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         borderBottomRightRadius: 4
     },
     messageText: { fontSize: 15, lineHeight: 22 },
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     },
     sendButton: {
         width: 36, height: 36, borderRadius: 18,
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         alignItems: 'center', justifyContent: 'center',
         marginBottom: 4
     },

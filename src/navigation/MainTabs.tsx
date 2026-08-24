@@ -13,7 +13,7 @@ import RecordsStack from './RecordsStack';
 
 const Tab = createBottomTabNavigator();
 
-const ACTIVE_COLOR = '#2FA561';
+const ACTIVE_COLOR = '#0FBBA1';
 const INACTIVE_COLOR = '#151517';
 
 type Props = {

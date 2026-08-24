@@ -90,7 +90,7 @@ export default function BloodRequestDetailScreen() {
                     {!request.isRequester && request.distanceKm !== null && (
                         <Row label="Distance" value={`${request.distanceKm} km away`} />
                     )}
-                    <Row label="Status" value={request.status} valueColor={request.status === 'OPEN' ? '#2FA561' : '#6B7280'} />
+                    <Row label="Status" value={request.status} valueColor={request.status === 'OPEN' ? '#0FBBA1' : '#6B7280'} />
                 </View>
 
                 {request.isRequester && request.contactNumber && (

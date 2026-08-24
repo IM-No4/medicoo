@@ -42,7 +42,7 @@ export default function MedicationTypeStep({ data, onChange, onNext }) {
               ]}>
                 {item}
               </Text>
-              {isSelected && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#2FA561' }} />}
+              {isSelected && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#0FBBA1' }} />}
             </TouchableOpacity>
             {!isLast && <View style={styles.separator} />}
           </View>

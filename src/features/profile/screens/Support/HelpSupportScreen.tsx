@@ -121,7 +121,7 @@ export default function HelpSupportScreen() {
                 <View style={styles.contactGrid}>
                     <TouchableOpacity style={styles.contactCard} activeOpacity={0.8} onPress={() => navigation.navigate('LiveChat')}>
                         <View style={[styles.iconBox, { backgroundColor: '#F0FDF4' }]}>
-                            <MessageCircle size={22} color="#2FA561" />
+                            <MessageCircle size={22} color="#0FBBA1" />
                         </View>
                         <Text style={styles.contactLabel}>Chat</Text>
                         <Text style={styles.contactSub}>Chat with us</Text>
@@ -183,7 +183,7 @@ export default function HelpSupportScreen() {
                     <TouchableOpacity style={styles.linkItem} activeOpacity={0.7} onPress={handleAboutPress}>
                         <View style={styles.linkLeft}>
                             <View style={[styles.linkIconBox, { backgroundColor: '#F0FDF4' }]}>
-                                <Info size={18} color="#2FA561" />
+                                <Info size={18} color="#0FBBA1" />
                             </View>
                             <Text style={styles.linkText}>About Medicoo</Text>
                         </View>

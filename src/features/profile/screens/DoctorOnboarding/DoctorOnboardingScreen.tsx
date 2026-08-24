@@ -675,11 +675,11 @@ export default function DoctorOnboardingScreen() {
                 onPress={() => openMediaPicker('uniformPhoto')}
             >
                 {formData.uniformPhoto ? (
-                    <Check size={24} color="#2FA561" />
+                    <Check size={24} color="#0FBBA1" />
                 ) : (
                     <Upload size={24} color="#6B7280" />
                 )}
-                <Text style={[styles.uploadText, formData.uniformPhoto && { color: '#2FA561' }]}>
+                <Text style={[styles.uploadText, formData.uniformPhoto && { color: '#0FBBA1' }]}>
                     {formData.uniformPhoto ? 'Profile Photo Uploaded' : 'Upload Profile Photo'}
                 </Text>
                 <Text style={styles.uploadSub}>
@@ -897,11 +897,11 @@ export default function DoctorOnboardingScreen() {
                 onPress={() => openMediaPicker('identityProofDocument')}
             >
                 {formData.identityProofDocument ? (
-                    <Check size={24} color="#2FA561" />
+                    <Check size={24} color="#0FBBA1" />
                 ) : (
                     <Upload size={24} color="#6B7280" />
                 )}
-                <Text style={[styles.uploadText, formData.identityProofDocument && { color: '#2FA561' }]}>
+                <Text style={[styles.uploadText, formData.identityProofDocument && { color: '#0FBBA1' }]}>
                     {formData.identityProofDocument ? 'ID Document Uploaded' : 'Upload ID Proof *'}
                 </Text>
             </TouchableOpacity>
@@ -943,11 +943,11 @@ export default function DoctorOnboardingScreen() {
                 onPress={() => openMediaPicker('cmeCertificate')}
             >
                 {formData.cmeCertificate ? (
-                    <Check size={24} color="#2FA561" />
+                    <Check size={24} color="#0FBBA1" />
                 ) : (
                     <Upload size={24} color="#6B7280" />
                 )}
-                <Text style={[styles.uploadText, formData.cmeCertificate && { color: '#2FA561' }]}>
+                <Text style={[styles.uploadText, formData.cmeCertificate && { color: '#0FBBA1' }]}>
                     {formData.cmeCertificate ? 'CME Certificate Uploaded' : 'Upload CME Certificate *'}
                 </Text>
             </TouchableOpacity>
@@ -1049,11 +1049,11 @@ export default function DoctorOnboardingScreen() {
                         onPress={() => openMediaPicker('certificates')}
                     >
                         {tempDoc.file ? (
-                            <Check size={24} color="#2FA561" />
+                            <Check size={24} color="#0FBBA1" />
                         ) : (
                             <Upload size={24} color="#6B7280" />
                         )}
-                        <Text style={[styles.uploadText, tempDoc.file && { color: '#2FA561' }]}>
+                        <Text style={[styles.uploadText, tempDoc.file && { color: '#0FBBA1' }]}>
                             {tempDoc.file ? 'File Selected' : 'Tap to Upload File *'}
                         </Text>
                         <Text style={styles.uploadSub}>
@@ -1401,7 +1401,7 @@ const styles = StyleSheet.create({
     saveDraftText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#2FA561',
+        color: '#0FBBA1',
     },
 
     // Banner Styles
@@ -1433,7 +1433,7 @@ const styles = StyleSheet.create({
     },
     progressBar: {
         height: '100%',
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
     },
 
     content: {
@@ -1520,7 +1520,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     uploadBoxActive: {
-        borderColor: '#2FA561',
+        borderColor: '#0FBBA1',
         backgroundColor: '#F0FDF4',
     },
     uploadText: {
@@ -1545,7 +1545,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     feeCardActive: {
-        borderColor: '#2FA561',
+        borderColor: '#0FBBA1',
         backgroundColor: '#F0FDF4',
     },
     feeHeader: {
@@ -1564,8 +1564,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     checkboxActive: {
-        backgroundColor: '#2FA561',
-        borderColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
+        borderColor: '#0FBBA1',
     },
     feeTitle: {
         fontSize: 16,
@@ -1658,12 +1658,12 @@ const styles = StyleSheet.create({
         borderTopColor: '#F3F4F6',
     },
     nextButton: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         paddingVertical: 16,
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#2FA561',
+        shadowColor: '#0FBBA1',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
@@ -1705,16 +1705,16 @@ const styles = StyleSheet.create({
     saveButton: {
         backgroundColor: '#DCFCE7', // Light green
         borderWidth: 1,
-        borderColor: '#2FA561',
+        borderColor: '#0FBBA1',
     },
     saveButtonText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#2FA561',
+        color: '#0FBBA1',
     },
     submitButton: {
-        backgroundColor: '#2FA561',
-        shadowColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
+        shadowColor: '#0FBBA1',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
@@ -1758,14 +1758,14 @@ const styles = StyleSheet.create({
         color: '#374151',
     },
     selectedOptionText: {
-        color: '#2FA561',
+        color: '#0FBBA1',
         fontWeight: '600',
     },
     selectedDot: {
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
     },
 
     // Doc List Styles
@@ -1794,7 +1794,7 @@ const styles = StyleSheet.create({
     },
     fileName: {
         fontSize: 12,
-        color: '#2FA561',
+        color: '#0FBBA1',
         marginTop: 2,
     },
     deleteButton: {
@@ -1819,7 +1819,7 @@ const styles = StyleSheet.create({
     addNewDocButton: {
         padding: 16,
         borderWidth: 1,
-        borderColor: '#2FA561',
+        borderColor: '#0FBBA1',
         borderStyle: 'dashed',
         borderRadius: 12,
         alignItems: 'center',
@@ -1827,7 +1827,7 @@ const styles = StyleSheet.create({
         marginVertical: 12,
     },
     addNewDocText: {
-        color: '#2FA561',
+        color: '#0FBBA1',
         fontWeight: '600',
         fontSize: 15,
     },
@@ -1849,7 +1849,7 @@ const styles = StyleSheet.create({
     },
     addButton: {
         flex: 1,
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         paddingVertical: 12,
         borderRadius: 12,
         alignItems: 'center',

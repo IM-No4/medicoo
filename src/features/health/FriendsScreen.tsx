@@ -145,7 +145,7 @@ export default function FriendsScreen() {
                             <Text style={styles.medIdValue}>{myMedId}</Text>
                         </View>
                         <TouchableOpacity style={styles.copyBtn} onPress={handleCopy} activeOpacity={0.7}>
-                            <Copy size={14} color="#2FA561" />
+                            <Copy size={14} color="#0FBBA1" />
                             <Text style={styles.copyBtnText}>{copied ? 'Copied' : 'Copy'}</Text>
                         </TouchableOpacity>
                     </View>
@@ -249,7 +249,7 @@ export default function FriendsScreen() {
                                 return (
                                     <View key={group.key} style={styles.leaderboardCard}>
                                         <View style={styles.leaderboardHeader}>
-                                            <Icon size={18} color="#2FA561" />
+                                            <Icon size={18} color="#0FBBA1" />
                                             <Text style={styles.leaderboardTitle}>{group.title}</Text>
                                         </View>
                                         {group.entries.map((entry, index) => (
@@ -268,7 +268,7 @@ export default function FriendsScreen() {
                                                                 styles.entryBarFill,
                                                                 {
                                                                     width: `${entry.progressPercent}%`,
-                                                                    backgroundColor: entry.isSelf ? '#2FA561' : '#94A3B8',
+                                                                    backgroundColor: entry.isSelf ? '#0FBBA1' : '#94A3B8',
                                                                 },
                                                             ]}
                                                         />
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     medIdLabel: {
         fontSize: 10,
         fontWeight: '700',
-        color: '#2FA561',
+        color: '#0FBBA1',
         letterSpacing: 1,
         marginBottom: 4,
     },
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     copyBtnText: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#2FA561',
+        color: '#0FBBA1',
     },
     sectionLabel: {
         fontSize: 10,
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 14,
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     avatarInitial: {
         fontSize: 16,
         fontWeight: '800',
-        color: '#2FA561',
+        color: '#0FBBA1',
     },
     friendName: {
         fontSize: 15,
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
         color: '#475569',
     },
     entryNameSelf: {
-        color: '#2FA561',
+        color: '#0FBBA1',
         fontWeight: '800',
     },
     entryPercent: {

@@ -99,7 +99,7 @@ function SelectionModal({ visible, title, options, selected, onClose }: any) {
                     {option.label}
                   </Text>
                   {isSelected && (
-                    <Check size={20} color="#2FA561" strokeWidth={3} />
+                    <Check size={20} color="#0FBBA1" strokeWidth={3} />
                   )}
                 </TouchableOpacity>
               );
@@ -496,7 +496,7 @@ export default function HealthProfileScreen() {
     <View style={{ flex: 1, backgroundColor: "#E4F2EE" }}>
       <View style={styles.header}>
         <LinearGradient
-          colors={['#2FA561', '#0E7439']}
+          colors={['#0FBBA1', '#007C69']}
           start={Platform.select({
             ios: { x: 0, y: 0 },
             android: { x: 0.2, y: 0 },
@@ -772,10 +772,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  ageInline: { color: "#0E7439", fontWeight: "600" },
+  ageInline: { color: "#007C69", fontWeight: "600" },
   submit: {
     marginTop: 22,
-    backgroundColor: "#0E7439",
+    backgroundColor: "#007C69",
     padding: 14,
     borderRadius: 12,
     alignItems: "center",
@@ -841,7 +841,7 @@ const styles = StyleSheet.create({
   },
   doneText: {
     fontSize: 15,
-    color: "#2FA561",
+    color: "#0FBBA1",
     fontWeight: "700",
   },
   optionsList: {
@@ -864,7 +864,7 @@ const styles = StyleSheet.create({
     color: "#4B5563",
   },
   optionTextSelected: {
-    color: "#2FA561",
+    color: "#0FBBA1",
     fontWeight: "600",
   },
 
@@ -906,7 +906,7 @@ const styles = StyleSheet.create({
     top: 10,
     bottom: 10,
     width: 2,
-    backgroundColor: "#2FA561",
+    backgroundColor: "#0FBBA1",
     zIndex: 10,
     borderRadius: 1,
   },
@@ -959,7 +959,7 @@ const styles = StyleSheet.create({
   weightDisplay: {
     fontSize: 52,
     fontWeight: "900",
-    color: "#2FA561",
+    color: "#0FBBA1",
     marginBottom: 30,
   },
   weightScaleContainer: {
@@ -973,7 +973,7 @@ const styles = StyleSheet.create({
     top: -10,
     width: 4,
     height: 60,
-    backgroundColor: "#2FA561",
+    backgroundColor: "#0FBBA1",
     zIndex: 10,
     borderRadius: 2,
   },

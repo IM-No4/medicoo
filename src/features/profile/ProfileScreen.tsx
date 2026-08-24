@@ -290,7 +290,7 @@ export default function ProfileScreen() {
           <Text style={styles.medIdLabel}>Member ID: </Text>
           <Text style={styles.medIdValue}>{medId}</Text>
           <TouchableOpacity onPress={handleCopyMedId} style={styles.copyButton}>
-            <Copy size={16} color="#2FA561" />
+            <Copy size={16} color="#0FBBA1" />
           </TouchableOpacity>
           {copiedId && <Text style={styles.copiedText}>Copied</Text>}
         </View>
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
   copiedText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#2FA561',
+    color: '#0FBBA1',
     marginLeft: 4,
   },
 
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
   statValue: { fontSize: 18, fontWeight: '700', color: '#111827' },
   statSub: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
-  redeemText: { fontSize: 12, color: '#2FA561', fontWeight: '600', marginTop: 8 },
+  redeemText: { fontSize: 12, color: '#0FBBA1', fontWeight: '600', marginTop: 8 },
 
   // Pending Requests
   pendingRequestCard: {

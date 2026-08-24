@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     acceptButton: {
-        backgroundColor: '#2FA561',
+        backgroundColor: '#0FBBA1',
     },
     acceptButtonText: {
         color: '#fff',

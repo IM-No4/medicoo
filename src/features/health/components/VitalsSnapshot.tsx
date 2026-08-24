@@ -36,7 +36,7 @@ export function VitalsSnapshot() {
             onPress={() => setModalVisible(true)}
             activeOpacity={0.7}
           >
-            <Plus size={12} color="#2FA561" style={{ marginRight: 2 }} />
+            <Plus size={12} color="#0FBBA1" style={{ marginRight: 2 }} />
             <Text style={styles.headerActionBtnText}>Log</Text>
           </TouchableOpacity>
 
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   headerActionBtnText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#2FA561',
+    color: '#0FBBA1',
     textTransform: 'uppercase',
   },
   vitalsContainer: {

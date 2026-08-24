@@ -37,7 +37,7 @@ export default function DurationStep({ data, onChange }: DurationStepProps) {
           <Switch
             value={data.familyVisible}
             onValueChange={v => onChange({ familyVisible: v })}
-            trackColor={{ false: '#E5E7EB', true: '#2FA561' }}
+            trackColor={{ false: '#E5E7EB', true: '#0FBBA1' }}
             thumbColor={'#FFF'}
             ios_backgroundColor="#E5E7EB"
           />

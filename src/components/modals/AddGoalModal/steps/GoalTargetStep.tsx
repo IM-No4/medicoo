@@ -17,7 +17,7 @@ interface Props {
 
 export default function GoalTargetStep({ data, onChange }: Props) {
     const goalMeta = GOAL_TYPES.find(g => g.id === data.type);
-    const color = goalMeta?.color ?? '#2FA561';
+    const color = goalMeta?.color ?? '#0FBBA1';
     const presets = goalMeta?.presets ?? [1, 5, 10, 20];
     const numTarget = parseFloat(data.target) || 0;
 

@@ -7,7 +7,6 @@ import CommandPalette from '../command/CommandPalette';
 import GlobalTrackingBanner from '../features/cart/GlobalTrackingBanner';
 import LegalAcceptanceModal from '../components/modals/LegalAcceptanceModal';
 import OnboardingStack from '../features/onboarding/OnboardingStack';
-import SplashScreen from '../features/splash/SplashScreen';
 import { RootState } from '../redux/store';
 import AuthStack from './AuthStack';
 import MainStack from './MainStack';
@@ -20,9 +19,11 @@ export default function RootNavigator() {
   const boot = useSelector((state: RootState) => state.boot);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
-  // 🔒 Absolute gate: nothing renders until boot is READY
+  // 🔒 Absolute gate: nothing renders until boot is READY (App.tsx's
+  // AppContent already guarantees this before RootNavigator ever mounts;
+  // kept here too as a defensive no-op render, not a splash screen).
   if (boot.status !== 'ready') {
-    return <SplashScreen />;
+    return null;
   }
 
   return (

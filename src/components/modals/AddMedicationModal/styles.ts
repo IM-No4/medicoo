@@ -75,7 +75,7 @@ export const styles = StyleSheet.create({
 
   optionCardSelected: {
     backgroundColor: '#ECFDF5', // Light Green
-    borderColor: '#2FA561',
+    borderColor: '#0FBBA1',
   },
 
   optionText: {
@@ -225,7 +225,7 @@ export const styles = StyleSheet.create({
     color: '#1F2937',
   },
   listItemTextSelected: {
-    color: '#2FA561',
+    color: '#0FBBA1',
     fontWeight: '600',
   },
   separator: {
@@ -247,7 +247,7 @@ export const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 17,
-    color: '#2FA561', // Green Link
+    color: '#0FBBA1', // Green Link
     fontWeight: '500',
   },
 
@@ -323,7 +323,7 @@ export const styles = StyleSheet.create({
   },
   colorDotSelected: {
     borderWidth: 3,
-    borderColor: '#2FA561', // Green ring for selection? 
+    borderColor: '#0FBBA1', // Green ring for selection? 
     // Or Keep white ring if dot is dark? 
     // If dot is white, ring should be dark.
     // Let's use subtle grey ring or sticking to old style if possible.
@@ -349,15 +349,15 @@ export const styles = StyleSheet.create({
     right: 0,
   },
   primaryButton: {
-    backgroundColor: '#2FA561', // Green
+    backgroundColor: '#0FBBA1', // Green
     paddingVertical: 16,
     borderRadius: 30,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#0E7439',
+    borderColor: '#007C69',
   },
   primaryButtonActive: {
-    backgroundColor: '#0E7439',
+    backgroundColor: '#007C69',
   },
   primaryButtonDisabled: {
     backgroundColor: '#E5E7EB',
@@ -403,7 +403,7 @@ export const styles = StyleSheet.create({
   },
   shapeCircleSelected: {
     backgroundColor: '#ECFDF5',
-    borderColor: '#2FA561',
+    borderColor: '#0FBBA1',
     borderWidth: 2,
   },
 });

@@ -3,6 +3,9 @@ import React from 'react';
 
 import DoctorCallScreen from '../features/doctor/DoctorCallScreen';
 import DoctorChatScreen from '../features/doctor/DoctorChatScreen';
+import AIAssistantChatScreen from '../features/health/AIAssistantChatScreen';
+import HealthAssistantHistoryScreen from '../features/health/HealthAssistantHistoryScreen';
+import HealthRiskAssessmentScreen from '../features/health/HealthRiskAssessment/HealthRiskAssessmentScreen';
 import AddFamilyMemberScreen from '../features/profile/screens/FamilyMembers/AddFamilyMemberScreen';
 import FamilyMembersScreen from '../features/profile/screens/FamilyMembers/FamilyMembersScreen';
 import AmbulanceStack from './AmbulanceStack';
@@ -113,6 +116,21 @@ export default function MainStack({
         name="DoctorChat"
         component={DoctorChatScreen}
         options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="AIAssistantChat"
+        component={AIAssistantChatScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="HealthAssistantHistory"
+        component={HealthAssistantHistoryScreen}
+        options={{ presentation: 'card', headerShown: false, animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="HealthRiskAssessment"
+        component={HealthRiskAssessmentScreen}
+        options={{ presentation: 'card', headerShown: false, animation: 'slide_from_right' }}
       />
       <Stack.Screen
         name="ComingSoon"

@@ -17,6 +17,7 @@ import AddFamilyMemberScreen from '../features/profile/screens/FamilyMembers/Add
 import FamilyMembersScreen from '../features/profile/screens/FamilyMembers/FamilyMembersScreen';
 import LabTestDetailScreen from '../features/profile/screens/Labs/LabTestDetailScreen';
 import LabTestsHistoryScreen from '../features/profile/screens/Labs/LabTestsHistoryScreen';
+import HealthAssessmentHistoryScreen from '../features/profile/screens/HealthAssessments/HealthAssessmentHistoryScreen';
 import MedicineOrderDetailScreen from '../features/profile/screens/Medicines/MedicineOrderDetailScreen';
 import MedicineOrdersScreen from '../features/profile/screens/Medicines/MedicineOrdersScreen';
 import HelpSupportScreen from '../features/profile/screens/Support/HelpSupportScreen';
@@ -65,6 +66,7 @@ export type ProfileStackParamList = {
   DoctorEarnings: undefined;
   LiveChat: undefined;
   OrderSupport: { orderId: string };
+  HealthAssessmentHistory: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -210,6 +212,11 @@ export default function ProfileStack() {
       <Stack.Screen
         name="DoctorEarnings"
         component={DoctorEarningsScreen}
+        options={{ presentation: 'card' }}
+      />
+      <Stack.Screen
+        name="HealthAssessmentHistory"
+        component={HealthAssessmentHistoryScreen}
         options={{ presentation: 'card' }}
       />
     </Stack.Navigator>

@@ -12,7 +12,9 @@ import {
   RefreshControl,
   View,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
+import { Bot } from 'lucide-react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -65,6 +67,14 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
 
   // Hook for feed data
   const { data: feedData, loading: feedLoading, loadMore, refresh: refreshFeed } = useHomeFeed();
+
+  // Used to lift the Medo FAB above MultiStoreCartBar when it's showing,
+  // instead of the two overlapping.
+  const carts = useSelector((state: RootState) => state.cart);
+  const hasCartItems = useMemo(
+    () => Object.values(carts).some((storeCart: any) => Object.keys(storeCart.items).length > 0),
+    [carts]
+  );
 
   // Only show goals section if there are active goals
   const activeGoals = useSelector(selectActiveGoals);
@@ -387,6 +397,33 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
           safe-area padding right below this - adding the real inset here
           too would double up as a visible gap. */}
       <MultiStoreCartBar bottomInset={0} />
+
+      <TouchableOpacity
+        style={{
+          position: 'absolute',
+          right: 16,
+          bottom: hasCartItems ? 100 : 16,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: '#0FBBA1',
+          alignItems: 'center',
+          justifyContent: 'center',
+          ...Platform.select({
+            ios: {
+              shadowColor: '#0FBBA1',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+            },
+            android: { elevation: 6 },
+          }),
+        }}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate('AIAssistantChat')}
+      >
+        <Bot size={24} color="#FFFFFF" />
+      </TouchableOpacity>
 
       <PrescriptionUploadModal
         visible={isPrescriptionModalVisible}

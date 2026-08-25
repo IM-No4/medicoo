@@ -10,6 +10,7 @@ import {
   Copy,
   FileText,
   FlaskConical,
+  HeartPulse,
   HelpCircle,
   LogOut,
   Pill,
@@ -250,6 +251,10 @@ export default function ProfileScreen() {
   const accountItems: { icon: any; label: string; action: ActionKey }[] = [
     { icon: BookOpen, label: 'Address Book', action: 'OPEN_ADDRESS_BOOK' },
     { icon: Users, label: 'Family Members', action: 'OPEN_FAMILY_MEMBERS' },
+    // Not tied to pharmacy/consultation/lab services, so unlike the items
+    // below it, this stays visible in every mode including orders-only -
+    // same reasoning as why Orders itself moves here in that mode.
+    { icon: HeartPulse, label: 'Health Assessments', action: 'OPEN_HEALTH_ASSESSMENTS' },
   ];
   if (!isDoctor && (!approvalStatus || approvalStatus === 'not-applied')) {
     accountItems.push({ icon: Stethoscope, label: 'Apply as Doctor', action: 'OPEN_DOCTOR_ONBOARDING' });

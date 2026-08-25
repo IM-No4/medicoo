@@ -133,6 +133,10 @@ export const ActionRegistry: Record<ActionKey, any> = {
     tab: 'Profile',
     screen: 'LabTestsModal',
   },
+  OPEN_HEALTH_ASSESSMENTS: {
+    tab: 'Profile',
+    screen: 'HealthAssessmentHistory',
+  },
   OPEN_LAB_TEST_DETAIL: {
     tab: 'Profile',
     screen: 'LabTestDetail',

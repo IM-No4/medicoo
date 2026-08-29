@@ -24,6 +24,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.medicootech.medicoo",
+      "versionCode": 2,
       "permissions": [
         "RECORD_AUDIO",
         "CAMERA",
@@ -107,6 +108,7 @@
       ],
       "./plugins/withRazorpayCheckoutTheme.js",
       "./plugins/withLowMemoryGradleTuning.js",
+      "./plugins/withAgoraScreenShareExclusion.js",
       [
         "expo-navigation-bar",
         {

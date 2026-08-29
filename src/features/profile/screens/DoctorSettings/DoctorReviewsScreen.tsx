@@ -1,7 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft, MessageSquare, Star, ThumbsUp } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { executeAction } from '../../../../actions/ActionExecutor';
 import { DoctorRatingBreakdown, DoctorReviewItem, getMyDoctorReviews } from '../../../../services/api/doctor.api';
@@ -92,9 +92,9 @@ export default function DoctorReviewsScreen() {
     return (
         <View style={styles.container}>
             <StatusBar style="dark" />
-            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-                <TouchableOpacity onPress={() => executeAction('GO_BACK')} style={styles.backButton}>
-                    <ChevronLeft size={24} color="#1F2937" />
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => executeAction('GO_BACK')} style={styles.backButton} activeOpacity={0.7}>
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Reviews & Ratings</Text>
                 <View style={{ width: 40 }} />
@@ -188,14 +188,16 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
+        paddingHorizontal: 24,
         paddingBottom: 16,
         backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6'
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
-    backButton: { padding: 8, marginLeft: -8 },
-    headerTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
+    backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
     scrollContent: { paddingBottom: 40 },
     loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 

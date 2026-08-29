@@ -1,6 +1,7 @@
 import { RouteProp, useRoute } from '@react-navigation/native';
+import { ChevronLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '../../components/icons/AppIcon';
 
@@ -86,12 +87,12 @@ export default function BookAppointmentScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={() => executeAction('GO_BACK')} style={styles.iconButton}>
-          <AppIcon name="arrow-left" size={24} color="#1c1c1e" />
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <TouchableOpacity onPress={() => executeAction('GO_BACK')} style={styles.iconButton} activeOpacity={0.7}>
+          <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{isRequestMode ? 'Request Appointment' : 'Select Time'}</Text>
-        <View style={{ width: 24 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -262,12 +263,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    paddingHorizontal: 24,
+    backgroundColor: '#fff',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
-  iconButton: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#1c1c1e' },
+  iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
   scrollContent: { paddingBottom: 140 },
   doctorSummary: {
     flexDirection: 'row',

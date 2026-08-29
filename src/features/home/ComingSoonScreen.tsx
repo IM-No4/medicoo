@@ -10,7 +10,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Sparkles, MapPin, ArrowLeft } from 'lucide-react-native';
+import { Sparkles, MapPin, ChevronLeft } from 'lucide-react-native';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -22,16 +22,16 @@ export default function ComingSoonScreen() {
   const featureName = route.params?.featureName || 'Service';
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom + 16 }]}>
+    <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <StatusBar style="dark" />
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <ArrowLeft size={24} color="#1E293B" />
+          <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{featureName}</Text>
         <View style={styles.placeholder} />
@@ -74,23 +74,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    height: 56,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    marginLeft: -8,
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },

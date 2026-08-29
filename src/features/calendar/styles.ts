@@ -1,4 +1,4 @@
-import { Platform, StatusBar, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 export const COLORS = {
   primary: '#0FBBA1',
@@ -15,8 +15,9 @@ export const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: COLORS.background,
-    // Dynamically set padding for Android Status Bar
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    // No top padding here - CalendarHeader carries its own safe-area top
+    // inset as part of its white header bar, same as the Records/Health
+    // screen headers, so the bar itself extends flush under the status bar.
     paddingBottom: 60,
   },
 

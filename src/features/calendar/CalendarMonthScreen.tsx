@@ -1,17 +1,21 @@
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { ChevronLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Modal, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useDispatch } from 'react-redux';
-import { COLORS } from '../styles';
-import MedicineCard from './MedicineCard';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useDispatch, useSelector } from 'react-redux';
+import { COLORS } from './styles';
+import MedicineCard from './components/MedicineCard';
 
 import EmptyState from '@/src/components/layout/EmptyState';
-import { markMedicineIntake } from '@/src/redux/slices/calendarSlice';
-import { AppDispatch } from '@/src/redux/store';
+import { loadCalendarData, markMedicineIntake } from '@/src/redux/slices/calendarSlice';
+import { AppDispatch, RootState } from '@/src/redux/store';
 import { DayEventStatus, fetchCalendarMonthStatus } from '@/src/services/api/calendar.api';
 import { executeAction } from '@/src/actions/ActionExecutor';
 import { formatDoctorName } from '@/src/utils/formatters';
-import AppointmentCard from './AppointmentCard';
-import { timeToMinutes } from '../utils/scheduleSort';
+import { getLocalDateString } from '@/src/utils/dateUtils';
+import AppointmentCard from './components/AppointmentCard';
+import { timeToMinutes } from './utils/scheduleSort';
 
 // Helper to get days in a month
 const getDaysInMonth = (month: any, year: any) => {
@@ -25,14 +29,35 @@ const getFirstDayOfMonth = (month: any, year: any) => {
   return day === 0 ? 6 : day - 1;
 };
 
-export default function CalendarModal({ visible, onClose, selectedDate, onSelectDate, data }: any) {
+// Route params:
+//   initialDate?: Date - which date to start on (defaults to today)
+//   onSelectDate?: (date: Date) => void - notified whenever a day is
+//     tapped, so the calendar screen that pushed this one can stay in sync
+//     with whatever date the user last picked here.
+export default function CalendarMonthScreen() {
+  const navigation = useNavigation();
+  const route = useRoute<any>();
+  const insets = useSafeAreaInsets();
+  const onSelectDateParam = route.params?.onSelectDate as ((date: Date) => void) | undefined;
+
   const dispatch = useDispatch<AppDispatch>();
+  const [selectedDate, setSelectedDate] = useState<Date>(route.params?.initialDate ?? new Date());
   const [currentMonth, setCurrentMonth] = useState(selectedDate.getMonth());
   const [currentYear, setCurrentYear] = useState(selectedDate.getFullYear());
   const [calendarGrid, setCalendarGrid] = useState<any[]>([]);
   const [monthStatus, setMonthStatus] = useState<Record<string, DayEventStatus>>({});
 
-  // Calculate isFuture for the "Today's plan" section based on the SELECTED date (not the modal nav month)
+  // Sourced directly from Redux (not passed in as a prop/param) so the
+  // "Today's plan" preview below always reflects whichever day is
+  // currently selected within this screen, not a stale snapshot from
+  // whenever the screen was first opened.
+  const data = useSelector((state: RootState) => state.calendar.data);
+
+  useEffect(() => {
+    dispatch(loadCalendarData(getLocalDateString(selectedDate)));
+  }, [dispatch, selectedDate]);
+
+  // Calculate isFuture for the "Today's plan" section based on the SELECTED date (not the nav month)
   // Logic must match CalendarScreen
   const isFuture = React.useMemo(() => {
     const today = new Date();
@@ -42,19 +67,10 @@ export default function CalendarModal({ visible, onClose, selectedDate, onSelect
     return selected.getTime() > today.getTime();
   }, [selectedDate]);
 
-  useEffect(() => {
-    if (visible) {
-      // Reset to selected date when opening
-      setCurrentMonth(selectedDate.getMonth());
-      setCurrentYear(selectedDate.getFullYear());
-    }
-  }, [visible]);
-
   // Fetch which days this month have an event (medicine reminder,
   // consultation, or lab booking) to drive the dots below - one call per
   // month shown, not per day.
   useEffect(() => {
-    if (!visible) return;
     let cancelled = false;
     const monthParam = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
     fetchCalendarMonthStatus(monthParam)
@@ -64,7 +80,7 @@ export default function CalendarModal({ visible, onClose, selectedDate, onSelect
         if (!cancelled) setMonthStatus({});
       });
     return () => { cancelled = true; };
-  }, [visible, currentMonth, currentYear]);
+  }, [currentMonth, currentYear]);
 
   // Generate the grid logic
   useEffect(() => {
@@ -113,26 +129,24 @@ export default function CalendarModal({ visible, onClose, selectedDate, onSelect
   const handleDayPress = (day: number) => {
     if (!day) return;
     const newDate = new Date(currentYear, currentMonth, day);
-    onSelectDate(newDate);
-    // Optional: Close on select? user preference. 
-    // For now we keep it open so they can see "Today's plan" update
+    setSelectedDate(newDate);
+    onSelectDateParam?.(newDate);
+    // Optional: navigate back on select? user preference.
+    // For now we keep the screen open so they can see "Today's plan" update.
   };
 
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
   return (
-    <Modal animationType="slide" visible={visible} onRequestClose={onClose}>
-      <View style={styles.container}>
-        {/* Safe Area spacer for Modal */}
-        <View style={{ height: Platform.OS === 'android' ? StatusBar.currentHeight : 50 }} />
-
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Calendar</Text>
-          <View style={{ width: 40 }} />
+    <View style={styles.container}>
+      {/* Header - same recipe as the rest of the app: white bar + shadow,
+          plain icon back button, fontSize 20/600/#111827 title. */}
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+          <ChevronLeft size={22} color="#111827" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Calendar</Text>
+        <View style={{ width: 40 }} />
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -269,8 +283,7 @@ export default function CalendarModal({ visible, onClose, selectedDate, onSelect
             })()}
           </View>
         </ScrollView>
-      </View>
-    </Modal>
+    </View>
   );
 }
 
@@ -279,35 +292,32 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  // Same header recipe as the rest of the app - white bar + shadow, plain
+  // icon back button, fontSize 20/600/#111827 title.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
     marginBottom: 20,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
   backButton: {
     width: 40,
     height: 40,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  backIcon: {
-    fontSize: 20,
-    color: '#000',
-    fontWeight: 'bold',
+    marginLeft: -8,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
+    fontWeight: '600',
+    color: '#111827',
   },
 
   // Calendar Card

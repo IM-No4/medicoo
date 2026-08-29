@@ -2,7 +2,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { Activity, ChevronLeft, Heart, Thermometer, Weight } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
@@ -142,12 +142,12 @@ export default function VitalsHistoryScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       <StatusBar style="dark" />
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <ChevronLeft size={24} color="#1F2937" />
+          <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Vitals History</Text>
         <View style={{ width: 40 }} />
@@ -335,23 +335,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
+  // Same header recipe as the rest of the app - white bar + shadow, plain
+  // icon back button, fontSize 20/600/#111827 title.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    height: 56,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb76',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
   backButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginLeft: -8,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
   },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
   /* Apple Health-style D/W/M/6M segmented control */
   rangeBar: {
     paddingHorizontal: 20,

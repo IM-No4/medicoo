@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { ChevronLeft, Send } from "lucide-react-native";
+import { ChevronLeft, Info, Send } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -262,12 +262,13 @@ export default function OrderSupportScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
+          activeOpacity={0.7}
         >
-          <ChevronLeft size={24} color="#1F2937" />
+          <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>Order Help</Text>
@@ -324,10 +325,15 @@ export default function OrderSupportScreen() {
       {/* Closed Banner or Footer Input */}
       {chatStatus === "closed" ? (
         <View style={[styles.closedBanner, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <Text style={styles.closedText}>
-            This support session has closed due to inactivity or resolution.
-          </Text>
-          <TouchableOpacity style={styles.restartBtn} onPress={handleRestartChat}>
+          <View style={styles.closedCard}>
+            <View style={styles.closedIconWrap}>
+              <Info size={18} color="#B45309" />
+            </View>
+            <Text style={styles.closedText}>
+              This support session has closed due to inactivity or resolution.
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.restartBtn} onPress={handleRestartChat} activeOpacity={0.85}>
             <Text style={styles.restartBtnText}>Start New Support Chat</Text>
           </TouchableOpacity>
         </View>
@@ -382,26 +388,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
     backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#EEEEEE",
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
   backButton: {
-    padding: 8,
-    marginLeft: -12,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -8,
   },
   headerInfo: {
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#1F2937",
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111827",
   },
   headerSubtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: "#6B7280",
     marginTop: 1,
   },
@@ -526,36 +537,48 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   closedBanner: {
-    padding: 24,
-    backgroundColor: "#FEF3C7",
+    padding: 16,
+    backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
-    borderTopColor: "#FDE68A",
+    borderTopColor: "#F3F4F6",
+  },
+  closedCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FEF3C7",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+  },
+  closedIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#FEF3C7",
     alignItems: "center",
     justifyContent: "center",
   },
   closedText: {
+    flex: 1,
     fontSize: 13,
-    color: "#B45309",
-    fontWeight: "600",
-    marginBottom: 12,
-    textAlign: "center",
+    color: "#92400E",
+    fontWeight: "500",
     lineHeight: 18,
   },
   restartBtn: {
-    backgroundColor: "#D97706",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-    shadowColor: "#B45309",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: "#0FBBA1",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
   restartBtnText: {
     color: "#FFFFFF",
     fontWeight: "700",
-    fontSize: 14,
+    fontSize: 15,
   },
   systemMessageContainer: {
     alignSelf: "center",

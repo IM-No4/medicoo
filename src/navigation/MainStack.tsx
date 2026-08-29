@@ -20,11 +20,14 @@ import PharmacyStack from './PharmacyStack';
 import SearchStack from './SearchStack';
 import ComingSoonScreen from '../features/home/ComingSoonScreen';
 import ManageGoalsScreen from '../features/health/ManageGoalsScreen';
+import AddGoalScreen from '../features/health/AddGoalScreen';
 import FriendsScreen from '../features/health/FriendsScreen';
 import ActivityHistoryScreen from '../features/health/ActivityHistoryScreen';
 import NotificationsScreen from '../features/notifications/NotificationsScreen';
 import VitalsHistoryScreen from '../features/health/VitalsHistoryScreen';
+import LogVitalsScreen from '../features/health/LogVitalsScreen';
 import ManageMedicationsScreen from '../features/calendar/ManageMedicationsScreen';
+import AddMedicationScreen from '../features/calendar/AddMedicationScreen';
 import ConsultationDetailScreen from '../features/profile/screens/Consultations/ConsultationDetailScreen';
 import BloodRequestDetailScreen from '../features/bloodDonation/screens/BloodRequestDetailScreen';
 import TermsOfServiceScreen from '../features/legals/TermsOfServiceScreen';
@@ -100,12 +103,12 @@ export default function MainStack({
       <Stack.Screen
         name="FamilyMembersModal"
         component={FamilyMembersScreen}
-        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        options={{ presentation: 'card' }}
       />
       <Stack.Screen
         name="AddFamilyMember"
         component={AddFamilyMemberScreen}
-        options={{ presentation: 'transparentModal', animation: 'slide_from_bottom' }}
+        options={{ presentation: 'card' }}
       />
       <Stack.Screen
         name="DoctorCall"
@@ -143,8 +146,18 @@ export default function MainStack({
         options={{ presentation: 'card', headerShown: false }}
       />
       <Stack.Screen
+        name="AddGoal"
+        component={AddGoalScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
         name="ManageMedications"
         component={ManageMedicationsScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="AddMedication"
+        component={AddMedicationScreen}
         options={{ presentation: 'card', headerShown: false }}
       />
       <Stack.Screen
@@ -165,6 +178,11 @@ export default function MainStack({
       <Stack.Screen
         name="VitalsHistory"
         component={VitalsHistoryScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="LogVitals"
+        component={LogVitalsScreen}
         options={{ presentation: 'card', headerShown: false }}
       />
       {/* Top-level (not nested under any tab's own stack) so opening it from

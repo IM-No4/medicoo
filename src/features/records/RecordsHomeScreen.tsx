@@ -246,7 +246,7 @@ export default function RecordsHomeScreen() {
     <View style={styles.container}>
       {isFocused && <StatusBar style="dark" translucent backgroundColor="transparent" />}
 
-      <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 4 }]}>
         <Text style={styles.topBarTitle}>Medical Records</Text>
       </View>
 
@@ -470,9 +470,14 @@ const styles = StyleSheet.create({
     }),
   },
   topBarTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '600',
     color: '#111827',
+    // Matches the 40px icon-button row height on the Calendar/Health
+    // headers, so this bar (which has no icon of its own) isn't shorter
+    // than theirs. lineHeight (not minHeight/textAlignVertical, which
+    // doesn't center Text vertically on iOS) sizes and centers it.
+    lineHeight: 40,
   },
 
   scrollContent: {

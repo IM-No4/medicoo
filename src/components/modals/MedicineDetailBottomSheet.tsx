@@ -17,6 +17,7 @@ import {
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Platform,
   ScrollView,
   Share,
   StyleSheet,
@@ -264,11 +265,14 @@ export default function MedicineDetailBottomSheet({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-          {/* Top Bar */}
-          <View style={styles.topBar}>
-            <TouchableOpacity style={styles.iconCircle} onPress={onClose}>
-              <AppIcon name="arrow-left" size={20} color="#1C1C1E" />
+      <View style={styles.container}>
+          {/* Top Bar - same recipe as the rest of the app: white bar +
+              shadow, plain icon back button. The share/notify buttons on
+              the right keep their own filled chip style (iconCircle) -
+              they're functional actions, not navigation. */}
+          <View style={[styles.topBar, { paddingTop: insets.top + 4 }]}>
+            <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
+              <AppIcon name="chevron-left" size={22} color="#111827" />
             </TouchableOpacity>
             <View style={styles.topBarRight}>
               <TouchableOpacity style={styles.iconCircle} onPress={handleShare}>
@@ -550,8 +554,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    backgroundColor: "#FFFFFF",
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -8,
   },
   topBarRight: {
     flexDirection: "row",

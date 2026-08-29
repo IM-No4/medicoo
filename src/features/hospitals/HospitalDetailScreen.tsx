@@ -1,8 +1,10 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import { ChevronLeft } from 'lucide-react-native';
 import React from 'react';
 import {
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -20,13 +22,13 @@ export default function HospitalDetailScreen() {
     const { hospitalId } = route.params || {};
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.container}>
             <StatusBar style="dark" backgroundColor="#FFFFFF" />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <AppIcon name="arrow-left" size={20} color="#1C1C1E" />
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Hospital Overview</Text>
                 <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -191,22 +193,28 @@ const styles = StyleSheet.create({
         backgroundColor: '#F8FAFC',
     },
     header: {
-        height: 56,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        paddingHorizontal: 24,
+        paddingBottom: 16,
+        backgroundColor: '#fff',
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
     backButton: {
-        padding: 6,
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: -8,
     },
     headerTitle: {
-        fontSize: 17,
-        fontWeight: '700',
-        color: '#0F172A',
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#111827',
     },
     content: {
         padding: 16,

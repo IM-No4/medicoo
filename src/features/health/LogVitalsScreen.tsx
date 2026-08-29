@@ -1,13 +1,12 @@
+import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
   KeyboardAvoidingView,
   LayoutChangeEvent,
-  Modal,
   PanResponder,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,14 +16,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import { Activity, Check, Heart, Minus, Plus, Thermometer, Weight, X } from 'lucide-react-native';
+import { Activity, Check, ChevronLeft, Heart, Minus, Plus, Thermometer, Weight } from 'lucide-react-native';
 import { addVitalRecord } from '../../redux/slices/vitalsSlice';
 import { AppDispatch } from '../../redux/store';
-
-interface Props {
-  visible: boolean;
-  onClose: () => void;
-}
 
 type FieldErrors = {
   heartRate?: string;
@@ -50,7 +44,8 @@ const TEMP_MIN = 90;
 const TEMP_MAX = 110;
 const TEMP_DEFAULT = 98.6;
 
-export default function RecordVitalsModal({ visible, onClose }: Props) {
+export default function LogVitalsScreen() {
+  const navigation = useNavigation();
   const dispatch = useDispatch<AppDispatch>();
   const insets = useSafeAreaInsets();
 
@@ -101,7 +96,7 @@ export default function RecordVitalsModal({ visible, onClose }: Props) {
 
   const handleClose = () => {
     resetForm();
-    onClose();
+    navigation.goBack();
   };
 
   const handleSave = async () => {
@@ -151,7 +146,7 @@ export default function RecordVitalsModal({ visible, onClose }: Props) {
       })).unwrap();
 
       resetForm();
-      onClose();
+      navigation.goBack();
     } catch (err: any) {
       setFormError(typeof err === 'string' ? err : 'Failed to save vitals. Please check your connection and try again.');
     } finally {
@@ -179,28 +174,24 @@ export default function RecordVitalsModal({ visible, onClose }: Props) {
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      onRequestClose={handleClose}
-    >
-      <SafeAreaView style={styles.container}>
-        {/* Header */}
-        <View style={[styles.header, { marginTop: insets.top }]}>
-          <View>
-            <Text style={styles.headerTitle}>Log Vitals</Text>
-            <Text style={styles.headerSubtitle}>Track today's health readings</Text>
-          </View>
-          <TouchableOpacity onPress={handleClose} style={styles.closeBtn} disabled={loading}>
-            <X size={20} color="#1F2937" />
-          </TouchableOpacity>
-        </View>
+    <View style={styles.container}>
+      {/* Header - same recipe as the rest of the app: white bar + shadow,
+          plain icon back button, fontSize 20/600/#111827 title. */}
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <TouchableOpacity onPress={handleClose} style={styles.backButton} activeOpacity={0.7} disabled={loading}>
+          <ChevronLeft size={22} color="#111827" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Log Vitals</Text>
+        <View style={{ width: 40 }} />
+      </View>
 
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
+          <Text style={styles.introSubtitle}>Track today's health readings</Text>
+
           {formError ? (
             <View style={styles.formErrorBanner}>
               <Text style={styles.formErrorText}>{formError}</Text>
@@ -482,8 +473,7 @@ export default function RecordVitalsModal({ visible, onClose }: Props) {
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Modal>
+    </View>
   );
 }
 
@@ -670,33 +660,36 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
+  // Same header recipe as the rest of the app - white bar + shadow, plain
+  // icon back button, fontSize 20/600/#111827 title.
   header: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  closeBtn: {
+  backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  introSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 4,
   },
   scrollView: {
     flex: 1,

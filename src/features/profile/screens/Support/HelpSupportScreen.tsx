@@ -95,9 +95,9 @@ export default function HelpSupportScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ChevronLeft size={24} color="#1F2937" />
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Help & Support</Text>
                 <View style={{ width: 40 }} />
@@ -224,23 +224,31 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F8F9FE',
     },
+    // Same header recipe as the Family Members / Address Book / Medicine
+    // Orders screens - white bar + shadow, plain icon back button,
+    // fontSize 20/600/#111827 title.
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingBottom: 20,
+        paddingHorizontal: 24,
+        paddingBottom: 16,
         backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
     backButton: {
-        padding: 8,
-        marginLeft: -12,
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: -8,
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontWeight: '600',
         color: '#111827',
     },
     content: {

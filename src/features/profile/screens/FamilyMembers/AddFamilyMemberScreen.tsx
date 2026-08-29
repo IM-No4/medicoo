@@ -2,14 +2,12 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Calendar, Camera, ChevronDown, ChevronLeft, User, X } from 'lucide-react-native';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Animated,
     Image,
     KeyboardAvoidingView,
     Modal,
-    PanResponder,
     Platform,
     ScrollView,
     StyleSheet,
@@ -52,40 +50,6 @@ export default function AddFamilyMemberScreen() {
     const isEditing = route.params?.isEditing || false;
     const existingMember = route.params?.member;
 
-    const translateY = useRef(new Animated.Value(0)).current;
-
-    /* ---------- Swipe Down with Animation ---------- */
-    const panResponder = useRef(
-        PanResponder.create({
-            onStartShouldSetPanResponder: () => true,
-            onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 5,
-            onPanResponderMove: (_, gestureState) => {
-                if (gestureState.dy > 0) {
-                    translateY.setValue(gestureState.dy);
-                }
-            },
-            onPanResponderRelease: (_, gestureState) => {
-                if (gestureState.dy > 100) {
-                    Animated.timing(translateY, {
-                        toValue: 1000,
-                        duration: 300,
-                        useNativeDriver: true,
-                    }).start(() => {
-                        navigation.goBack();
-                        setTimeout(() => {
-                            translateY.setValue(0);
-                        }, 100);
-                    });
-                } else {
-                    Animated.spring(translateY, {
-                        toValue: 0,
-                        useNativeDriver: true,
-                    }).start();
-                }
-            },
-        })
-    ).current;
-
     const [saving, setSaving] = useState(false);
     const [mode, setMode] = useState<'create' | 'link'>('create');
 
@@ -98,7 +62,6 @@ export default function AddFamilyMemberScreen() {
     });
 
     const [showDatePicker, setShowDatePicker] = useState(false);
-    const [isGenderDropdownOpen, setIsGenderDropdownOpen] = useState(false);
 
     // Link Mode State
     const [linkId, setLinkId] = useState('');
@@ -315,42 +278,19 @@ export default function AddFamilyMemberScreen() {
     };
 
     return (
-        <View style={styles.modalBackdrop}>
-            <TouchableOpacity
-                style={styles.backdropTouchable}
-                activeOpacity={1}
-                onPress={() => navigation.goBack()}
-            />
+        <KeyboardAvoidingView
+            style={styles.screen}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+                    <ChevronLeft size={22} color="#111827" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>{isEditing ? 'Edit Details' : 'Add Family Member'}</Text>
+                <View style={{ width: 40 }} />
+            </View>
 
-            <Animated.View
-                style={[
-                    styles.modalContainer,
-                    {
-                        transform: [{ translateY }],
-                        paddingBottom: Math.max(insets.bottom, 20),
-                    },
-                ]}
-            >
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={{ flex: 1 }}
-                >
-                    {/* Handle & Header Area with pan handlers */}
-                    <View style={styles.modalHeader} {...panResponder.panHandlers}>
-                        <View style={styles.dragIndicator} />
-
-                        <View style={styles.headerBar}>
-                            <View style={{ width: 36 }} />
-
-                            <Text style={styles.headerTitle}>{isEditing ? 'Edit Details' : 'Add Family Member'}</Text>
-
-                            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-                                <X size={20} color="#64748B" />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
-                    {!isEditing && (
+            {!isEditing && (
                         <View style={styles.tabsWrapper}>
                             <View style={styles.tabContainer}>
                                 <TouchableOpacity
@@ -446,48 +386,18 @@ export default function AddFamilyMemberScreen() {
                                 </TouchableOpacity>
                             </View>
 
-                            <View style={[styles.inputGroup, { zIndex: 50 }]}>
+                            <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Gender *</Text>
                                 <TouchableOpacity
-                                    style={[styles.dropdownTrigger, isGenderDropdownOpen && styles.dropdownTriggerActive]}
-                                    onPress={() => setIsGenderDropdownOpen(!isGenderDropdownOpen)}
+                                    style={styles.dropdownTrigger}
+                                    onPress={() => openSelection('gender')}
                                     activeOpacity={0.7}
                                 >
                                     <Text style={[styles.dropdownText, !formData.gender && styles.placeholderText]}>
                                         {GENDERS.find(g => g.value === formData.gender)?.label || 'Select Gender'}
                                     </Text>
-                                    <ChevronDown
-                                        size={20}
-                                        color="#9CA3AF"
-                                        style={{ transform: [{ rotate: isGenderDropdownOpen ? '180deg' : '0deg' }] }}
-                                    />
+                                    <ChevronDown size={20} color="#9CA3AF" />
                                 </TouchableOpacity>
-
-                                {isGenderDropdownOpen && (
-                                    <View style={styles.dropdownContainer}>
-                                        {GENDERS.map((g) => (
-                                            <TouchableOpacity
-                                                key={g.value}
-                                                style={[
-                                                    styles.dropdownOption,
-                                                    formData.gender === g.value && styles.dropdownOptionActive
-                                                ]}
-                                                onPress={() => {
-                                                    setFormData({ ...formData, gender: g.value });
-                                                    setIsGenderDropdownOpen(false);
-                                                }}
-                                                activeOpacity={0.7}
-                                            >
-                                                <Text style={[
-                                                    styles.dropdownOptionText,
-                                                    formData.gender === g.value && styles.dropdownOptionTextActive
-                                                ]}>
-                                                    {g.label}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                )}
                             </View>
                         </View>
                     </>
@@ -534,7 +444,7 @@ export default function AddFamilyMemberScreen() {
                 )}
             </ScrollView>
 
-            <View style={styles.footer}>
+            <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
                 <TouchableOpacity
                     style={styles.saveButton}
                     onPress={handleSave}
@@ -634,66 +544,41 @@ export default function AddFamilyMemberScreen() {
                 onGallerySelect={launchLibrary}
                 title="Change Photo"
             />
-                </KeyboardAvoidingView>
-            </Animated.View>
-        </View>
+        </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
-    modalBackdrop: {
+    screen: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'flex-end',
+        backgroundColor: '#F8F9FE',
     },
-    backdropTouchable: {
-        flex: 1,
-    },
-    modalContainer: {
-        backgroundColor: '#FFFFFF',
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        height: '95%',
-        overflow: 'hidden',
-    },
-    modalHeader: {
-        paddingTop: 24,
-        paddingBottom: 16,
-        paddingHorizontal: 24,
-        zIndex: 10,
-    },
-    dragIndicator: {
-        width: 40,
-        height: 5,
-        backgroundColor: '#E5E7EB',
-        borderRadius: 3,
-        alignSelf: 'center',
-        marginTop: 4,
-        marginBottom: 20,
-    },
-    headerBar: {
+    // Same white bar + shadow + title treatment as the Calendar/Records/
+    // Health screen headers, so this reads as a real screen rather than a
+    // bottom sheet.
+    header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        width: '100%',
+        paddingHorizontal: 24,
+        paddingBottom: 16,
+        backgroundColor: '#fff',
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
-    headerCenter: {
-        flex: 1,
-        alignItems: 'center',
-        gap: 2,
-    },
-    iconBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 12,
-        backgroundColor: '#F8FAFC',
+    backButton: {
+        width: 40,
+        height: 40,
         alignItems: 'center',
         justifyContent: 'center',
+        marginLeft: -8,
     },
     headerTitle: {
-        fontSize: 17,
-        fontWeight: '800',
-        color: '#0F172A',
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#111827',
     },
     content: {
         padding: 20,
@@ -849,38 +734,6 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     chipTextActive: {
-        color: '#0FBBA1',
-        fontWeight: '600',
-    },
-    dropdownTriggerActive: {
-        borderColor: '#0FBBA1',
-        borderBottomLeftRadius: 0,
-        borderBottomRightRadius: 0,
-    },
-    dropdownContainer: {
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderTopWidth: 0,
-        borderBottomLeftRadius: 12,
-        borderBottomRightRadius: 12,
-        overflow: 'hidden',
-        marginTop: -1,
-    },
-    dropdownOption: {
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
-    },
-    dropdownOptionActive: {
-        backgroundColor: '#F0FDF4',
-    },
-    dropdownOptionText: {
-        fontSize: 15,
-        color: '#4B5563',
-    },
-    dropdownOptionTextActive: {
         color: '#0FBBA1',
         fontWeight: '600',
     },

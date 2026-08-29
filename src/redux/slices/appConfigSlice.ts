@@ -2,9 +2,11 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { EnabledServices, getAppConfig } from '../../services/api/appConfig.api';
 
 interface AppConfigState {
-  // Defaults to the current launch state (pharmacy only) so the UI is
-  // correct even before the boot-time fetch resolves, and stays correct if
-  // that fetch ever fails - never falls open to "show everything".
+  // Defaults to the current launch state (pharmacy + consultations) so the
+  // UI is correct even before the boot-time fetch resolves, and stays
+  // correct if that fetch ever fails - never falls open to "show
+  // everything" (labTests/homeCare/bloodDonation/ambulance/doctorOnboarding
+  // stay off until deliberately launched).
   enabledServices: EnabledServices;
   loaded: boolean;
 }
@@ -12,12 +14,15 @@ interface AppConfigState {
 const initialState: AppConfigState = {
   enabledServices: {
     pharmacy: true,
-    consultations: false,
+    consultations: true,
     labTests: false,
     homeCare: false,
     bloodDonation: false,
     ambulance: false,
     doctorPrescriptions: false,
+    // Apply as Doctor stays hidden even though consultations (the
+    // patient-facing side) is now live.
+    doctorOnboarding: false,
   },
   loaded: false,
 };

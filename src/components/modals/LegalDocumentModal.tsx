@@ -23,6 +23,8 @@ interface Props {
 const FALLBACK_TITLES: Record<LegalDocumentType, string> = {
     terms: 'Terms of Service',
     privacy: 'Privacy Policy',
+    security: 'Security Standards',
+    'community-guidelines': 'Community Guidelines',
 };
 
 // A plain Modal (not the existing TermsOfServiceScreen/PrivacyPolicyScreen

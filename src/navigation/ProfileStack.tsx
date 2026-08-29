@@ -21,11 +21,10 @@ import HealthAssessmentHistoryScreen from '../features/profile/screens/HealthAss
 import MedicineOrderDetailScreen from '../features/profile/screens/Medicines/MedicineOrderDetailScreen';
 import MedicineOrdersScreen from '../features/profile/screens/Medicines/MedicineOrdersScreen';
 import HelpSupportScreen from '../features/profile/screens/Support/HelpSupportScreen';
-import TermsPrivacyScreen from '../features/profile/screens/Support/TermsPrivacyScreen';
 import OrderSupportScreen from '../features/profile/screens/Support/OrderSupportScreen';
 import LiveChatScreen from '../features/profile/screens/Support/LiveChatScreen';
-import ContentPolicyScreen from '../features/legals/ContentPolicyScreen';
-import PrivacyPolicyScreen from '../features/legals/PrivacyPolicyScreen';
+import CommunityGuidelinesScreen from '../features/legals/CommunityGuidelinesScreen';
+import SecurityStandardsScreen from '../features/legals/SecurityStandardsScreen';
 import EditProfileScreen from '../features/profile/screens/UserDetails/EditProfileScreen';
 import ProfileDetailsScreen from '../features/profile/screens/UserDetails/ProfileDetailsScreen';
 
@@ -55,7 +54,6 @@ export type ProfileStackParamList = {
   LabTestsModal: undefined;
   LabTestDetail: { testId: string };
   HelpModal: undefined;
-  TermsModal: undefined;
   CommunityGuidelines: undefined;
   SecurityStandards: undefined;
   ManageAvailability: undefined;
@@ -86,12 +84,12 @@ export default function ProfileStack() {
       <Stack.Screen
         name="EditProfile"
         component={EditProfileScreen}
-        options={{ presentation: 'modal' }}
+        options={{ presentation: 'card' }}
       />
       <Stack.Screen
         name="DoctorOnboarding"
         component={DoctorOnboardingScreen}
-        options={{ presentation: 'fullScreenModal' }}
+        options={{ presentation: 'card' }}
       />
       <Stack.Screen
         name="DoctorSettings"
@@ -102,7 +100,7 @@ export default function ProfileStack() {
       <Stack.Screen
         name="AddressBookModal"
         component={AddressBookScreen}
-        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        options={{ presentation: 'card' }}
       />
       <Stack.Screen
         name="AddAddress"
@@ -113,29 +111,29 @@ export default function ProfileStack() {
       <Stack.Screen
         name="FamilyMembersModal"
         component={FamilyMembersScreen}
-        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        options={{ presentation: 'card' }}
       />
       <Stack.Screen
         name="AddFamilyMember"
         component={AddFamilyMemberScreen}
-        options={{ presentation: 'transparentModal', animation: 'slide_from_bottom' }}
+        options={{ presentation: 'card' }}
       />
       {/* Consultations */}
       <Stack.Screen
         name="ConsultationModal"
         component={ConsultationsScreen}
-        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        options={{ presentation: 'card' }}
       />
       <Stack.Screen
         name="DoctorFeedback"
         component={DoctorFeedbackScreen}
-        options={{ presentation: 'modal' }}
+        options={{ presentation: 'card' }}
       />
       {/* Medicine Orders */}
       <Stack.Screen
         name="MedicineOrdersModal"
         component={MedicineOrdersScreen}
-        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        options={{ presentation: 'card' }}
       />
       <Stack.Screen
         name="MedicineOrderDetail"
@@ -146,7 +144,7 @@ export default function ProfileStack() {
       <Stack.Screen
         name="LabTestsModal"
         component={LabTestsHistoryScreen}
-        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        options={{ presentation: 'card' }}
       />
       <Stack.Screen
         name="LabTestDetail"
@@ -157,21 +155,16 @@ export default function ProfileStack() {
       <Stack.Screen
         name="HelpModal"
         component={HelpSupportScreen}
-        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-      />
-      <Stack.Screen
-        name="TermsModal"
-        component={TermsPrivacyScreen}
-        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        options={{ presentation: 'card' }}
       />
       <Stack.Screen
         name="CommunityGuidelines"
-        component={ContentPolicyScreen}
+        component={CommunityGuidelinesScreen}
         options={{ presentation: 'card' }}
       />
       <Stack.Screen
         name="SecurityStandards"
-        component={PrivacyPolicyScreen}
+        component={SecurityStandardsScreen}
         options={{ presentation: 'card' }}
       />
       <Stack.Screen

@@ -10,8 +10,8 @@ import * as Contacts from "expo-contacts";
 import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 import {
-  ArrowLeft,
   ChevronDown,
+  ChevronLeft,
   ChevronUp,
   ChevronRight,
   Clock,
@@ -32,6 +32,7 @@ import {
   Alert,
   Image,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -798,12 +799,13 @@ export default function CartScreen() {
     return (
       <View style={[styles.container, styles.emptyContainer]}>
         <StatusBar style="dark" />
-        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backButton}
+            activeOpacity={0.7}
           >
-            <ArrowLeft size={24} color="#1F2937" />
+            <ChevronLeft size={22} color="#111827" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Cart</Text>
           <View style={{ width: 40 }} />
@@ -975,12 +977,13 @@ export default function CartScreen() {
       <StatusBar style="dark" />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
+          activeOpacity={0.7}
         >
-          <ArrowLeft size={24} color="#1F2937" />
+          <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.headerTitleContainer}
@@ -1259,11 +1262,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    backgroundColor: "#fff",
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
   headerTitleContainer: {
     flexDirection: "row",
@@ -1271,13 +1276,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: "800",
+    fontSize: 18,
+    fontWeight: "600",
     color: "#111827",
   },
   backButton: {
-    padding: 8,
-    marginLeft: -12,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -8,
   },
   contentWrapper: {
     flex: 1,

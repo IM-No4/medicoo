@@ -1,5 +1,5 @@
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
     ActivityIndicator,
@@ -153,9 +153,9 @@ export default function OtpVerificationScreen() {
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-            <View style={[styles.header, { paddingTop: insets.top }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ArrowLeft size={24} color="#1F2937" />
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
             </View>
 
@@ -225,11 +225,19 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     header: {
-        paddingHorizontal: 16,
-        paddingBottom: 10,
+        paddingHorizontal: 24,
+        paddingBottom: 16,
+        backgroundColor: '#fff',
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
     backButton: {
-        padding: 8,
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
         marginLeft: -8,
     },
     keyboardView: {

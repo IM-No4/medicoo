@@ -5,6 +5,7 @@ import {
     ActivityIndicator,
     FlatList,
     Image,
+    Platform,
     RefreshControl,
     ScrollView,
     StyleSheet,
@@ -15,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { executeAction } from '../../../../actions/ActionExecutor';
 import { getMyAppointmentRequests } from '../../../../services/api';
+import { getMyDoctorReview } from '../../../../services/api/doctor.api';
 import { API_BASE_URL } from '../../../../services/api/client';
 import { formatDoctorName } from '../../../../utils/formatters';
 
@@ -57,11 +59,35 @@ export default function ConsultationsScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [consultations, setConsultations] = useState<Consultation[]>([]);
     const [statusFilter, setStatusFilter] = useState<'all' | Consultation['status']>('all');
+    // Reviews are keyed by (doctorId, customerId), not per-consultation (see
+    // saveDoctorReview on the backend) - so "already rated" is checked per
+    // doctor, not per completed appointment.
+    const [reviewedDoctorIds, setReviewedDoctorIds] = useState<Set<string>>(new Set());
 
     const fetchConsultations = useCallback(async () => {
         try {
             const responseData = await getMyAppointmentRequests({ limit: 50 });
-            setConsultations(responseData?.data?.appointmentRequests || []);
+            const list: Consultation[] = responseData?.data?.appointmentRequests || [];
+            setConsultations(list);
+
+            const completedDoctorIds = Array.from(
+                new Set(
+                    list
+                        .filter((c) => c.status === 'completed' && c.doctorId)
+                        .map((c) => c.doctorId as string)
+                )
+            );
+            const reviewChecks = await Promise.all(
+                completedDoctorIds.map(async (doctorId) => {
+                    try {
+                        const review = await getMyDoctorReview(doctorId);
+                        return review ? doctorId : null;
+                    } catch {
+                        return null;
+                    }
+                })
+            );
+            setReviewedDoctorIds(new Set(reviewChecks.filter((id): id is string => !!id)));
         } catch (error) {
             console.error('Error fetching consultations:', error);
             // No fallback mocks to display only actual backend data
@@ -148,7 +174,7 @@ export default function ConsultationsScreen() {
                 </View>
             </View>
 
-            {item.status === 'completed' && (
+            {item.status === 'completed' && item.doctorId && !reviewedDoctorIds.has(item.doctorId) && (
                 <TouchableOpacity
                     style={styles.feedbackBanner}
                     onPress={() => executeAction('OPEN_DOCTOR_FEEDBACK', {
@@ -170,12 +196,12 @@ export default function ConsultationsScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ChevronLeft size={24} color="#1F2937" />
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>My Consultations</Text>
-                <View style={{ width: 24 }} />
+                <View style={{ width: 40 }} />
             </View>
 
             <View style={styles.filterBar}>
@@ -233,23 +259,30 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F8F9FE',
     },
+    // Same header recipe as the rest of the Profile screens - white bar +
+    // shadow, plain icon back button, fontSize 20/600/#111827 title.
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingBottom: 20,
+        paddingHorizontal: 24,
+        paddingBottom: 16,
         backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
     backButton: {
-        padding: 8,
-        marginLeft: -12,
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: -8,
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontWeight: '600',
         color: '#111827',
     },
     filterBar: {
@@ -283,21 +316,17 @@ const styles = StyleSheet.create({
         color: '#fff',
     },
     listContent: {
-        padding: 0,
-        marginTop: 16,
-        paddingTop: 12,
+        paddingTop: 16,
         paddingBottom: 84,
-        gap: 0,
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        backgroundColor: '#fff',
     },
     card: {
         backgroundColor: '#fff',
-        paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
         marginHorizontal: 16,
+        marginBottom: 12,
     },
     cardHeader: {
         flexDirection: 'row',

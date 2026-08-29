@@ -14,6 +14,7 @@ import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   RefreshControl,
   StyleSheet,
   Text,
@@ -140,11 +141,11 @@ export default function MedicineOrdersScreen() {
         }
       >
         {/* Left: Icon circle */}
-        <View style={styles.iconCircle}>
+        <View style={[styles.iconCircle, { backgroundColor: statusStyle.bg }]}>
           {isDeliveryPhase ? (
-            <Truck size={20} color="#0284C7" />
+            <Truck size={20} color={statusStyle.text} />
           ) : (
-            <Package size={20} color="#4F46E5" />
+            <Package size={20} color={statusStyle.text} />
           )}
         </View>
 
@@ -206,7 +207,7 @@ export default function MedicineOrdersScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <TouchableOpacity
           onPress={() => {
             if (searchActive) {
@@ -217,8 +218,9 @@ export default function MedicineOrdersScreen() {
             }
           }}
           style={styles.backButton}
+          activeOpacity={0.7}
         >
-          <ChevronLeft size={24} color="#1F2937" />
+          <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
 
         {searchActive ? (
@@ -264,7 +266,6 @@ export default function MedicineOrdersScreen() {
         renderItem={renderItem}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -303,23 +304,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8F9FE",
   },
+  // Same header recipe as the Family Members / Address Book / Health
+  // screens - white bar + shadow, plain icon back button, fontSize
+  // 20/600/#111827 title.
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingBottom: 16,
     backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
   backButton: {
-    padding: 8,
-    marginLeft: -12,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -8,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#111827",
   },
   searchButton: {
@@ -351,23 +360,27 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   listContent: {
+    padding: 16,
     paddingBottom: 32,
   },
   itemRow: {
     flexDirection: "row",
-    paddingVertical: 20,
-    paddingHorizontal: 20,
+    padding: 16,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    marginBottom: 12,
   },
   iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 16,
+    marginRight: 14,
   },
   detailsContainer: {
     flex: 1,
@@ -496,10 +509,5 @@ const styles = StyleSheet.create({
   loadingContainer: {
     marginTop: 100,
     alignItems: "center",
-  },
-  separator: {
-    height: 1,
-    backgroundColor: "#F3F4F6",
-    marginLeft: 84,
   },
 });

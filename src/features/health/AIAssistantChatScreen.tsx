@@ -260,9 +260,9 @@ export default function AIAssistantChatScreen() {
         <View style={styles.container}>
             <StatusBar style="dark" />
 
-            <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ChevronLeft size={24} color="#1F2937" />
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
 
                 <View style={styles.headerInfo}>
@@ -332,14 +332,16 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingBottom: 12,
+        paddingHorizontal: 24,
+        paddingBottom: 16,
         backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
         gap: 12,
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
-    backButton: { padding: 4 },
+    backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
     headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
     avatarHeader: {
         width: 36,

@@ -7,12 +7,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Modal,
+  Platform,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  ArrowLeft,
+  ChevronLeft,
   ChevronRight,
   CreditCard,
   ShieldCheck,
@@ -273,10 +274,10 @@ export default function PaymentScreen() {
       <StatusBar style="dark" />
 
       {/* Top Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <View style={styles.headerLeftRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
-            <ArrowLeft size={22} color="#111827" />
+            <ChevronLeft size={22} color="#111827" />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Select Payment Options</Text>
@@ -427,11 +428,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+    paddingHorizontal: 24,
     paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
   headerLeftRow: {
     flexDirection: 'row',
@@ -440,14 +443,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backBtn: {
-    padding: 4,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -8,
   },
   headerTitleContainer: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#111827',
   },
   headerSubtitle: {

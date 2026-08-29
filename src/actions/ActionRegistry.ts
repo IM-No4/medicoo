@@ -183,9 +183,15 @@ export const ActionRegistry: Record<ActionKey, any> = {
     tab: 'Profile',
     screen: 'HelpModal',
   },
-  OPEN_TERMS: {
-    tab: 'Profile',
-    screen: 'TermsModal',
+  // Top-level (not nested under the Profile tab's own stack) - registered
+  // on MainStack alongside ConsultationDetail/BloodRequestDetail for the
+  // same reason: LegalAcceptanceModal's "read full document" links need to
+  // reach these regardless of which tab the user is on.
+  OPEN_TERMS_OF_SERVICE: {
+    screen: 'TermsOfService',
+  },
+  OPEN_PRIVACY_POLICY: {
+    screen: 'PrivacyPolicy',
   },
   OPEN_ADD_ADDRESS: {
     tab: 'Profile',

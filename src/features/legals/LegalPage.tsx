@@ -1,7 +1,8 @@
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import React from 'react';
 import {
+    Platform,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -28,14 +29,17 @@ export default function LegalPage({ title, lastUpdated, sections }: LegalPagePro
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#0FBBA1" />
-            {/* Header */}
-            <View style={[styles.header, { paddingTop: insets.top }]}>
+            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            {/* Header - same recipe as the rest of the Profile screens: white
+                bar + shadow, plain icon back button, fontSize 20/600/#111827
+                title. */}
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
                 <TouchableOpacity
                     onPress={() => navigation.goBack()}
                     style={styles.backButton}
+                    activeOpacity={0.7}
                 >
-                    <ArrowLeft size={24} color="#fff" />
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{title}</Text>
                 <View style={{ width: 40 }} />
@@ -72,21 +76,28 @@ const styles = StyleSheet.create({
         backgroundColor: '#F9FAFB', // Slightly off-white background
     },
     header: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#fff',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
+        paddingHorizontal: 24,
         paddingBottom: 16,
-        minHeight: 60,
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
     backButton: {
-        padding: 8,
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: -8,
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#fff',
+        color: '#111827',
     },
     contentContainer: {
         padding: 24,

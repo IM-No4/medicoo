@@ -15,7 +15,7 @@ import {
     X,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { executeAction } from '../../../../actions/ActionExecutor';
 import ConsultationDetailsCard from '../../../../components/consultation/ConsultationDetailsCard';
@@ -244,12 +244,12 @@ export default function PatientConsultationDetailScreen() {
         <View style={styles.container}>
             <StatusBar style="dark" />
 
-            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-                <TouchableOpacity onPress={() => executeAction('GO_BACK')} style={styles.iconButton}>
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => executeAction('GO_BACK')} style={styles.backButton} activeOpacity={0.7}>
                     <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Patient Consultation</Text>
-                <View style={{ width: 38 }} />
+                <View style={{ width: 40 }} />
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -553,21 +553,22 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 18,
+        paddingHorizontal: 24,
         paddingBottom: 16,
         backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
-    iconButton: {
-        width: 38,
-        height: 38,
-        borderRadius: 19,
+    backButton: {
+        width: 40,
+        height: 40,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F9FAFB',
+        marginLeft: -8,
     },
-    headerTitle: { fontSize: 17, fontWeight: '800', color: '#111827' },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
     content: { padding: 20, paddingBottom: 40 },
 
     patientHeaderCard: {

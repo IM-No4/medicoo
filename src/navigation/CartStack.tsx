@@ -45,10 +45,10 @@ export default function CartStack() {
         component={LiveTrackingScreen}
         options={{ presentation: 'card', gestureEnabled: false }}
       />
-      <Stack.Screen 
-        name="AddressBookModal" 
-        component={AddressBookScreen} 
-        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+      <Stack.Screen
+        name="AddressBookModal"
+        component={AddressBookScreen}
+        options={{ presentation: 'card' }}
       />
       <Stack.Screen 
         name="AddAddress" 

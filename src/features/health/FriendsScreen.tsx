@@ -21,6 +21,7 @@ import {
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Platform,
     RefreshControl,
     ScrollView,
     StyleSheet,
@@ -108,7 +109,7 @@ export default function FriendsScreen() {
             // unwrap() throws that string directly, not an Error object, so
             // error.message is always undefined here even when the backend
             // sent a specific, useful reason (e.g. "No user found with that
-            // MED ID"). Same fix already applied in RecordVitalsModal.tsx.
+            // MED ID"). Same fix already applied in LogVitalsScreen.tsx.
             showStatus('error', 'Could not send request', typeof error === 'string' ? error : 'Something went wrong. Please try again.');
         } finally {
             setSending(false);
@@ -122,15 +123,15 @@ export default function FriendsScreen() {
     const initial = (name?: string) => (name || '?').trim().charAt(0).toUpperCase() || '?';
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.container}>
             <StatusBar style="dark" />
 
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
                 <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-                    <ChevronLeft size={24} color="#1F2937" />
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Friends</Text>
-                <View style={{ width: 24 }} />
+                <View style={{ width: 40 }} />
             </View>
 
             <ScrollView
@@ -304,20 +305,25 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        height: 56,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        paddingHorizontal: 24,
+        paddingBottom: 16,
+        backgroundColor: '#fff',
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
     backButton: {
-        padding: 8,
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
         marginLeft: -8,
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '700',
-        color: '#0F172A',
+        fontWeight: '600',
+        color: '#111827',
     },
     scrollContent: {
         paddingHorizontal: 20,

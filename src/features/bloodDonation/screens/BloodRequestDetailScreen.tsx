@@ -1,7 +1,9 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
+import { ChevronLeft } from 'lucide-react-native';
 import React, { useEffect } from 'react';
-import { ActivityIndicator, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import AppIcon from '../../../components/icons/AppIcon';
 import StatusModal from '../../../components/modals/StatusModal';
@@ -21,6 +23,7 @@ const URGENCY_COLORS: Record<string, string> = {
 export default function BloodRequestDetailScreen() {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
+    const insets = useSafeAreaInsets();
     const { requestId } = route.params || {};
     const dispatch = useDispatch<AppDispatch>();
 
@@ -64,12 +67,12 @@ export default function BloodRequestDetailScreen() {
     return (
         <View style={styles.container}>
             <StatusBar style="dark" />
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <AppIcon name="arrow-left" size={24} color="#111827" />
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{request.isRequester ? 'Your Blood Request' : 'Blood Request'}</Text>
-                <View style={{ width: 24 }} />
+                <View style={{ width: 40 }} />
             </View>
 
             <View style={styles.content}>
@@ -187,13 +190,22 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingTop: 60,
-        paddingBottom: 20,
         paddingHorizontal: 24,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        paddingBottom: 16,
+        backgroundColor: '#fff',
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
-    headerTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
+    backButton: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: -8,
+    },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
     content: { padding: 24 },
     urgentBadge: {
         alignSelf: 'flex-start',

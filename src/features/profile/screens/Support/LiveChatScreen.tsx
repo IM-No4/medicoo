@@ -209,9 +209,9 @@ export default function LiveChatScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ChevronLeft size={24} color="#1F2937" />
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
                 <View style={styles.headerInfo}>
                     <Text style={styles.headerTitle}>Chat</Text>
@@ -338,17 +338,22 @@ export default function LiveChatScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#F8F9FE" },
     center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FFFFFF" },
+    // Same header bar recipe as the rest of the Profile screens - white bar
+    // + shadow instead of a hard border. The title+subtitle+End-Chat layout
+    // here is intentionally different content, not part of that unification.
     header: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingHorizontal: 16,
-        paddingBottom: 12,
+        paddingHorizontal: 24,
+        paddingBottom: 16,
         backgroundColor: "#FFFFFF",
-        borderBottomWidth: 1,
-        borderBottomColor: "#EEEEEE",
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
-    backButton: { padding: 8, marginLeft: -12 },
+    backButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center", marginLeft: -8 },
     headerInfo: { alignItems: "center" },
     headerTitle: { fontSize: 16, fontWeight: "800", color: "#1F2937" },
     headerSubtitle: { fontSize: 11, color: "#6B7280", marginTop: 1 },

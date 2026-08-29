@@ -6,9 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  Platform,
   StatusBar,
 } from 'react-native';
-import { ArrowLeft, Ticket } from 'lucide-react-native';
+import { ChevronLeft, Ticket } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -63,9 +64,9 @@ export default function CouponScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={24} color="#1F2937" />
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+          <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Apply Coupon</Text>
         <View style={{ width: 40 }} />
@@ -121,19 +122,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    backgroundColor: '#fff',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
   backButton: {
-    padding: 8,
-    marginLeft: -12,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -8,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#111827',
   },
   scrollContent: {

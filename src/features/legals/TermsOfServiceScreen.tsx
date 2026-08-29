@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ErrorState from '../../components/layout/ErrorState';
@@ -46,9 +46,9 @@ export default function TermsOfServiceScreen() {
     if (loading || error) {
         return (
             <View style={styles.container}>
-                <View style={[styles.header, { paddingTop: insets.top }]}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <ArrowLeft size={24} color="#fff" />
+                <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+                        <ChevronLeft size={22} color="#111827" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>{FALLBACK_TITLE}</Text>
                     <View style={{ width: 40 }} />
@@ -74,21 +74,28 @@ const styles = StyleSheet.create({
         backgroundColor: '#F9FAFB',
     },
     header: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#fff',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
+        paddingHorizontal: 24,
         paddingBottom: 16,
-        minHeight: 60,
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
     backButton: {
-        padding: 8,
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: -8,
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#fff',
+        color: '#111827',
     },
     center: {
         flex: 1,

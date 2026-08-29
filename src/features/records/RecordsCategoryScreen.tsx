@@ -9,7 +9,7 @@ import {
   requestCameraPermissionsAsync
 } from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowDownWideNarrow, ArrowLeft, ArrowUpWideNarrow, Eye, FolderOpen, MoreVertical, Plus, Search, Trash2 } from 'lucide-react-native';
+import { ArrowDownWideNarrow, ArrowUpWideNarrow, ChevronLeft, Eye, FolderOpen, MoreVertical, Plus, Search, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -253,9 +253,9 @@ export default function RecordsCategoryScreen() {
     <View style={styles.container}>
       {isFocused && <StatusBar style="dark" translucent backgroundColor="transparent" />}
 
-      <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <ArrowLeft size={20} color="#111827" />
+      <View style={[styles.topBar, { paddingTop: insets.top + 4 }]}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+          <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.topBarTitle} numberOfLines={1}>{label}</Text>
         <View style={styles.headerSpacer} />
@@ -442,40 +442,41 @@ const styles = StyleSheet.create({
   // bar with a shadow - matches the reference, where the header, search
   // field, and chips all float directly on the same light backdrop and
   // only the search/chip/list cards themselves carry shadows.
+  // Same header recipe as the rest of the app - white bar + shadow, plain
+  // icon back button, fontSize 20/600/#111827 title.
   topBar: {
-    paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F8FC',
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
     backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
     }),
   },
+  backBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -8,
+  },
   headerSpacer: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
   },
   topBarTitle: {
     flex: 1,
-    fontSize: 19,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#111827',
     textAlign: 'center',
   },
 
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 4,
+    paddingTop: 16,
     paddingBottom: 120,
   },
 

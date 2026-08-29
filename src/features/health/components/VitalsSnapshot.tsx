@@ -1,17 +1,14 @@
 import { useNavigation } from '@react-navigation/native';
 import { Activity, Plus, TrendingUp, Weight } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
-import RecordVitalsModal from '../../../components/modals/RecordVitalsModal';
 import { RootState } from '../../../redux/store';
 import { HealthSection } from './HealthSection';
 
 export function VitalsSnapshot() {
   const navigation = useNavigation<any>();
   const { records } = useSelector((state: RootState) => state.vitals);
-
-  const [modalVisible, setModalVisible] = useState(false);
 
   // Find latest recorded vitals. Heart Rate and Temperature are shown
   // higher up on this screen already (the ring, and the summary row), so
@@ -33,7 +30,7 @@ export function VitalsSnapshot() {
         <View style={styles.headerActionsContainer}>
           <TouchableOpacity
             style={styles.headerActionBtn}
-            onPress={() => setModalVisible(true)}
+            onPress={() => navigation.navigate('LogVitals')}
             activeOpacity={0.7}
           >
             <Plus size={12} color="#0FBBA1" style={{ marginRight: 2 }} />
@@ -73,11 +70,6 @@ export function VitalsSnapshot() {
           />
         </View>
       </View>
-
-      <RecordVitalsModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-      />
     </HealthSection>
   );
 }

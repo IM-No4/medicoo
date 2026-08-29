@@ -1,11 +1,14 @@
 import { StatusBar } from 'expo-status-bar';
+import { ChevronLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { executeAction } from '../../../actions/ActionExecutor';
 import AppIcon from '../../../components/icons/AppIcon';
 import { bloodDonationApi } from '../../../services/api/bloodDonation.api';
 
 export default function BloodDonationHistoryScreen() {
+    const insets = useSafeAreaInsets();
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -56,12 +59,12 @@ export default function BloodDonationHistoryScreen() {
     return (
         <View style={styles.container}>
             <StatusBar style="dark" />
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => executeAction('GO_BACK')}>
-                    <AppIcon name="arrow-left" size={24} color="#111827" />
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => executeAction('GO_BACK')} style={styles.backButton} activeOpacity={0.7}>
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Donation History</Text>
-                <View style={{ width: 24 }} />
+                <View style={{ width: 40 }} />
             </View>
 
             {loading ? (
@@ -114,16 +117,24 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingTop: 60,
-        paddingBottom: 20,
         paddingHorizontal: 24,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        paddingBottom: 16,
+        backgroundColor: '#fff',
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: -8,
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontWeight: '600',
         color: '#111827',
     },
     listContent: {

@@ -13,6 +13,7 @@ import {
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -276,13 +277,14 @@ export default function MedicineOrderDetailScreen() {
   return (
     <View style={styles.container}>
       {/* Custom Nav Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <View style={styles.headerLeftRow}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backButton}
+            activeOpacity={0.7}
           >
-            <ChevronLeft size={24} color="#1F2937" />
+            <ChevronLeft size={22} color="#111827" />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>
@@ -551,15 +553,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFFFFF",
   },
+  // Same header bar recipe as the Medicine Orders list / Family Members /
+  // Address Book screens - white bar + shadow instead of a hard border.
+  // The left-aligned title+subtitle+support-badge layout here is
+  // intentionally different content, not part of that unification.
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
     backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#EEEEEE",
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
   headerLeftRow: {
     flexDirection: "row",
@@ -567,8 +575,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backButton: {
-    padding: 8,
-    marginLeft: -12,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -8,
   },
   headerTitleContainer: {
     marginLeft: 8,

@@ -18,6 +18,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   RefreshControl,
   StyleSheet,
   Text,
@@ -435,11 +436,11 @@ export default function AppointmentRequestsScreen() {
   }, [activeTab, loading]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       <StatusBar style="dark" />
 
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton} onPress={() => executeAction('GO_BACK')}>
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => executeAction('GO_BACK')} activeOpacity={0.7}>
           <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
@@ -519,10 +520,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 18,
+    paddingHorizontal: 24,
     paddingBottom: 16,
-    paddingTop: 8,
     backgroundColor: '#fff',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -8,
   },
   iconButton: {
     width: 38,

@@ -51,7 +51,7 @@ const LoadingSkeletons = () => (
   </View>
 );
 
-const HEADER_MAX_HEIGHT = 160;
+const HEADER_MAX_HEIGHT = 136;
 const FADE_DURATION = 180;
 
 type Props = {
@@ -374,7 +374,7 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
         removeClippedSubviews={true}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingTop: HEADER_HEIGHT + 28,
+          paddingTop: HEADER_HEIGHT + 12,
           // Clears the floating MultiStoreCartBar rendered below once
           // there are cart items.
           paddingBottom: 100,

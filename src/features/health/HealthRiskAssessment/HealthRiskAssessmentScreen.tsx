@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Animated,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -112,9 +113,9 @@ export default function HealthRiskAssessmentScreen() {
         return (
             <View style={styles.container}>
                 <StatusBar style="dark" />
-                <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+                <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn} activeOpacity={0.7}>
-                        <ChevronLeft size={22} color="#1F2937" />
+                        <ChevronLeft size={22} color="#111827" />
                     </TouchableOpacity>
                     <View style={styles.headerCenter}>
                         <Text style={styles.stepTitle}>Past Result</Text>
@@ -150,12 +151,12 @@ export default function HealthRiskAssessmentScreen() {
         <View style={styles.container}>
             <StatusBar style="dark" />
 
-            <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
                 {isResultsStep ? (
                     <View style={styles.iconBtnSpacer} />
                 ) : (
                     <TouchableOpacity onPress={goBack} style={styles.iconBtn} activeOpacity={0.7}>
-                        <ChevronLeft size={22} color="#1F2937" />
+                        <ChevronLeft size={22} color="#111827" />
                     </TouchableOpacity>
                 )}
                 <View style={styles.headerCenter}>
@@ -211,28 +212,32 @@ export default function HealthRiskAssessmentScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFFFFF' },
+    // Same header recipe as the Family Members / Address Book / Health
+    // Assessments screens - white bar + shadow, plain icon back button,
+    // fontSize 20/600/#111827 title.
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingBottom: 12,
+        paddingHorizontal: 24,
+        paddingBottom: 16,
         backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
     iconBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 12,
-        backgroundColor: '#F8FAFC',
+        width: 40,
+        height: 40,
         alignItems: 'center',
         justifyContent: 'center',
+        marginLeft: -8,
     },
     // Plain symmetry spacer for the header's other side - no background, so
     // it doesn't read as an empty badge/button when there's nothing to show.
     iconBtnSpacer: {
-        width: 36,
-        height: 36,
+        width: 40,
+        height: 40,
     },
     statusBadge: {
         paddingHorizontal: 10,
@@ -242,7 +247,7 @@ const styles = StyleSheet.create({
     },
     statusBadgeText: { fontSize: 11, fontWeight: '700' },
     headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
-    stepTitle: { fontSize: 17, fontWeight: '800', color: '#0F172A' },
+    stepTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
     progressTrack: {
         height: 3,
         backgroundColor: '#F1F5F9',

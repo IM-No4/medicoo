@@ -109,7 +109,7 @@ export default function HealthScreen() {
       )}
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <View style={{ flex: 1 }}>
           {/* <Text style={styles.greeting}>Daily Check-in</Text> */}
           <Text style={styles.headerTitle}>My Health</Text>
@@ -228,30 +228,37 @@ function SummaryCard({ icon, value, unit, label, color, onPress }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FE' },
 
+  // Same white bar + shadow recipe as the Calendar and Records screen
+  // headers, so all three read as one consistent header style.
   header: {
     paddingHorizontal: 24,
-    paddingBottom: 20,
+    paddingBottom: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#fff',
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    borderWidth: 1,
-    borderColor: '#e5e7eb76',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
   greeting: { fontSize: 13, fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 1 },
-  headerTitle: { fontSize: 20, fontWeight: '600', color: '#111827', marginTop: 4 },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
   headerActions: { flexDirection: 'row', gap: 12 },
+  // Same size/shape/shadow as the icon buttons in the Calendar header, so
+  // the icon chips read as one consistent style across screens.
   headerIconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#F9FAFB',
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#F3F4F6'
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   notificationBadge: {
     position: 'absolute',

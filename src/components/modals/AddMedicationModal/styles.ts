@@ -1,6 +1,10 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   /* ---------- Layout ---------- */
   stepContainer: {
     paddingHorizontal: 20,
@@ -116,78 +120,54 @@ export const styles = StyleSheet.create({
     borderColor: '#e5e7eb76',
   },
 
-  /* ---------- Modal Structure ---------- */
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  backdropTouchable: {
-    flex: 1,
-  },
-  modalContainer: {
-    backgroundColor: '#FFFFFF', // White Background
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    height: '95%',
-    overflow: 'hidden', // For header gradient
-  },
-  modalHeader: {
-    paddingTop: 16,
-    paddingBottom: 24, // More space for Gradient Header
-    paddingHorizontal: 20,
-    borderBottomWidth: 0,
-    backgroundColor: 'transparent', // Handled by LinearGradient in component
-    zIndex: 10,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  dragIndicator: {
-    width: 40,
-    height: 5,
-    backgroundColor: '#E5E7EB', // Light Grey
-    borderRadius: 3,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  headerBar: {
+  /* ---------- Header - same recipe as the rest of the app: white bar +
+     shadow, plain icon back button, fontSize 20/600/#111827 title. ---------- */
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
-  headerLeft: {
+  backButton: {
     width: 40,
-    alignItems: 'flex-start',
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -8,
   },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
   },
-  headerRight: {
-    width: 40,
-    alignItems: 'flex-end',
-  },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#111827', // Dark
+    color: '#111827',
   },
   headerSubtitle: {
     fontSize: 13,
-    color: '#6B7280', // Grey
+    color: '#6B7280',
     marginTop: 2,
   },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F3F4F6', // Light Grey
-    justifyContent: 'center',
-    alignItems: 'center',
+  progressTrack: {
+    height: 3,
+    backgroundColor: '#F1F5F9',
+    marginHorizontal: 20,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: 16,
+    marginBottom: 8,
   },
-  iconButtonPlaceholder: {
-    width: 36,
-    height: 36,
+  progressFill: {
+    height: '100%',
+    borderRadius: 2,
+    backgroundColor: '#0FBBA1',
   },
   content: {
     flex: 1,

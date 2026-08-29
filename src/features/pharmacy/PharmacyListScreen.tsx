@@ -19,7 +19,6 @@ import {
   Image,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -389,7 +388,7 @@ export default function PharmacyListScreen() {
   };
 
   const renderHeader = () => (
-    <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+    <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
       <View style={styles.locationContainer}>
         <Text style={styles.headerSubtitle}>Delivering to</Text>
         <TouchableOpacity
@@ -645,7 +644,7 @@ export default function PharmacyListScreen() {
   const renderToast = () => null;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       {renderHeader()}
 
@@ -722,7 +721,7 @@ export default function PharmacyListScreen() {
             : undefined
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

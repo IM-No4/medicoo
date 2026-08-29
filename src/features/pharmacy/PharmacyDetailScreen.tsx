@@ -225,7 +225,7 @@ export default function PharmacyDetailScreen() {
         <View
           style={[
             styles.stickySearchContainer,
-            { paddingTop: insets.top + 12 },
+            { paddingTop: insets.top + 4 },
           ]}
         >
           <View style={styles.searchWrapper}>
@@ -389,8 +389,9 @@ export default function PharmacyDetailScreen() {
             <TouchableOpacity
               style={styles.searchModalBackBtn}
               onPress={() => setIsSearchModalVisible(false)}
+              activeOpacity={0.7}
             >
-              <AppIcon name="arrow-left" size={22} color="#1C1C1E" />
+              <AppIcon name="chevron-left" size={22} color="#111827" />
             </TouchableOpacity>
             <View style={[styles.searchContainer, { flex: 1 }]}>
               <AppIcon name="search" size={20} color="#8A8A8E" />

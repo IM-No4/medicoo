@@ -4,9 +4,9 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   AlertCircle,
-  ArrowLeft,
   Calendar,
   CheckCircle,
+  ChevronLeft,
   ChevronRight,
   Clock,
   MapPin,
@@ -283,15 +283,16 @@ export default function PrescriptionResultScreen() {
   };
 
   return (
-    <View style={[styles.masterContainer, { paddingTop: insets.top }]}>
+    <View style={styles.masterContainer}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.safeArea}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={styles.closeBtn}
+            style={styles.backButton}
+            activeOpacity={0.7}
           >
-            <ArrowLeft size={24} color="#0F172A" />
+            <ChevronLeft size={22} color="#111827" />
           </TouchableOpacity>
           <View style={styles.headerMid}>
             <Text style={styles.headerLabel}>Analysis Report</Text>
@@ -299,7 +300,7 @@ export default function PrescriptionResultScreen() {
               {pt_id}
             </Text>
           </View>
-          <View style={{ width: 44 }} />
+          <View style={{ width: 40 }} />
         </View>
 
         <ScrollView
@@ -646,12 +647,21 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingBottom: 16,
     backgroundColor: "#fff",
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
-  closeBtn: {
-    padding: 5,
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -8,
   },
   headerMid: {
     flex: 1,
@@ -666,7 +676,7 @@ const styles = StyleSheet.create({
   headerId: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#0F172A",
+    color: "#111827",
     maxWidth: 200,
   },
 

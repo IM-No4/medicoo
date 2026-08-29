@@ -8,6 +8,8 @@ import {
   ChevronRight,
   Clock,
   Copy,
+  Droplet,
+  Eye,
   FileText,
   FlaskConical,
   HeartPulse,
@@ -256,7 +258,7 @@ export default function ProfileScreen() {
     // same reasoning as why Orders itself moves here in that mode.
     { icon: HeartPulse, label: 'Health Assessments', action: 'OPEN_HEALTH_ASSESSMENTS' },
   ];
-  if (!isDoctor && (!approvalStatus || approvalStatus === 'not-applied')) {
+  if (enabledServices.doctorOnboarding && !isDoctor && (!approvalStatus || approvalStatus === 'not-applied')) {
     accountItems.push({ icon: Stethoscope, label: 'Apply as Doctor', action: 'OPEN_DOCTOR_ONBOARDING' });
   }
   if (isOrdersOnlyMode) {
@@ -267,6 +269,7 @@ export default function ProfileScreen() {
     ...(enabledServices.consultations ? [{ icon: Stethoscope, label: 'Consultations', action: 'OPEN_CONSULTATIONS' as ActionKey }] : []),
     ...(enabledServices.pharmacy ? [{ icon: Pill, label: 'Medicine Orders', action: 'OPEN_MY_MEDICINE_ORDERS' as ActionKey }] : []),
     ...(enabledServices.labTests ? [{ icon: FlaskConical, label: 'Lab Tests', action: 'OPEN_MY_LAB_TESTS' as ActionKey }] : []),
+    ...(enabledServices.bloodDonation ? [{ icon: Droplet, label: 'Blood Donation', action: 'OPEN_BLOOD_DONATION' as ActionKey }] : []),
   ];
 
   if (loading && !name) {
@@ -417,8 +420,13 @@ export default function ProfileScreen() {
           />
           <MenuItem
             icon={FileText}
-            label="Terms & Privacy"
-            onPress={() => executeAction('OPEN_TERMS')} // Assuming route
+            label="Terms of Service"
+            onPress={() => executeAction('OPEN_TERMS_OF_SERVICE')}
+          />
+          <MenuItem
+            icon={Eye}
+            label="Privacy Policy"
+            onPress={() => executeAction('OPEN_PRIVACY_POLICY')}
           />
           <MenuItem
             icon={LogOut}

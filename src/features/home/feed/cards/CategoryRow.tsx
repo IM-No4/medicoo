@@ -50,6 +50,7 @@ export default React.memo(CategoryRow);
 
 const styles = StyleSheet.create({
     container: {
+        marginTop: 8,
         marginBottom: 28,
     },
     title: {

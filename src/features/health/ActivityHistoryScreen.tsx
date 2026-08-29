@@ -2,7 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { Award, CheckCircle2, ChevronLeft, ChevronRight, Footprints, TrendingUp } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StepsBarChart } from './components/StepsBarChart';
 import {
@@ -70,12 +70,12 @@ export default function ActivityHistoryScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom + 16 }]}>
+    <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <StatusBar style="dark" />
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <ChevronLeft size={24} color="#1F2937" />
+          <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Activity History</Text>
         <View style={{ width: 40 }} />
@@ -194,23 +194,28 @@ function InfoRow({ icon, iconBg, label, value, isLast }: InfoRowProps) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FE' },
 
+  // Same header recipe as the rest of the app - white bar + shadow, plain
+  // icon back button, fontSize 20/600/#111827 title.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    height: 56,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb76',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
   backButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginLeft: -8,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
   },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
 
   tabRow: {
     flexDirection: 'row',

@@ -7,6 +7,7 @@ import {
   ScrollView,
   Switch,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -15,7 +16,6 @@ import { ChevronLeft, Trash2, Droplets, Footprints, Moon, Activity, Target, Plus
 import { AppDispatch, RootState } from '../../redux/store';
 import { deleteGoal, toggleGoalEnabled, toggleGoalShared } from '../../redux/slices/goalsSlice';
 import { loadOnDeviceSteps } from '../../redux/slices/deviceSlice';
-import AddGoalModal from '../../components/modals/AddGoalModal/AddGoalModal';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -31,7 +31,6 @@ export default function ManageGoalsScreen() {
   const insets = useSafeAreaInsets();
   
   const { goals } = useSelector((state: RootState) => state.goals);
-  const [addGoalVisible, setAddGoalVisible] = useState(false);
   const [status, setStatus] = useState<{
     visible: boolean;
     type: StatusType;
@@ -116,24 +115,23 @@ export default function ManageGoalsScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom + 16 }]}>
+    <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <StatusBar style="dark" />
-      
-      {/* Header - bare icon buttons (no circle background), matching the
-          back/action button convention used across the rest of the app
-          (e.g. FamilyMembersScreen, LabTestsHistoryScreen, ManageMedications) */}
-      <View style={styles.header}>
+
+      {/* Header - same recipe as the rest of the Profile/Health screens:
+          white bar + shadow, plain icon back button, fontSize 20/600. */}
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <ChevronLeft size={24} color="#1F2937" />
+          <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Manage Goals</Text>
         <TouchableOpacity
           style={styles.addHeaderBtn}
-          onPress={() => setAddGoalVisible(true)}
+          onPress={() => navigation.navigate('AddGoal' as never)}
           activeOpacity={0.7}
         >
           <Plus size={22} color="#0FBBA1" />
@@ -179,7 +177,7 @@ export default function ManageGoalsScreen() {
             </Text>
             <TouchableOpacity 
               style={styles.emptyBtn} 
-              onPress={() => setAddGoalVisible(true)}
+              onPress={() => navigation.navigate('AddGoal' as never)}
               activeOpacity={0.8}
             >
               <Plus size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
@@ -241,11 +239,6 @@ export default function ManageGoalsScreen() {
         )}
       </ScrollView>
 
-      <AddGoalModal
-        visible={addGoalVisible}
-        onClose={() => setAddGoalVisible(false)}
-      />
-
       <StatusModal
         visible={status.visible}
         status={status.type}
@@ -268,22 +261,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    height: 56,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
   backButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginLeft: -8,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontWeight: '600',
+    color: '#111827',
   },
   addHeaderBtn: {
     padding: 8,

@@ -9,20 +9,17 @@ import { getLocalDateString } from '../../utils/dateUtils';
 // Components
 import AppointmentCard from './components/AppointmentCard';
 import CalendarHeader from './components/CalendarHeader';
-import CalendarModal from './components/CalendarModal';
 import CalendarSkeleton from './components/CalendarSkeleton';
 import DateStrip from './components/DateStrip';
 import MedicineCard from './components/MedicineCard';
 
 import AddActionModal from '../../components/modals/AddActionModal';
-import AddMedicationModal from '../../components/modals/AddMedicationModal/AddMedicationModal';
 
 import { executeAction } from '../../actions/ActionExecutor';
 import { loadCalendarCache, loadCalendarData, markMedicineIntake } from '@/src/redux/slices/calendarSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import EmptyState from '../../components/layout/EmptyState';
 import ErrorState from '../../components/layout/ErrorState';
-import AddGoalModal from '../../components/modals/AddGoalModal/AddGoalModal';
 import { AppDispatch, RootState } from '../../redux/store';
 import { useNavigation } from '@react-navigation/native';
 import { Settings } from 'lucide-react-native';
@@ -45,10 +42,7 @@ export default function CalendarScreen() {
         (state: RootState) => state.calendar
     );
 
-    const [isCalendarVisible, setCalendarVisible] = useState(false);
     const [showAddAction, setShowAddAction] = useState(false);
-    const [showAddMedication, setShowAddMedication] = useState(false);
-    const [showAddGoal, setShowAddGoal] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
     // Tracks only pull-to-refresh gestures, separate from the redux `loading`
     // flag - initial loads and date-switch loads show the skeleton instead,
@@ -115,7 +109,7 @@ export default function CalendarScreen() {
             <View style={styles.screen}>
                 <CalendarHeader
                     selectedDate={selectedDate}
-                    onOpenCalendar={() => setCalendarVisible(true)}
+                    onOpenCalendar={() => navigation.navigate('CalendarMonth', { initialDate: selectedDate, onSelectDate: setSelectedDate })}
                 />
                 <ErrorState
                     message={error}
@@ -130,11 +124,11 @@ export default function CalendarScreen() {
     /* ---------------- CONTENT ---------------- */
     return (
         <View style={styles.screen}>
-            {isFocused && <StatusBar style="dark" translucent backgroundColor="#fff" />}
+            {isFocused && <StatusBar style="dark" translucent backgroundColor="transparent" />}
             {/* Header & Date Strip */}
             <CalendarHeader
                 selectedDate={selectedDate}
-                onOpenCalendar={() => setCalendarVisible(true)}
+                onOpenCalendar={() => navigation.navigate('CalendarMonth', { initialDate: selectedDate, onSelectDate: setSelectedDate })}
             />
             <DateStrip
                 selectedDate={selectedDate}
@@ -243,43 +237,18 @@ export default function CalendarScreen() {
                 )}
             </ScrollView>
 
-            {/* Calendar Date Picker Modal */}
-            <CalendarModal
-                visible={isCalendarVisible}
-                onClose={() => setCalendarVisible(false)}
-                selectedDate={selectedDate}
-                onSelectDate={setSelectedDate}
-                data={data}
-            />
-
             {/* Add Action Modal */}
             <AddActionModal
                 visible={showAddAction}
                 onClose={() => setShowAddAction(false)}
                 onAddMedication={() => {
                     setShowAddAction(false);
-                    setShowAddMedication(true);
+                    navigation.navigate('AddMedication');
                 }}
                 onAddGoal={() => {
                     setShowAddAction(false);
-                    setShowAddGoal(true);
+                    navigation.navigate('AddGoal');
                 }}
-            />
-
-            {/* Add Medication Modal */}
-            <AddMedicationModal
-                visible={showAddMedication}
-                onClose={() => {
-                    setShowAddMedication(false);
-                    const dateStr = selectedDate.toISOString().split('T')[0];
-                    dispatch(loadCalendarData(dateStr));
-                }}
-            />
-
-            {/* Add Goal Modal */}
-            <AddGoalModal
-                visible={showAddGoal}
-                onClose={() => setShowAddGoal(false)}
             />
         </View>
     );

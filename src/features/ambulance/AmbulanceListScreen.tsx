@@ -1,9 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import { ChevronLeft } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
     FlatList,
+    Linking,
+    Platform,
     StyleSheet,
     Text,
     TextInput,
@@ -200,13 +203,13 @@ export default function AmbulanceListScreen() {
     }, [searchQuery, selectedFilter]);
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.container}>
             <StatusBar style="dark" backgroundColor="#FFFFFF" />
 
             {/* ---------- Header ---------- */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconButton}>
-                    <AppIcon name="arrow-left" size={22} color="#1C1C1E" />
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
 
                 <View style={styles.headerTitleContainer}>
@@ -347,28 +350,30 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        justifyContent: 'space-between',
+        paddingHorizontal: 24,
+        paddingBottom: 16,
+        backgroundColor: '#fff',
         gap: 12,
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
-    headerIconButton: {
-        width: 38,
-        height: 38,
-        borderRadius: 19,
-        backgroundColor: '#F1F5F9',
-        justifyContent: 'center',
+    backButton: {
+        width: 40,
+        height: 40,
         alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: -8,
     },
     headerTitleContainer: {
         flex: 1,
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '800',
-        color: '#0F172A',
+        fontWeight: '600',
+        color: '#111827',
     },
     locationRow: {
         flexDirection: 'row',

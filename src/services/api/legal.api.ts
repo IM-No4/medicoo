@@ -1,6 +1,6 @@
 import { apiClient } from './client';
 
-export type LegalDocumentType = 'terms' | 'privacy';
+export type LegalDocumentType = 'terms' | 'privacy' | 'security' | 'community-guidelines';
 
 export interface LegalSectionDto {
   heading?: string;

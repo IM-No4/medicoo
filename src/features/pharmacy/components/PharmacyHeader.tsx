@@ -121,7 +121,7 @@ export default function PharmacyHeader({
   return (
     <View style={styles.container} onLayout={onLayout}>
       {/* Dark Green Header Background (fully contains the info card) */}
-      <View style={[styles.darkHeader, { paddingTop: insets.top + 8 }]}>
+      <View style={[styles.darkHeader, { paddingTop: insets.top + 4 }]}>
         <LinearGradient
           colors={["#FFF", "#FFF"]}
           start={{ x: 0, y: 0 }}
@@ -129,8 +129,8 @@ export default function PharmacyHeader({
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.headerBar}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <AppIcon name="arrow-left" size={24} color="#1c1c1e" />
+          <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
+            <AppIcon name="chevron-left" size={22} color="#111827" />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleToggleFavorite}
@@ -219,7 +219,6 @@ const styles = StyleSheet.create({
   darkHeader: {
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
-    paddingBottom: 4,
     overflow: "hidden",
     position: "relative",
     borderWidth: 1,
@@ -255,7 +254,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderRadius: 20,
     marginHorizontal: 16,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
   infoRow: {
     flexDirection: "row",
@@ -355,5 +356,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#F2F2F7",
     paddingTop: 12,
+  },
+  // The search bar rendered as `children` sits below the dark header/white
+  // info card, on the screen's own background - not inside the card, so it
+  // doesn't use the card's divider styling above. Its own content
+  // (searchRowWrapper) already carries horizontal padding. marginTop:4
+  // here, combined with infoCard's own paddingBottom:8, lands at the same
+  // ~12px gap used below the search bar (container's marginBottom) -
+  // otherwise the card's bottom padding stacks invisibly with this margin
+  // and reads as one much bigger gap than the one below.
+  childrenContainer: {
+    marginTop: 4,
   },
 });

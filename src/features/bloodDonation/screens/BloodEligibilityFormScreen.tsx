@@ -1,7 +1,9 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { StatusBar } from 'expo-status-bar';
+import { ChevronLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { executeAction } from '../../../actions/ActionExecutor';
 import AppIcon from '../../../components/icons/AppIcon';
@@ -15,6 +17,7 @@ const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 export default function BloodEligibilityFormScreen() {
     const dispatch = useDispatch<AppDispatch>();
+    const insets = useSafeAreaInsets();
     const [loadingProfile, setLoadingProfile] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -133,12 +136,12 @@ export default function BloodEligibilityFormScreen() {
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
             <StatusBar style="dark" />
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => executeAction('GO_BACK')}>
-                    <AppIcon name="arrow-left" size={24} color="#111827" />
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => executeAction('GO_BACK')} style={styles.backButton} activeOpacity={0.7}>
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Eligibility Test</Text>
-                <View style={{ width: 24 }} />
+                <View style={{ width: 40 }} />
             </View>
 
             {loadingProfile ? (
@@ -246,49 +249,89 @@ export default function BloodEligibilityFormScreen() {
                 primaryActionText={status.primaryActionText}
             />
 
-            <Modal visible={showPicker} transparent animationType="fade">
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Select Blood Group</Text>
-                        <View style={styles.groupGrid}>
-                            {BLOOD_GROUPS.map((group) => (
+            <Modal visible={showPicker} transparent animationType="slide" onRequestClose={() => setShowPicker(false)}>
+                <View style={styles.sheetBackdrop}>
+                    <TouchableOpacity style={styles.backdropTouchable} activeOpacity={1} onPress={() => setShowPicker(false)} />
+                    <View style={[styles.sheetContainer, { paddingBottom: insets.bottom + 20 }]}>
+                        <View style={styles.handleBar} />
+                        <Text style={styles.sheetTitle}>Select Blood Group</Text>
+                        <View style={styles.groupList}>
+                            {BLOOD_GROUPS.map((group, index) => (
                                 <TouchableOpacity
                                     key={group}
-                                    style={[styles.groupItem, form.bloodGroup === group && styles.groupItemActive]}
+                                    style={[styles.groupRow, index === BLOOD_GROUPS.length - 1 && styles.groupRowLast]}
                                     onPress={() => {
                                         setForm({ ...form, bloodGroup: group });
                                         setShowPicker(false);
                                     }}
+                                    activeOpacity={0.7}
                                 >
-                                    <Text style={[styles.groupText, form.bloodGroup === group && styles.groupTextActive]}>
+                                    <Text style={[styles.groupRowText, form.bloodGroup === group && styles.groupRowTextActive]}>
                                         {group}
                                     </Text>
+                                    {form.bloodGroup === group && (
+                                        <View style={styles.checkCircle}>
+                                            <AppIcon name="check" size={12} color="#FFFFFF" />
+                                        </View>
+                                    )}
                                 </TouchableOpacity>
                             ))}
                         </View>
-                        <TouchableOpacity style={styles.closeButton} onPress={() => setShowPicker(false)}>
-                            <Text style={styles.closeButtonText}>Close</Text>
-                        </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
 
-            {showDatePicker && (
-                <DateTimePicker
-                    value={form.lastDonationDate ? new Date(form.lastDonationDate) : new Date()}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={(event, selectedDate) => {
-                        setShowDatePicker(Platform.OS === 'ios');
-                        if (event.type === 'set' && selectedDate) {
+            {/* Android's native picker is already its own OS-level dialog the
+                moment showDatePicker flips true, regardless of where it sits
+                in the tree. iOS's inline "spinner" style has no such dialog
+                chrome of its own - rendering it bare (as before) placed it at
+                the bottom of the ScrollView, well below the field that
+                triggered it, which read as "nothing happened". Wrapping it
+                in the same bottom sheet used for blood group fixes that. */}
+            {Platform.OS === 'ios' ? (
+                <Modal visible={showDatePicker} transparent animationType="slide" onRequestClose={() => setShowDatePicker(false)}>
+                    <View style={styles.sheetBackdrop}>
+                        <TouchableOpacity style={styles.backdropTouchable} activeOpacity={1} onPress={() => setShowDatePicker(false)} />
+                        <View style={[styles.sheetContainer, { paddingBottom: insets.bottom + 20 }]}>
+                            <View style={styles.handleBar} />
+                            <View style={styles.sheetHeaderRow}>
+                                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                                    <Text style={styles.sheetCancelText}>Cancel</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.sheetHeaderTitle}>Last Donation Date</Text>
+                                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                                    <Text style={styles.sheetDoneText}>Done</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <DateTimePicker
+                                value={form.lastDonationDate ? new Date(form.lastDonationDate) : new Date()}
+                                mode="date"
+                                display="spinner"
+                                onChange={(event, selectedDate) => {
+                                    if (selectedDate) {
+                                        setForm(prev => ({ ...prev, lastDonationDate: formatDateForApi(selectedDate) }));
+                                    }
+                                }}
+                                maximumDate={new Date()}
+                            />
+                        </View>
+                    </View>
+                </Modal>
+            ) : (
+                showDatePicker && (
+                    <DateTimePicker
+                        value={form.lastDonationDate ? new Date(form.lastDonationDate) : new Date()}
+                        mode="date"
+                        display="default"
+                        onChange={(event, selectedDate) => {
                             setShowDatePicker(false);
-                            setForm(prev => ({ ...prev, lastDonationDate: formatDateForApi(selectedDate) }));
-                        } else if (event.type === 'dismissed') {
-                            setShowDatePicker(false);
-                        }
-                    }}
-                    maximumDate={new Date()}
-                />
+                            if (event.type === 'set' && selectedDate) {
+                                setForm(prev => ({ ...prev, lastDonationDate: formatDateForApi(selectedDate) }));
+                            }
+                        }}
+                        maximumDate={new Date()}
+                    />
+                )
             )}
         </ScrollView>
     );
@@ -306,15 +349,24 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingTop: 60,
-        paddingBottom: 20,
         paddingHorizontal: 24,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        paddingBottom: 16,
+        backgroundColor: '#fff',
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: -8,
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontWeight: '600',
         color: '#111827',
     },
     form: {
@@ -394,59 +446,86 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#FFFFFF',
     },
-    modalOverlay: {
+    sheetBackdrop: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        padding: 24,
+        justifyContent: 'flex-end',
     },
-    modalContent: {
+    backdropTouchable: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    sheetContainer: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 24,
-        padding: 24,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingHorizontal: 24,
+        paddingTop: 12,
     },
-    modalTitle: {
-        fontSize: 20,
+    handleBar: {
+        width: 40,
+        height: 4,
+        backgroundColor: '#D1D5DB',
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginBottom: 16,
+    },
+    sheetTitle: {
+        fontSize: 18,
         fontWeight: '700',
         color: '#111827',
         marginBottom: 20,
         textAlign: 'center',
     },
-    groupGrid: {
+    sheetHeaderRow: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 12,
-        justifyContent: 'center',
-    },
-    groupItem: {
-        width: '22%',
-        aspectRatio: 1,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 8,
     },
-    groupItemActive: {
-        backgroundColor: '#FEF2F2',
-        borderColor: '#EF4444',
-    },
-    groupText: {
+    sheetHeaderTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#4B5563',
+        color: '#111827',
     },
-    groupTextActive: {
+    sheetCancelText: {
+        fontSize: 15,
+        color: '#6B7280',
+        fontWeight: '500',
+    },
+    sheetDoneText: {
+        fontSize: 15,
+        color: '#EF4444',
+        fontWeight: '700',
+    },
+    groupList: {
+        marginBottom: 4,
+    },
+    groupRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+    },
+    groupRowLast: {
+        borderBottomWidth: 0,
+    },
+    groupRowText: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#111827',
+    },
+    groupRowTextActive: {
+        fontWeight: '700',
         color: '#EF4444',
     },
-    closeButton: {
-        marginTop: 24,
-        paddingVertical: 12,
+    checkCircle: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: '#EF4444',
         alignItems: 'center',
-    },
-    closeButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#3B82F6',
+        justifyContent: 'center',
     },
 });

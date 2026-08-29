@@ -1,6 +1,7 @@
 import { Settings } from 'lucide-react-native';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../styles';
 
 // Add the prop here
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export default function CalendarHeader({ onOpenCalendar, onOpenManage, selectedDate }: Props) {
+  const insets = useSafeAreaInsets();
   // Format date: "Wednesday, June 25"
   const dateString = selectedDate
     ? selectedDate.toLocaleDateString('en-US', {
@@ -21,12 +23,7 @@ export default function CalendarHeader({ onOpenCalendar, onOpenManage, selectedD
     : '';
 
   return (
-    <View style={styles.container}>
-      <View style={styles.topRow}>
-        {/* <Text style={styles.appTitle}>Schedule</Text> */}
-
-      </View>
-
+    <View style={[styles.container, { paddingTop: insets.top + 4 }]}>
       <View style={styles.dateRow}>
         <Text style={styles.dateText}>{dateString}</Text>
         <View style={styles.actionsRow}>
@@ -46,30 +43,30 @@ export default function CalendarHeader({ onOpenCalendar, onOpenManage, selectedD
 }
 
 const styles = StyleSheet.create({
+  // Same white bar + shadow recipe as the Records and Health screen
+  // headers, so all three read as one consistent header style.
   container: {
     paddingHorizontal: 24,
-    marginBottom: 20,
-  },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  appTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: COLORS.text,
+    paddingBottom: 16,
+    marginBottom: 16,
+    backgroundColor: '#fff',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
   dateRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  // Matches the title treatment used on the Records and Health screen
+  // headers (fontSize 20 / weight 600 / #111827) so the three read as one
+  // consistent header style instead of each picking its own.
   dateText: {
     fontSize: 18,
-    fontWeight: '500',
-    color: COLORS.text,
+    fontWeight: '600',
+    color: '#111827',
   },
   actionsRow: {
     flexDirection: 'row',

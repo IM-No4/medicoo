@@ -8,6 +8,7 @@ import { ChevronLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -44,9 +45,9 @@ export default function HealthAssistantHistoryScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ChevronLeft size={24} color="#1F2937" />
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Past conversations</Text>
                 <View style={styles.headerSpacer} />
@@ -95,16 +96,24 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingBottom: 12,
+        paddingHorizontal: 24,
+        paddingBottom: 16,
         backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
         gap: 12,
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
-    backButton: { padding: 4 },
-    headerTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: '#111827' },
-    headerSpacer: { width: 24 },
+    backButton: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: -8,
+    },
+    headerTitle: { flex: 1, fontSize: 18, fontWeight: '600', color: '#111827' },
+    headerSpacer: { width: 40 },
     scrollContent: { padding: 20, flexGrow: 1 },
     emptyText: {
         fontSize: 13,

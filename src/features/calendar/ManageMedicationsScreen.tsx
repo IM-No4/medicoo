@@ -1,9 +1,10 @@
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft, Pencil, Pill, Plus, Trash2 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -11,7 +12,6 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AddMedicationModal from '../../components/modals/AddMedicationModal/AddMedicationModal';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 import { deleteMedicineSchedule, getMedicineSchedules } from '../../services/api/medicine.api';
 
@@ -51,12 +51,10 @@ function isPastSchedule(schedule: MedSchedule): boolean {
 }
 
 export default function ManageMedicationsScreen() {
-    const navigation = useNavigation();
+    const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
     const [schedules, setSchedules] = useState<MedSchedule[]>([]);
     const [loading, setLoading] = useState(true);
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [editingSchedule, setEditingSchedule] = useState<MedSchedule | null>(null);
     const [status, setStatus] = useState<{
         visible: boolean;
         type: StatusType;
@@ -84,13 +82,17 @@ export default function ManageMedicationsScreen() {
         }
     };
 
-    useEffect(() => {
-        fetchSchedules();
-    }, []);
+    // useFocusEffect (not a plain useEffect) so returning from AddMedication
+    // after adding/editing a schedule refreshes this list automatically,
+    // instead of only fetching once on initial mount.
+    useFocusEffect(
+        useCallback(() => {
+            fetchSchedules();
+        }, [])
+    );
 
     const handleEdit = (schedule: MedSchedule) => {
-        setEditingSchedule(schedule);
-        setShowAddModal(true);
+        navigation.navigate('AddMedication', { editingSchedule: schedule });
     };
 
     const handleDelete = (id: string, name: string) => {
@@ -156,19 +158,19 @@ export default function ManageMedicationsScreen() {
     );
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.container}>
             <StatusBar style="dark" />
 
             {/* Header - bare icon buttons (no circle background), matching
                 the back/action button convention used across the rest of
                 the app (e.g. FamilyMembersScreen, LabTestsHistoryScreen)
                 rather than the filled-circle style this screen had before. */}
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-                    <ChevronLeft size={24} color="#1F2937" />
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>My Medications</Text>
-                <TouchableOpacity style={styles.addHeaderBtn} onPress={() => { setEditingSchedule(null); setShowAddModal(true); }} activeOpacity={0.7}>
+                <TouchableOpacity style={styles.addHeaderBtn} onPress={() => navigation.navigate('AddMedication')} activeOpacity={0.7}>
                     <Plus size={22} color="#1F2937" />
                 </TouchableOpacity>
             </View>
@@ -184,7 +186,7 @@ export default function ManageMedicationsScreen() {
                     </View>
                     <Text style={styles.emptyTitle}>No Medications Added</Text>
                     <Text style={styles.emptySubtitle}>Add your medications to get daily reminders.</Text>
-                    <TouchableOpacity style={styles.emptyBtn} onPress={() => { setEditingSchedule(null); setShowAddModal(true); }} activeOpacity={0.8}>
+                    <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.navigate('AddMedication')} activeOpacity={0.8}>
                         <Plus size={16} color="#FFF" style={{ marginRight: 6 }} />
                         <Text style={styles.emptyBtnText}>Add First Medication</Text>
                     </TouchableOpacity>
@@ -211,16 +213,6 @@ export default function ManageMedicationsScreen() {
                 </ScrollView>
             )}
 
-            <AddMedicationModal
-                visible={showAddModal}
-                editingSchedule={editingSchedule}
-                onClose={() => {
-                    setShowAddModal(false);
-                    setEditingSchedule(null);
-                    fetchSchedules();
-                }}
-            />
-
             <StatusModal
                 visible={status.visible}
                 status={status.type}
@@ -243,20 +235,25 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        height: 56,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#e5e7eb76',
+        paddingHorizontal: 24,
+        paddingBottom: 16,
+        backgroundColor: '#fff',
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
     backBtn: {
-        padding: 8,
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
         marginLeft: -8,
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '700',
-        color: '#0F172A',
+        fontWeight: '600',
+        color: '#111827',
     },
     addHeaderBtn: {
         padding: 8,

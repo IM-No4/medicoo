@@ -2,7 +2,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { StatusBar } from 'expo-status-bar';
 import {
-  ArrowLeft,
+  ChevronLeft,
   Clock,
   Download,
   FileText,
@@ -204,9 +204,9 @@ export default function RecordDetailScreen() {
       <StatusBar style="dark" />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <ArrowLeft size={24} color="#1F2937" />
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+          <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Document Details</Text>
@@ -278,17 +278,32 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  // Same header recipe as the rest of the app - white bar + shadow, plain
+  // icon back button, fontSize 20/600/#111827 title. The right-side
+  // download/delete buttons keep their own filled chip style below
+  // (iconBtn) - they're functional actions, not navigation.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingBottom: 16,
     backgroundColor: '#FFFFFF',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -8,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#111827',
   },
   iconBtn: {

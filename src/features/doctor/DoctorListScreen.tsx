@@ -1,10 +1,12 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ChevronLeft } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
     Modal,
+    Platform,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -293,14 +295,14 @@ export default function DoctorListScreen() {
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
             {/* ---------- Header ---------- */}
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
                 <View style={styles.topRow}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <AppIcon name="arrow-left" size={22} color="#1c1c1e" />
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+                        <ChevronLeft size={22} color="#111827" />
                     </TouchableOpacity>
 
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.title}>Find a Doctor</Text>
+                        <Text style={styles.headerTitle}>Find a Doctor</Text>
                         {!loading && (
                             <Text style={styles.subtitle}>
                                 {filteredDoctors.length > 0
@@ -565,9 +567,12 @@ const styles = StyleSheet.create({
 
     header: {
         backgroundColor: '#fff',
-        paddingTop: 50,
         paddingBottom: 16,
-        paddingHorizontal: 20,
+        paddingHorizontal: 24,
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
 
     topRow: {
@@ -577,9 +582,9 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
 
-    backButton: { padding: 4 },
+    backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
 
-    title: { fontSize: 19, fontWeight: '700', color: '#1c1c1e' },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
     subtitle: { fontSize: 12.5, color: '#8e8e93', marginTop: 2, fontWeight: '500' },
 
     searchBox: {

@@ -8,6 +8,11 @@ export interface EnabledServices {
   bloodDonation: boolean;
   ambulance: boolean;
   doctorPrescriptions: boolean;
+  // Whether "Apply as Doctor" is shown to regular (non-doctor) users -
+  // separate from `consultations` (which controls whether patients can
+  // book/see consultations) since doctor onboarding stays hidden even
+  // once consultations itself is live.
+  doctorOnboarding: boolean;
 }
 
 // GET /api/app/config - public, no auth required. Only enabledServices is

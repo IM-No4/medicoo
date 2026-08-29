@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, HeartPulse, Plus } from 'lucide-react-native
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -46,9 +47,9 @@ export default function HealthAssessmentHistoryScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ChevronLeft size={24} color="#1F2937" />
+            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+                    <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Health Assessments</Text>
                 <View style={styles.headerSpacer} />
@@ -107,38 +108,52 @@ export default function HealthAssessmentHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
+    container: { flex: 1, backgroundColor: '#F8F9FE' },
     flexOne: { flex: 1 },
+    // Same header recipe as the Family Members / Address Book screens -
+    // white bar + shadow, plain icon back button, fontSize 20/600/#111827
+    // title.
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingBottom: 12,
+        justifyContent: 'space-between',
+        paddingHorizontal: 24,
+        paddingBottom: 16,
         backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-        gap: 12,
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+            android: { elevation: 2 },
+        }),
     },
-    backButton: { padding: 4 },
-    headerTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: '#111827' },
-    headerSpacer: { width: 24 },
+    backButton: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: -8,
+    },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+    headerSpacer: { width: 40 },
     scrollContent: { padding: 20, flexGrow: 1 },
     newCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 14,
-        borderRadius: 14,
-        backgroundColor: '#F0FDFA',
-        borderWidth: 1,
-        borderColor: '#0FBBA1',
+        padding: 16,
+        borderRadius: 16,
+        backgroundColor: '#FFFFFF',
         marginBottom: 20,
         gap: 12,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 8,
+        elevation: 2,
     },
     newIconContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#FFFFFF',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F0FDFA',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -152,18 +167,21 @@ const styles = StyleSheet.create({
     card: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 14,
-        borderRadius: 14,
-        backgroundColor: '#F9FAFB',
-        marginBottom: 10,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
+        padding: 16,
+        borderRadius: 16,
+        backgroundColor: '#FFFFFF',
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 8,
+        elevation: 2,
     },
     iconContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#FFFFFF',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F0FDFA',
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 12,

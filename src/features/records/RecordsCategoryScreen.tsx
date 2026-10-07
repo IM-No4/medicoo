@@ -253,7 +253,7 @@ export default function RecordsCategoryScreen() {
     <View style={styles.container}>
       {isFocused && <StatusBar style="dark" translucent backgroundColor="transparent" />}
 
-      <View style={[styles.topBar, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.topBar, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
           <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>

@@ -62,6 +62,8 @@ export interface HealthAssistantInteractionRecord {
   query: string;
   response: string;
   timestamp: string;
+  quickReplies?: string[];
+  disclaimer?: string | null;
 }
 
 // GET /api/v1/health-assistant/session-history/:sessionId - the full

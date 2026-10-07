@@ -128,13 +128,15 @@ export default React.memo(ServicesSection);
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 28,
+    marginBottom: 30,
     overflow: 'visible',
   },
   title: {
     fontSize: 13,
     color: '#494949',
-    marginBottom: 14,
+    // Matches SectionHeader.tsx's marginBottom (the shared header used by
+    // most other feed cards) instead of a slightly smaller one-off value.
+    marginBottom: 16,
     letterSpacing: 2,
     paddingHorizontal: 20,
   },

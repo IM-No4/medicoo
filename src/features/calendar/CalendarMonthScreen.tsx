@@ -1,7 +1,8 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { COLORS } from './styles';
@@ -105,6 +106,16 @@ export default function CalendarMonthScreen() {
       });
     }
 
+    // Padding for empty slots at the end, so the last row always has a
+    // full 7 cells - otherwise a lone real day left in that row (e.g.
+    // August 2026's trailing "31") is the row's only flex:1 child and
+    // stretches to fill/center across the whole width instead of sitting
+    // in its correct weekday column.
+    const trailing = (7 - (grid.length % 7)) % 7;
+    for (let i = 0; i < trailing; i++) {
+      grid.push({ day: null, id: `next-${i}` });
+    }
+
     setCalendarGrid(grid);
   }, [currentMonth, currentYear, monthStatus]);
 
@@ -139,9 +150,11 @@ export default function CalendarMonthScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="dark" />
+
       {/* Header - same recipe as the rest of the app: white bar + shadow,
           plain icon back button, fontSize 20/600/#111827 title. */}
-      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
           <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
@@ -170,42 +183,52 @@ export default function CalendarMonthScreen() {
               ))}
             </View>
 
-            {/* Days Grid */}
-            <View style={styles.daysGrid}>
-              {calendarGrid.map((item, index) => {
-                // Check if this specific day is selected
-                const isSelected = item.day === selectedDate.getDate() &&
-                  currentMonth === selectedDate.getMonth() &&
-                  currentYear === selectedDate.getFullYear();
+            {/* Days Grid - rendered as explicit rows of exactly 7 cells
+                (rather than one flexWrap'd row of all cells) so the row
+                boundary can never drift: flexWrap wraps based on
+                accumulated width vs container width, which is exact-fit
+                fragile - percentage/fixed cell widths that don't divide
+                the container's actual pixel width perfectly (100/7 is a
+                repeating decimal) round differently than expected and wrap
+                one cell early or late. Chunking into fixed 7-cell rows
+                sidesteps that entirely. */}
+            {Array.from({ length: Math.ceil(calendarGrid.length / 7) }, (_, weekIndex) => (
+              <View key={weekIndex} style={styles.weekGridRow}>
+                {calendarGrid.slice(weekIndex * 7, weekIndex * 7 + 7).map((item, index) => {
+                  // Check if this specific day is selected
+                  const isSelected = item.day === selectedDate.getDate() &&
+                    currentMonth === selectedDate.getMonth() &&
+                    currentYear === selectedDate.getFullYear();
 
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={[styles.dayCell, isSelected && styles.selectedDayCell]}
-                    onPress={() => handleDayPress(item.day)}
-                    disabled={!item.day}
-                  >
-                    {item.day && (
-                      <>
-                        <Text style={[styles.dayText, isSelected && styles.selectedDayText]}>
-                          {item.day}
-                        </Text>
-                        {/* Dots: Only show if NOT selected (selected has solid bg) -
-                            one per event type present that day, so a day with
-                            both a reminder and a consultation shows two. */}
-                        {!isSelected && (
-                          <View style={styles.dotRow}>
-                            {item.eventStatus?.medicine && <View style={[styles.eventDot, styles.dotMedicine]} />}
-                            {item.eventStatus?.appointment && <View style={[styles.eventDot, styles.dotAppointment]} />}
-                            {item.eventStatus?.lab && <View style={[styles.eventDot, styles.dotLab]} />}
-                          </View>
-                        )}
-                      </>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[styles.dayCell, isSelected && styles.selectedDayCell]}
+                      onPress={() => handleDayPress(item.day)}
+                      disabled={!item.day}
+                    >
+                      {item.day && (
+                        <>
+                          <Text style={[styles.dayText, isSelected && styles.selectedDayText]}>
+                            {item.day}
+                          </Text>
+                          {/* Dots: Only show if NOT selected (selected has solid bg) -
+                              one per event type present that day, so a day with
+                              both a reminder and a consultation shows two. */}
+                          {!isSelected && (
+                            <View style={styles.dotRow}>
+                              {item.eventStatus?.medicine && <View style={[styles.eventDot, styles.dotMedicine]} />}
+                              {item.eventStatus?.appointment && <View style={[styles.eventDot, styles.dotAppointment]} />}
+                              {item.eventStatus?.lab && <View style={[styles.eventDot, styles.dotLab]} />}
+                            </View>
+                          )}
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))}
           </View>
 
           {/* Today's Plan Section */}
@@ -214,8 +237,16 @@ export default function CalendarMonthScreen() {
             {(() => {
               const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
 
-              // Prevent flicker: Wait for data to match selected date
-              if (data?.date !== dateStr) return null;
+              // Data for a freshly-selected date hasn't arrived yet - show a
+              // loader instead of silently rendering nothing (which used to
+              // look like the screen had frozen while switching days).
+              if (data?.date !== dateStr) {
+                return (
+                  <View style={styles.planLoading}>
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  </View>
+                );
+              }
 
               const sortedAppointments = [...(data.appointments || [])].sort(
                 (a: any, b: any) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
@@ -365,19 +396,22 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   weekText: {
-    width: 40, // Fixed width for alignment
+    // flex: 1 over exactly 7 siblings, matching dayCell/weekGridRow below -
+    // a fixed 40px (and later a 100/7% width relying on flexWrap) both
+    // assumed the row's actual pixel width divided evenly into cell widths;
+    // any rounding there wraps a cell early/late. flex: 1 across a fixed
+    // 7-cell row has no wrapping decision to get wrong.
+    flex: 1,
     textAlign: 'center',
     fontSize: 13,
     color: COLORS.textSecondary,
     fontWeight: '500',
   },
-  daysGrid: {
+  weekGridRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between', // Keeps alignment clean
   },
   dayCell: {
-    width: 40,
+    flex: 1,
     height: 50, // Taller to fit the dot
     alignItems: 'center',
     justifyContent: 'center',
@@ -427,5 +461,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.text,
     marginBottom: 16,
+  },
+  planLoading: {
+    paddingVertical: 32,
+    alignItems: 'center',
   }
 });

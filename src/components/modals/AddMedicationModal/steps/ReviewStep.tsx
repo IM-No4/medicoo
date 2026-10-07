@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, TextInput, View } from 'react-native';
+import MedicalDisclaimerNote from '../../../MedicalDisclaimerNote';
 import { RenderMedicationIcon } from '../config/shapes';
 import { styles } from '../styles';
 
@@ -32,10 +33,10 @@ export default function ReviewStep({ data, onChange }: ReviewStepProps) {
 
       {/* Name and Type */}
       <View style={{ marginBottom: 30, paddingHorizontal: 4, alignItems: 'center' }}>
-        <Text style={{ fontSize: 28, fontWeight: '700', color: '#111827', marginBottom: 4 }}>
+        <Text style={{ fontSize: 24, fontWeight: '700', color: '#111827', marginBottom: 4 }}>
           {data.medicineName || 'Medication'}
         </Text>
-        <Text style={{ fontSize: 18, color: '#6B7280' }}>
+        <Text style={{ fontSize: 16, color: '#6B7280' }}>
           {data.type ? data.type.charAt(0).toUpperCase() + data.type.slice(1) : 'Type'}
         </Text>
       </View>
@@ -43,10 +44,10 @@ export default function ReviewStep({ data, onChange }: ReviewStepProps) {
       {/* Schedule */}
       <Text style={styles.sectionLabel}>Schedule</Text>
       <View style={[styles.listGroup, { padding: 16 }]}>
-        <Text style={{ fontSize: 17, fontWeight: '600', color: '#111827', marginBottom: 8 }}>
+        <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827', marginBottom: 8 }}>
           {data.frequency || 'Every Day'}
         </Text>
-        <Text style={{ fontSize: 17, color: '#111827', marginBottom: 12 }}>
+        <Text style={{ fontSize: 15, color: '#111827', marginBottom: 12 }}>
           {timesSummary || 'No time set'}  <Text style={{ color: '#6B7280' }}>1 {doseLabel}</Text>
         </Text>
 
@@ -66,8 +67,8 @@ export default function ReviewStep({ data, onChange }: ReviewStepProps) {
       <Text style={styles.sectionLabel}>Privacy</Text>
       <View style={[styles.listGroup, { padding: 16 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ fontSize: 17, color: '#111827' }}>Visibility</Text>
-          <Text style={{ fontSize: 17, color: '#6B7280' }}>
+          <Text style={{ fontSize: 15, color: '#111827' }}>Visibility</Text>
+          <Text style={{ fontSize: 15, color: '#6B7280' }}>
             {data.familyVisible ? 'Shared with Family' : 'Private'}
           </Text>
         </View>
@@ -97,6 +98,8 @@ export default function ReviewStep({ data, onChange }: ReviewStepProps) {
           onChangeText={text => onChange({ notes: text })}
         />
       </View>
+
+      <MedicalDisclaimerNote variant="medication" style={{ paddingHorizontal: 0 }} />
 
       <View style={{ height: 100 }} />
     </View>

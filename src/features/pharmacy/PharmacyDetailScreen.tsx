@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   FlatList,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -225,7 +226,7 @@ export default function PharmacyDetailScreen() {
         <View
           style={[
             styles.stickySearchContainer,
-            { paddingTop: insets.top + 4 },
+            { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) },
           ]}
         >
           <View style={styles.searchWrapper}>

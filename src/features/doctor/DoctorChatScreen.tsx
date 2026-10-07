@@ -165,7 +165,7 @@ export default function DoctorChatScreen() {
             <StatusBar style="dark" />
 
             {/* Header */}
-            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => executeAction('GO_BACK')} style={styles.backButton} activeOpacity={0.7}>
                     <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
@@ -327,14 +327,20 @@ const styles = StyleSheet.create({
     messageRowRight: { alignSelf: 'flex-end' },
 
     messageBubble: {
-        borderRadius: 16,
+        borderRadius: 18,
         paddingHorizontal: 16,
         paddingVertical: 10,
-        maxWidth: '100%'
+        maxWidth: '100%',
+        ...Platform.select({
+            ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3 },
+            android: { elevation: 1 },
+        }),
     },
     bubbleLeft: {
         backgroundColor: '#fff',
-        borderBottomLeftRadius: 4
+        borderBottomLeftRadius: 4,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
     },
     bubbleRight: {
         backgroundColor: '#0FBBA1',
@@ -355,14 +361,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 12,
         backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#E5E7EB',
-        gap: 10
+        gap: 10,
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -1 }, shadowOpacity: 0.03, shadowRadius: 4 },
+            android: { elevation: 3 },
+        }),
     },
     input: {
         flex: 1,
         backgroundColor: '#F9FAFB',
         borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
         paddingHorizontal: 16,
         paddingVertical: 10,
         paddingTop: 10,

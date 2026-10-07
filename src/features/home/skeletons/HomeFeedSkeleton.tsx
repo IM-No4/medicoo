@@ -11,7 +11,7 @@ export default function HomeFeedSkeleton() {
           borderRadius={16}
           style={{
             marginHorizontal: 16,
-            marginBottom: 28,
+            marginBottom: 30,
           }}
         />
       ))}

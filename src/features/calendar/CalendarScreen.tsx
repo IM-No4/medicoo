@@ -103,8 +103,15 @@ export default function CalendarScreen() {
     // 2. Loading AND initial empty state
     const showSkeleton = loading && (!isDataForSelectedDate || (medicines.length === 0 && appointments.length === 0));
 
-    /* ---------------- ERROR ---------------- */
-    if (error) {
+    /* ---------------- ERROR ----------------
+       Only a hard blocker when there's no usable cached data to fall back
+       to for this date - loadCalendarCache paints instantly from disk
+       before loadCalendarData's network call even resolves, and the cache
+       is left untouched on a failed fetch (see calendarSlice's
+       loadCalendarData.rejected), so an offline user who just got a local
+       medicine reminder notification and tapped it should still see
+       today's schedule instead of a dead "Network Error" screen. */
+    if (error && !isDataForSelectedDate) {
         return (
             <View style={styles.screen}>
                 <CalendarHeader

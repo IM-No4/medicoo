@@ -272,7 +272,7 @@ export default function AddressBookScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}

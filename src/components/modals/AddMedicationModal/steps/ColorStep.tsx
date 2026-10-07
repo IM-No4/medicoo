@@ -40,39 +40,54 @@ interface ColorStepProps {
   onChange: (data: any) => void;
 }
 
+// Fixed count per row, not flexWrap - see styles.ts's colorRow comment.
+// 6 fits every dot's own width (44) plus a comfortable minimum gap on the
+// narrowest screens this app supports, so it's never a squeeze.
+const DOTS_PER_ROW = 6;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    rows.push(items.slice(i, i + size));
+  }
+  return rows;
+}
+
 export default function ColorStep({ data, onChange }: ColorStepProps) {
   const renderSection = (label: string, field: string, options: string[]) => (
     <View style={{ marginBottom: 24 }}>
       <Text style={styles.colorLabel}>{label}</Text>
-      <View style={styles.colorRow}>
-        {options.map(color => {
-          const isBackground = field === 'color';
-          const isLeftOrRight = field === 'leftColor' || field === 'rightColor';
+      {chunk(options, DOTS_PER_ROW).map((row, rowIndex) => (
+        <View key={rowIndex} style={styles.colorRow}>
+          {row.map(color => {
+            const isBackground = field === 'color';
+            const isLeftOrRight = field === 'leftColor' || field === 'rightColor';
 
-          const isSelected = data[field] === color ||
-            (!data[field] && isBackground && color === '#00C3FF') ||
-            (!data[field] && isLeftOrRight && color === '#FFFFFF');
+            const isSelected = data[field] === color ||
+              (!data[field] && isBackground && color === '#00C3FF') ||
+              (!data[field] && isLeftOrRight && color === '#FFFFFF');
 
-          return (
-            <TouchableOpacity
-              key={color}
-              style={[
-                styles.colorDot,
-                { backgroundColor: color },
-                isSelected && styles.colorDotSelected,
-              ]}
-              onPress={() => onChange({ [field]: color })}
-            >
-              {isSelected && (
-                <View style={{
-                  width: '100%', height: '100%', borderRadius: 999,
-                  borderWidth: 2, borderColor: '#121212'
-                }} />
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+            return (
+              <TouchableOpacity
+                key={color}
+                style={[
+                  styles.colorDot,
+                  { backgroundColor: color },
+                  isSelected && styles.colorDotSelected,
+                ]}
+                onPress={() => onChange({ [field]: color })}
+              >
+                {isSelected && (
+                  <View style={{
+                    width: '100%', height: '100%', borderRadius: 999,
+                    borderWidth: 2, borderColor: '#121212'
+                  }} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ))}
     </View>
   );
 

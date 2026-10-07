@@ -1,4 +1,5 @@
 import { WEB_APP_URL } from '@/src/config/env';
+import { APP_VERSION } from '@/src/utils/appVersion';
 import { useNavigation } from '@react-navigation/native';
 import {
     ChevronDown,
@@ -95,7 +96,7 @@ export default function HelpSupportScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
                     <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
@@ -212,7 +213,7 @@ export default function HelpSupportScreen() {
                 </View>
 
                 <View style={styles.footer}>
-                    <Text style={styles.versionText}>Medicoo App v1.0.0</Text>
+                    <Text style={styles.versionText}>Medicoo App v{APP_VERSION}</Text>
                 </View>
             </ScrollView>
         </View>

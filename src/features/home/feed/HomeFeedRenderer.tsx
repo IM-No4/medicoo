@@ -19,12 +19,14 @@ import HealthTipCard from './cards/HealthTipCard';
 import HomeCareCard from './cards/HomeCareCard';
 import HospitalCard from './cards/HospitalCard';
 import LabPackageCard from './cards/LabPackageCard';
+import NotServiceableCard from './cards/NotServiceableCard';
 import ProductShowcaseCard from './cards/ProductShowcaseCard';
 import PromoCard from './cards/PromoCard';
 import RecentActivityFeedCard from './cards/RecentActivityFeedCard';
 import SeasonalEssentialsCard from './cards/SeasonalEssentialsCard';
 import TrustSignalCard from './cards/TrustSignalCard';
 import UpcomingAppointmentsCard from './cards/UpcomingAppointmentsCard';
+import UpcomingMedicationCard from './cards/UpcomingMedicationCard';
 import { FeedAction } from './feed.actions';
 import { HomeFeedItem } from './feed.types';
 
@@ -37,8 +39,14 @@ export default function HomeFeedRenderer({ item, onAction }: Props) {
   const { data: calendarData } = useSelector((state: RootState) => state.calendar);
 
   if ((item.type as any) === 'GOALS_SECTION') {
+    // GoalsCard is built on HealthSection.tsx, which already carries its
+    // own marginVertical:16 (top AND bottom) - meant for its other context
+    // (the Health tab's own vertical rhythm). Canceling HealthSection's own
+    // margins out and reapplying the feed's standard 30px fresh keeps this
+    // card visually consistent with the rest of the feed regardless of
+    // HealthSection's internals.
     return (
-      <View style={{ marginBottom: 24 }}>
+      <View style={{ marginTop: -16, marginBottom: 14 }}>
         <GoalsCard />
       </View>
     );
@@ -59,10 +67,12 @@ export default function HomeFeedRenderer({ item, onAction }: Props) {
       );
     case 'HEALTH_SUMMARY':
       return <HealthSummary title={item.title} />;
+    case 'UPCOMING_MEDICATION':
+      return <UpcomingMedicationCard data={item} />;
     case 'SEASONAL_ESSENTIALS':
       return <SeasonalEssentialsCard data={item as any} onAction={onAction} />;
     case 'HOME_FEED_FOOTER':
-      return <HomeFeedFooter appName={item.appName} tagline={item.tagline} />;
+      return <HomeFeedFooter appName={item.appName} tagline={item.tagline} showTrustBadges={item.showTrustBadges} />;
     case 'QUICK_ACTIONS':
       return <QuickActions items={item.items} onAction={onAction!} />;
     case 'SERVICES_SECTION':
@@ -71,6 +81,8 @@ export default function HomeFeedRenderer({ item, onAction }: Props) {
       return <UpcomingAppointmentsCard />;
     case 'CATEGORY_ROW':
       return <CategoryRow title={item.title} items={item.items} onAction={onAction!} />;
+    case 'NOT_SERVICEABLE_BANNER':
+      return <NotServiceableCard data={item} />;
     case 'PROMO':
       return <PromoCard data={item as any} onAction={onAction} />;
     case 'HEALTH_TIP':

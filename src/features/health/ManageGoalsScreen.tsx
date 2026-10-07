@@ -12,7 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
-import { ChevronLeft, Trash2, Droplets, Footprints, Moon, Activity, Target, Plus, Salad, Brain, Heart, Users, RefreshCw } from 'lucide-react-native';
+import { ChevronLeft, Trash2, Droplets, Footprints, Moon, Activity, Target, Plus, Salad, Brain, Heart, Users, RefreshCw, WifiOff } from 'lucide-react-native';
 import { AppDispatch, RootState } from '../../redux/store';
 import { deleteGoal, toggleGoalEnabled, toggleGoalShared } from '../../redux/slices/goalsSlice';
 import { loadOnDeviceSteps } from '../../redux/slices/deviceSlice';
@@ -31,6 +31,12 @@ export default function ManageGoalsScreen() {
   const insets = useSafeAreaInsets();
   
   const { goals } = useSelector((state: RootState) => state.goals);
+  // Friends/leaderboard is a live, backend-driven feature (see
+  // FriendsScreen.tsx) with no offline cache of its own - unlike the goals
+  // list itself, there's nothing useful to show it offline, so the card is
+  // dimmed and redirected to a short explainer instead of pushing a screen
+  // that would just fail to load anything.
+  const isOnline = useSelector((state: RootState) => state.connectivity.isOnline);
   const [status, setStatus] = useState<{
     visible: boolean;
     type: StatusType;
@@ -100,8 +106,39 @@ export default function ManageGoalsScreen() {
     dispatch(toggleGoalEnabled(id));
   };
 
-  const handleToggleShared = (id: string) => {
-    dispatch(toggleGoalShared(id));
+  const handleCompareWithFriends = () => {
+    if (!isOnline) {
+      showStatus(
+        'warning',
+        'You\'re Offline',
+        'Comparing progress with friends needs an internet connection. Reconnect and try again.'
+      );
+      return;
+    }
+    navigation.navigate('Friends' as never);
+  };
+
+  const handleToggleShared = async (id: string) => {
+    // Same reasoning as "Compare with Friends" - sharing needs the backend
+    // to actually be reachable, so check up front rather than letting the
+    // request fail and leaving the tap looking like it did nothing.
+    if (!isOnline) {
+      showStatus(
+        'warning',
+        'You\'re Offline',
+        'Sharing a goal with friends needs an internet connection. Reconnect and try again.'
+      );
+      return;
+    }
+
+    try {
+      await dispatch(toggleGoalShared(id)).unwrap();
+    } catch {
+      // toggleGoalShared has no optimistic update and no .rejected reducer
+      // case, so a failed request previously left the tap with zero
+      // feedback at all - the switch/icon just silently didn't change.
+      showStatus('error', 'Could Not Update', 'Something went wrong while updating this goal. Please try again.');
+    }
   };
 
   const handleDelete = (id: string, name: string) => {
@@ -120,7 +157,7 @@ export default function ManageGoalsScreen() {
 
       {/* Header - same recipe as the rest of the Profile/Health screens:
           white bar + shadow, plain icon back button, fontSize 20/600. */}
-      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -141,15 +178,17 @@ export default function ManageGoalsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <TouchableOpacity
           style={styles.friendsCard}
-          onPress={() => navigation.navigate('Friends' as never)}
+          onPress={handleCompareWithFriends}
           activeOpacity={0.8}
         >
           <View style={styles.friendsIconBox}>
-            <Users size={22} color="#FFFFFF" />
+            {isOnline ? <Users size={22} color="#FFFFFF" /> : <WifiOff size={22} color="#FFFFFF" />}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.friendsCardTitle}>Compare with Friends</Text>
-            <Text style={styles.friendsCardSubtitle}>Share goals and see how you stack up</Text>
+            <Text style={styles.friendsCardSubtitle}>
+              {isOnline ? 'Share goals and see how you stack up' : 'Needs an internet connection'}
+            </Text>
           </View>
           <ChevronLeft size={18} color="#FFFFFF" style={{ transform: [{ rotate: '180deg' }] }} />
         </TouchableOpacity>

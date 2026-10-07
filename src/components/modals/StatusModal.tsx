@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export type StatusType = 'idle' | 'loading' | 'success' | 'date_error' | 'error' | 'warning' | 'info';
 
@@ -12,6 +12,7 @@ interface StatusModalProps {
     autoCloseDelay?: number; // Optional: Auto close success messages
     primaryAction?: () => void;
     primaryActionText?: string;
+    secondaryActionText?: string;
 }
 
 const DEFAULT_TITLES: Partial<Record<StatusType, string>> = {
@@ -26,6 +27,26 @@ const PRIMARY_COLORS: Partial<Record<StatusType, string>> = {
     success: '#0FBBA1',
     error: '#EF4444',
     date_error: '#EF4444',
+    warning: '#0FBBA1',
+    info: '#3B82F6',
+};
+
+// Every popup card gets a soft colored glow matching its status (falls back
+// to the app's teal for warning/loading, which have no primary color of
+// their own) instead of a plain neutral drop shadow. Android's `elevation`
+// can't render a colored shadow at all (it's always grey/black no matter
+// what shadowColor says) - genuinely emulating a coloured glow there needs
+// a shadow library, which isn't installed and couldn't be added in this
+// environment (no network access to npm). A translucent colored border
+// ring is the zero-dependency stand-in for the glow on that platform, on
+// top of the same elevation for depth.
+const GLOW_COLORS: Record<StatusType, string> = {
+    idle: '#0FBBA1',
+    loading: '#0FBBA1',
+    success: '#0FBBA1',
+    error: '#EF4444',
+    date_error: '#EF4444',
+    warning: '#F59E0B',
     info: '#3B82F6',
 };
 
@@ -42,7 +63,8 @@ export default function StatusModal({
     onClose,
     autoCloseDelay,
     primaryAction,
-    primaryActionText
+    primaryActionText,
+    secondaryActionText
 }: StatusModalProps) {
 
     // Auto-close logic for success state if requested
@@ -57,11 +79,18 @@ export default function StatusModal({
 
     if (!visible) return null;
 
+    const glowColor = GLOW_COLORS[status];
+    const glowStyle = Platform.select({
+        ios: { shadowColor: glowColor, shadowOpacity: 0.35, shadowRadius: 20, shadowOffset: { width: 0, height: 0 } },
+        android: { borderWidth: 1.5, borderColor: `${glowColor}55` },
+        default: {},
+    });
+
     if (status === 'loading') {
         return (
             <Modal transparent visible={visible} animationType="fade" statusBarTranslucent>
                 <View style={styles.overlay}>
-                    <View style={[styles.card, styles.loadingCard]}>
+                    <View style={[styles.card, styles.loadingCard, glowStyle]}>
                         <ActivityIndicator size="large" color="#0FBBA1" />
                         <Text style={styles.loadingText}>{message || 'Processing...'}</Text>
                     </View>
@@ -87,14 +116,14 @@ export default function StatusModal({
     return (
         <Modal transparent visible={visible} animationType="fade" statusBarTranslucent>
             <View style={styles.overlay}>
-                <View style={styles.card}>
+                <View style={[styles.card, glowStyle]}>
                     <Text style={styles.title}>{title || DEFAULT_TITLES[status]}</Text>
                     {!!message && <Text style={styles.message}>{message}</Text>}
 
                     <View style={styles.buttonRow}>
                         {showCancel && (
                             <TouchableOpacity style={[styles.button, styles.flexButton, styles.secondaryButton]} onPress={onClose}>
-                                <Text style={styles.secondaryButtonText}>Cancel</Text>
+                                <Text style={styles.secondaryButtonText}>{secondaryActionText || 'Cancel'}</Text>
                             </TouchableOpacity>
                         )}
                         <TouchableOpacity
@@ -124,9 +153,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderRadius: 20,
         padding: 24,
-        shadowColor: '#000',
-        shadowOpacity: 0.15,
-        shadowRadius: 16,
+        // Base depth - the actual glow color/opacity/radius (iOS) or border
+        // ring (Android) is layered on top per-status via `glowStyle` above.
         elevation: 8,
     },
     loadingCard: {
@@ -144,12 +172,14 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '700',
         color: '#111827',
+        textAlign: 'center',
     },
     message: {
         marginTop: 8,
         fontSize: 14,
         color: '#6B7280',
         lineHeight: 20,
+        textAlign: 'center',
     },
     buttonRow: {
         flexDirection: 'row',

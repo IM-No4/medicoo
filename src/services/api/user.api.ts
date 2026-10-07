@@ -29,36 +29,28 @@ export const verifyEmailOtp = async (otp: string) => {
     return res.data;
 };
 
-// Doctor Profile APIs
-export const getDoctorProfile = async () => {
-    const res = await apiClient.get('/api/user/get-doctor-profile');
+// Account deletion - starts a 30-day grace period; logging back in with
+// this same account before deletionScheduledFor cancels it automatically
+// (see backend customerLoginController.js), so cancelAccountDeletion below
+// is only needed for a user who stays logged in and changes their mind.
+export const requestAccountDeletion = async () => {
+    const res = await apiClient.post('/api/user/account/delete-request');
     return res.data;
 };
 
-export const updateDoctorDraft = async (formData: FormData) => {
-    const res = await apiClient.put('/api/user/update-doctor-draft', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-    });
+export const cancelAccountDeletion = async () => {
+    const res = await apiClient.post('/api/user/account/delete-cancel');
     return res.data;
 };
 
-export const applyAsDoctor = async (formData: FormData) => {
-    const res = await apiClient.post('/api/user/apply-doctor', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return res.data;
-};
+export interface AccountDeletionStatus {
+    pending: boolean;
+    deletionRequestedAt: string | null;
+    deletionScheduledFor: string | null;
+}
 
-// Update specific doctor settings (status, fees, availability, urgent
-// surcharge) without full application flow
-export const updateDoctorSettings = async (data: {
-    isOnline?: boolean;
-    consultationFees?: any;
-    notificationSettings?: any;
-    availability?: Record<string, { enabled: boolean; start: string; end: string }>;
-    urgentSurchargePercent?: number;
-}) => {
-    const res = await apiClient.put('/api/user/update-doctor-settings', data);
+export const getAccountDeletionStatus = async (): Promise<AccountDeletionStatus> => {
+    const res = await apiClient.get('/api/user/account/deletion-status');
     return res.data;
 };
 

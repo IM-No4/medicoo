@@ -99,7 +99,7 @@ export default React.memo(PromoCard);
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 28,
+    marginBottom: 30,
   },
   scrollContent: {
     paddingHorizontal: 20,

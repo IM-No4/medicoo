@@ -39,7 +39,7 @@ export default React.memo(HealthTipCard);
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: 20,
-    marginBottom: 28,
+    marginBottom: 30,
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,

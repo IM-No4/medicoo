@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { EnabledServices, getAppConfig } from '../../services/api/appConfig.api';
+import { AppUpdateInfo, EnabledServices, getAppConfig, MaintenanceInfo } from '../../services/api/appConfig.api';
 
 interface AppConfigState {
   // Defaults to the current launch state (pharmacy + consultations) so the
@@ -8,6 +8,18 @@ interface AppConfigState {
   // everything" (labTests/homeCare/bloodDonation/ambulance/doctorOnboarding
   // stay off until deliberately launched).
   enabledServices: EnabledServices;
+  // null means "no update known" - a failed/pending fetch must never be
+  // read as update-required or update-available by any consumer of this.
+  update: AppUpdateInfo | null;
+  // null means "no maintenance info known" - treated the same as "not in
+  // maintenance" by every consumer, never as "maintenance is on."
+  maintenance: MaintenanceInfo | null;
+  // Computed by BootCoordinator.ts (not server-sent directly) once
+  // maintenance.enabled is true: true means "let this user into the app,
+  // but hide/disable starting anything new" - set only after a specific
+  // journey-status check for THIS user, never inferred from `maintenance`
+  // alone.
+  restricted: boolean;
   loaded: boolean;
 }
 
@@ -24,32 +36,54 @@ const initialState: AppConfigState = {
     // patient-facing side) is now live.
     doctorOnboarding: false,
   },
+  update: null,
+  maintenance: null,
+  restricted: false,
   loaded: false,
 };
 
 export const loadAppConfig = createAsyncThunk('appConfig/load', async () => {
   const config = await getAppConfig();
-  return config.enabledServices;
+  return config;
 });
 
 const appConfigSlice = createSlice({
   name: 'appConfig',
   initialState,
-  reducers: {},
+  reducers: {
+    setMaintenanceRestricted(state, action: { payload: boolean }) {
+      state.restricted = action.payload;
+    },
+  },
   extraReducers: (builder) => {
     builder.addCase(loadAppConfig.fulfilled, (state, action) => {
-      if (action.payload) {
-        state.enabledServices = action.payload;
+      if (action.payload?.enabledServices) {
+        state.enabledServices = action.payload.enabledServices;
+      }
+      state.update = action.payload?.update ?? null;
+      state.maintenance = action.payload?.maintenance ?? null;
+      // Every fresh config fetch (cold boot, foreground recheck) starts
+      // from "not restricted" and lets BootCoordinator re-derive it - a
+      // stale `restricted: true` from a previous session must never
+      // survive maintenance being turned off.
+      if (!action.payload?.maintenance?.enabled) {
+        state.restricted = false;
       }
       state.loaded = true;
     });
-    // A failed fetch keeps the safe pharmacy-only default rather than
-    // leaving the UI in a half-loaded state.
+    // A failed fetch keeps the safe pharmacy-only default, `update: null`,
+    // and `maintenance: null` rather than leaving the UI in a half-loaded
+    // state or guessing.
     builder.addCase(loadAppConfig.rejected, (state) => {
+      state.update = null;
+      state.maintenance = null;
+      state.restricted = false;
       state.loaded = true;
     });
   },
 });
+
+export const { setMaintenanceRestricted } = appConfigSlice.actions;
 
 export default appConfigSlice.reducer;
 

@@ -1,9 +1,10 @@
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
-    Animated,
+    BackHandler,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -35,7 +36,6 @@ export default function AddGoalScreen() {
     const insets = useSafeAreaInsets();
     const [stepIndex, setStepIndex] = useState(0);
     const [loading, setLoading] = useState(false);
-    const progressAnim = useRef(new Animated.Value(0)).current;
 
     const [status, setStatus] = useState<{
         visible: boolean;
@@ -64,30 +64,32 @@ export default function AddGoalScreen() {
         setForm(prev => ({ ...prev, ...data }));
     };
 
-    const animateProgress = (toStep: number) => {
-        Animated.spring(progressAnim, {
-            toValue: toStep / (STEPS.length - 1),
-            useNativeDriver: false,
-            tension: 60,
-            friction: 10,
-        }).start();
-    };
-
     const goNext = () => {
-        const next = stepIndex + 1;
-        animateProgress(next);
-        setStepIndex(next);
+        setStepIndex(stepIndex + 1);
     };
 
     const goBack = () => {
         if (stepIndex > 0) {
-            const prev = stepIndex - 1;
-            animateProgress(prev);
-            setStepIndex(prev);
+            setStepIndex(stepIndex - 1);
         } else {
             navigation.goBack();
         }
     };
+
+    // Without this, the Android hardware back button/gesture bypasses the
+    // step logic entirely and closes the whole screen mid-wizard - only the
+    // header's own back chevron (which calls goBack directly) respected it.
+    // Same fix as AddMedicationScreen.
+    useFocusEffect(
+        useCallback(() => {
+            const onBackPress = () => {
+                goBack();
+                return true; // Prevents the default pop action
+            };
+            const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+            return () => subscription.remove();
+        }, [stepIndex])
+    );
 
     const isNextDisabled = () => {
         if (stepIndex === 0) return !form.type;
@@ -196,17 +198,14 @@ export default function AddGoalScreen() {
     const StepComponent = STEPS[stepIndex] as any;
     const isLastStep = stepIndex === STEPS.length - 1;
 
-    const progressWidth = progressAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0%', '100%'],
-    });
-
     return (
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <StatusBar style="dark" />
+
+            <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={goBack} style={styles.backButton} activeOpacity={0.7}>
                     <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
@@ -214,13 +213,23 @@ export default function AddGoalScreen() {
                 <View style={{ width: 40 }} />
             </View>
 
+            {/* Segmented step indicator, not a continuous fill bar - a
+                continuous bar starts at 0% width on the very first step,
+                which is the step most people actually see, and reads as a
+                bare gray line with nothing "progress-bar" about it. Each
+                segment here fills in for the step it represents, so the
+                first one is always visibly colored from the moment this
+                screen opens. */}
             <View style={styles.progressTrack}>
-                <Animated.View
-                    style={[
-                        styles.progressFill,
-                        { width: progressWidth, backgroundColor: accentColor },
-                    ]}
-                />
+                {STEP_TITLES.map((_, i) => (
+                    <View
+                        key={i}
+                        style={[
+                            styles.progressSegment,
+                            { backgroundColor: i <= stepIndex ? accentColor : '#E5E7EB' },
+                        ]}
+                    />
+                ))}
             </View>
 
             <ScrollView
@@ -305,15 +314,17 @@ const styles = StyleSheet.create({
         color: '#111827',
     },
     progressTrack: {
-        height: 3,
-        backgroundColor: '#F1F5F9',
+        flexDirection: 'row',
+        gap: 6,
         marginHorizontal: 20,
-        borderRadius: 2,
-        overflow: 'hidden',
         marginTop: 16,
         marginBottom: 8,
     },
-    progressFill: { height: '100%', borderRadius: 2 },
+    progressSegment: {
+        flex: 1,
+        height: 6,
+        borderRadius: 3,
+    },
     footer: {
         paddingHorizontal: 20,
         paddingTop: 12,

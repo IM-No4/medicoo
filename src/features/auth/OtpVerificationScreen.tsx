@@ -153,7 +153,7 @@ export default function OtpVerificationScreen() {
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
                     <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>

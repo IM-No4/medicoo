@@ -1,17 +1,14 @@
-import { AlertCircle, ChevronRight, MessageCircle, Phone, Video } from 'lucide-react-native';
+import { ChevronRight, MessageCircle, Phone, Video } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { executeAction } from '../../../../actions/ActionExecutor';
-import { getProfileDetails } from '../../../../services/api';
-import { getDoctorAppointmentRequests, getMyAppointmentRequests } from '../../../../services/api/doctor.api';
+import { getMyAppointmentRequests } from '../../../../services/api/doctor.api';
 
 type AppointmentItem = {
     requestId: string;
     preferredDate?: string;
     preferredTime?: string;
     consultationType?: 'chat' | 'voice' | 'video';
-    patientDetails?: { name?: string };
-    actionMeta?: { patientName?: string };
     doctorDetails?: { name?: string };
 };
 
@@ -42,8 +39,6 @@ const formatWhen = (item: AppointmentItem) => {
 };
 
 export default function UpcomingAppointmentsCard() {
-    const [isDoctor, setIsDoctor] = useState<boolean | null>(null);
-    const [pendingItems, setPendingItems] = useState<AppointmentItem[]>([]);
     const [upcomingItems, setUpcomingItems] = useState<AppointmentItem[]>([]);
 
     useEffect(() => {
@@ -51,14 +46,7 @@ export default function UpcomingAppointmentsCard() {
 
         (async () => {
             try {
-                const profile = await getProfileDetails();
-                const doctorView = !!profile?.isDoctor;
-                if (cancelled) return;
-                setIsDoctor(doctorView);
-
-                const upcomingRes = doctorView
-                    ? await getDoctorAppointmentRequests({ status: 'upcoming', limit: 10 })
-                    : await getMyAppointmentRequests({ status: 'approved', limit: 10 });
+                const upcomingRes = await getMyAppointmentRequests({ status: 'approved', limit: 10 });
 
                 const requests: AppointmentItem[] = upcomingRes?.data?.requests || [];
                 const now = Date.now();
@@ -68,15 +56,6 @@ export default function UpcomingAppointmentsCard() {
                     .slice(0, 3);
 
                 if (!cancelled) setUpcomingItems(upcoming);
-
-                // New requests waiting on a response only apply to doctors -
-                // this was previously only visible on the Profile screen's
-                // banner, meaning a doctor had to go look for it rather than
-                // seeing it the moment they open the app.
-                if (doctorView) {
-                    const pendingRes = await getDoctorAppointmentRequests({ status: 'pending', limit: 5 });
-                    if (!cancelled) setPendingItems(pendingRes?.data?.requests || []);
-                }
             } catch (error) {
                 console.warn('Failed to load appointments for home screen:', error);
             }
@@ -85,39 +64,16 @@ export default function UpcomingAppointmentsCard() {
         return () => { cancelled = true; };
     }, []);
 
-    if (pendingItems.length === 0 && upcomingItems.length === 0) return null;
+    if (upcomingItems.length === 0) return null;
 
-    const handleSeeAllUpcoming = () => {
-        if (isDoctor) {
-            executeAction('OPEN_MANAGE_APPOINTMENTS', { initialTab: 'upcoming' });
-        } else {
-            executeAction('OPEN_CONSULTATIONS');
-        }
-    };
+    const handleSeeAllUpcoming = () => executeAction('OPEN_CONSULTATIONS');
 
-    const handleSeeAllPending = () => executeAction('OPEN_DOCTOR_PENDING_REQUESTS');
+    const handleOpenItem = (item: AppointmentItem) => executeAction('OPEN_CONSULTATION_DETAIL', { requestId: item.requestId });
 
-    const handleOpenItem = (item: AppointmentItem) => {
-        if (isDoctor) {
-            executeAction('OPEN_PATIENT_CONSULTATION_DETAIL', { appointment: item });
-        } else {
-            executeAction('OPEN_CONSULTATION_DETAIL', { requestId: item.requestId });
-        }
-    };
-
-    // Pending rows use a fixed alert icon (matching the section header)
-    // instead of the chat/voice/video icon - a recolored consultation-type
-    // icon didn't read as "needs your response", it just looked like a
-    // mistinted version of the Upcoming section's icon. Upcoming rows keep
-    // the type icon since there the type itself is useful, settled info.
-    const renderRow = (item: AppointmentItem, index: number, isPending?: boolean) => {
+    const renderRow = (item: AppointmentItem, index: number) => {
         const typeMeta = TYPE_META[item.consultationType || 'video'];
-        const RowIcon = isPending ? AlertCircle : typeMeta.Icon;
-        const iconBg = isPending ? '#FEF3C7' : typeMeta.bg;
-        const iconColor = isPending ? '#B45309' : typeMeta.color;
-        const name = isDoctor
-            ? (item.patientDetails?.name || item.actionMeta?.patientName || 'Patient')
-            : (item.doctorDetails?.name || 'Doctor');
+        const RowIcon = typeMeta.Icon;
+        const name = item.doctorDetails?.name || 'Doctor';
 
         return (
             <TouchableOpacity
@@ -126,14 +82,12 @@ export default function UpcomingAppointmentsCard() {
                 onPress={() => handleOpenItem(item)}
                 activeOpacity={0.85}
             >
-                <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
-                    <RowIcon size={20} color={iconColor} />
+                <View style={[styles.iconBox, { backgroundColor: typeMeta.bg }]}>
+                    <RowIcon size={20} color={typeMeta.color} />
                 </View>
                 <View style={styles.info}>
                     <Text style={styles.primary} numberOfLines={1}>{name}</Text>
-                    <Text style={styles.secondary}>
-                        {isPending ? 'Requested for ' : ''}{formatWhen(item)}
-                    </Text>
+                    <Text style={styles.secondary}>{formatWhen(item)}</Text>
                 </View>
                 <ChevronRight size={16} color="#D1D5DB" />
             </TouchableOpacity>
@@ -141,45 +95,23 @@ export default function UpcomingAppointmentsCard() {
     };
 
     return (
-        <View>
-            {pendingItems.length > 0 && (
-                <View style={styles.container}>
-                    <View style={styles.headerRow}>
-                        <View style={styles.titleRow}>
-                            <AlertCircle size={18} color="#B45309" />
-                            <Text style={styles.title}>New Requests</Text>
-                        </View>
-                        <TouchableOpacity style={styles.seeAllRow} onPress={handleSeeAllPending}>
-                            <Text style={styles.seeAll}>See all</Text>
-                            <ChevronRight size={16} color="#1c1c1e" />
-                        </TouchableOpacity>
-                    </View>
-                    <View style={styles.cardSection}>
-                        {pendingItems.slice(0, 3).map((item, index) => renderRow(item, index, true))}
-                    </View>
-                </View>
-            )}
-
-            {upcomingItems.length > 0 && (
-                <View style={styles.container}>
-                    <View style={styles.headerRow}>
-                        <Text style={styles.title}>Upcoming Appointments</Text>
-                        <TouchableOpacity style={styles.seeAllRow} onPress={handleSeeAllUpcoming}>
-                            <Text style={styles.seeAll}>See all</Text>
-                            <ChevronRight size={16} color="#1c1c1e" />
-                        </TouchableOpacity>
-                    </View>
-                    <View style={styles.cardSection}>
-                        {upcomingItems.map((item, index) => renderRow(item, index))}
-                    </View>
-                </View>
-            )}
+        <View style={styles.container}>
+            <View style={styles.headerRow}>
+                <Text style={styles.title}>Upcoming Appointments</Text>
+                <TouchableOpacity style={styles.seeAllRow} onPress={handleSeeAllUpcoming}>
+                    <Text style={styles.seeAll}>See all</Text>
+                    <ChevronRight size={16} color="#1c1c1e" />
+                </TouchableOpacity>
+            </View>
+            <View style={styles.cardSection}>
+                {upcomingItems.map((item, index) => renderRow(item, index))}
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { marginBottom: 28 },
+    container: { marginBottom: 30 },
     headerRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',

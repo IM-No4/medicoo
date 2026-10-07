@@ -1,5 +1,45 @@
 import { apiClient } from './client';
 
+export interface ApiCoupon {
+  _id: string;
+  code: string;
+  type: string;
+  description?: string;
+  discountType: 'percentage' | 'flat' | 'free_shipping' | 'free_subscription';
+  discountValue: number;
+  minOrderValue?: number;
+  maxDiscount?: number;
+  expiry: string;
+  // Added server-side (customerController.getStoreCoupons) from the
+  // cart's real usage/order-value context - not just "is this coupon
+  // active anywhere", but "can *this* customer actually use it on *this*
+  // cart right now". A coupon this customer has exhausted (globally or
+  // their own per-user allowance) never even reaches the client;
+  // minOrderValue not yet met is the one case still returned, so the UI
+  // can show a "add ₹X more" nudge instead of just hiding it.
+  eligible: boolean;
+  shortfall: number;
+}
+
+/**
+ * Real, admin-managed medicine coupons (customerController.getStoreCoupons -
+ * already filters to type:'medicine', active, and not yet expired) -
+ * CouponScreen.tsx previously showed a hardcoded list instead of this.
+ * `cartAmount` (the store-cart's current subtotal) drives the
+ * minOrderValue eligibility check server-side.
+ */
+export const getStoreCoupons = async (cartAmount?: number): Promise<ApiCoupon[]> => {
+  try {
+    const response = await apiClient.get<ApiCoupon[]>('/api/v1/user/get-store-coupons', {
+      params: { amount: cartAmount },
+    });
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error) {
+    console.error('Failed to fetch coupons', error);
+    return [];
+  }
+};
+
 /**
  * Get cart on app start
  */

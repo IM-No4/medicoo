@@ -1,13 +1,19 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import AppIcon from '../../../components/icons/AppIcon';
+import { APP_VERSION } from '../../../utils/appVersion';
 
 interface Props {
     appName: string;
     tagline: string;
+    // Backend-controlled (HomeFeedFooter.showTrustBadges) - these are real
+    // claims (user count, certification), not decoration, so they must not
+    // render unless the backend says they're actually true. Defaults to
+    // false server-side until there's real data to back them.
+    showTrustBadges?: boolean;
 }
 
-export default function HomeFeedFooter({ appName, tagline }: Props) {
+export default function HomeFeedFooter({ appName, tagline, showTrustBadges }: Props) {
     return (
         <View style={styles.container}>
             <View style={styles.iconContainer}>
@@ -17,28 +23,30 @@ export default function HomeFeedFooter({ appName, tagline }: Props) {
             <Text style={styles.appName}>{appName}</Text>
             <Text style={styles.tagline}>{tagline}</Text>
 
-            <View style={styles.badgesRow}>
-                <View style={styles.badge}>
-                    <AppIcon name="shield-check" size={12} color="#6B7280" />
-                    <Text style={styles.badgeText}>100% Secure</Text>
+            {showTrustBadges && (
+                <View style={styles.badgesRow}>
+                    <View style={styles.badge}>
+                        <AppIcon name="shield-check" size={12} color="#6B7280" />
+                        <Text style={styles.badgeText}>100% Secure</Text>
+                    </View>
+                    <View style={styles.dot} />
+                    <View style={styles.badge}>
+                        <AppIcon name="users" size={12} color="#6B7280" />
+                        <Text style={styles.badgeText}>10M+ Users</Text>
+                    </View>
+                    <View style={styles.dot} />
+                    <View style={styles.badge}>
+                        <AppIcon name="heart" size={12} color="#6B7280" />
+                        <Text style={styles.badgeText}>ISO Certified</Text>
+                    </View>
                 </View>
-                <View style={styles.dot} />
-                <View style={styles.badge}>
-                    <AppIcon name="users" size={12} color="#6B7280" />
-                    <Text style={styles.badgeText}>10M+ Users</Text>
-                </View>
-                <View style={styles.dot} />
-                <View style={styles.badge}>
-                    <AppIcon name="heart" size={12} color="#6B7280" />
-                    <Text style={styles.badgeText}>ISO Certified</Text>
-                </View>
-            </View>
+            )}
 
             <Text style={styles.footerText}>
                 Made with ❤️ for a Healthy India
             </Text>
 
-            <Text style={styles.version}>v2.4.0 • Terms of Service • Privacy Policy</Text>
+            <Text style={styles.version}>v{APP_VERSION} • Terms of Service • Privacy Policy</Text>
         </View >
     );
 }

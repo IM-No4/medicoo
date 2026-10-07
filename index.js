@@ -2,7 +2,7 @@ import messaging from '@react-native-firebase/messaging';
 import { registerRootComponent } from 'expo';
 import { FlatList, Platform, ScrollView, SectionList } from 'react-native';
 import App from './src/app/App';
-import { installGlobalMontserratFont } from './src/bootstrap/globalFont';
+import { installGlobalAppFont } from './src/bootstrap/globalFont';
 // Registers TaskManager.defineTask as a side effect - must be imported
 // unconditionally at module scope, on every JS bundle load (including a
 // headless background-task execution that never goes through App.tsx's
@@ -11,7 +11,7 @@ import './src/services/health/nativeStepsBackgroundTask';
 
 // Must run before the app's first render - see globalFont.ts for why this
 // can't just be Text.defaultProps.
-installGlobalMontserratFont();
+installGlobalAppFont();
 
 // Must be registered outside the React tree - handles data-only FCM messages
 // received while the app is backgrounded/killed. Notification-type messages

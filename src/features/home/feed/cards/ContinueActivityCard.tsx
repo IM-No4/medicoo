@@ -66,7 +66,10 @@ export default React.memo(ContinueActivityCard);
 const styles = StyleSheet.create({
     card: {
         marginHorizontal: 20,
-        marginBottom: 20,
+        // Matches every other feed card's marginBottom:28 - this was 20,
+        // making the gap after this card noticeably tighter than the rest
+        // of the feed's otherwise-uniform rhythm.
+        marginBottom: 30,
         backgroundColor: '#FFFBEB',
         borderRadius: 16,
         padding: 16,

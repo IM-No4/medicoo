@@ -270,7 +270,7 @@ export default function MedicineDetailBottomSheet({
               shadow, plain icon back button. The share/notify buttons on
               the right keep their own filled chip style (iconCircle) -
               they're functional actions, not navigation. */}
-          <View style={[styles.topBar, { paddingTop: insets.top + 4 }]}>
+          <View style={[styles.topBar, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
             <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
               <AppIcon name="chevron-left" size={22} color="#111827" />
             </TouchableOpacity>

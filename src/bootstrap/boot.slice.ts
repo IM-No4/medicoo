@@ -7,6 +7,7 @@ const initialState: BootState = {
   onboardingCompleted: false,
   initialRoute: null,
   deepLinkIntent: null,
+  isSlow: false,
 };
 
 const bootSlice = createSlice({
@@ -15,13 +16,31 @@ const bootSlice = createSlice({
   reducers: {
     bootStart(state) {
       state.status = 'loading';
+      state.isSlow = false;
+    },
+    setBootSlow(state, action: PayloadAction<boolean>) {
+      state.isSlow = action.payload;
     },
     bootSuccess(state, action: PayloadAction<Partial<BootState>>) {
       Object.assign(state, action.payload);
       state.status = 'ready';
+      state.isSlow = false;
     },
     bootFail(state) {
       state.status = 'error';
+      state.isSlow = false;
+    },
+    bootOffline(state) {
+      state.status = 'offline';
+      state.isSlow = false;
+    },
+    bootMandatoryUpdate(state) {
+      state.status = 'mandatoryUpdate';
+      state.isSlow = false;
+    },
+    bootMaintenance(state) {
+      state.status = 'maintenance';
+      state.isSlow = false;
     },
     setOnboardingCompleted(state) {
       state.onboardingCompleted = true;
@@ -37,8 +56,12 @@ const bootSlice = createSlice({
 
 export const {
   bootStart,
+  setBootSlow,
   bootSuccess,
   bootFail,
+  bootOffline,
+  bootMandatoryUpdate,
+  bootMaintenance,
   setOnboardingCompleted,
   setDeepLinkIntent,
   clearDeepLinkIntent,

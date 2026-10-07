@@ -255,9 +255,9 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
             </View>
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16 }}>
-              <Text style={{ color: '#111827', fontSize: 20, fontWeight: '700' }}>When will you take this?</Text>
+              <Text style={{ color: '#111827', fontSize: 18, fontWeight: '700' }}>When will you take this?</Text>
               <TouchableOpacity onPress={() => setShowScheduleModal(false)}>
-                <Text style={{ color: '#0FBBA1', fontSize: 17, fontWeight: '600' }}>Done</Text>
+                <Text style={{ color: '#0FBBA1', fontSize: 15, fontWeight: '600' }}>Done</Text>
               </TouchableOpacity>
             </View>
 
@@ -284,7 +284,7 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 17, color: '#1F2937', fontWeight: scheduleType === option.type ? '600' : '400' }}>
+                      <Text style={{ fontSize: 15, color: '#1F2937', fontWeight: scheduleType === option.type ? '600' : '400' }}>
                         {option.type}
                       </Text>
                       {option.description && (
@@ -294,7 +294,7 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                       )}
                     </View>
                     {scheduleType === option.type && (
-                      <Text style={{ fontSize: 20, color: '#0FBBA1', fontWeight: '600', marginLeft: 12 }}>✓</Text>
+                      <Text style={{ fontSize: 18, color: '#0FBBA1', fontWeight: '600', marginLeft: 12 }}>✓</Text>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -335,9 +335,9 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
               <View style={{ width: 60 }} />
-              <Text style={{ color: '#111827', fontSize: 17, fontWeight: '600' }}>Interval</Text>
+              <Text style={{ color: '#111827', fontSize: 15, fontWeight: '600' }}>Interval</Text>
               <TouchableOpacity onPress={() => setShowIntervalPicker(false)}>
-                <Text style={{ color: '#0FBBA1', fontSize: 17, fontWeight: '600' }}>Done</Text>
+                <Text style={{ color: '#0FBBA1', fontSize: 15, fontWeight: '600' }}>Done</Text>
               </TouchableOpacity>
             </View>
 
@@ -392,11 +392,11 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                   }}
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 17, color: '#1F2937', fontWeight: intervalValue === num ? '600' : '400' }}>
+                    <Text style={{ fontSize: 15, color: '#1F2937', fontWeight: intervalValue === num ? '600' : '400' }}>
                       {num} {intervalType}{num > 1 ? 's' : ''}
                     </Text>
                     {intervalValue === num && (
-                      <Text style={{ fontSize: 20, color: '#0FBBA1', fontWeight: '600' }}>✓</Text>
+                      <Text style={{ fontSize: 18, color: '#0FBBA1', fontWeight: '600' }}>✓</Text>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -438,11 +438,11 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
               <View style={{ width: 60 }} />
-              <Text style={{ color: '#111827', fontSize: 17, fontWeight: '600' }}>
+              <Text style={{ color: '#111827', fontSize: 15, fontWeight: '600' }}>
                 {cycleEditType === 'on' ? 'Days On' : 'Days Off'}
               </Text>
               <TouchableOpacity onPress={() => setShowCycleDaysPicker(false)}>
-                <Text style={{ color: '#0FBBA1', fontSize: 17, fontWeight: '600' }}>Done</Text>
+                <Text style={{ color: '#0FBBA1', fontSize: 15, fontWeight: '600' }}>Done</Text>
               </TouchableOpacity>
             </View>
 
@@ -467,11 +467,11 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                   }}
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 17, color: '#1F2937', fontWeight: currentValue === num ? '600' : '400' }}>
+                    <Text style={{ fontSize: 15, color: '#1F2937', fontWeight: currentValue === num ? '600' : '400' }}>
                       {num} {num === 1 ? 'Day' : 'Days'}
                     </Text>
                     {currentValue === num && (
-                      <Text style={{ fontSize: 20, color: '#0FBBA1', fontWeight: '600' }}>✓</Text>
+                      <Text style={{ fontSize: 18, color: '#0FBBA1', fontWeight: '600' }}>✓</Text>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -510,13 +510,13 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
 
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
                 <TouchableOpacity onPress={onIosCancel}>
-                  <Text style={{ color: '#6B7280', fontSize: 17, fontWeight: '600' }}>Cancel</Text>
+                  <Text style={{ color: '#6B7280', fontSize: 15, fontWeight: '600' }}>Cancel</Text>
                 </TouchableOpacity>
-                <Text style={{ color: '#111827', fontSize: 17, fontWeight: '600' }}>
+                <Text style={{ color: '#111827', fontSize: 15, fontWeight: '600' }}>
                   {pickerMode === 'time' ? 'Select Time' : dateField === 'start' ? 'Start Date' : 'End Date'}
                 </Text>
                 <TouchableOpacity onPress={onIosDone}>
-                  <Text style={{ color: '#0FBBA1', fontSize: 17, fontWeight: '600' }}>Done</Text>
+                  <Text style={{ color: '#0FBBA1', fontSize: 15, fontWeight: '600' }}>Done</Text>
                 </TouchableOpacity>
               </View>
               <DateTimePicker

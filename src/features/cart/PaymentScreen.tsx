@@ -1,42 +1,25 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
-  Modal,
   Platform,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import {
   ChevronLeft,
   ChevronRight,
   CreditCard,
   ShieldCheck,
-  Check,
   Coins,
   AlertCircle,
 } from 'lucide-react-native';
-import RazorpayCheckout from 'react-native-razorpay';
-import { apiClient } from '../../services/api/client';
-import { getDocumentViewUrl } from '../../services/api/document.api';
-import { clearCart } from '../../services/api/cart.api';
-import { createRazorpayOrder } from '../../services/api/payment.api';
-import { clearStoreCartLocal } from '../../redux/slices/cartSlice';
-import { dismissActivity } from '../../redux/slices/activitySlice';
-import { setActiveOrder } from '../../redux/slices/orderSlice';
 import { RootState } from '../../redux/store';
 import { StatusBar } from 'expo-status-bar';
-
-interface RazorpayResult {
-  razorpay_order_id: string;
-  razorpay_payment_id: string;
-  razorpay_signature: string;
-}
 
 const formatPrice = (amount: number): string => {
   const parts = amount.toFixed(2).split('.');
@@ -44,11 +27,17 @@ const formatPrice = (amount: number): string => {
   return parts.join('.');
 };
 
+// Purely the "pick a payment method" screen - everything that actually
+// moves money or touches stock (the store/inventory hold, the Razorpay
+// order, the checkout itself, placing the order) lives on
+// VerifyingOrderScreen.tsx now, reached from the Pay button below. Keeping
+// this screen lean means tapping Pay always lands on a real "here's what's
+// happening" screen instead of a spinner modal sitting on top of the
+// method picker.
 export default function PaymentScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const dispatch = useDispatch();
 
   const {
     storeId,
@@ -72,86 +61,25 @@ export default function PaymentScreen() {
   }, [carts, storeId]);
 
   const [selectedMethod, setSelectedMethod] = useState<'online' | 'cod'>('online');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('Initiating transaction...');
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  const [orderId, setOrderId] = useState('');
-  const [orderNumber, setOrderNumber] = useState('');
-  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  // Backend still rejects a submitted order either way (maintenanceGate.js
+  // on /order/validate-checkout and /order/place-order) - this just avoids
+  // letting someone pick a payment method first only to hit an error.
+  const maintenance = useSelector((state: RootState) => state.appConfig.maintenance);
+  const isCheckoutPaused = Boolean(maintenance?.enabled || maintenance?.services?.pharmacy === 'maintenance');
 
-  // Cart items don't change mid-checkout - snapshot once so the payment
-  // callback (which fires after this component may have re-rendered) always
-  // builds the order from a consistent set of items.
-  const cartItemsRef = useRef(Object.values(carts[storeId]?.items || {}));
-
-  const buildOrderPayload = (paymentMethod: 'online' | 'cod', razorpayResult?: RazorpayResult) => ({
-    storeId,
-    items: cartItemsRef.current.map((item: any) => ({
-      productId: item.medicineId,
-      sku: item.sku,
-      name: item.name,
-      price: item.price,
-      discountPrice: item.discountPrice,
-      quantity: item.quantity,
-      brand: item.brand || '',
-      composition: item.composition || '',
-      prescriptionRequired: item.prescriptionRequired || false,
-      image: item.image || null,
-      batchId: item.batchId || String(item.medicineId),
-      expiryDate: item.expiryDate || null,
-    })),
-    billDetails: {
-      itemsCost: subtotal,
-      deliveryCost: deliveryFee,
-      taxes: taxes,
-      couponDiscount: couponDiscount,
-      platformFee: platformFee,
-      packagingCharges: otherCharges,
-      totalAmount: amount,
-      finalTotal: amount,
-      totalItems: cartItemsRef.current.reduce((sum: number, item: any) => sum + item.quantity, 0),
-    },
-    deliveryAddress: selectedAddress ? {
-      label: selectedAddress.label || 'Home',
-      fullAddress: selectedAddress.fullAddress || '',
-      latitude: Number(selectedAddress.latitude) || 0,
-      longitude: Number(selectedAddress.longitude) || 0,
-      // selectedAddress.receiverPhone doesn't exist - the real field is
-      // receiverNumber (matches the backend's CustomerAddress schema) - so
-      // this always fell through to the fake placeholder before, meaning
-      // real orders were recording a fabricated contact number.
-      receiverName: selectedAddress.receiverName || '',
-      receiverPhone: selectedAddress.receiverNumber || '',
-    } : null,
-    paymentMethod,
-    razorpayOrderId: razorpayResult?.razorpay_order_id,
-    razorpayPaymentId: razorpayResult?.razorpay_payment_id,
-    razorpaySignature: razorpayResult?.razorpay_signature,
-    mode: 'online',
-    // 'doctor' points at a PrescribedMedicine record via prescription_id;
-    // 'image' covers both a freshly-uploaded prescription and one picked
-    // from the user's existing documents - both are backed by a
-    // UserDocument, viewable via prescription_uri.
-    prescription_mode: prescriptionMode === 'doctor' ? 'doctor' : prescriptionMode ? 'image' : 'none',
-    prescription_id: prescriptionMode === 'doctor' ? prescriptionId : prescriptionDocumentId,
-    prescription_uri: prescriptionMode === 'doctor' ? undefined : (prescriptionDocumentId ? getDocumentViewUrl(prescriptionDocumentId) : undefined),
-    prescription_required: !!prescriptionRequired,
-  });
-
-  const finalizeOrder = async (paymentMethod: 'online' | 'cod', razorpayResult?: RazorpayResult) => {
-    setStatusMessage('Placing order...');
-    const orderRes = await apiClient.post('/api/orders/place-order', buildOrderPayload(paymentMethod, razorpayResult));
-    await handlePaymentSuccess(orderRes.data.orderId, orderRes.data.orderNumber);
-  };
-
-  const handlePay = async () => {
+  const handlePay = () => {
+    if (isCheckoutPaused) {
+      setPaymentError(maintenance?.message || "We're performing scheduled maintenance. Please try again shortly.");
+      return;
+    }
     setPaymentError(null);
 
     // Defense in depth: CartScreen already blocks getting here without a
-    // selected address, but this screen shouldn't trust that and place an
-    // order with deliveryAddress: null if it's ever reached another way
-    // (deep link, back-forward navigation, etc).
+    // selected address, but this screen shouldn't trust that and hand off
+    // to VerifyingOrderScreen with deliveryAddress: null if it's ever
+    // reached another way (deep link, back-forward navigation, etc).
     if (!selectedAddress) {
       setPaymentError('Please select a delivery address before paying.');
       navigation.navigate('AddressBookModal');
@@ -164,109 +92,21 @@ export default function PaymentScreen() {
       return;
     }
 
-    if (selectedMethod === 'cod') {
-      setIsProcessing(true);
-      try {
-        await finalizeOrder('cod');
-      } catch (error: any) {
-        setIsProcessing(false);
-        setPaymentError(error?.response?.data?.message || 'Could not place your order. Please try again.');
-      }
-      return;
-    }
-
-    setIsProcessing(true);
-    setStatusMessage('Connecting to payment gateway...');
-    try {
-      const { orderId: razorpayOrderId, amount: amountInPaise, currency, keyId } = await createRazorpayOrder(amount);
-      setIsProcessing(false);
-
-      const result: RazorpayResult = await RazorpayCheckout.open({
-        key: keyId,
-        order_id: razorpayOrderId,
-        amount: amountInPaise,
-        currency,
-        name: 'Medicoo',
-        description: `Order from ${pharmacyName}`,
-        prefill: {
-          name: selectedAddress?.receiverName || '',
-          contact: selectedAddress?.receiverNumber || '',
-        },
-        theme: { color: '#089643' },
-      });
-
-      setIsProcessing(true);
-      setStatusMessage('Payment received, confirming order...');
-      try {
-        await finalizeOrder('online', result);
-      } catch (error: any) {
-        setIsProcessing(false);
-        setPaymentError(
-          error?.response?.data?.message || 'Payment succeeded but we could not confirm your order. Please contact support before retrying.'
-        );
-      }
-    } catch (error: any) {
-      setIsProcessing(false);
-      // RazorpayCheckout rejects with {code, description} on failure/cancel;
-      // our own API calls reject with an axios error instead.
-      setPaymentError(error?.description || error?.response?.data?.message || 'Could not complete payment. Please try again.');
-    }
-  };
-
-  const handlePaymentSuccess = async (forcedOrderId: string, forcedOrderNumber: string) => {
-    setIsProcessing(true);
-    setStatusMessage('Clearing shopping cart...');
-    try {
-      await clearCart(storeId);
-    } catch (e) {
-      console.warn('Failed clearing cart from database, continuing locally', e);
-    }
-
-    setOrderId(forcedOrderId);
-    setOrderNumber(forcedOrderNumber);
-
-    dispatch(
-      setActiveOrder({
-        orderId: forcedOrderId,
-        orderNumber: forcedOrderNumber,
-        storeId,
-        storeName: pharmacyName,
-        amount,
-        address: selectedAddress,
-        status: 'pending',
-        timestamp: Date.now(),
-        items: cartItemsRef.current.map((item: any) => ({
-          productId: item.medicineId,
-          sku: item.sku,
-          name: item.name,
-          price: item.price,
-          discountPrice: item.discountPrice,
-          quantity: item.quantity,
-          brand: item.brand || '',
-          composition: item.composition || '',
-          prescriptionRequired: item.prescriptionRequired || false,
-          image: item.image || null,
-          batchId: item.batchId || String(item.medicineId),
-          expiryDate: item.expiryDate || null,
-        })),
-        billData: {
-          itemsCost: subtotal,
-          deliveryCost: deliveryFee,
-          taxes: taxes,
-          couponDiscount: couponDiscount,
-          platformFee: platformFee,
-          packagingCharges: otherCharges,
-          totalAmount: amount,
-          finalTotal: amount,
-          totalItems: cartItemsRef.current.reduce((sum: number, item: any) => sum + item.quantity, 0),
-        }
-      })
-    );
-
-    dispatch(dismissActivity() as any);
-    dispatch(clearStoreCartLocal({ storeId }));
-    setIsProcessing(false);
-    setShowSuccessOverlay(true);
+    navigation.navigate('VerifyingOrder', {
+      storeId,
+      amount,
+      deliveryFee,
+      subtotal,
+      taxes,
+      couponDiscount,
+      platformFee,
+      otherCharges,
+      prescriptionMode,
+      prescriptionDocumentId,
+      prescriptionId,
+      prescriptionRequired,
+      paymentMethod: selectedMethod,
+    });
   };
 
   return (
@@ -274,7 +114,7 @@ export default function PaymentScreen() {
       <StatusBar style="dark" />
 
       {/* Top Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <View style={styles.headerLeftRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
             <ChevronLeft size={22} color="#111827" />
@@ -350,71 +190,19 @@ export default function PaymentScreen() {
       {/* Sticky footer pay button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : 16 }]}>
         <TouchableOpacity
-          style={styles.payBtn}
+          style={[styles.payBtn, isCheckoutPaused && styles.payBtnDisabled]}
           onPress={handlePay}
           activeOpacity={0.8}
+          disabled={isCheckoutPaused}
         >
           <Text style={styles.payBtnText}>
-            {selectedMethod === 'cod' ? 'Place Order' : `Pay ₹${formatPrice(amount)}`}
+            {isCheckoutPaused
+              ? 'Temporarily Unavailable'
+              : selectedMethod === 'cod' ? 'Place Order' : `Pay ₹${formatPrice(amount)}`}
           </Text>
-          <ChevronRight size={18} color="#FFFFFF" />
+          {!isCheckoutPaused && <ChevronRight size={18} color="#FFFFFF" />}
         </TouchableOpacity>
       </View>
-
-      <Modal visible={isProcessing} transparent animationType="fade">
-        <View style={styles.loadingOverlay}>
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color="#089643" />
-            <Text style={styles.loadingTitle}>Processing Payment</Text>
-            <Text style={styles.loadingSubtitle}>{statusMessage}</Text>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={showSuccessOverlay} transparent animationType="fade">
-        <View style={styles.successOverlay}>
-          <View style={styles.successBox}>
-            <View style={styles.successIconOuter}>
-              <View style={styles.successIconInner}>
-                <Check size={40} color="#FFFFFF" strokeWidth={3} />
-              </View>
-            </View>
-
-            <Text style={styles.successTitle}>Order Placed Successfully!</Text>
-            <Text style={styles.successSubtitle}>
-              Your medicine order from <Text style={{ fontWeight: '700' }}>{pharmacyName}</Text> has been accepted and is being processed.
-            </Text>
-
-            <View style={styles.receiptContainer}>
-              <View style={styles.receiptRow}>
-                <Text style={styles.receiptLabel}>Order ID</Text>
-                <Text style={styles.receiptValue}>{orderNumber}</Text>
-              </View>
-              <View style={styles.receiptRow}>
-                <Text style={styles.receiptLabel}>Paid Amount</Text>
-                <Text style={styles.receiptValue}>₹{formatPrice(amount)}</Text>
-              </View>
-              <View style={styles.receiptRow}>
-                <Text style={styles.receiptLabel}>Delivery Address</Text>
-                <Text style={[styles.receiptValue, { flex: 1, textAlign: 'right' }]} numberOfLines={1}>
-                  {selectedAddress?.label || 'Home'} - {selectedAddress?.fullAddress || 'Selected Address'}
-                </Text>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={styles.continueBtn}
-              onPress={() => {
-                setShowSuccessOverlay(false);
-                navigation.navigate('CartStack', { screen: 'LiveTracking' });
-              }}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.continueBtnText}>Track Order Live</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -599,117 +387,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
+  payBtnDisabled: {
+    backgroundColor: '#9CA3AF',
+  },
   payBtnText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  loadingOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingBox: {
-    backgroundColor: '#FFFFFF',
-    padding: 24,
-    borderRadius: 16,
-    alignItems: 'center',
-    width: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  loadingTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#111827',
-    marginTop: 16,
-  },
-  loadingSubtitle: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 6,
-    textAlign: 'center',
-  },
-  successOverlay: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  successBox: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  successIconOuter: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: '#DCFCE7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  successIconInner: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    backgroundColor: '#089643',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  successTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#111827',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  successSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
-    paddingHorizontal: 16,
-  },
-  receiptContainer: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 16,
-    padding: 16,
-    width: '100%',
-    marginBottom: 40,
-  },
-  receiptRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  receiptLabel: {
-    fontSize: 13,
-    color: '#64748B',
-  },
-  receiptValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  continueBtn: {
-    backgroundColor: '#089643',
-    borderRadius: 14,
-    paddingVertical: 16,
-    width: '100%',
-    alignItems: 'center',
-  },
-  continueBtnText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '800',

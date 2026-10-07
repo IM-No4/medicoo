@@ -10,6 +10,7 @@ import React, {
 import {
   Animated,
   RefreshControl,
+  ScrollView,
   View,
   Platform,
   TouchableOpacity,
@@ -20,7 +21,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { executeAction as runGlobalAction } from '../../actions/ActionExecutor';
 import MultiStoreCartBar from '../../components/cart/MultiStoreCartBar';
-import HomeHeader from './components/HomeHeader';
+import HomeHeader, { HOME_HEADER_ANDROID_EXTRA_TOP } from './components/HomeHeader';
+import OfflineHomeHeader from './components/OfflineHomeHeader';
+import OfflineHomeContent from './components/OfflineHomeContent';
 import HomeFeedRenderer from './feed/HomeFeedRenderer';
 
 import HealthSummarySkeleton from './skeletons/HealthSummarySkeleton';
@@ -40,6 +43,7 @@ import { useFeedActionExecutor } from './hooks/useFeedActionExecutor';
 import { getLocalDateString } from '../../utils/dateUtils';
 import { useHomeFeed } from './hooks/useHomeFeed';
 import PrescriptionUploadModal from '../../components/modals/PrescriptionUploadModal';
+import { attemptSync } from '../../services/offlineSync';
 
 // Skeletons are still used for initial load
 const LoadingSkeletons = () => (
@@ -70,6 +74,12 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
 
   // Used to lift the Medo FAB above MultiStoreCartBar when it's showing,
   // instead of the two overlapping.
+  // Also used as the FlatList's `extraData` in the online branch below -
+  // must stay a top-level hook call (not inline in JSX) because a hook
+  // called only inside the post-early-return online tree would run a
+  // different number of times than the offline branch above it, which
+  // React detects as "Rendered fewer hooks than expected" the moment
+  // connectivity flips from online to offline.
   const carts = useSelector((state: RootState) => state.cart);
   const hasCartItems = useMemo(
     () => Object.values(carts).some((storeCart: any) => Object.keys(storeCart.items).length > 0),
@@ -148,7 +158,17 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch<AppDispatch>();
 
-  const HEADER_HEIGHT = HEADER_MAX_HEIGHT + insets.top;
+  // The header's TRUE total on-screen height - collapsible content +
+  // safe-area inset + Android's extra top padding. This is the ONE value
+  // everything below measures against (the header's own render height via
+  // the maxHeight prop, the collapse-scroll distance, the content's top
+  // offset, and the dark-status-bar scroll threshold), so none of them can
+  // drift out of sync with each other again - previously `maxHeight` was
+  // passed to HomeHeader as the bare HEADER_MAX_HEIGHT (excluding the
+  // safe-area inset), which meant the header's collapse animation moved it
+  // up by less than its actual height, leaving a sliver of it stuck on
+  // screen after a full scroll.
+  const HEADER_HEIGHT = HEADER_MAX_HEIGHT + insets.top + HOME_HEADER_ANDROID_EXTRA_TOP;
 
   const [darkStatusBar, setDarkStatusBar] = useState(false);
   const lastStatusRef = useRef(false);
@@ -157,16 +177,40 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
     (state: RootState) => state.app.homeBootstrapped
   );
 
+  // The backend feed has no offline fallback of its own - while offline,
+  // render the offline-capable slice of the app directly (cached vitals,
+  // goals, on-device steps, shortcuts) instead of an empty list where the
+  // feed would have been. See OfflineHomeContent.tsx.
+  const isOnline = useSelector((state: RootState) => state.connectivity.isOnline);
+
+  // Pull-to-refresh on the offline screen (below) - runs the exact same
+  // reachability check the background coordinator does every 45s, just on
+  // demand. If it turns out we're actually back online, isOnline flips in
+  // Redux and this component's own re-render swaps out of the offline
+  // branch entirely - nothing further to do here than await it.
+  const [offlineRefreshing, setOfflineRefreshing] = useState(false);
+  const handleOfflineRefresh = useCallback(async () => {
+    setOfflineRefreshing(true);
+    try {
+      await attemptSync();
+    } finally {
+      setOfflineRefreshing(false);
+    }
+  }, []);
+
   // Combined loading state: App bootstrap OR Feed initial load (if data is empty)
   // We use feedLoading && feedData.length === 0 to denote "Waiting for first batch"
   const isInitialLoading = !homeBootstrapped || (feedLoading && feedData.length === 0);
 
   useFocusEffect(
     useCallback(() => {
-      const shouldBeDark = scrollValueRef.current > HEADER_MAX_HEIGHT;
+      // HEADER_HEIGHT (the true total height), not the bare content
+      // constant - this is exactly the distance the header actually
+      // travels before it's fully off-screen, on any device/OS.
+      const shouldBeDark = scrollValueRef.current > HEADER_HEIGHT;
       setDarkStatusBar(shouldBeDark);
       lastStatusRef.current = shouldBeDark;
-    }, [])
+    }, [HEADER_HEIGHT])
   );
 
   const onRefresh = useCallback(async () => {
@@ -179,7 +223,7 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
   useEffect(() => {
     const id = scrollY.addListener(({ value }) => {
       scrollValueRef.current = value;
-      const shouldBeDark = value > HEADER_MAX_HEIGHT;
+      const shouldBeDark = value > HEADER_HEIGHT;
 
       if (lastStatusRef.current !== shouldBeDark) {
         lastStatusRef.current = shouldBeDark;
@@ -188,7 +232,11 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
     });
 
     return () => scrollY.removeListener(id);
-  }, [scrollY]);
+    // HEADER_HEIGHT depends on insets.top, which can resolve to 0 on the
+    // very first frame on some Android devices before updating - without
+    // it in this dependency array, this listener would keep comparing
+    // against a stale (too-small) threshold forever once registered.
+  }, [scrollY, HEADER_HEIGHT]);
 
   useEffect(() => {
     if (!homeBootstrapped) {
@@ -223,8 +271,15 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
         </View>
       );
     }
-    return null;
-  }, [feedLoading, isInitialLoading]);
+    if (isInitialLoading) return null;
+    // The feed's actual last card (HomeFeedFooter.tsx) ends in a solid gray
+    // (#F9FAFB) block - the FlatList's own background behind it is the
+    // screen's white, so any bottom clearance reserved via
+    // contentContainerStyle's padding showed as a jarring white gap right
+    // after that gray section. Painting the clearance itself in the same
+    // gray keeps it reading as one continuous block instead of a seam.
+    return <View style={{ height: hasCartItems ? 100 : 24, backgroundColor: '#F9FAFB' }} />;
+  }, [feedLoading, isInitialLoading, hasCartItems]);
 
   // Manual isFocused tracking since useIsFocused is causing issues
   const [isFocused, setIsFocused] = useState(false);
@@ -320,6 +375,30 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
     });
   };
 
+  // Deliberately a completely separate tree, not a bunch of conditionals
+  // sprinkled through the normal one below - the normal layout's header,
+  // FlatList-driven feed, Medo FAB, and cart bar are all either
+  // network-dependent or exist to surface network-dependent content, none
+  // of which applies here. See OfflineHomeHeader.tsx/OfflineHomeContent.tsx
+  // and MainTabs.tsx (hides the bottom tab bar for the same reason).
+  if (!isOnline) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#F8F9FE' }}>
+        {isFocused && <StatusBar style="light" />}
+        <OfflineHomeHeader />
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
+          refreshControl={
+            <RefreshControl refreshing={offlineRefreshing} onRefresh={handleOfflineRefresh} tintColor="#0FBBA1" />
+          }
+        >
+          <OfflineHomeContent />
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
       {isFocused && (
@@ -341,7 +420,7 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
           height: insets.top,
           backgroundColor: '#ffffff',
           opacity: scrollY.interpolate({
-            inputRange: [HEADER_MAX_HEIGHT - 30, HEADER_MAX_HEIGHT + 10],
+            inputRange: [HEADER_HEIGHT - 30, HEADER_HEIGHT + 10],
             outputRange: [0, 1],
             extrapolate: 'clamp',
           }),
@@ -351,14 +430,14 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
 
       <HomeHeader
         scrollY={scrollY}
-        maxHeight={HEADER_MAX_HEIGHT}
+        maxHeight={HEADER_HEIGHT}
         onOpenCommandPalette={onOpenCommandPalette}
         dynamicConfig={dynamicHeaderConfig}
       />
 
       <Animated.FlatList
         data={isInitialLoading ? [] : visibleFeedData}
-        extraData={useSelector((state: RootState) => state.cart)}
+        extraData={carts}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <HomeFeedRenderer item={item} onAction={executeAction} />
@@ -375,9 +454,10 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingTop: HEADER_HEIGHT + 12,
-          // Clears the floating MultiStoreCartBar rendered below once
-          // there are cart items.
-          paddingBottom: 100,
+          // Bottom clearance (for the floating MultiStoreCartBar, when
+          // present) is now painted by renderFooter's own colored spacer
+          // instead of here, so it can match the feed footer's gray
+          // background instead of showing the screen's plain white.
         }}
         scrollEventThrottle={8}
         onScroll={Animated.event(

@@ -1,6 +1,6 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
-import { ChevronLeft, Clock, Plus, User, UserPlus } from "lucide-react-native";
+import { Check, ChevronLeft, ChevronRight, Clock, Plus, User, UserPlus, X } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -9,6 +9,7 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -19,7 +20,14 @@ import ConfirmModal from "../../../../components/modals/ConfirmModal";
 import StatusModal, {
   StatusType,
 } from "../../../../components/modals/StatusModal";
-import { getFamilyMembers, removeFamilyMember } from "../../../../services/api";
+import {
+  getFamilyMembers,
+  getIncomingRequests,
+  getMyMemberships,
+  removeFamilyMember,
+  respondToRequest,
+  updateMySharingPermissions,
+} from "../../../../services/api";
 
 interface FamilyMember {
   _id: string;
@@ -47,6 +55,29 @@ interface PendingRequest {
   expiresAt: string;
 }
 
+interface IncomingRequest {
+  _id: string;
+  requesterUserId: {
+    name: string;
+    med_id: string;
+    profileImage?: string;
+  };
+  relation: string;
+  expiresAt: string;
+}
+
+interface Membership {
+  _id: string;
+  relation: string;
+  addedBy: {
+    name: string;
+    profileImage?: string;
+  };
+  permissions?: {
+    viewMedicalRecords?: boolean;
+  };
+}
+
 export default function FamilyMembersScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -54,6 +85,10 @@ export default function FamilyMembersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
+  const [incomingRequests, setIncomingRequests] = useState<IncomingRequest[]>([]);
+  const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   // Status Modal State
   const [statusVisible, setStatusVisible] = useState(false);
@@ -70,9 +105,28 @@ export default function FamilyMembersScreen() {
 
   const fetchMembers = useCallback(async () => {
     try {
-      const data = await getFamilyMembers();
+      const [data, incoming, membershipsRes] = await Promise.all([
+        getFamilyMembers(),
+        // Someone else's request into this account - previously fetched
+        // by nothing at all in the app, so an incoming request was
+        // completely invisible short of a push notification landing.
+        getIncomingRequests().catch((e) => {
+          console.error("Error fetching incoming family requests:", e);
+          return [];
+        }),
+        // Groups the CURRENT user has been linked INTO by someone else -
+        // the reverse of `data.members` above (which only lists groups
+        // this user themselves owns). This is what surfaces the sharing
+        // toggle to the person whose data is actually at stake.
+        getMyMemberships().catch((e) => {
+          console.error("Error fetching family memberships:", e);
+          return { data: [] };
+        }),
+      ]);
       setMembers(data.members || []);
       setPendingRequests(data.pendingRequests || []);
+      setIncomingRequests(Array.isArray(incoming) ? incoming : []);
+      setMemberships(membershipsRes?.data || []);
     } catch (error) {
       console.error("Error fetching family members:", error);
     } finally {
@@ -80,6 +134,61 @@ export default function FamilyMembersScreen() {
       setRefreshing(false);
     }
   }, []);
+
+  const handleToggleSharing = async (membership: Membership, value: boolean) => {
+    setTogglingId(membership._id);
+    // Optimistic - a household head viewing this isn't waiting on a
+    // network round trip to see their own toggle flip.
+    setMemberships((prev) =>
+      prev.map((m) =>
+        m._id === membership._id
+          ? { ...m, permissions: { ...m.permissions, viewMedicalRecords: value } }
+          : m
+      )
+    );
+    try {
+      await updateMySharingPermissions(membership._id, value);
+    } catch (error) {
+      // Revert on failure.
+      setMemberships((prev) =>
+        prev.map((m) =>
+          m._id === membership._id
+            ? { ...m, permissions: { ...m.permissions, viewMedicalRecords: !value } }
+            : m
+        )
+      );
+      setStatusMode("error");
+      setStatusTitle("Error");
+      setStatusMessage("Failed to update sharing settings.");
+      setStatusVisible(true);
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const handleRespond = async (req: IncomingRequest, action: "accept" | "reject") => {
+    setRespondingId(req._id);
+    try {
+      await respondToRequest(req._id, action);
+      setIncomingRequests((prev) => prev.filter((r) => r._id !== req._id));
+      if (action === "accept") {
+        setStatusMode("success");
+        setStatusTitle("Request Accepted");
+        setStatusMessage(`You're now linked with ${req.requesterUserId.name}.`);
+        setStatusVisible(true);
+        fetchMembers();
+      }
+    } catch (error: any) {
+      setStatusMode("error");
+      setStatusTitle("Error");
+      setStatusMessage(
+        error?.response?.data?.message || "Failed to respond to this request.",
+      );
+      setStatusVisible(true);
+    } finally {
+      setRespondingId(null);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -133,8 +242,26 @@ export default function FamilyMembersScreen() {
     const displayImage = isLinked ? item.linkedUserId?.profileImage : null;
     const medId = item.linkedUserId?.med_id;
 
+    // Only a linked (real, registered) member has any health data to view
+    // in the first place - a manually-added, unregistered member has
+    // nothing behind it to fetch.
+    const CardWrapper = isLinked ? TouchableOpacity : View;
+
     return (
-      <View key={item._id} style={styles.card}>
+      <CardWrapper
+        key={item._id}
+        style={styles.card}
+        {...(isLinked
+          ? {
+              activeOpacity: 0.7,
+              onPress: () =>
+                navigation.navigate("FamilyMemberHealth", {
+                  memberId: item._id,
+                  name: displayName,
+                }),
+            }
+          : {})}
+      >
         <View style={styles.cardMain}>
           <View style={styles.avatarCircle}>
             {displayImage ? (
@@ -166,6 +293,7 @@ export default function FamilyMembersScreen() {
               </Text>
             )}
           </View>
+          {isLinked && <ChevronRight size={18} color="#9CA3AF" />}
         </View>
 
         <View style={styles.cardFooter}>
@@ -192,6 +320,92 @@ export default function FamilyMembersScreen() {
             <Text style={[styles.actionText, { color: "#EF4444" }]}>
               Remove
             </Text>
+          </TouchableOpacity>
+        </View>
+      </CardWrapper>
+    );
+  };
+
+  const renderMembership = (membership: Membership) => {
+    const isShared = membership.permissions?.viewMedicalRecords !== false;
+    return (
+      <View key={membership._id} style={styles.card}>
+        <View style={styles.cardMain}>
+          <View style={styles.avatarCircle}>
+            {membership.addedBy?.profileImage ? (
+              <Image source={{ uri: membership.addedBy.profileImage }} style={styles.avatarFull} />
+            ) : (
+              <User size={24} color="#0FBBA1" />
+            )}
+          </View>
+          <View style={styles.memberInfo}>
+            <Text style={styles.memberName}>{membership.addedBy?.name || "Family Member"}</Text>
+            <Text style={styles.statusText}>Added you as their {membership.relation}</Text>
+          </View>
+        </View>
+
+        <View style={styles.membershipFooter}>
+          <Text style={styles.shareLabel}>Share my medications, vitals & appointments</Text>
+          <Switch
+            value={isShared}
+            onValueChange={(value) => handleToggleSharing(membership, value)}
+            disabled={togglingId === membership._id}
+            trackColor={{ false: "#E5E7EB", true: "#0FBBA1" }}
+            thumbColor="#fff"
+          />
+        </View>
+      </View>
+    );
+  };
+
+  const renderIncomingRequest = (req: IncomingRequest) => {
+    const isResponding = respondingId === req._id;
+    return (
+      <View key={req._id} style={[styles.card, styles.incomingCard]}>
+        <View style={styles.cardMain}>
+          <View style={styles.avatarCircle}>
+            {req.requesterUserId.profileImage ? (
+              <Image source={{ uri: req.requesterUserId.profileImage }} style={styles.avatarFull} />
+            ) : (
+              <User size={24} color="#0FBBA1" />
+            )}
+          </View>
+          <View style={styles.memberInfo}>
+            <View style={styles.nameRow}>
+              <Text style={styles.memberName}>{req.requesterUserId.name}</Text>
+              <View style={styles.relationBadge}>
+                <Text style={styles.relationText}>{req.relation.toUpperCase()}</Text>
+              </View>
+            </View>
+            <Text style={styles.medIdText}>{req.requesterUserId.med_id}</Text>
+            <Text style={styles.statusText}>
+              Wants to add you as their {req.relation}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.incomingActions}>
+          <TouchableOpacity
+            style={[styles.respondButton, styles.declineButton]}
+            onPress={() => handleRespond(req, "reject")}
+            disabled={isResponding}
+          >
+            <X size={16} color="#EF4444" />
+            <Text style={[styles.respondButtonText, { color: "#EF4444" }]}>Decline</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.respondButton, styles.acceptButton]}
+            onPress={() => handleRespond(req, "accept")}
+            disabled={isResponding}
+          >
+            {isResponding ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Check size={16} color="#fff" />
+                <Text style={[styles.respondButtonText, { color: "#fff" }]}>Accept</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -223,7 +437,7 @@ export default function FamilyMembersScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
-      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
@@ -253,7 +467,7 @@ export default function FamilyMembersScreen() {
             <ActivityIndicator size="large" color="#0FBBA1" />
             <Text style={styles.loadingText}>Fetching members...</Text>
           </View>
-        ) : members.length === 0 && pendingRequests.length === 0 ? (
+        ) : members.length === 0 && pendingRequests.length === 0 && incomingRequests.length === 0 && memberships.length === 0 ? (
           <>
             <View style={styles.infoBox}>
               <Text style={styles.infoText}>
@@ -273,9 +487,18 @@ export default function FamilyMembersScreen() {
           </>
         ) : (
           <View style={styles.list}>
-            {members.length > 0 && (
+            {incomingRequests.length > 0 && (
               <>
                 <Text style={styles.sectionTitle}>
+                  Requests For You ({incomingRequests.length})
+                </Text>
+                {incomingRequests.map(renderIncomingRequest)}
+              </>
+            )}
+
+            {members.length > 0 && (
+              <>
+                <Text style={[styles.sectionTitle, incomingRequests.length > 0 && { marginTop: 24 }]}>
                   Members ({members.length})
                 </Text>
                 {members.map(renderMemberCard)}
@@ -288,6 +511,20 @@ export default function FamilyMembersScreen() {
                   Pending Requests ({pendingRequests.length})
                 </Text>
                 {pendingRequests.map(renderPendingRequest)}
+              </>
+            )}
+
+            {memberships.length > 0 && (
+              <>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    (members.length > 0 || pendingRequests.length > 0) && { marginTop: 24 },
+                  ]}
+                >
+                  Family Groups You Belong To ({memberships.length})
+                </Text>
+                {memberships.map(renderMembership)}
               </>
             )}
           </View>
@@ -403,6 +640,52 @@ const styles = StyleSheet.create({
     borderColor: "#D1D5DB",
     shadowOpacity: 0,
     elevation: 0,
+  },
+  incomingCard: {
+    borderWidth: 1,
+    borderColor: "#E6FBF7",
+  },
+  incomingActions: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    padding: 12,
+    gap: 10,
+  },
+  respondButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  declineButton: {
+    backgroundColor: "#FEF2F2",
+  },
+  acceptButton: {
+    backgroundColor: "#0FBBA1",
+  },
+  respondButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  membershipFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  shareLabel: {
+    flex: 1,
+    fontSize: 12,
+    color: "#4B5563",
+    fontWeight: "600",
   },
   cardMain: {
     flexDirection: "row",

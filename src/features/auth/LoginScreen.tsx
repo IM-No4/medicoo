@@ -58,6 +58,8 @@ export default function LoginScreen() {
   // manually and applying it as marginBottom resets deterministically
   // instead (same fix already applied to LiveChatScreen/OrderSupportScreen).
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const keyboardVisible = keyboardHeight > 0;
+
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
@@ -155,9 +157,22 @@ export default function LoginScreen() {
 
             {/* OTP Back button removed */}
 
-            <Text style={styles.mainTitle}>
-              India's #1 Healthcare{'\n'}and Pharmacy App
-            </Text>
+            {/* Was "India's #1 Healthcare and Pharmacy App" - an
+                unsubstantiated ranking claim ("#1") that got the app
+                rejected under Google Play's Metadata policy. This exact
+                screen is also the first Play Store screenshot, so the claim
+                was live in two places at once, not just the screenshot
+                overlay. */}
+            {/* Hidden while the keyboard is open - this headline is the
+                easiest chunk of vertical space to give up, and reclaiming
+                it is what actually gets the Continue button + footer back
+                on screen without needing to touch the hero image or scroll
+                position at all. */}
+            {!keyboardVisible && (
+              <Text style={styles.mainTitle}>
+                Your All-in-One{'\n'}Healthcare Companion
+              </Text>
+            )}
 
             <View style={styles.dividerContainer}>
               <View style={styles.line} />

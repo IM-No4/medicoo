@@ -26,6 +26,7 @@ interface ChatMessage {
     text: string;
     disclaimer?: string | null;
     quickReplies?: string[];
+    quickReplySelected?: string;
     failed?: boolean;
 }
 
@@ -158,13 +159,30 @@ export default function AIAssistantChatScreen() {
         sendMessageText(prompt);
     };
 
+    // Quick replies belong to a specific assistant message. Once one is
+    // picked, that message's chips are locked to the picked option - so
+    // scrolling back up to an earlier reply can't fire off a second,
+    // out-of-sequence answer for a turn the user already responded to.
+    const handleSelectQuickReply = (messageId: string, option: string) => {
+        setMessages((prev) =>
+            prev.map((m) => (m.id === messageId ? { ...m, quickReplySelected: option } : m))
+        );
+        sendMessageText(option);
+    };
+
     const handleSelectSession = async (sessionId: string) => {
         setLoadingHistory(true);
         try {
             const interactions = await getHealthAssistantSessionHistory(sessionId);
             const loaded: ChatMessage[] = interactions.flatMap((interaction) => [
                 { id: `${interaction.id}-q`, role: 'user' as const, text: interaction.query },
-                { id: `${interaction.id}-a`, role: 'assistant' as const, text: interaction.response },
+                {
+                    id: `${interaction.id}-a`,
+                    role: 'assistant' as const,
+                    text: interaction.response,
+                    disclaimer: interaction.disclaimer,
+                    quickReplies: interaction.quickReplies,
+                },
             ]);
             sessionIdRef.current = sessionId;
             setMessages(loaded.length > 0 ? loaded : [buildGreeting()]);
@@ -231,16 +249,31 @@ export default function AIAssistantChatScreen() {
 
                     {!showSuggestions && !!item.quickReplies?.length && (
                         <View style={styles.suggestionsWrap}>
-                            {item.quickReplies.map((option) => (
-                                <TouchableOpacity
-                                    key={option}
-                                    style={styles.suggestionButton}
-                                    activeOpacity={0.7}
-                                    onPress={() => handleSelectSuggestion(option)}
-                                >
-                                    <Text style={styles.suggestionButtonText}>{option}</Text>
-                                </TouchableOpacity>
-                            ))}
+                            {item.quickReplies.map((option) => {
+                                const isAnswered = !!item.quickReplySelected;
+                                const isPicked = item.quickReplySelected === option;
+                                return (
+                                    <TouchableOpacity
+                                        key={option}
+                                        style={[
+                                            styles.suggestionButton,
+                                            isAnswered && !isPicked && styles.suggestionButtonDisabled,
+                                        ]}
+                                        activeOpacity={0.7}
+                                        disabled={isAnswered}
+                                        onPress={() => handleSelectQuickReply(item.id, option)}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.suggestionButtonText,
+                                                isAnswered && !isPicked && styles.suggestionButtonTextDisabled,
+                                            ]}
+                                        >
+                                            {option}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
                         </View>
                     )}
                 </View>
@@ -260,7 +293,7 @@ export default function AIAssistantChatScreen() {
         <View style={styles.container}>
             <StatusBar style="dark" />
 
-            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
                     <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
@@ -362,11 +395,15 @@ const styles = StyleSheet.create({
     messageRowRight: { alignSelf: 'flex-end' },
 
     messageBubble: {
-        borderRadius: 16,
+        borderRadius: 18,
         paddingHorizontal: 16,
         paddingVertical: 10,
+        ...Platform.select({
+            ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3 },
+            android: { elevation: 1 },
+        }),
     },
-    bubbleLeft: { backgroundColor: '#fff', borderBottomLeftRadius: 4 },
+    bubbleLeft: { backgroundColor: '#fff', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: '#F1F5F9' },
     bubbleRight: { backgroundColor: '#0FBBA1', borderBottomRightRadius: 4 },
     messageText: { fontSize: 15, lineHeight: 22 },
     textLeft: { color: '#1F2937' },
@@ -403,6 +440,12 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#FFFFFF',
     },
+    suggestionButtonDisabled: {
+        backgroundColor: '#E5E7EB',
+    },
+    suggestionButtonTextDisabled: {
+        color: '#9CA3AF',
+    },
 
     typingRow: {
         flexDirection: 'row',
@@ -419,14 +462,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 12,
         backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#E5E7EB',
         gap: 10,
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -1 }, shadowOpacity: 0.03, shadowRadius: 4 },
+            android: { elevation: 3 },
+        }),
     },
     input: {
         flex: 1,
         backgroundColor: '#F9FAFB',
         borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
         paddingHorizontal: 16,
         paddingVertical: 10,
         paddingTop: 10,

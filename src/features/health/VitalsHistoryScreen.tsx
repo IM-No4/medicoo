@@ -1,6 +1,6 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { Activity, ChevronLeft, Heart, Thermometer, Weight } from 'lucide-react-native';
+import { Activity, ChevronLeft, Heart, Plus, Thermometer, Weight } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,7 +41,7 @@ const iconForMetric = (key: MetricType) => {
 // pre-selected from wherever its card was tapped (Vitals Snapshot, Home's
 // Health Summary), instead of a modal popup.
 export default function VitalsHistoryScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
 
@@ -145,12 +145,22 @@ export default function VitalsHistoryScreen() {
     <View style={styles.container}>
       <StatusBar style="dark" />
 
-      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
           <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Vitals History</Text>
-        <View style={{ width: 40 }} />
+        {/* Jumps straight into logging whichever vital is currently active
+            here (activeMetric) rather than a generic blank form - LogVitals
+            already covers all four vitals in one screen, this just
+            pre-focuses/scrolls to the one the user was already looking at. */}
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => navigation.navigate('LogVitals', { focusMetric: activeMetric })}
+          activeOpacity={0.7}
+        >
+          <Plus size={22} color="#0FBBA1" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -191,7 +201,7 @@ export default function VitalsHistoryScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + insets.bottom }]}>
         <View style={styles.valueHeader}>
           <Text style={styles.valueHeaderTitle}>{latestValueText}</Text>
           <Text style={styles.valueHeaderDate}>
@@ -355,6 +365,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: -8,
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
   /* Apple Health-style D/W/M/6M segmented control */

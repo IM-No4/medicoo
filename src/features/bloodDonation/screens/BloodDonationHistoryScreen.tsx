@@ -59,7 +59,7 @@ export default function BloodDonationHistoryScreen() {
     return (
         <View style={styles.container}>
             <StatusBar style="dark" />
-            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => executeAction('GO_BACK')} style={styles.backButton} activeOpacity={0.7}>
                     <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
@@ -78,7 +78,7 @@ export default function BloodDonationHistoryScreen() {
                             data={history}
                             renderItem={renderItem}
                             keyExtractor={(item) => item.id}
-                            contentContainerStyle={styles.listContent}
+                            contentContainerStyle={[styles.listContent, { paddingBottom: 20 + insets.bottom }]}
                             showsVerticalScrollIndicator={false}
                             ListFooterComponent={
                                 <View style={styles.infoCard}>

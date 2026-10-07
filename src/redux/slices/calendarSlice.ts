@@ -1,7 +1,10 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { fetchCalendarData } from '../../services/api/calendar.api';
-import { createMedicineSchedule, markMedicineIntake as markMedicineIntakeApi } from '../../services/api/medicine.api';
+import { createMedicineSchedule, deleteMedicineSchedule, markMedicineIntake as markMedicineIntakeApi, updateMedicineSchedule } from '../../services/api/medicine.api';
+import { createVitalRecord as createVitalRecordApi } from '../../services/api/vitals.api';
 import { StorageService } from '../../services/storage';
+import { refreshAndScheduleMedicineReminders } from '../../services/notifications/medicineReminderScheduler';
+import { loadVitalRecords } from './vitalsSlice';
 
 /* =======================
    Types
@@ -47,6 +50,16 @@ export const markMedicineIntake = createAsyncThunk<
   }
 });
 
+// A queued write is retried this many times before it's given up on for
+// good. Was 5 - but sync passes fire every ~45s (see offlineSync.ts), so 5
+// meant a write that kept failing (e.g. against a backend that hadn't been
+// redeployed with a fix yet) was permanently abandoned within ~4 minutes,
+// with the user never told. This is generous enough to survive a backend
+// being down/stale for a long stretch and still eventually go through once
+// it's healthy, while still eventually stopping a genuinely un-sendable
+// (malformed) action from retrying literally forever.
+export const MAX_SYNC_ATTEMPTS = 200;
+
 // Sync Offline Queue
 export const syncOfflineQueue = createAsyncThunk(
   'calendar/syncQueue',
@@ -55,14 +68,35 @@ export const syncOfflineQueue = createAsyncThunk(
     if (queue.length === 0) return;
 
     for (const action of queue) {
-      if (action.status === 'FAILED' && action.attempts > 5) {
+      if (action.status === 'FAILED' && action.attempts > MAX_SYNC_ATTEMPTS) {
         continue;
       }
 
       try {
+        let touchedVitals = false;
+        let touchedMedicine = false;
         switch (action.type) {
           case 'MARK_INTAKE':
             await markMedicineIntakeApi(action.payload);
+            break;
+          case 'LOG_VITAL':
+            await createVitalRecordApi(action.payload);
+            touchedVitals = true;
+            break;
+          case 'CREATE_MEDICINE':
+            await createMedicineSchedule(action.payload);
+            touchedMedicine = true;
+            break;
+          case 'UPDATE_MEDICINE':
+            // Queued as { id, data } (see AddMedicationScreen.tsx) rather
+            // than the raw payload alone - updateMedicineSchedule needs the
+            // schedule's id separately from the fields being changed.
+            await updateMedicineSchedule(action.payload.id, action.payload.data);
+            touchedMedicine = true;
+            break;
+          case 'DELETE_MEDICINE':
+            await deleteMedicineSchedule(action.payload.id);
+            touchedMedicine = true;
             break;
           default:
             console.warn('[Sync] Unknown action type', action.type);
@@ -70,6 +104,18 @@ export const syncOfflineQueue = createAsyncThunk(
         }
 
         await StorageService.removeFromSyncQueue(action.id);
+        // Replaces the optimistic offline_* record (and its temp id) with
+        // the real, server-assigned one now that it actually made it there.
+        if (touchedVitals) {
+          dispatch(loadVitalRecords());
+        }
+        // Same idea for local reminders - the offline-queued write scheduled
+        // them against a temporary offline_* id (AddMedicationScreen.tsx),
+        // this re-derives the whole window from the now-real, server-synced
+        // schedule instead.
+        if (touchedMedicine) {
+          refreshAndScheduleMedicineReminders();
+        }
 
       } catch (err: any) {
         console.error(`[Sync] Action ${action.id} failed`, err);

@@ -33,7 +33,7 @@ export default function LegalPage({ title, lastUpdated, sections }: LegalPagePro
             {/* Header - same recipe as the rest of the Profile screens: white
                 bar + shadow, plain icon back button, fontSize 20/600/#111827
                 title. */}
-            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity
                     onPress={() => navigation.goBack()}
                     style={styles.backButton}
@@ -47,10 +47,8 @@ export default function LegalPage({ title, lastUpdated, sections }: LegalPagePro
 
             {/* Content */}
             <ScrollView
-                contentContainerStyle={[
-                    styles.contentContainer,
-                    { paddingBottom: insets.bottom + 24 },
-                ]}
+                style={styles.scroll}
+                contentContainerStyle={styles.contentContainer}
                 showsVerticalScrollIndicator={false}
             >
                 {lastUpdated && (
@@ -66,14 +64,33 @@ export default function LegalPage({ title, lastUpdated, sections }: LegalPagePro
                     </View>
                 ))}
             </ScrollView>
+
+            {/* Fixed (non-scrolling) safe-area footer - guarantees the strip
+                behind the nav bar is always solid white and never has text
+                scrolled into it, regardless of scroll position. Reserving
+                this as its own sibling (not just ScrollView content padding)
+                means it can't be scrolled past - a plain content padding
+                only leaves a gap at the very end of the list, but content
+                still passes behind the transparent nav bar while scrolling. */}
+            <View style={{ height: Math.max(insets.bottom, 16), backgroundColor: '#FFFFFF' }} />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        backgroundColor: '#F9FAFB', // Slightly off-white background
+        // Absolute + StyleSheet.absoluteFillObject instead of flex: 1 -
+        // with the nav bar forced fully transparent (see colors.xml's
+        // navigationBarColor + withTransparentNavigationBar.js), that strip
+        // shows literally whatever the app draws there, and nothing else.
+        // On this screen specifically (reached from AuthStack, nested one
+        // level deeper than most routes) a flex: 1 root was coming up short
+        // of the true screen bottom, leaving that strip see-through to
+        // whatever's behind the app entirely - not tinted, not off-white,
+        // genuinely unpainted. Sizing against the root instead of flexing
+        // against its immediate parent closes that gap.
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: '#FFFFFF',
     },
     header: {
         backgroundColor: '#fff',
@@ -98,6 +115,9 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '600',
         color: '#111827',
+    },
+    scroll: {
+        flex: 1,
     },
     contentContainer: {
         padding: 24,

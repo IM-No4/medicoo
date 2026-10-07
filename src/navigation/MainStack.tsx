@@ -7,6 +7,7 @@ import AIAssistantChatScreen from '../features/health/AIAssistantChatScreen';
 import HealthAssistantHistoryScreen from '../features/health/HealthAssistantHistoryScreen';
 import HealthRiskAssessmentScreen from '../features/health/HealthRiskAssessment/HealthRiskAssessmentScreen';
 import AddFamilyMemberScreen from '../features/profile/screens/FamilyMembers/AddFamilyMemberScreen';
+import FamilyMemberHealthScreen from '../features/profile/screens/FamilyMembers/FamilyMemberHealthScreen';
 import FamilyMembersScreen from '../features/profile/screens/FamilyMembers/FamilyMembersScreen';
 import AmbulanceStack from './AmbulanceStack';
 import BloodDonationStack from './BloodDonationStack';
@@ -26,12 +27,24 @@ import ActivityHistoryScreen from '../features/health/ActivityHistoryScreen';
 import NotificationsScreen from '../features/notifications/NotificationsScreen';
 import VitalsHistoryScreen from '../features/health/VitalsHistoryScreen';
 import LogVitalsScreen from '../features/health/LogVitalsScreen';
+import BreathingExerciseScreen from '../features/health/BreathingExerciseScreen';
+import StretchBreakScreen from '../features/health/StretchBreakScreen';
+import MindfulPauseScreen from '../features/health/MindfulPauseScreen';
+import WellnessActivitiesScreen from '../features/health/WellnessActivitiesScreen';
+import EyeRestScreen from '../features/health/EyeRestScreen';
+import GratitudeJournalScreen from '../features/health/GratitudeJournalScreen';
+import DanceBreakScreen from '../features/health/DanceBreakScreen';
+import FunFactScreen from '../features/health/FunFactScreen';
+import QuickQuizScreen from '../features/health/QuickQuizScreen';
 import ManageMedicationsScreen from '../features/calendar/ManageMedicationsScreen';
 import AddMedicationScreen from '../features/calendar/AddMedicationScreen';
 import ConsultationDetailScreen from '../features/profile/screens/Consultations/ConsultationDetailScreen';
 import BloodRequestDetailScreen from '../features/bloodDonation/screens/BloodRequestDetailScreen';
 import TermsOfServiceScreen from '../features/legals/TermsOfServiceScreen';
 import PrivacyPolicyScreen from '../features/legals/PrivacyPolicyScreen';
+import MedicalDisclaimerScreen from '../features/legals/MedicalDisclaimerScreen';
+import HealthArticleDetailScreen from '../features/home/HealthArticleDetailScreen';
+import HealthArticlesListScreen from '../features/home/HealthArticlesListScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -111,6 +124,11 @@ export default function MainStack({
         options={{ presentation: 'card' }}
       />
       <Stack.Screen
+        name="FamilyMemberHealth"
+        component={FamilyMemberHealthScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
         name="DoctorCall"
         component={DoctorCallScreen}
         options={{ presentation: 'fullScreenModal', headerShown: false }}
@@ -185,6 +203,61 @@ export default function MainStack({
         component={LogVitalsScreen}
         options={{ presentation: 'card', headerShown: false }}
       />
+      <Stack.Screen
+        name="BreathingExercise"
+        component={BreathingExerciseScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="StretchBreak"
+        component={StretchBreakScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="MindfulPause"
+        component={MindfulPauseScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="WellnessActivities"
+        component={WellnessActivitiesScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="EyeRest"
+        component={EyeRestScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="GratitudeJournal"
+        component={GratitudeJournalScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="DanceBreak"
+        component={DanceBreakScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="FunFact"
+        component={FunFactScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="QuickQuiz"
+        component={QuickQuizScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="HealthArticleDetail"
+        component={HealthArticleDetailScreen}
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="HealthArticlesList"
+        component={HealthArticlesListScreen}
+        options={{ presentation: 'modal', headerShown: false }}
+      />
       {/* Top-level (not nested under any tab's own stack) so opening it from
           Calendar/Home/Doctor screens pops back to wherever the user actually
           was, instead of hijacking the Profile tab's separate back stack. */}
@@ -214,6 +287,11 @@ export default function MainStack({
       <Stack.Screen
         name="PrivacyPolicy"
         component={PrivacyPolicyScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="MedicalDisclaimer"
+        component={MedicalDisclaimerScreen}
         options={{ presentation: 'card', headerShown: false }}
       />
     </Stack.Navigator>

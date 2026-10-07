@@ -1,4 +1,5 @@
 import AppIcon from '@/src/components/icons/AppIcon';
+import MedicalDisclaimerNote from '@/src/components/MedicalDisclaimerNote';
 import { RootState } from '@/src/redux/store';
 import { AttachedPrescription } from '@/src/redux/slices/cart.types';
 import { Document, fetchDocuments, getDocumentViewUrl } from '@/src/services/api/document.api';
@@ -83,6 +84,7 @@ export default function SelectPrescriptionSheet({ visible, onClose, onSelect }: 
         <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
           <View style={styles.handleBar} />
           <Text style={styles.title}>Select a prescription</Text>
+          <MedicalDisclaimerNote variant="medication" style={{ paddingHorizontal: 0, marginBottom: 4 }} />
 
           <ScrollView
             style={styles.scrollView}

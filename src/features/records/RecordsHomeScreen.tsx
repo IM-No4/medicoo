@@ -246,7 +246,7 @@ export default function RecordsHomeScreen() {
     <View style={styles.container}>
       {isFocused && <StatusBar style="dark" translucent backgroundColor="transparent" />}
 
-      <View style={[styles.topBar, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.topBar, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <Text style={styles.topBarTitle}>Medical Records</Text>
       </View>
 
@@ -527,7 +527,13 @@ const styles = StyleSheet.create({
     // padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB'
+    borderColor: '#E5E7EB',
+    // The grid's row-wrap stretches every card in a row to match the
+    // tallest one (e.g. a 2-line title next to a 1-line one) - without
+    // this, the shorter card's content doesn't grow to fill that extra
+    // height, leaving blank space between the title and the "files/KB"
+    // footer strip instead of the footer sitting flush at the bottom.
+    justifyContent: 'space-between',
   },
   folderTopRow: {
     flexDirection: 'row',

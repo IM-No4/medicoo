@@ -16,7 +16,8 @@ export type SyncActionType =
     | 'MARK_INTAKE'
     | 'CREATE_MEDICINE'
     | 'UPDATE_MEDICINE'
-    | 'DELETE_MEDICINE';
+    | 'DELETE_MEDICINE'
+    | 'LOG_VITAL';
 
 export interface SyncAction {
     id: string;

@@ -1,11 +1,12 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Contacts from 'expo-contacts';
 import * as Location from 'expo-location';
-import { Briefcase, Check, ChevronLeft, Contact, Crosshair, Home, MapPin } from 'lucide-react-native';
+import { Briefcase, Check, ChevronLeft, Contact, Crosshair, Home, MapPin, Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Animated,
+    FlatList,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -15,15 +16,13 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
-import { API_BASE_URL } from '../../../../config/env';
+import { apiClient } from '../../../../services/api/client';
 import { addUserAddress, updateUserAddress } from '../../../../services/api/address.api';
 import { getProfileDetails } from '../../../../services/api/user.api';
-import { getToken } from '../../../../utils/tokenManagement';
 
 type FloatingLabelInputProps = {
     label: string;
@@ -112,6 +111,14 @@ export default function AddAddressScreen() {
     const [saving, setSaving] = useState(false);
     const [step, setStep] = useState(route.params?.fullAddress ? 2 : 1); // 1: Location, 2: Details & Receiver
 
+    // The "Confirm Location" footer sits absolutely over the map on step 1,
+    // same as addressPreviewCard - a hardcoded bottom offset on the card
+    // drifts out of sync with the footer's real height (which itself grows
+    // by insets.bottom on Android), so the card ends up covered by the
+    // footer instead of sitting above it. Measuring the actual footer keeps
+    // the two in sync regardless of device/inset size.
+    const [footerHeight, setFooterHeight] = useState(0);
+
     // Status Modal State
     const [status, setStatus] = useState<{
         visible: boolean;
@@ -143,11 +150,87 @@ export default function AddAddressScreen() {
     });
 
     const ADDRESS_TAGS = ['Home', 'Work', 'Other'];
-    const [authToken, setAuthToken] = useState<string | null>(null);
-    useEffect(() => {
-        getToken('access_token').then(setAuthToken);
-    }, []);
     const mapRef = useRef<MapView>(null);
+
+    // Custom autocomplete state - previously used react-native-google-places-
+    // autocomplete's own XMLHttpRequest + a manually-fetched auth token
+    // passed in as a header. Going through apiClient instead (same client
+    // every other screen uses) means the auth header is attached fresh on
+    // every request straight from storage, not a token snapshot captured
+    // once on mount that could still be null the first time the user types.
+    const [searchQuery, setSearchQuery] = useState('');
+    const [suggestions, setSuggestions] = useState<{ place_id: string; description: string }[]>([]);
+    const [searchLoading, setSearchLoading] = useState(false);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const runPlacesSearch = useCallback((text: string) => {
+        if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+
+        if (text.trim().length < 3) {
+            setSuggestions([]);
+            setSearchLoading(false);
+            return;
+        }
+
+        setSearchLoading(true);
+        searchDebounceRef.current = setTimeout(async () => {
+            try {
+                const res = await apiClient.get('/api/maps/place/autocomplete/json', {
+                    params: { input: text, language: 'en' },
+                });
+                setSuggestions(res.data?.predictions || []);
+            } catch {
+                setSuggestions([]);
+            } finally {
+                setSearchLoading(false);
+            }
+        }, 350);
+    }, []);
+
+    const handleSearchChange = (text: string) => {
+        setSearchQuery(text);
+        setShowSuggestions(true);
+        runPlacesSearch(text);
+    };
+
+    const handleSuggestionPress = async (item: { place_id: string; description: string }) => {
+        setShowSuggestions(false);
+        setSearchQuery(item.description);
+        setSuggestions([]);
+
+        try {
+            const res = await apiClient.get('/api/maps/place/details/json', {
+                params: { place_id: item.place_id, language: 'en' },
+            });
+            const location = res.data?.result?.geometry?.location;
+            if (location) {
+                const newRegion = {
+                    latitude: location.lat,
+                    longitude: location.lng,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                };
+                setRegion(newRegion);
+                mapRef.current?.animateToRegion(newRegion, 1000);
+            }
+            setFormData(p => ({ ...p, fullAddress: res.data?.result?.formatted_address || item.description }));
+        } catch {
+            // Details lookup failed - still usable with just the picked
+            // description and whatever pin position was already showing.
+            setFormData(p => ({ ...p, fullAddress: item.description }));
+        }
+    };
+
+    // Keeps the search box showing the current address when it changes from
+    // something other than picking a suggestion (map tap, "use current
+    // location") - but never fights the user while they're actively typing/
+    // browsing the dropdown.
+    useEffect(() => {
+        if (!showSuggestions) {
+            setSearchQuery(formData.fullAddress);
+        }
+    }, [formData.fullAddress, showSuggestions]);
     const [region, setRegion] = useState({
         latitude: 12.9716,
         longitude: 77.5946,
@@ -346,6 +429,8 @@ export default function AddAddressScreen() {
                     onPress={async (e) => {
                         const { latitude, longitude } = e.nativeEvent.coordinate;
                         setRegion(prev => ({ ...prev, latitude, longitude }));
+                        setShowSuggestions(false);
+                        setSuggestions([]);
 
                         try {
                             const place = await Location.reverseGeocodeAsync({ latitude, longitude });
@@ -369,61 +454,57 @@ export default function AddAddressScreen() {
                     <Marker coordinate={region} />
                 </MapView>
 
-                {/* Search Bar Overlay */}
+                {/* Search Bar Overlay - own debounced search against apiClient
+                    (same client + auth handling every other screen uses)
+                    instead of react-native-google-places-autocomplete's own
+                    XHR + manually-snapshotted auth header. */}
                 <View style={styles.searchContainerOverlay}>
-                    <GooglePlacesAutocomplete
-                        placeholder='Search for area, street name...'
-                        onPress={(data, details = null) => {
-                            if (details) {
-                                const lat = details.geometry.location.lat;
-                                const lng = details.geometry.location.lng;
-                                const newRegion = {
-                                    latitude: lat,
-                                    longitude: lng,
-                                    latitudeDelta: 0.005,
-                                    longitudeDelta: 0.005,
-                                };
-                                setRegion(newRegion);
-                                mapRef.current?.animateToRegion(newRegion, 1000);
-                                setFormData(p => ({ ...p, fullAddress: data.description }));
-                            }
-                        }}
-                        requestUrl={{
-                            url: `${API_BASE_URL}/api/maps`,
-                            useOnPlatform: 'all',
-                            headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
-                        }}
-                        query={{
-                            // Real key lives server-side; the proxy ignores this value.
-                            key: 'proxied-via-backend',
-                            language: 'en',
-                        }}
-                        fetchDetails={true}
-                        styles={{
-                            container: { flex: 0 },
-                            textInputContainer: {
-                                backgroundColor: '#fff',
-                                borderRadius: 12,
-                                paddingHorizontal: 4,
-                                height: 50,
-                                shadowColor: "#000",
-                                shadowOpacity: 0.1,
-                                shadowRadius: 5,
-                                elevation: 4,
-                            },
-                            textInput: {
-                                height: 50,
-                                color: '#1F2937',
-                                fontSize: 16,
-                            },
-                            listView: {
-                                marginTop: 8,
-                                borderRadius: 12,
-                                backgroundColor: '#fff',
-                                elevation: 3,
-                            }
-                        }}
-                    />
+                    <View style={styles.searchInputBox}>
+                        <Search size={18} color="#6B7280" />
+                        <TextInput
+                            style={styles.searchInput}
+                            placeholder="Search for area, street name..."
+                            placeholderTextColor="#9CA3AF"
+                            value={searchQuery}
+                            onChangeText={handleSearchChange}
+                            onFocus={() => setShowSuggestions(true)}
+                        />
+                        {searchLoading ? (
+                            <ActivityIndicator size="small" color="#0FBBA1" />
+                        ) : searchQuery.length > 0 ? (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setSearchQuery('');
+                                    setSuggestions([]);
+                                }}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                                <X size={18} color="#9CA3AF" />
+                            </TouchableOpacity>
+                        ) : null}
+                    </View>
+
+                    {showSuggestions && suggestions.length > 0 && (
+                        <View style={styles.suggestionsBox}>
+                            <FlatList
+                                data={suggestions}
+                                keyExtractor={(item) => item.place_id}
+                                keyboardShouldPersistTaps="handled"
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={styles.suggestionRow}
+                                        onPress={() => handleSuggestionPress(item)}
+                                    >
+                                        <MapPin size={16} color="#0FBBA1" />
+                                        <Text style={styles.suggestionText} numberOfLines={2}>
+                                            {item.description}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                                ItemSeparatorComponent={() => <View style={styles.suggestionSeparator} />}
+                            />
+                        </View>
+                    )}
                 </View>
 
                 {/* Current Location Button */}
@@ -440,7 +521,7 @@ export default function AddAddressScreen() {
                 </TouchableOpacity>
 
                 {/* Bottom Address Preview */}
-                <View style={styles.addressPreviewCard}>
+                <View style={[styles.addressPreviewCard, { bottom: footerHeight + 12 }]}>
                     <View style={styles.addressPreviewHeader}>
                         <MapPin size={20} color="#0FBBA1" />
                         <Text style={styles.addressPreviewTitle}>Selected Location</Text>
@@ -458,7 +539,10 @@ export default function AddAddressScreen() {
             {/* Address Details */}
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Selected Address</Text>
-                <Text style={styles.selectedAddress}>{formData.fullAddress}</Text>
+                <View style={styles.selectedAddressBox}>
+                    <MapPin size={18} color="#0FBBA1" />
+                    <Text style={styles.selectedAddress}>{formData.fullAddress}</Text>
+                </View>
                 <TouchableOpacity onPress={() => setStep(1)}>
                     <Text style={styles.changeLink}>Change</Text>
                 </TouchableOpacity>
@@ -559,10 +643,17 @@ export default function AddAddressScreen() {
 
     return (
         <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            // Android's "height" behavior shrinks the view when the keyboard
+            // opens but doesn't reliably grow it back once the keyboard
+            // closes, leaving the screen stuck with extra bottom padding -
+            // same bug already fixed this way elsewhere (AddMedicationScreen,
+            // LoginScreen). windowSoftInputMode="adjustResize" (set globally)
+            // already resizes the window correctly on its own, so Android
+            // needs no behavior here at all.
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.container}
         >
-            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => step === 1 ? navigation.goBack() : setStep(1)} style={styles.backButton} activeOpacity={0.7}>
                     <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
@@ -573,7 +664,7 @@ export default function AddAddressScreen() {
             <View style={styles.contentContainer}>
                 {step === 1 ? renderStep1() : (
                     <ScrollView
-                        contentContainerStyle={styles.scrollContent}
+                        contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + footerHeight }]}
                         keyboardShouldPersistTaps="handled"
                         keyboardDismissMode="on-drag"
                     >
@@ -582,7 +673,10 @@ export default function AddAddressScreen() {
                 )}
             </View>
 
-            <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+            <View
+                style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}
+                onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}
+            >
                 <TouchableOpacity
                     style={styles.saveButton}
                     onPress={step === 1 ? handleNext : handleSave}
@@ -648,7 +742,6 @@ const styles = StyleSheet.create({
     },
     contentContainer: {
         flex: 1,
-        marginBottom: 80, // Increased space for footer
     },
     scrollContent: {
         paddingBottom: 40,
@@ -666,6 +759,56 @@ const styles = StyleSheet.create({
         left: 20,
         right: 20,
         zIndex: 10,
+    },
+    searchInputBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        height: 50,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        elevation: 4,
+    },
+    searchInput: {
+        flex: 1,
+        height: 50,
+        fontSize: 16,
+        color: '#1F2937',
+    },
+    suggestionsBox: {
+        marginTop: 8,
+        maxHeight: 260,
+        borderRadius: 12,
+        backgroundColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        elevation: 4,
+        overflow: 'hidden',
+    },
+    suggestionRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+    },
+    suggestionText: {
+        flex: 1,
+        fontSize: 14,
+        color: '#1F2937',
+        lineHeight: 19,
+    },
+    suggestionSeparator: {
+        height: 1,
+        backgroundColor: '#F3F4F6',
+        marginLeft: 40,
     },
     fabLocation: {
         position: 'absolute',
@@ -714,12 +857,23 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     },
 
-    // Step 2 Styles
+    // Step 2 Styles - white cards on the screen's off-white background,
+    // same recipe used everywhere else in the app (ProfileDetailsScreen,
+    // AddMedicationModal) rather than the form fields floating directly on
+    // the bare background with no card boundary.
     form: {
         padding: 20,
     },
     section: {
-        marginBottom: 32,
+        backgroundColor: '#fff',
+        borderRadius: 18,
+        padding: 20,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
     },
     sectionTitle: {
         fontSize: 16,
@@ -727,16 +881,27 @@ const styles = StyleSheet.create({
         color: '#111827',
         marginBottom: 16,
     },
+    selectedAddressBox: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+        backgroundColor: '#F0FDF4',
+        borderRadius: 14,
+        padding: 14,
+        marginBottom: 4,
+    },
     selectedAddress: {
-        fontSize: 15,
-        lineHeight: 22,
-        color: '#4B5563',
-        marginBottom: 8,
+        flex: 1,
+        fontSize: 14,
+        lineHeight: 21,
+        color: '#374151',
     },
     changeLink: {
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: 13,
+        fontWeight: '700',
         color: '#0FBBA1',
+        marginTop: 10,
+        alignSelf: 'flex-start',
     },
     inputGroup: {
         marginBottom: 20,

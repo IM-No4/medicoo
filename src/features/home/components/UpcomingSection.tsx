@@ -128,7 +128,7 @@ export default React.memo(UpcomingSection);
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 28,
+    marginBottom: 30,
   },
   headerRow: {
     flexDirection: 'row',

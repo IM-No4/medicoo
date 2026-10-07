@@ -1,4 +1,5 @@
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -44,10 +45,21 @@ const TEMP_MIN = 90;
 const TEMP_MAX = 110;
 const TEMP_DEFAULT = 98.6;
 
+// Metric keys as used by VitalsHistoryScreen's per-metric tabs - the "Add"
+// button there passes one of these along so this screen can jump straight
+// to (and pre-fill) the specific vital the user was already looking at,
+// instead of landing on a generic blank form every time.
+type FocusMetric = 'heart_rate' | 'blood_pressure' | 'weight' | 'temperature';
+
 export default function LogVitalsScreen() {
   const navigation = useNavigation();
+  const route = useRoute<any>();
   const dispatch = useDispatch<AppDispatch>();
   const insets = useSafeAreaInsets();
+  const focusMetric: FocusMetric | undefined = route.params?.focusMetric;
+
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionOffsets = useRef<Partial<Record<FocusMetric, number>>>({});
 
   // "touched" tracks whether the user has actually interacted with a field -
   // sliders/steppers always show *some* number, so an untouched field can't
@@ -78,6 +90,28 @@ export default function LogVitalsScreen() {
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState('');
+
+  // Pre-touch (so it's visibly active and included in the save, not just
+  // scrolled-to) whichever field the "Add" button on VitalsHistoryScreen
+  // was pressed for, then scroll it into view. Runs once, after the first
+  // layout pass has actually measured section offsets - onLayout below
+  // fires before this effect's dependencies are ready otherwise.
+  useEffect(() => {
+    if (!focusMetric) return;
+    if (focusMetric === 'heart_rate') setHrTouched(true);
+    else if (focusMetric === 'blood_pressure') setBpTouched(true);
+    else if (focusMetric === 'temperature') setTempTouched(true);
+    else if (focusMetric === 'weight') setWeightTouched(true);
+
+    const timer = setTimeout(() => {
+      const y = sectionOffsets.current[focusMetric];
+      if (y !== undefined) {
+        scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusMetric]);
 
   const resetForm = () => {
     setHrTouched(false);
@@ -175,9 +209,11 @@ export default function LogVitalsScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="dark" />
+
       {/* Header - same recipe as the rest of the app: white bar + shadow,
           plain icon back button, fontSize 20/600/#111827 title. */}
-      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity onPress={handleClose} style={styles.backButton} activeOpacity={0.7} disabled={loading}>
           <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
@@ -186,6 +222,7 @@ export default function LogVitalsScreen() {
       </View>
 
         <ScrollView
+          ref={scrollRef}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
@@ -199,7 +236,10 @@ export default function LogVitalsScreen() {
           ) : null}
 
           {/* Heart Rate Card */}
-          <View style={styles.fieldCard}>
+          <View
+            style={styles.fieldCard}
+            onLayout={(e) => { sectionOffsets.current.heart_rate = e.nativeEvent.layout.y; }}
+          >
             <View style={styles.fieldHeader}>
               <View style={[styles.fieldIconBox, { backgroundColor: '#FEF2F2' }]}>
                 <Heart size={20} color="#EF4444" />
@@ -259,7 +299,10 @@ export default function LogVitalsScreen() {
           </View>
 
           {/* Blood Pressure Card */}
-          <View style={styles.fieldCard}>
+          <View
+            style={styles.fieldCard}
+            onLayout={(e) => { sectionOffsets.current.blood_pressure = e.nativeEvent.layout.y; }}
+          >
             <View style={styles.fieldHeader}>
               <View style={[styles.fieldIconBox, { backgroundColor: '#EFF6FF' }]}>
                 <Activity size={20} color="#3B82F6" />
@@ -336,7 +379,10 @@ export default function LogVitalsScreen() {
           </View>
 
           {/* Temperature Card */}
-          <View style={styles.fieldCard}>
+          <View
+            style={styles.fieldCard}
+            onLayout={(e) => { sectionOffsets.current.temperature = e.nativeEvent.layout.y; }}
+          >
             <View style={styles.fieldHeader}>
               <View style={[styles.fieldIconBox, { backgroundColor: '#F0F9FF' }]}>
                 <Thermometer size={20} color="#0EA5E9" />
@@ -396,7 +442,10 @@ export default function LogVitalsScreen() {
           </View>
 
           {/* Weight Card */}
-          <View style={styles.fieldCard}>
+          <View
+            style={styles.fieldCard}
+            onLayout={(e) => { sectionOffsets.current.weight = e.nativeEvent.layout.y; }}
+          >
             <View style={styles.fieldHeader}>
               <View style={[styles.fieldIconBox, { backgroundColor: '#F5F3FF' }]}>
                 <Weight size={20} color="#8B5CF6" />

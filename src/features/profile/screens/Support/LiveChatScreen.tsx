@@ -209,7 +209,7 @@ export default function LiveChatScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
                     <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
@@ -375,7 +375,15 @@ const styles = StyleSheet.create({
     agentRow: { alignSelf: "flex-start", alignItems: "flex-start" },
     userRow: { alignSelf: "flex-end", alignItems: "flex-end" },
     messageContentRow: { flexDirection: "row", alignItems: "flex-end", gap: 6, alignSelf: "flex-start" },
-    bubble: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 16 },
+    bubble: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 18,
+        ...Platform.select({
+            ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3 },
+            android: { elevation: 1 },
+        }),
+    },
     agentBubble: { backgroundColor: "#FFFFFF", borderTopLeftRadius: 4, borderWidth: 1, borderColor: "#E5E7EB" },
     userBubble: { backgroundColor: "#0FBBA1", borderTopRightRadius: 4 },
     botBubble: { backgroundColor: "#EFF6FF", borderTopLeftRadius: 4, borderWidth: 1, borderColor: "#DBEAFE" },
@@ -399,11 +407,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 12,
         backgroundColor: "#FFFFFF",
-        borderTopWidth: 1,
-        borderTopColor: "#EEEEEE",
         gap: 12,
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -1 }, shadowOpacity: 0.03, shadowRadius: 4 },
+            android: { elevation: 3 },
+        }),
     },
-    input: { flex: 1, height: 40, backgroundColor: "#F3F4F6", borderRadius: 20, paddingHorizontal: 16, color: "#1F2937", fontSize: 14 },
+    input: { flex: 1, height: 40, backgroundColor: "#F3F4F6", borderRadius: 20, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, color: "#1F2937", fontSize: 14 },
     sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#0FBBA1", alignItems: "center", justifyContent: "center" },
     closedNotice: { backgroundColor: "#F0FDF4", borderRadius: 12, padding: 12, marginBottom: 16 },
     closedNoticeText: { fontSize: 12, color: "#166534", fontWeight: "600" },

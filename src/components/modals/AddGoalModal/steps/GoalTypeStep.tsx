@@ -4,7 +4,6 @@ import {
     Text,
     TouchableOpacity,
     StyleSheet,
-    Dimensions,
 } from 'react-native';
 import {
     Droplets,
@@ -16,9 +15,6 @@ import {
     Heart,
     Brain,
 } from 'lucide-react-native';
-
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 56) / 2;
 
 // Each goal type has a vivid, meaningful color baked in permanently.
 // Custom goals let the user pick their own color in step 3.
@@ -133,14 +129,9 @@ export default function GoalTypeStep({ data, onChange }: Props) {
                             key={type.id}
                             style={[
                                 styles.card,
+                                { backgroundColor: type.bg },
                                 isSelected && {
                                     borderColor: type.color,
-                                    backgroundColor: type.bg,
-                                    shadowColor: type.color,
-                                    shadowOffset: { width: 0, height: 2 },
-                                    shadowOpacity: 0.18,
-                                    shadowRadius: 8,
-                                    elevation: 4,
                                 },
                             ]}
                             activeOpacity={0.75}
@@ -161,28 +152,24 @@ export default function GoalTypeStep({ data, onChange }: Props) {
                                 <View style={[styles.selectedDot, { backgroundColor: type.color }]} />
                             )}
 
-                            {/* Icon box — always colored */}
-                            <View style={[
-                                styles.iconBox,
-                                { backgroundColor: type.color + '20' },
-                            ]}>
-                                <Icon size={26} color={type.color} />
+                            {/* Icon box - white, so the category's own light
+                                background tint (always on, not just when
+                                selected) is what actually distinguishes each
+                                card, same pattern as the offline home
+                                screen's cards. */}
+                            <View style={styles.iconBox}>
+                                <Icon size={20} color={type.color} />
                             </View>
 
                             <Text style={[
                                 styles.cardTitle,
-                                isSelected && { color: type.color, fontWeight: '800' },
+                                isSelected && { color: type.color },
                             ]}>
                                 {type.title}
                             </Text>
                             <Text style={styles.cardDesc} numberOfLines={2}>
                                 {type.description}
                             </Text>
-
-                            {/* Color stripe at the bottom when selected */}
-                            {isSelected && (
-                                <View style={[styles.stripe, { backgroundColor: type.color }]} />
-                            )}
                         </TouchableOpacity>
                     );
                 })}
@@ -208,20 +195,23 @@ const styles = StyleSheet.create({
         marginBottom: 24,
         fontWeight: '500',
     },
+    // width: '48%' + space-between instead of a Dimensions-computed pixel
+    // width - the computed width didn't quite account for the container's
+    // own horizontal padding plus the grid gap together, so cards drifted
+    // out of alignment with each other row to row on some screen widths.
     grid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 12,
+        justifyContent: 'space-between',
+        rowGap: 12,
     },
     card: {
-        width: CARD_WIDTH,
-        backgroundColor: '#FFFFFF',
+        width: '48%',
         borderRadius: 20,
         padding: 16,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderWidth: 1.5,
+        borderColor: 'transparent',
         position: 'relative',
-        overflow: 'hidden',
     },
     selectedDot: {
         position: 'absolute',
@@ -232,9 +222,10 @@ const styles = StyleSheet.create({
         borderRadius: 5,
     },
     iconBox: {
-        width: 52,
-        height: 52,
-        borderRadius: 16,
+        width: 40,
+        height: 40,
+        borderRadius: 13,
+        backgroundColor: '#FFFFFF',
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,
@@ -247,18 +238,8 @@ const styles = StyleSheet.create({
     },
     cardDesc: {
         fontSize: 11,
-        color: '#94A3B8',
+        color: '#64748B',
         lineHeight: 15,
         fontWeight: '500',
-    },
-    // Colored accent stripe at the card bottom when selected
-    stripe: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 2,
-        borderBottomLeftRadius: 18,
-        borderBottomRightRadius: 18,
     },
 });

@@ -1,4 +1,23 @@
-export type BootStatus = 'idle' | 'loading' | 'ready' | 'error';
+// 'offline' - a real network reachability check failed right at launch,
+// before anything else was even attempted. RootNavigator shows
+// OfflineGateScreen instead of the normal Auth/Onboarding/Main stacks
+// while in this state - "Try Again" re-runs the full boot sequence,
+// "Use in Offline Mode" trusts whatever's stored locally (see
+// BootCoordinator.ts's continueOffline) and proceeds without a network
+// call ever having to succeed.
+// 'mandatoryUpdate' - the backend-driven app config says the installed
+// build is below the minimum supported version (see appConfig.api.ts's
+// `update.updateRequired`). RootNavigator shows MandatoryUpdateScreen
+// instead of Auth/Onboarding/Main, with no way to skip - this only ever
+// comes from a successfully-parsed config response, never a default, so a
+// config-fetch failure can't accidentally produce this state.
+// 'maintenance' - maintenance mode is on AND this specific user has been
+// confirmed (via the authenticated journey-status check) to have no
+// in-progress order/consultation to protect - see BootCoordinator.ts.
+// Never set from an uncertain/failed journey-status check (that fails
+// toward letting the user in restricted instead), only a confirmed "no
+// active journey."
+export type BootStatus = 'idle' | 'loading' | 'ready' | 'error' | 'offline' | 'mandatoryUpdate' | 'maintenance';
 
 export interface BootState {
   status: BootStatus;
@@ -9,4 +28,9 @@ export interface BootState {
     route: string;
     params?: any;
   };
+  // Set once boot has been in 'loading' for longer than a short grace
+  // period (see BootCoordinator.ts) - lets App.tsx swap the otherwise-blank
+  // native splash for a JS screen with a "this is taking a while" message,
+  // instead of leaving a slow connection looking like a frozen app.
+  isSlow: boolean;
 }

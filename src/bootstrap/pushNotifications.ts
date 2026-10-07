@@ -1,4 +1,5 @@
 import messaging from '@react-native-firebase/messaging';
+import * as Notifications from 'expo-notifications';
 import { Linking } from 'react-native';
 import { navigationRef } from '../navigation/navigationRef';
 import { setUnreadCount } from '../redux/slices/notificationSlice';
@@ -80,17 +81,6 @@ const goToConsultationDetail = (requestId: string) => {
   navigationRef.navigate('ConsultationDetail', { requestId });
 };
 
-// Doctor's side of the same reminder - there's no single-request detail
-// fetch on the doctor side (only the paginated list), so land on the list
-// pre-filtered to upcoming appointments rather than guessing a deep link.
-const goToManageAppointments = () => {
-  if (!navigationRef.isReady()) return;
-  navigationRef.navigate('Tabs', {
-    screen: 'Profile',
-    params: { screen: 'ManageAppointments', params: { initialTab: 'upcoming' } },
-  });
-};
-
 // Jumps straight into the call screen. Works for either the patient or the
 // doctor unchanged - joining/permission is resolved by requestId server-side
 // (getCallToken), so no role disambiguation is needed here.
@@ -110,6 +100,24 @@ const goToIncomingCall = (requestId: string, consultationType?: string, callerNa
 const goToBloodRequestDetail = (requestId: string) => {
   if (!navigationRef.isReady()) return;
   navigationRef.navigate('BloodRequestDetail', { requestId });
+};
+
+// A family-link request has to actually be accepted/declined somewhere -
+// FamilyMembersScreen already renders every incoming request with those
+// actions (see its "Requests For You" section), so the notification just
+// needs to land there rather than a dedicated detail screen.
+const goToFamilyMembers = () => {
+  if (!navigationRef.isReady()) return;
+  navigationRef.navigate('FamilyMembersModal');
+};
+
+// Same reasoning as goToFamilyMembers - FriendsScreen already renders
+// incoming friend requests with Accept/Decline (its "FRIEND REQUESTS"
+// section), previously only reachable via Manage Goals' "Compare with
+// Friends" card with no notification ever pointing at it directly.
+const goToFriends = () => {
+  if (!navigationRef.isReady()) return;
+  navigationRef.navigate('Friends');
 };
 
 function routeNotificationTap(data?: { [key: string]: string | object } | undefined) {
@@ -159,11 +167,6 @@ function routeNotificationTap(data?: { [key: string]: string | object } | undefi
     return;
   }
 
-  if (type === 'doctor_appointment_reminder' || type === 'new_appointment_request') {
-    goToManageAppointments();
-    return;
-  }
-
   if (type === 'call_incoming' && typeof data?.requestId === 'string' && data.requestId) {
     const consultationType = typeof data?.consultationType === 'string' ? data.consultationType : undefined;
     const callerName = typeof data?.callerName === 'string' ? data.callerName : undefined;
@@ -177,6 +180,21 @@ function routeNotificationTap(data?: { [key: string]: string | object } | undefi
     data.requestId
   ) {
     goToBloodRequestDetail(data.requestId);
+    return;
+  }
+
+  // family_link_accepted has no pending action left to take (the requester
+  // is just being told the other side said yes) - still lands on
+  // FamilyMembersScreen so they can see the new member right away.
+  if (type === 'family_link_request' || type === 'family_link_accepted') {
+    goToFamilyMembers();
+    return;
+  }
+
+  // Same reasoning as family_link_accepted above - friend_request_accepted
+  // just lands on the screen that now shows the new friend.
+  if (type === 'friend_request' || type === 'friend_request_accepted') {
+    goToFriends();
     return;
   }
 
@@ -194,6 +212,20 @@ export function initPushNotifications() {
   messaging().onTokenRefresh(async () => {
     syncPushToken();
   });
+
+  // Governs whether a notification (server push OR a locally-scheduled
+  // medicine reminder - see medicineReminderScheduler.ts) actually displays
+  // while the app is open and in the foreground. Without this, the default
+  // is to show nothing - a medication reminder firing while the app happens
+  // to be open would otherwise go completely unnoticed.
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
 }
 
 /** Notification-tap navigation. Call once boot/navigation is ready. */
@@ -209,4 +241,17 @@ export function setupNotificationTapHandling() {
         routeNotificationTap(remoteMessage.data);
       }
     });
+
+  // Same routing for a tapped local reminder (see
+  // medicineReminderScheduler.ts) - it carries the same `{ type:
+  // 'medicine_reminder', ... }` data shape the server push does, so
+  // routeNotificationTap sends both to the same place with no extra cases.
+  Notifications.addNotificationResponseReceivedListener((response) => {
+    routeNotificationTap(response.notification.request.content.data as any);
+  });
+
+  const lastResponse = Notifications.getLastNotificationResponse();
+  if (lastResponse) {
+    routeNotificationTap(lastResponse.notification.request.content.data as any);
+  }
 }

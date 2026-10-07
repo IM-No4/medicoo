@@ -1,9 +1,10 @@
 import { Activity, Heart, TrendingUp, Weight, PlusCircle } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import { RootState } from '../../../redux/store';
+import { getLocalDateString } from '../../../utils/dateUtils';
 
 interface Props {
   title?: string;
@@ -15,13 +16,27 @@ function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
   const { records } = useSelector((state: RootState) => state.vitals);
   const { connectedDevice } = useSelector((state: RootState) => state.device);
 
-  const latestManual = records[0];
-  const latestHeartRate = latestManual?.heartRate ?? connectedDevice?.data?.heartRate;
-  const latestSystolic = latestManual?.systolic;
-  const latestDiastolic = latestManual?.diastolic;
-  const latestWeight = latestManual?.weight;
+  // This is meant to be a DAILY summary, not "whatever the most recent
+  // reading ever was" - the old code just read records[0] for every
+  // metric, so a heart rate logged three weeks ago kept showing up as if
+  // it were current. Each metric now only counts if it was actually
+  // logged today; otherwise it falls through to the "not logged today"
+  // state below (a Log CTA) instead of silently displaying stale data.
+  const todayStr = getLocalDateString();
+  const latestToday = useMemo(
+    () => records.find((r) => getLocalDateString(new Date(r.timestamp)) === todayStr),
+    [records, todayStr]
+  );
 
-  const hasVitals = latestHeartRate !== undefined || latestSystolic !== undefined || latestWeight !== undefined;
+  const latestHeartRate = latestToday?.heartRate ?? (connectedDevice?.data?.heartRate !== undefined ? connectedDevice.data.heartRate : undefined);
+  const latestSystolic = latestToday?.systolic;
+  const latestDiastolic = latestToday?.diastolic;
+  const latestWeight = latestToday?.weight;
+
+  // Controls the header's "History" link and whether we show the full
+  // empty-state placeholder (no vitals ever logged) vs. the per-metric
+  // cards (some history exists, even if nothing is from today yet).
+  const hasAnyVitals = records.length > 0 || connectedDevice?.data?.heartRate !== undefined;
 
   const handleNavigateToHealth = () => {
     navigation.navigate('Tabs', { screen: 'Health' });
@@ -31,18 +46,30 @@ function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
     navigation.navigate('VitalsHistory', { metric });
   };
 
+  const logMetric = (metric: 'heart_rate' | 'blood_pressure' | 'weight') => {
+    navigation.navigate('LogVitals', { focusMetric: metric });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>{title.toUpperCase()}</Text>
-        {hasVitals && (
-          <TouchableOpacity onPress={() => navigation.navigate('VitalsHistory')}>
-            <Text style={styles.seeAll}>History</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => navigation.navigate('LogVitals')}>
+            <Text style={styles.seeAll}>Log</Text>
           </TouchableOpacity>
-        )}
+          {hasAnyVitals && (
+            <>
+              <View style={styles.headerDot} />
+              <TouchableOpacity onPress={() => navigation.navigate('VitalsHistory')}>
+                <Text style={styles.seeAll}>History</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       </View>
 
-      {!hasVitals ? (
+      {!hasAnyVitals ? (
         <TouchableOpacity 
           style={styles.emptyPlaceholder}
           onPress={handleNavigateToHealth}
@@ -64,39 +91,39 @@ function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
           <HealthCard
             info={{
               label: 'Heart Rate',
-              value: latestHeartRate !== undefined ? `${latestHeartRate}` : '--',
+              value: latestHeartRate !== undefined ? `${latestHeartRate}` : undefined,
               unit: 'bpm',
               color: '#EF4444',
               bgColor: '#FEF2F2',
               icon: Heart
             }}
-            onPress={() => openHistory('heart_rate')}
+            onPress={latestHeartRate !== undefined ? () => openHistory('heart_rate') : () => logMetric('heart_rate')}
           />
 
           {/* BP */}
           <HealthCard
             info={{
               label: 'Blood Pressure',
-              value: latestSystolic !== undefined && latestDiastolic !== undefined ? `${latestSystolic}/${latestDiastolic}` : '--',
+              value: latestSystolic !== undefined && latestDiastolic !== undefined ? `${latestSystolic}/${latestDiastolic}` : undefined,
               unit: 'mmHg',
               color: '#3B82F6',
               bgColor: '#EFF6FF',
               icon: Activity
             }}
-            onPress={() => openHistory('blood_pressure')}
+            onPress={latestSystolic !== undefined ? () => openHistory('blood_pressure') : () => logMetric('blood_pressure')}
           />
 
           {/* Weight */}
           <HealthCard
             info={{
               label: 'Weight',
-              value: latestWeight !== undefined ? `${latestWeight}` : '--',
+              value: latestWeight !== undefined ? `${latestWeight}` : undefined,
               unit: 'kg',
               color: '#8B5CF6',
               bgColor: '#F5F3FF',
               icon: Weight
             }}
-            onPress={() => openHistory('weight')}
+            onPress={latestWeight !== undefined ? () => openHistory('weight') : () => logMetric('weight')}
           />
         </View>
       )}
@@ -106,6 +133,8 @@ function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
 
 function HealthCard({ info, onPress }: any) {
   const Icon = info.icon;
+  const hasTodayValue = info.value !== undefined;
+
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={onPress}>
       <View style={[styles.iconBox, { backgroundColor: info.bgColor }]}>
@@ -114,15 +143,17 @@ function HealthCard({ info, onPress }: any) {
 
       <View style={styles.content}>
         <View style={styles.valueRow}>
-          <Text style={styles.value}>{info.value}</Text>
-          <Text style={styles.unit}>{info.unit}</Text>
+          <Text style={styles.value}>{hasTodayValue ? info.value : '-'}</Text>
+          {hasTodayValue && <Text style={styles.unit}>{info.unit}</Text>}
         </View>
         <Text style={styles.label} numberOfLines={1}>{info.label}</Text>
       </View>
 
-      <View style={styles.trendIcon}>
-        <TrendingUp size={12} color="#10B981" />
-      </View>
+      {hasTodayValue && (
+        <View style={styles.trendIcon}>
+          <TrendingUp size={12} color="#10B981" />
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -131,20 +162,33 @@ export default React.memo(HealthSummary);
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 28,
+    marginBottom: 30,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginBottom: 14,
+    // Matches SectionHeader.tsx's marginBottom (the shared header used by
+    // most other feed cards) instead of a slightly smaller one-off value.
+    marginBottom: 16,
   },
   title: {
     fontSize: 13,
     color: '#494949',
     letterSpacing: 2,
     fontWeight: '700',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  headerDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#CBD5E1',
   },
   seeAll: {
     fontSize: 12,

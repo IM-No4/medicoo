@@ -5,14 +5,6 @@ import AddAddressScreen from '../features/profile/screens/AddressBook/AddAddress
 import AddressBookScreen from '../features/profile/screens/AddressBook/AddressBookScreen';
 import ConsultationsScreen from '../features/profile/screens/Consultations/ConsultationsScreen';
 import DoctorFeedbackScreen from '../features/profile/screens/Consultations/DoctorFeedbackScreen';
-import DoctorOnboardingScreen from '../features/profile/screens/DoctorOnboarding/DoctorOnboardingScreen';
-import DoctorEarningsScreen from '../features/profile/screens/DoctorSettings/DoctorEarningsScreen';
-import DoctorPendingRequestsScreen from '../features/profile/screens/DoctorSettings/DoctorPendingRequestsScreen';
-import DoctorReviewsScreen from '../features/profile/screens/DoctorSettings/DoctorReviewsScreen';
-import DoctorSettingsScreen from '../features/profile/screens/DoctorSettings/DoctorSettingsScreen';
-import ManageAppointmentsScreen from '../features/profile/screens/DoctorSettings/ManageAppointmentsScreen';
-import ManageAvailabilityScreen from '../features/profile/screens/DoctorSettings/ManageAvailabilityScreen';
-import PatientConsultationDetailScreen from '../features/profile/screens/DoctorSettings/PatientConsultationDetailScreen';
 import AddFamilyMemberScreen from '../features/profile/screens/FamilyMembers/AddFamilyMemberScreen';
 import FamilyMembersScreen from '../features/profile/screens/FamilyMembers/FamilyMembersScreen';
 import LabTestDetailScreen from '../features/profile/screens/Labs/LabTestDetailScreen';
@@ -32,8 +24,6 @@ export type ProfileStackParamList = {
   ProfileMain: undefined;
   ProfileDetails: undefined;
   EditProfile: { profile: any };
-  DoctorOnboarding: undefined;
-  DoctorSettings: undefined;
   AddressBookModal: undefined;
   AddAddress: {
     fullAddress?: string;
@@ -56,12 +46,6 @@ export type ProfileStackParamList = {
   HelpModal: undefined;
   CommunityGuidelines: undefined;
   SecurityStandards: undefined;
-  ManageAvailability: undefined;
-  ManageAppointments: { initialTab?: 'requests' | 'upcoming' | 'history' };
-  PatientConsultationDetail: { appointment: any };
-  DoctorPendingRequests: undefined;
-  DoctorReviews: undefined;
-  DoctorEarnings: undefined;
   LiveChat: undefined;
   OrderSupport: { orderId: string };
   HealthAssessmentHistory: undefined;
@@ -84,16 +68,6 @@ export default function ProfileStack() {
       <Stack.Screen
         name="EditProfile"
         component={EditProfileScreen}
-        options={{ presentation: 'card' }}
-      />
-      <Stack.Screen
-        name="DoctorOnboarding"
-        component={DoctorOnboardingScreen}
-        options={{ presentation: 'card' }}
-      />
-      <Stack.Screen
-        name="DoctorSettings"
-        component={DoctorSettingsScreen}
         options={{ presentation: 'card' }}
       />
       {/* Address Book */}
@@ -175,36 +149,6 @@ export default function ProfileStack() {
       <Stack.Screen
         name="LiveChat"
         component={LiveChatScreen}
-        options={{ presentation: 'card' }}
-      />
-      <Stack.Screen
-        name="ManageAvailability"
-        component={ManageAvailabilityScreen}
-        options={{ presentation: 'card' }}
-      />
-      <Stack.Screen
-        name="ManageAppointments"
-        component={ManageAppointmentsScreen}
-        options={{ presentation: 'card' }}
-      />
-      <Stack.Screen
-        name="PatientConsultationDetail"
-        component={PatientConsultationDetailScreen}
-        options={{ presentation: 'card' }}
-      />
-      <Stack.Screen
-        name="DoctorPendingRequests"
-        component={DoctorPendingRequestsScreen}
-        options={{ presentation: 'card' }}
-      />
-      <Stack.Screen
-        name="DoctorReviews"
-        component={DoctorReviewsScreen}
-        options={{ presentation: 'card' }}
-      />
-      <Stack.Screen
-        name="DoctorEarnings"
-        component={DoctorEarningsScreen}
         options={{ presentation: 'card' }}
       />
       <Stack.Screen

@@ -91,10 +91,6 @@ export const ActionRegistry: Record<ActionKey, any> = {
     tab: 'Profile',
     screen: 'EditProfile',
   },
-  OPEN_DOCTOR_ONBOARDING: {
-    tab: 'Profile',
-    screen: 'DoctorOnboarding',
-  },
   OPEN_FAMILY_MEMBERS: {
     tab: 'Profile',
     screen: 'FamilyMembersModal',
@@ -141,38 +137,6 @@ export const ActionRegistry: Record<ActionKey, any> = {
     tab: 'Profile',
     screen: 'LabTestDetail',
   },
-  OPEN_REDEEM: {
-    tab: 'Profile',
-    screen: 'DoctorEarnings',
-  },
-  OPEN_DOCTOR_SETTINGS: {
-    tab: 'Profile',
-    screen: 'DoctorSettings',
-  },
-  OPEN_MANAGE_AVAILABILITY: {
-    tab: 'Profile',
-    screen: 'ManageAvailability',
-  },
-  OPEN_MANAGE_APPOINTMENTS: {
-    tab: 'Profile',
-    screen: 'ManageAppointments',
-  },
-  OPEN_DOCTOR_PENDING_REQUESTS: {
-    tab: 'Profile',
-    screen: 'DoctorPendingRequests',
-  },
-  OPEN_DOCTOR_REVIEWS: {
-    tab: 'Profile',
-    screen: 'DoctorReviews',
-  },
-  OPEN_DOCTOR_EARNINGS: {
-    tab: 'Profile',
-    screen: 'DoctorEarnings',
-  },
-  OPEN_PATIENT_CONSULTATION_DETAIL: {
-    tab: 'Profile',
-    screen: 'PatientConsultationDetail',
-  },
   OPEN_DOCTOR_CALL: {
     screen: 'DoctorCall',
   },
@@ -192,6 +156,9 @@ export const ActionRegistry: Record<ActionKey, any> = {
   },
   OPEN_PRIVACY_POLICY: {
     screen: 'PrivacyPolicy',
+  },
+  OPEN_MEDICAL_DISCLAIMER: {
+    screen: 'MedicalDisclaimer',
   },
   OPEN_ADD_ADDRESS: {
     tab: 'Profile',

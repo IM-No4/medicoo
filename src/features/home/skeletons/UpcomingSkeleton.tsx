@@ -18,6 +18,6 @@ export default function UpcomingSkeleton() {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    marginBottom: 28,
+    marginBottom: 30,
   },
 });

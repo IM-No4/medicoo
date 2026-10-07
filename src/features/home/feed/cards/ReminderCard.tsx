@@ -13,7 +13,7 @@ export default function ReminderCard({
         backgroundColor: '#FFF3E0',
         padding: 16,
         borderRadius: 12,
-        marginBottom: 28,
+        marginBottom: 30,
         marginHorizontal: 20,
       }}
     >

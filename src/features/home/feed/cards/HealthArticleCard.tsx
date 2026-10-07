@@ -80,7 +80,7 @@ export default React.memo(HealthArticleCard);
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: 28,
+        marginBottom: 30,
     },
     listContent: {
         paddingHorizontal: 16,
@@ -91,12 +91,6 @@ const styles = StyleSheet.create({
         marginHorizontal: 8,
         backgroundColor: '#fff',
         borderRadius: 16,
-        // Shadow
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
         borderWidth: 1,
         borderColor: '#F3F4F6',
         overflow: 'hidden'

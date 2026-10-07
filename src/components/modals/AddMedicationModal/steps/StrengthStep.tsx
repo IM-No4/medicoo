@@ -1,3 +1,4 @@
+import { Gauge } from 'lucide-react-native';
 import React from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { styles } from '../styles';
@@ -13,21 +14,12 @@ export default function StrengthStep({ data, onChange }: StrengthStepProps) {
     return (
         <View style={styles.stepContainer}>
 
-            {/* Visual Anchor - Strength/Dose Theme */}
+            {/* Visual Anchor - plain icon-in-circle, same recipe used
+                everywhere else in the app rather than a bespoke bar-chart
+                composition. */}
             <View style={styles.iconHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', height: 80, gap: 10 }}>
-                    {/* Outline Circle/Pill - Green */}
-                    <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: '#DAF7A6', justifyContent: 'center', alignItems: 'center' }}>
-                        <View style={{ width: 30, borderTopWidth: 2, borderColor: '#DAF7A6', borderStyle: 'dotted' }} />
-                    </View>
-                    {/* Filled Pill - Blue with midline */}
-                    <View style={{ width: 40, height: 60, borderRadius: 20, borderWidth: 3, borderColor: '#00C3FF', justifyContent: 'center', alignItems: 'center' }}>
-                        <View style={{ width: 30, borderTopWidth: 2, borderColor: '#00C3FF', borderStyle: 'dotted' }} />
-                    </View>
-                    {/* Filled Pill - Dark Blue */}
-                    <View style={{ width: 40, height: 80, borderRadius: 20, borderWidth: 3, borderColor: '#2F80ED', justifyContent: 'center', alignItems: 'center' }}>
-                        <View style={{ width: 30, borderTopWidth: 2, borderColor: '#2F80ED', borderStyle: 'dotted' }} />
-                    </View>
+                <View style={[styles.iconCircle, { backgroundColor: '#8B5CF6' }]}>
+                    <Gauge size={36} color="#FFFFFF" />
                 </View>
             </View>
 
@@ -62,7 +54,7 @@ export default function StrengthStep({ data, onChange }: StrengthStepProps) {
                                 ]}>
                                     {unit}
                                 </Text>
-                                {isSelected && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#2F80ED' }} />}
+                                {isSelected && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#0FBBA1' }} />}
                             </TouchableOpacity>
                             {!isLast && <View style={styles.separator} />}
                         </View>

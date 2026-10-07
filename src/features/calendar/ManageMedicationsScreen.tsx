@@ -1,7 +1,7 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft, Pencil, Pill, Plus, Trash2 } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Platform,
@@ -13,7 +13,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
+import { RenderMedicationIcon } from '../../components/modals/AddMedicationModal/config/shapes';
 import { deleteMedicineSchedule, getMedicineSchedules } from '../../services/api/medicine.api';
+import { MAX_SYNC_ATTEMPTS } from '../../redux/slices/calendarSlice';
+import { StorageService } from '../../services/storage';
+import { loadMedicineSchedules, saveMedicineSchedules } from '../../services/storage/medicineSchedulesStorage';
+import { scheduleLocalMedicineReminders } from '../../services/notifications/medicineReminderScheduler';
 
 interface MedSchedule {
     _id: string;
@@ -38,6 +43,10 @@ interface MedSchedule {
     intervalType?: string;
     cycleDaysOn?: number;
     cycleDaysOff?: number;
+    // Set only on entries rebuilt from the offline sync queue (created
+    // offline, not yet confirmed by the server) - they have no real _id
+    // yet, so edit/delete are held back until the write actually lands.
+    __pendingSync?: boolean;
 }
 
 // A schedule counts as "past" (removed from active management, kept
@@ -73,14 +82,62 @@ export default function ManageMedicationsScreen() {
         try {
             setLoading(true);
             const res = await getMedicineSchedules();
-            const list: MedSchedule[] = res?.data ?? res ?? [];
+            const serverList: MedSchedule[] = res?.data ?? res ?? [];
+
+            // A medication created offline used to just vanish the moment
+            // this screen next fetched successfully - the fetch isn't wrong
+            // (the server genuinely doesn't have it yet), but it then
+            // overwrote the cache with that list, erasing the only trace of
+            // it before its queued write ever ran. Rebuild those pending
+            // entries straight from the sync queue's own payloads instead
+            // (the queue is the real source of truth for "not synced yet",
+            // and unlike the cache it survives any number of these
+            // overwrites), and show them until the write actually goes
+            // through or is finally given up on.
+            const queue = await StorageService.getSyncQueue();
+            const pendingCreates: MedSchedule[] = queue
+                .filter((a) => a.type === 'CREATE_MEDICINE' && a.attempts <= MAX_SYNC_ATTEMPTS)
+                .map((a) => ({
+                    ...a.payload,
+                    _id: `offline_pending_${a.id}`,
+                    isActive: true,
+                    __pendingSync: true,
+                }));
+
+            // Same reasoning in reverse - a delete that hasn't synced yet
+            // shouldn't have the medicine it's about to remove reappear the
+            // next time this list refreshes just because the server still
+            // (correctly, for now) has it.
+            const pendingDeleteIds = new Set(
+                queue
+                    .filter((a) => a.type === 'DELETE_MEDICINE' && a.attempts <= MAX_SYNC_ATTEMPTS)
+                    .map((a) => a.payload.id)
+            );
+
+            const list = [...pendingCreates, ...serverList.filter((s) => !pendingDeleteIds.has(s._id))];
             setSchedules(list);
+            await saveMedicineSchedules(list);
         } catch (e) {
+            // Offline (or any other failure): fall back to the last
+            // successfully fetched list instead of leaving this screen
+            // stuck on "No Medications Added" for someone who actually has
+            // reminders set up - they just can't be refreshed right now.
             console.error('Failed to load medication schedules', e);
+            const cached = await loadMedicineSchedules();
+            if (cached.length > 0) setSchedules(cached);
         } finally {
             setLoading(false);
         }
     };
+
+    // Cache-first instant paint, same pattern as goals/vitals/calendar -
+    // shows the last-known list immediately, before fetchSchedules's
+    // network call (triggered separately below) has a chance to resolve.
+    useEffect(() => {
+        loadMedicineSchedules().then((cached) => {
+            if (cached.length > 0) setSchedules(cached);
+        });
+    }, []);
 
     // useFocusEffect (not a plain useEffect) so returning from AddMedication
     // after adding/editing a schedule refreshes this list automatically,
@@ -102,11 +159,37 @@ export default function ManageMedicationsScreen() {
             `Are you sure you want to delete ${name}? This cannot be undone.`,
             async () => {
                 hideStatus();
+                const removeLocally = () => {
+                    setSchedules(prev => {
+                        const next = prev.filter(s => s._id !== id);
+                        saveMedicineSchedules(next);
+                        // Otherwise a deleted medicine's reminders keep
+                        // firing for the rest of the rolling window - they
+                        // were scheduled up to 3 days ahead and nothing
+                        // else would cancel them on its own.
+                        scheduleLocalMedicineReminders(next);
+                        return next;
+                    });
+                };
+
                 try {
                     await deleteMedicineSchedule(id);
-                    setSchedules(prev => prev.filter(s => s._id !== id));
-                } catch (e) {
-                    showStatus('error', 'Error', 'Failed to delete medication.');
+                    removeLocally();
+                } catch (e: any) {
+                    // No response at all (vs a real 4xx/5xx) means this never
+                    // reached the backend - almost always no internet.
+                    // Deleting a medication is exactly the kind of write that
+                    // shouldn't be blocked just because the user is offline
+                    // right now: queue it for syncOfflineQueue to actually
+                    // send once back online (mirrors CREATE_MEDICINE/
+                    // UPDATE_MEDICINE's offline handling), and remove it
+                    // locally right away either way.
+                    if (!e?.response) {
+                        await StorageService.addToSyncQueue('DELETE_MEDICINE', { id });
+                        removeLocally();
+                    } else {
+                        showStatus('error', 'Error', 'Failed to delete medication.');
+                    }
                 }
             },
             'Delete'
@@ -118,8 +201,13 @@ export default function ManageMedicationsScreen() {
 
     const renderMedCard = (item: MedSchedule, isPast: boolean) => (
         <View key={item._id} style={[styles.medCard, (!item.isActive || isPast) && styles.disabledCard]}>
-            <View style={styles.medIconBox}>
-                <Pill size={20} color={!item.isActive || isPast ? '#94A3B8' : '#0FBBA1'} />
+            <View style={[styles.medIconBox, { backgroundColor: item.color || '#E0F7F4' }]}>
+                <RenderMedicationIcon
+                    shapeKey={item.shape || 'tablet'}
+                    leftColor={item.leftColor}
+                    rightColor={item.rightColor}
+                    size={0.8}
+                />
             </View>
 
             <View style={styles.medInfo}>
@@ -127,16 +215,19 @@ export default function ManageMedicationsScreen() {
                     {item.medicineName}
                 </Text>
                 <Text style={styles.medDosage}>
-                    {item.dosage} · {item.scheduleType}
+                    {[item.dosage, item.scheduleType].filter(Boolean).join(' · ')}
                     {item.times?.length ? ` · ${item.times.join(', ')}` : ''}
                 </Text>
+                {item.__pendingSync && (
+                    <Text style={styles.pendingSyncText}>Waiting to sync…</Text>
+                )}
             </View>
 
             {isPast ? (
                 <View style={styles.pastBadge}>
                     <Text style={styles.pastBadgeText}>{item.isDeleted ? 'Removed' : 'Completed'}</Text>
                 </View>
-            ) : (
+            ) : item.__pendingSync ? null : (
                 <View style={styles.medActions}>
                     <TouchableOpacity
                         style={styles.editBtn}
@@ -165,7 +256,7 @@ export default function ManageMedicationsScreen() {
                 the back/action button convention used across the rest of
                 the app (e.g. FamilyMembersScreen, LabTestsHistoryScreen)
                 rather than the filled-circle style this screen had before. */}
-            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
                     <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
@@ -192,7 +283,7 @@ export default function ManageMedicationsScreen() {
                     </TouchableOpacity>
                 </View>
             ) : (
-                <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+                <ScrollView contentContainerStyle={[styles.list, { paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
                     {activeSchedules.length > 0 && (
                         <>
                             <Text style={styles.sectionLabel}>EDIT OR REMOVE MEDICATION SCHEDULES</Text>
@@ -297,14 +388,12 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     disabledCard: {
-        backgroundColor: '#F8FAFC',
-        opacity: 0.75,
+        backgroundColor: '#FFFFFF',
     },
     medIconBox: {
         width: 44,
         height: 44,
         borderRadius: 14,
-        backgroundColor: '#F0FDF4',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -325,6 +414,12 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#64748B',
         fontWeight: '500',
+    },
+    pendingSyncText: {
+        fontSize: 11,
+        color: '#F59E0B',
+        fontWeight: '600',
+        marginTop: 3,
     },
     medActions: {
         flexDirection: 'row',

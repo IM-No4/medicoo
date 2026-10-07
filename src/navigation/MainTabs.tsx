@@ -2,9 +2,11 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute, RouteProp } from '@react-navigation/native';
 import React from 'react';
 import { View } from 'react-native';
+import { useSelector } from 'react-redux';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AppIcon from '../components/icons/AppIcon';
+import { RootState } from '../redux/store';
 import CalendarStack from './CalendarStack';
 import HealthStack from './HealthStack';
 import HomeStack from './HomeStack';
@@ -33,6 +35,15 @@ const isNestedStackOnSubScreen = (route: RouteProp<any, any>) => {
 export default function MainTabs({ onOpenCommandPalette }: Props) {
   const insets = useSafeAreaInsets();
 
+  // Offline mode is a single self-contained hub (see HomeScreen's early
+  // return + OfflineHomeContent) rather than a normal tabbed app - there's
+  // nothing else offline-specific behind the other tabs to switch to, and
+  // the hub's own shortcut cards already push straight into the
+  // offline-capable screens (Log Vitals, Manage Medications, etc.) that
+  // matter. Hiding the bar removes a set of destinations that would mostly
+  // just show their own "couldn't load" states right now.
+  const isOnline = useSelector((state: RootState) => state.connectivity.isOnline);
+
   const baseTabBarStyle = {
     backgroundColor: '#ffffff',
     borderTopWidth: 0,
@@ -54,7 +65,15 @@ export default function MainTabs({ onOpenCommandPalette }: Props) {
         // Only the tab's own root screen keeps the bar - anything pushed on
         // top within a nested stack (e.g. Profile's sub-screens) hides it,
         // since those are drill-down detail views, not tab destinations.
-        tabBarStyle: isNestedStackOnSubScreen(route) ? { display: 'none' } : baseTabBarStyle,
+        tabBarStyle: (!isOnline || isNestedStackOnSubScreen(route)) ? { display: 'none' } : baseTabBarStyle,
+        // With app.json's edgeToEdgeEnabled, Android's system nav bar is
+        // fully transparent and the app draws behind it - tabBarStyle's own
+        // backgroundColor doesn't reliably survive that on every device
+        // (bottom-tabs computes its layout against the transparent inset
+        // before applying the style), leaving a see-through strip under the
+        // gesture bar. Rendering an explicit solid layer behind the bar's
+        // own content is the documented, reliable fix.
+        tabBarBackground: () => <View style={{ flex: 1, backgroundColor: '#ffffff' }} />,
         tabBarIcon: ({ focused }) => {
           const color = focused ? ACTIVE_COLOR : INACTIVE_COLOR;
           const opacity = focused ? 1 : 0.45;

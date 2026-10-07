@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     container: {
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
-        marginBottom: 28,
+        marginBottom: 30,
         marginHorizontal: 24,
         borderWidth: 1,
         borderColor: '#FEE2E2', // Subtle, premium soft red border

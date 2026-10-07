@@ -25,7 +25,7 @@ export default function ComingSoonScreen() {
     <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <StatusBar style="dark" />
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}

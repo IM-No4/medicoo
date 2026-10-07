@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
         padding: 16,
-        marginBottom: 28,
+        marginBottom: 30,
         marginHorizontal: 24,
         borderWidth: 1,
         borderColor: '#F1F5F9', // Subtle premium border

@@ -23,7 +23,7 @@ export default function CalendarHeader({ onOpenCalendar, onOpenManage, selectedD
     : '';
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 4 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
       <View style={styles.dateRow}>
         <Text style={styles.dateText}>{dateString}</Text>
         <View style={styles.actionsRow}>

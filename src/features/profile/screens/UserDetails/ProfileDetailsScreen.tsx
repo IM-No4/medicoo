@@ -1,19 +1,84 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Calendar, ChevronLeft, Droplet, Edit2, Mail, MapPin, Phone, Ruler, User, Weight } from 'lucide-react-native';
+import { Calendar, ChevronLeft, Droplet, Edit2, Mail, MapPin, Phone, Ruler, Trash2, User, Weight } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { executeAction } from '../../../../actions/ActionExecutor';
-import { getProfileDetails } from '../../../../services/api';
+import { bootSuccess } from '../../../../bootstrap/boot.slice';
+import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
+import { logout as logoutRedux } from '../../../../redux/slices/authSlice';
+import { clearActiveOrder } from '../../../../redux/slices/orderSlice';
+import { getProfileDetails, logoutApi, requestAccountDeletion } from '../../../../services/api';
+import { unregisterDeviceToken } from '../../../../services/api/pushNotification.api';
+import { getFCMToken } from '../../../../utils/deviceUtils';
 import { formatDateForDisplay, formatGenderForDisplay } from '../../../../utils/formatters';
+import { clearToken } from '../../../../utils/tokenManagement';
 
 export default function ProfileDetailsScreen() {
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
+    const dispatch = useDispatch();
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState<any>(null);
     const authMobile = useSelector((state: any) => state.auth.mobile);
+
+    // Delete Account lives here (behind a tap into Profile Details) rather
+    // than sitting in the main Profile menu, so it isn't the kind of thing
+    // someone brushes past and taps by accident - it now takes a deliberate
+    // trip into this screen to even see it.
+    const [status, setStatus] = useState<{
+        visible: boolean;
+        type: StatusType;
+        title: string;
+        message: string;
+        primaryAction?: () => void;
+        primaryActionText?: string;
+        secondaryActionText?: string;
+    }>({ visible: false, type: 'idle', title: '', message: '' });
+
+    const hideStatus = () => setStatus(prev => ({ ...prev, visible: false }));
+
+    const handleDeleteAccount = () => {
+        setStatus({
+            visible: true,
+            type: 'warning',
+            title: 'Delete Account',
+            message: "Your account will be permanently deleted after 30 days. Log back in anytime before then to cancel.",
+            primaryActionText: 'Delete',
+            secondaryActionText: 'Keep',
+            primaryAction: async () => {
+                hideStatus();
+                try {
+                    await requestAccountDeletion();
+                } catch (error) {
+                    console.error('Failed to request account deletion:', error);
+                    setStatus({
+                        visible: true,
+                        type: 'error',
+                        title: 'Something went wrong',
+                        message: 'Could not schedule account deletion. Please try again.',
+                    });
+                    return;
+                }
+
+                try {
+                    await logoutApi();
+                    const fcmToken = await getFCMToken();
+                    if (fcmToken) {
+                        await unregisterDeviceToken(fcmToken).catch(() => {});
+                    }
+                } catch (error) {
+                    console.error('Logout after delete request failed:', error);
+                } finally {
+                    await clearToken('access_token');
+                    dispatch(clearActiveOrder());
+                    dispatch(logoutRedux());
+                    dispatch(bootSuccess({ isAuthenticated: false }));
+                }
+            },
+        });
+    };
 
     useFocusEffect(
         useCallback(() => {
@@ -64,7 +129,7 @@ export default function ProfileDetailsScreen() {
     return (
         <View style={styles.container}>
             {/* Header */}
-            <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+            <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
                     <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
@@ -108,6 +173,20 @@ export default function ProfileDetailsScreen() {
                     {renderDetailRow(MapPin, 'Home Address', profile?.address)}
                 </View>
 
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Account</Text>
+                    <TouchableOpacity
+                        style={styles.deleteRow}
+                        activeOpacity={0.7}
+                        onPress={handleDeleteAccount}
+                    >
+                        <View style={[styles.iconContainer, styles.deleteIconContainer]}>
+                            <Trash2 size={20} color="#EF4444" />
+                        </View>
+                        <Text style={styles.deleteRowText}>Delete Account</Text>
+                    </TouchableOpacity>
+                </View>
+
                 <View style={{ height: 100 }} />
             </ScrollView>
 
@@ -121,6 +200,17 @@ export default function ProfileDetailsScreen() {
                     <Text style={styles.editButtonText}>Edit Profile</Text>
                 </TouchableOpacity>
             </View>
+
+            <StatusModal
+                visible={status.visible}
+                status={status.type}
+                title={status.title}
+                message={status.message}
+                onClose={hideStatus}
+                primaryAction={status.primaryAction}
+                primaryActionText={status.primaryActionText}
+                secondaryActionText={status.secondaryActionText}
+            />
         </View>
     );
 }
@@ -185,6 +275,10 @@ const styles = StyleSheet.create({
     detailContent: { flex: 1 },
     detailLabel: { fontSize: 12, color: '#6B7280' },
     detailValue: { fontSize: 14, color: '#1F2937', fontWeight: '500', marginTop: 2 },
+
+    deleteRow: { flexDirection: 'row', alignItems: 'center' },
+    deleteIconContainer: { backgroundColor: '#FEF2F2' },
+    deleteRowText: { fontSize: 15, fontWeight: '600', color: '#EF4444' },
 
     verifiedBadge: {
         backgroundColor: '#DCFCE7',

@@ -17,7 +17,7 @@ export default function HealthSummarySkeleton() {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    marginBottom: 28,
+    marginBottom: 30,
   },
   row: {
     flexDirection: 'row',

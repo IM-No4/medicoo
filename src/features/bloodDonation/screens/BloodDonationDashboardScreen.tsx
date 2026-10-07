@@ -209,7 +209,7 @@ export default function BloodDonationDashboardScreen() {
     return (
         <View style={styles.container}>
             <StatusBar style="dark" />
-            <View style={[styles.topHeader, { paddingTop: insets.top + 4 }]}>
+            <View style={[styles.topHeader, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={handleBack} style={styles.backButton} activeOpacity={0.7}>
                     <ChevronLeft size={22} color="#111827" />
                 </TouchableOpacity>
@@ -217,7 +217,7 @@ export default function BloodDonationDashboardScreen() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + insets.bottom }]}>
                 {profile ? renderDonorView() : renderNonDonorView()}
             </ScrollView>
         </View>

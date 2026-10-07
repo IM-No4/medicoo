@@ -53,6 +53,11 @@ const formatPrice = (amount: number): string => {
   return parts.join(".");
 };
 
+// Mirrors homeController.js's own SERVICEABILITY_RADIUS_KM - a store beyond
+// this from the currently selected address isn't delivering here, same
+// threshold the home feed already uses to decide store visibility.
+const SERVICEABILITY_RADIUS_KM = 10;
+
 export default function CartScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
@@ -67,6 +72,11 @@ export default function CartScreen() {
   const currentLocation = useSelector(
     (state: RootState) => state.location.currentLocation,
   );
+  // Bumped by offlineSync.ts on a stale-length background resume - a
+  // store's online/offline status, distance-based fee, and platform fee
+  // can all have changed while the app sat backgrounded, same reasoning as
+  // useHomeFeed.ts's own reaction to this.
+  const resumeSignal = useSelector((state: RootState) => state.appLifecycle.resumeSignal);
 
   const lat = selectedAddress?.latitude ?? currentLocation?.latitude ?? 0;
   const long = selectedAddress?.longitude ?? currentLocation?.longitude ?? 0;
@@ -174,6 +184,11 @@ export default function CartScreen() {
   // clickable for the first few seconds even for a store that turns out to
   // be offline.
   const [loadedStoreStatus, setLoadedStoreStatus] = useState<Record<string, boolean>>({});
+  // Distance-based, recomputed every time the fetchStatuses effect below
+  // re-runs (which already happens on address change via its lat/long
+  // deps) - a store that was in range for the old address may no longer
+  // be for the new one, same client-derived pattern as offlineStores.
+  const [notServiceableStores, setNotServiceableStores] = useState<Record<string, boolean>>({});
   const [storeDistances, setStoreDistances] = useState<Record<string, number>>({});
   const [storePlatformFees, setStorePlatformFees] = useState<Record<string, number>>({});
   const [isGstChargesExpanded, setIsGstChargesExpanded] = useState<Record<string, boolean>>({});
@@ -219,6 +234,10 @@ export default function CartScreen() {
                 ...prev,
                 [id]: dist,
               }));
+              setNotServiceableStores((prev) => ({
+                ...prev,
+                [id]: dist > SERVICEABILITY_RADIUS_KM,
+              }));
             }
           }
           if (details?.platformFee !== undefined) {
@@ -249,7 +268,7 @@ export default function CartScreen() {
     return () => {
       active = false;
     };
-  }, [storeCarts, lat, long]);
+  }, [storeCarts, lat, long, resumeSignal]);
 
   const [isReceiverModalVisible, setIsReceiverModalVisible] = useState(false);
   const [tempReceiverName, setTempReceiverName] = useState(
@@ -686,6 +705,7 @@ export default function CartScreen() {
               onPress={() =>
                 navigation.navigate("CouponScreen", {
                   storeId: storeCart.storeId,
+                  amount: subtotal,
                 })
               }
             >
@@ -799,7 +819,7 @@ export default function CartScreen() {
     return (
       <View style={[styles.container, styles.emptyContainer]}>
         <StatusBar style="dark" />
-        <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backButton}
@@ -850,6 +870,7 @@ export default function CartScreen() {
   const renderStickyFooter = (storeCart: StoreCart) => {
     if (!storeCart) return null;
     const isOffline = !!offlineStores[storeCart.storeId];
+    const notServiceable = !isOffline && !!notServiceableStores[storeCart.storeId];
     const cartItems = Object.values(storeCart.items);
     const needsPrescription = cartItems.some((item) => item.prescriptionRequired);
     const attachedPrescription = attachedPrescriptions[storeCart.storeId];
@@ -903,6 +924,10 @@ export default function CartScreen() {
         alert("Please add a prescription for the items that require one before proceeding to pay.");
         return;
       }
+      if (notServiceable) {
+        alert("This store doesn't deliver to your selected address. Please change your delivery address or remove these items.");
+        return;
+      }
       executeAction("OPEN_CHECKOUT", {
         storeId: storeCart.storeId,
         amount: total,
@@ -931,6 +956,13 @@ export default function CartScreen() {
             <Info size={18} color="#EF4444" />
             <Text style={styles.offlineFooterText}>
               This store is currently offline
+            </Text>
+          </View>
+        ) : notServiceable ? (
+          <View style={styles.offlineFooterRow}>
+            <Info size={18} color="#EF4444" />
+            <Text style={styles.offlineFooterText}>
+              This store doesn't deliver to your selected address
             </Text>
           </View>
         ) : (
@@ -977,7 +1009,7 @@ export default function CartScreen() {
       <StatusBar style="dark" />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
@@ -1202,6 +1234,7 @@ export default function CartScreen() {
             <ScrollView showsVerticalScrollIndicator={false}>
               {storeCarts.map((item) => {
                 const itemIsOffline = !!offlineStores[item.storeId];
+                const itemNotServiceable = !itemIsOffline && !!notServiceableStores[item.storeId];
                 const isActive = selectedStoreId === item.storeId;
                 return (
                   <TouchableOpacity
@@ -1219,12 +1252,12 @@ export default function CartScreen() {
                     <View
                       style={[
                         styles.storeSwitcherIconWrap,
-                        itemIsOffline && styles.storeSwitcherIconWrapOffline,
+                        (itemIsOffline || itemNotServiceable) && styles.storeSwitcherIconWrapOffline,
                       ]}
                     >
                       <ShoppingBag
                         size={18}
-                        color={itemIsOffline ? "#EF4444" : "#007C69"}
+                        color={itemIsOffline || itemNotServiceable ? "#EF4444" : "#007C69"}
                       />
                     </View>
                     <View style={styles.storeSwitcherTextCol}>
@@ -1234,7 +1267,7 @@ export default function CartScreen() {
                       <Text style={styles.storeSwitcherSubtext}>
                         {Object.keys(item.items).length} item
                         {Object.keys(item.items).length !== 1 ? "s" : ""}
-                        {itemIsOffline ? " · Offline" : ""}
+                        {itemIsOffline ? " · Offline" : itemNotServiceable ? " · Not deliverable" : ""}
                       </Text>
                     </View>
                     {isActive && (

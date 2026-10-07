@@ -1,6 +1,6 @@
 import { Check, Clock, X } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { RenderMedicationIcon } from '../../../components/modals/AddMedicationModal/config/shapes';
 import StatusModal from '../../../components/modals/StatusModal';
 import { COLORS } from '../styles';
@@ -18,6 +18,12 @@ interface Props {
   rightColor?: string;
   isFuture?: boolean;
   onMarkIntake: (status: 'taken' | 'skipped') => void;
+  // Lets a caller in a different visual context (e.g. the home feed, whose
+  // cards all use a lighter #F1F5F9/16-radius border instead of this card's
+  // own AppointmentCard-matching #E5E7EB/20-radius one) override just the
+  // container's border, without every other usage (Calendar tab, offline
+  // hub) losing the look it was actually designed to match.
+  style?: StyleProp<ViewStyle>;
 }
 
 // Matches AppointmentCard's card language (border instead of shadow, same
@@ -36,7 +42,8 @@ export default function MedicineCard({
   leftColor,
   rightColor,
   isFuture,
-  onMarkIntake
+  onMarkIntake,
+  style
 }: Props) {
   const isTaken = status === 'taken';
   const isSkipped = status === 'skipped';
@@ -53,7 +60,7 @@ export default function MedicineCard({
   return (
     <>
       <TouchableOpacity
-        style={styles.card}
+        style={[styles.card, style]}
         onPress={handlePress}
         disabled={isTaken || isSkipped || isFuture}
         activeOpacity={0.7}
@@ -117,7 +124,7 @@ export default function MedicineCard({
         visible={modalVisible}
         status="warning"
         title="Medication Check"
-        message={`Have you taken ${name} (${dosage}) scheduled for ${time}?`}
+        message={`Have you taken ${name}${dosage ? ` (${dosage})` : ''} scheduled for ${time}?`}
         onClose={() => setModalVisible(false)}
         primaryAction={() => {
           setModalVisible(false);

@@ -1,4 +1,5 @@
 import AppIcon from "@/src/components/icons/AppIcon";
+import MedicalDisclaimerNote from "@/src/components/MedicalDisclaimerNote";
 import { uploadPrescription } from "@/src/services/api/prescription.api";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -286,7 +287,7 @@ export default function PrescriptionResultScreen() {
     <View style={styles.masterContainer}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.safeArea}>
-        <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backButton}
@@ -302,6 +303,8 @@ export default function PrescriptionResultScreen() {
           </View>
           <View style={{ width: 40 }} />
         </View>
+
+        <MedicalDisclaimerNote variant="medication" />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}

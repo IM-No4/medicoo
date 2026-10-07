@@ -1,11 +1,13 @@
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  KeyboardAvoidingView,
+  BackHandler,
+  Keyboard,
   Platform,
   ScrollView,
   Text,
@@ -24,8 +26,11 @@ import ScheduleStep from '../../components/modals/AddMedicationModal/steps/Sched
 import ShapeStep from '../../components/modals/AddMedicationModal/steps/ShapeStep';
 import StrengthStep from '../../components/modals/AddMedicationModal/steps/StrengthStep';
 
-import { createMedicineSchedule, updateMedicineSchedule } from '../../services/api/medicine.api';
 import { styles } from '../../components/modals/AddMedicationModal/styles';
+import { createMedicineSchedule, updateMedicineSchedule } from '../../services/api/medicine.api';
+import { StorageService } from '../../services/storage';
+import { loadMedicineSchedules, saveMedicineSchedules } from '../../services/storage/medicineSchedulesStorage';
+import { refreshAndScheduleMedicineReminders, scheduleLocalMedicineReminders } from '../../services/notifications/medicineReminderScheduler';
 
 const STEPS = [
   MedicationDetailsStep,
@@ -121,7 +126,30 @@ export default function AddMedicationScreen() {
   const isEditing = !!editingSchedule;
   const [stepIndex, setStepIndex] = useState(0);
   const insets = useSafeAreaInsets();
-  const progressAnim = useState(new Animated.Value(0))[0];
+  // Starts already reflecting step 1 of N (see animateProgress's matching
+  // formula below), not 0 - a bare 0% fill on the very first, most-seen
+  // step of the wizard looked like an empty gray line with nothing
+  // "progress bar" about it (same fix as AddGoalScreen's step indicator).
+  const progressAnim = useState(new Animated.Value(1 / STEPS.length))[0];
+
+  // Tracks the keyboard's real, OS-reported height so the fixed footer can
+  // sit flush above it - same fix already used in
+  // AIAssistantChatScreen/LoginScreen/LiveChatScreen/OrderSupportScreen.
+  // KeyboardAvoidingView's "height" behavior on Android left a stray gap
+  // here (roughly the size of the bottom safe-area inset, which is still
+  // being added on top of the keyboard-shrunk space) between the footer
+  // and the keyboard.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   const [status, setStatus] = useState<{
     visible: boolean;
     type: StatusType;
@@ -154,7 +182,10 @@ export default function AddMedicationScreen() {
 
   const animateProgress = (toStep: number) => {
     Animated.spring(progressAnim, {
-      toValue: STEPS.length > 1 ? toStep / (STEPS.length - 1) : 1,
+      // (toStep + 1) / length, not toStep / (length - 1) - the latter is 0%
+      // on the first step, which read as an empty gray line rather than a
+      // progress bar. This way step 1 of 8 already shows ~12% filled.
+      toValue: (toStep + 1) / STEPS.length,
       useNativeDriver: false,
       tension: 60,
       friction: 10,
@@ -177,6 +208,20 @@ export default function AddMedicationScreen() {
       navigation.goBack();
     }
   };
+
+  // Without this, the Android hardware back button/gesture bypasses the
+  // step logic entirely and closes the whole screen mid-wizard - only the
+  // header's own back chevron (which calls goBack directly) respected it.
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        goBack();
+        return true; // Prevents the default pop action
+      };
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [stepIndex])
+  );
 
   // Helper: Check validity of current step
   const isNextDisabled = () => {
@@ -211,29 +256,33 @@ export default function AddMedicationScreen() {
   const handleNext = async () => {
     if (stepIndex === STEPS.length - 1) {
       // Submit
+      const dosage = form.strength ? `${form.strength} ${form.unit}` : form.dosage;
+      const scheduleType = form.scheduleType || 'Every Day';
+
+      // Compute frequency text
+      let frequency = scheduleType;
+      if (scheduleType === 'Every Few Days') {
+        frequency = `Every ${form.intervalValue} ${form.intervalType}${form.intervalValue > 1 ? 's' : ''}`;
+      } else if (scheduleType === 'On Specific Days of the Week') {
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const days = (form.selectedDays || []).sort().map((d: number) => dayNames[d]).join(', ');
+        if (days) frequency = days;
+      }
+
+      // Declared outside the try block (not just above it inside handleNext)
+      // so the catch block below - which needs to queue this exact payload
+      // when offline - can actually see it.
+      const payload = {
+        ...form,
+        dosage,
+        scheduleType,
+        medicineType: form.type,
+        shape: form.shape,
+        frequency,
+      };
+
       try {
         setLoading(true);
-        const dosage = form.strength ? `${form.strength} ${form.unit}` : form.dosage;
-        const scheduleType = form.scheduleType || 'Every Day';
-
-        // Compute frequency text
-        let frequency = scheduleType;
-        if (scheduleType === 'Every Few Days') {
-          frequency = `Every ${form.intervalValue} ${form.intervalType}${form.intervalValue > 1 ? 's' : ''}`;
-        } else if (scheduleType === 'On Specific Days of the Week') {
-          const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-          const days = (form.selectedDays || []).sort().map((d: number) => dayNames[d]).join(', ');
-          if (days) frequency = days;
-        }
-
-        const payload = {
-          ...form,
-          dosage,
-          scheduleType,
-          medicineType: form.type,
-          shape: form.shape,
-          frequency,
-        };
 
         if (isEditing) {
           await updateMedicineSchedule(editingSchedule._id, payload);
@@ -244,8 +293,53 @@ export default function AddMedicationScreen() {
           setLoading(false);
           showStatus('success', 'Medication Saved', 'Your prescription schedule has been updated.');
         }
+
+        // Re-fetches the full, authoritative schedule list (rather than
+        // guessing at the create/update response's exact shape) and
+        // re-derives the local reminder window from it - not awaited, the
+        // save itself already succeeded and shouldn't wait on this.
+        refreshAndScheduleMedicineReminders();
       } catch (error: any) {
         setLoading(false);
+
+        // No response at all (vs a real 4xx/5xx) means this never reached
+        // the backend - almost always no internet. This used to just fail
+        // outright with a generic error, unlike LogVitals (which already
+        // queues offline writes for syncOfflineQueue) - same treatment here
+        // now: queue it, tell the user it's saved, and let it actually sync
+        // once back online instead of losing everything they just filled in.
+        if (!error?.response) {
+          // Queuing alone isn't enough - ManageMedicationsScreen reads from
+          // its own local cache (medicineSchedulesStorage) whenever its own
+          // fetch also fails offline, and that cache was only ever written
+          // by a successful server fetch, so it had no idea this one
+          // existed. Without also patching it here, "medicine got created"
+          // (the queued write + this success message) was true, but the
+          // list the user immediately checks next would still show nothing
+          // for it until the queue actually syncs.
+          const cachedSchedules = await loadMedicineSchedules();
+          let updatedSchedules: any[];
+          if (isEditing) {
+            await StorageService.addToSyncQueue('UPDATE_MEDICINE', { id: editingSchedule._id, data: payload });
+            updatedSchedules = cachedSchedules.map((s: any) => (s._id === editingSchedule._id ? { ...s, ...payload } : s));
+          } else {
+            await StorageService.addToSyncQueue('CREATE_MEDICINE', payload);
+            const optimisticSchedule = { ...payload, _id: `offline_${Date.now()}` };
+            updatedSchedules = [optimisticSchedule, ...cachedSchedules];
+          }
+          await saveMedicineSchedules(updatedSchedules);
+          // No network needed here - reminders schedule straight from the
+          // in-memory list we just built, same as the online path does
+          // after its own fresh fetch.
+          scheduleLocalMedicineReminders(updatedSchedules);
+          showStatus(
+            'success',
+            isEditing ? 'Medication Updated' : 'Medication Saved',
+            "You're offline - this will sync automatically once you're back online."
+          );
+          return;
+        }
+
         showStatus('error', 'Update Failed', error.response?.data?.message || `Failed to ${isEditing ? 'update' : 'create'} medication schedule. Please try again.`);
       }
     } else {
@@ -257,13 +351,12 @@ export default function AddMedicationScreen() {
 
   return (
     <>
-      <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <StatusBar style="dark" />
+
+      <View style={styles.screen}>
         {/* Header - same recipe as the rest of the app: white bar + shadow,
             plain icon back button, fontSize 20/600/#111827 title. */}
-        <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
           <TouchableOpacity onPress={goBack} style={styles.backButton} activeOpacity={0.7}>
             <ChevronLeft size={22} color="#111827" />
           </TouchableOpacity>
@@ -308,7 +401,10 @@ export default function AddMedicationScreen() {
         <LinearGradient
           colors={['rgba(255,255,255,0)', '#ffffff']}
           locations={[0, 0.3]}
-          style={[styles.fixedFooter, { paddingBottom: Math.max(insets.bottom / 1.5, 20) }]}
+          style={[
+            styles.fixedFooter,
+            { paddingBottom: keyboardHeight > 0 ? 12 : insets.bottom + 12 },
+          ]}
         >
           <TouchableOpacity
             style={[
@@ -338,7 +434,7 @@ export default function AddMedicationScreen() {
             </TouchableOpacity>
           )}
         </LinearGradient>
-      </KeyboardAvoidingView>
+      </View>
       <StatusModal
         visible={status.visible}
         status={status.type}

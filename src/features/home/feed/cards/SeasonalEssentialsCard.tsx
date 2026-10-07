@@ -207,7 +207,10 @@ export default React.memo(SeasonalEssentialsCard);
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: 32,
+        // Matches every other feed card's marginBottom:28 - this was 32,
+        // making the gap after this card noticeably larger than the rest
+        // of the feed's otherwise-uniform rhythm.
+        marginBottom: 30,
         paddingVertical: 4, // Spacing inside the gradient
     },
     gradientContainer: {

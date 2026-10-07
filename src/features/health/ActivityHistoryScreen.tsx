@@ -6,12 +6,16 @@ import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View }
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StepsBarChart } from './components/StepsBarChart';
 import {
+  enableStepsTracking,
   getStepsRange,
+  isHealthConnectSupported,
   isStepsTrackingEnabled,
+  openHealthConnectInPlayStore,
   shiftAnchorDate,
   StepsRangeData,
   StepsRangeType,
 } from '../../services/health/healthConnectStepsService';
+import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 
 const TABS: { type: StepsRangeType; label: string }[] = [
   { type: 'day', label: 'Daily' },
@@ -39,10 +43,58 @@ export default function ActivityHistoryScreen() {
   const [anchorDate, setAnchorDate] = useState(() => new Date());
   const [data, setData] = useState<StepsRangeData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [enabling, setEnabling] = useState(false);
+
+  const [status, setStatus] = useState<{
+    visible: boolean;
+    type: StatusType;
+    title: string;
+    message: string;
+    primaryAction?: () => void;
+    primaryActionText?: string;
+  }>({ visible: false, type: 'idle', title: '', message: '' });
+
+  const showStatus = (type: StatusType, title: string, message: string, primaryAction?: () => void, primaryActionText?: string) => {
+    setStatus({ visible: true, type, title, message, primaryAction, primaryActionText });
+  };
+  const hideStatus = () => setStatus((prev) => ({ ...prev, visible: false }));
 
   useEffect(() => {
     isStepsTrackingEnabled().then(setTrackingEnabled);
   }, []);
+
+  // Same flow as ManageGoalsScreen's "Track Steps Automatically?" prompt -
+  // previously this screen's only way to enable tracking was to send the
+  // user away to Manage Goals first, even though the exact same toggle
+  // could just live here.
+  const handleEnableTracking = async () => {
+    if (enabling) return;
+    setEnabling(true);
+    try {
+      const result = await enableStepsTracking();
+      if (result.success) {
+        setTrackingEnabled(true);
+        return;
+      }
+
+      if (result.reason === 'not_installed' || result.reason === 'update_required') {
+        showStatus(
+          'warning',
+          result.reason === 'not_installed' ? 'Health Connect Required' : 'Health Connect Update Required',
+          result.reason === 'not_installed'
+            ? 'Automatic step tracking needs the Health Connect app, which isn\'t installed on this device yet.'
+            : 'Your Health Connect app needs an update before Medicoo can read step data from it.',
+          openHealthConnectInPlayStore,
+          'Get Health Connect'
+        );
+        return;
+      }
+
+      showStatus('error', 'Could Not Enable Tracking', 'Permission wasn\'t granted in Health Connect. Open Health Connect\'s app settings and allow Medicoo to read Steps, then try again here.');
+    } finally {
+      setEnabling(false);
+    }
+  };
 
   const load = useCallback(async (type: StepsRangeType, anchor: Date) => {
     setLoading(true);
@@ -73,7 +125,7 @@ export default function ActivityHistoryScreen() {
     <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <StatusBar style="dark" />
 
-      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
           <ChevronLeft size={22} color="#111827" />
         </TouchableOpacity>
@@ -88,6 +140,15 @@ export default function ActivityHistoryScreen() {
             style={[styles.tab, rangeType === tab.type && styles.tabActive]}
             activeOpacity={0.7}
             onPress={() => handleTabPress(tab.type)}
+            // The visual pill is only ~34px tall (paddingVertical: 9 + text),
+            // under Android's ~48dp comfortable tap target - hitSlop pads
+            // the actual touchable area without changing how it looks.
+            // pressRetentionOffset widens how far a finger can drift during
+            // a quick tap before Android's Touchable mixin cancels it as a
+            // "drag" instead of firing onPress, which is the other half of
+            // why a fast tap here could silently do nothing.
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+            pressRetentionOffset={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <Text style={[styles.tabText, rangeType === tab.type && styles.tabTextActive]}>{tab.label}</Text>
           </TouchableOpacity>
@@ -99,8 +160,19 @@ export default function ActivityHistoryScreen() {
           <Footprints size={36} color="#0FBBA1" />
           <Text style={styles.emptyTitle}>Step tracking isn&apos;t enabled</Text>
           <Text style={styles.emptySubtitle}>
-            Turn on the Steps goal from Manage Goals to start seeing your activity history here.
+            {isHealthConnectSupported
+              ? 'Turn on step tracking to start seeing your activity history here.'
+              : 'Turn on the Steps goal from Manage Goals to start seeing your activity history here.'}
           </Text>
+          {isHealthConnectSupported && (
+            <TouchableOpacity style={styles.enableButton} onPress={handleEnableTracking} activeOpacity={0.85} disabled={enabling}>
+              {enabling ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.enableButtonText}>Enable Step Tracking</Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <View style={styles.content}>
@@ -169,6 +241,16 @@ export default function ActivityHistoryScreen() {
           )}
         </View>
       )}
+
+      <StatusModal
+        visible={status.visible}
+        status={status.type}
+        title={status.title}
+        message={status.message}
+        onClose={hideStatus}
+        primaryAction={status.primaryAction}
+        primaryActionText={status.primaryActionText}
+      />
     </View>
   );
 }
@@ -313,4 +395,19 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginTop: 8 },
   emptySubtitle: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 19 },
+  enableButton: {
+    marginTop: 12,
+    backgroundColor: '#0FBBA1',
+    borderRadius: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 28,
+    minWidth: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  enableButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14.5,
+    fontWeight: '700',
+  },
 });

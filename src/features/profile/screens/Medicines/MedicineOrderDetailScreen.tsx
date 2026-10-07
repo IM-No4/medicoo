@@ -277,7 +277,7 @@ export default function MedicineOrderDetailScreen() {
   return (
     <View style={styles.container}>
       {/* Custom Nav Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <View style={styles.headerLeftRow}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}

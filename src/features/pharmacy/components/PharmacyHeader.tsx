@@ -9,6 +9,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -121,7 +122,7 @@ export default function PharmacyHeader({
   return (
     <View style={styles.container} onLayout={onLayout}>
       {/* Dark Green Header Background (fully contains the info card) */}
-      <View style={[styles.darkHeader, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.darkHeader, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <LinearGradient
           colors={["#FFF", "#FFF"]}
           start={{ x: 0, y: 0 }}

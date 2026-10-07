@@ -23,7 +23,7 @@ export default function ServicesSkeleton() {
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: 28,
+    marginBottom: 30,
   },
   row: {
     flexDirection: 'row',

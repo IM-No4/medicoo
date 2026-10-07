@@ -20,10 +20,12 @@ export type HomeFeedItemType =
   | 'DYNAMIC_HEADER'
   | 'UPCOMING_SECTION'
   | 'HEALTH_SUMMARY'
+  | 'UPCOMING_MEDICATION'
   | 'SEASONAL_ESSENTIALS'
   | 'HOME_FEED_FOOTER'
   | 'UPCOMING_APPOINTMENTS_CARD'
-  | 'CATEGORY_ROW';
+  | 'CATEGORY_ROW'
+  | 'NOT_SERVICEABLE_BANNER';
 
 export interface SeasonalCollection {
   id: string;
@@ -73,10 +75,35 @@ export interface HealthSummaryFeedItem extends HomeFeedItemBase {
   title: string;
 }
 
+// Admin-toggleable via HomeFeedConfig (sectionType: 'UPCOMING_MEDICATION') -
+// same minimal shape as HealthSummaryFeedItem above. The actual schedule
+// isn't carried here; UpcomingMedicationCard reads it straight from the
+// calendar redux slice so it can't go stale against what's already been
+// marked taken/skipped since this (paginated, cached) feed response loaded.
+export interface UpcomingMedicationFeedItem extends HomeFeedItemBase {
+  type: 'UPCOMING_MEDICATION';
+  title: string;
+  subtitle?: string;
+}
+
+// Shown instead of the pharmacy category row/product carousels when no
+// store is within homeController.js's SERVICEABILITY_RADIUS_KM of the
+// customer's location - see NotServiceableCard.tsx.
+export interface NotServiceableBannerFeedItem extends HomeFeedItemBase {
+  type: 'NOT_SERVICEABLE_BANNER';
+  title: string;
+  subtitle: string;
+}
+
 export interface HomeFeedFooterFeedItem extends HomeFeedItemBase {
   type: 'HOME_FEED_FOOTER';
   appName: string;
   tagline: string;
+  // Backend-controlled - the "100% Secure / 10M+ Users / ISO Certified"
+  // badges row makes claims the app can't currently back, so it's off by
+  // default until there's real data/certification to show. See
+  // backend's HomeFeedFooter model.
+  showTrustBadges?: boolean;
 }
 
 export interface QuickActionItem {
@@ -158,9 +185,9 @@ export interface CategoryRowItem {
   action: FeedAction;
 }
 
-// Zomato-style circular category selector (pharmacyOnly home layout only) -
-// one flat row combining every active ProductShowcase category, built
-// server-side in place of several stacked PRODUCT_SHOWCASE carousels.
+// Zomato-style circular category selector - one flat row combining every
+// active ProductShowcase category, built server-side in place of several
+// stacked PRODUCT_SHOWCASE carousels.
 export interface CategoryRowFeedItem extends HomeFeedItemBase {
   type: 'CATEGORY_ROW';
   title: string;
@@ -239,10 +266,12 @@ export type HomeFeedItem =
   | DynamicHeaderFeedItem
   | UpcomingSectionFeedItem
   | HealthSummaryFeedItem
+  | UpcomingMedicationFeedItem
   | SeasonalEssentialsFeedItem
   | HomeFeedFooterFeedItem
   | UpcomingAppointmentsCardFeedItem
-  | CategoryRowFeedItem;
+  | CategoryRowFeedItem
+  | NotServiceableBannerFeedItem;
 
 export interface HomeCareService {
   id: string;

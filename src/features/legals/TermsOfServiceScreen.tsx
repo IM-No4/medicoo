@@ -46,7 +46,7 @@ export default function TermsOfServiceScreen() {
     if (loading || error) {
         return (
             <View style={styles.container}>
-                <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+                <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
                         <ChevronLeft size={22} color="#111827" />
                     </TouchableOpacity>
@@ -69,9 +69,13 @@ export default function TermsOfServiceScreen() {
 }
 
 const styles = StyleSheet.create({
+    // Absolute + StyleSheet.absoluteFillObject instead of flex: 1, and pure
+    // white instead of the usual off-white - see LegalPage.tsx's container
+    // comment. This is only the transient loading/error state; the real
+    // content below renders through LegalPage itself, already fixed there.
     container: {
-        flex: 1,
-        backgroundColor: '#F9FAFB',
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: '#FFFFFF',
     },
     header: {
         backgroundColor: '#fff',

@@ -8,8 +8,8 @@ import { setCurrentLocation } from "@/src/redux/slices/locationSlice";
 import { setUnreadCount } from "@/src/redux/slices/notificationSlice";
 import { RootState } from "@/src/redux/store";
 import { getUserAddresses } from "@/src/services/api/address.api";
-import { getUnreadCustomerNotificationCount } from "@/src/services/api/notification.api";
 import { reverseGeocode } from "@/src/services/api/maps.api";
+import { getUnreadCustomerNotificationCount } from "@/src/services/api/notification.api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useDispatch, useSelector } from "react-redux";
@@ -31,6 +31,17 @@ import { DynamicHeaderFeedItem } from "../feed/feed.types";
 
 type Props = {
   scrollY: Animated.Value;
+  // The header's TRUE total on-screen height in px - i.e. the collapsible
+  // content height PLUS the safe-area top inset PLUS
+  // HOME_HEADER_ANDROID_EXTRA_TOP, all already summed by the caller
+  // (HomeScreen.tsx). Every scroll-collapse calculation below
+  // (headerTranslateY/contentOpacity/gradientOverlayOpacity) measures
+  // against this one number, so the header always fully translates off
+  // screen with nothing left stuck, no matter what that total actually
+  // comes out to on a given device/OS. Passing anything smaller than the
+  // header's real rendered height (e.g. just the collapsible content
+  // height, ignoring the safe-area inset) is exactly what used to leave a
+  // sliver of the header stuck on screen after a full scroll.
   maxHeight: number;
   onOpenCommandPalette: () => void;
   dynamicConfig?: DynamicHeaderFeedItem;
@@ -63,6 +74,12 @@ const getDistance = (
 };
 
 let hasInitializedSession = false;
+
+// Extra breathing room above the address row on Android. Exported (rather
+// than each caller guessing a number) because HomeScreen.tsx needs this
+// exact same value to compute the header's TRUE total on-screen height -
+// see the big comment on `maxHeight` below for why that matters.
+export const HOME_HEADER_ANDROID_EXTRA_TOP = Platform.OS === 'android' ? 24 : 0;
 
 export default function HomeHeader({
   scrollY,
@@ -289,8 +306,12 @@ export default function HomeHeader({
         style={[
           styles.headerContainer,
           {
-            height: maxHeight + insets.top,
-            paddingTop: insets.top,
+            // maxHeight IS the true total height now (see the Props
+            // comment) - no more adding insets.top on top of it here,
+            // which used to make this box taller than the distance
+            // headerTranslateY actually moves it by.
+            height: maxHeight,
+            paddingTop: insets.top + HOME_HEADER_ANDROID_EXTRA_TOP,
             transform: [{ translateY: headerTranslateY }],
           },
         ]}

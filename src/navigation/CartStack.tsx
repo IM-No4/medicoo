@@ -2,6 +2,8 @@ import CartScreen from '@/src/features/cart/CartScreen';
 import CouponScreen from '@/src/features/cart/CouponScreen';
 import LiveTrackingScreen from '@/src/features/cart/LiveTrackingScreen';
 import PaymentScreen from '@/src/features/cart/PaymentScreen';
+import VerifyingOrderScreen from '@/src/features/cart/VerifyingOrderScreen';
+import CashfreePaymentScreen from '@/src/features/cart/CashfreePaymentScreen';
 import AddressBookScreen from '@/src/features/profile/screens/AddressBook/AddressBookScreen';
 import AddAddressScreen from '@/src/features/profile/screens/AddressBook/AddAddressScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -13,6 +15,7 @@ export type CartStackParamList = {
   };
   CouponScreen: {
     storeId: string;
+    amount?: number;
   };
   AddressBookModal: undefined;
   AddAddress: {
@@ -29,6 +32,38 @@ export type CartStackParamList = {
     storeId: string;
     amount: number;
   };
+  VerifyingOrder: {
+    storeId: string;
+    amount: number;
+    deliveryFee?: number;
+    subtotal?: number;
+    taxes?: number;
+    couponDiscount?: number;
+    platformFee?: number;
+    otherCharges?: number;
+    prescriptionMode?: string;
+    prescriptionDocumentId?: string;
+    prescriptionId?: string;
+    prescriptionRequired?: boolean;
+    paymentMethod: 'online' | 'cod';
+  };
+  CashfreePayment: {
+    storeId: string;
+    amount: number;
+    deliveryFee?: number;
+    subtotal?: number;
+    taxes?: number;
+    couponDiscount?: number;
+    platformFee?: number;
+    otherCharges?: number;
+    prescriptionMode?: string;
+    prescriptionDocumentId?: string;
+    prescriptionId?: string;
+    prescriptionRequired?: boolean;
+    holdId: string;
+    cashfreeOrderId: string;
+    paymentSessionId: string;
+  };
   LiveTracking: undefined;
 };
 
@@ -40,6 +75,16 @@ export default function CartStack() {
       <Stack.Screen name="CartScreen" component={CartScreen} />
       <Stack.Screen name="CouponScreen" component={CouponScreen} />
       <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
+      <Stack.Screen
+        name="VerifyingOrder"
+        component={VerifyingOrderScreen}
+        options={{ gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="CashfreePayment"
+        component={CashfreePaymentScreen}
+        options={{ gestureEnabled: false }}
+      />
       <Stack.Screen
         name="LiveTracking"
         component={LiveTrackingScreen}

@@ -93,7 +93,7 @@ export default React.memo(QuickActions);
 
 const styles = StyleSheet.create({
   row: {
-    marginBottom: 28,
+    marginBottom: 30,
     overflow: 'visible',
   },
   listContent: {
@@ -112,11 +112,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    // Flat border-only look, matching ProductShowcaseCard.tsx (no shadow
+    // at all, just borderWidth/borderColor) rather than the shadow-bearing
+    // convention some other feed cards use - any shadow here read as
+    // heavier than the rest regardless of how much it was tuned down.
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     overflow: 'visible',
   },
   label: {

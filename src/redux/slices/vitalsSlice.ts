@@ -6,6 +6,8 @@ import {
   VitalRecordDto,
   VitalRecordPayload,
 } from '../../services/api/vitals.api';
+import { loadVitals as loadVitalsCacheFromDisk, saveVitals as saveVitalsCacheToDisk } from '../../services/storage/vitalsStorage';
+import { StorageService } from '../../services/storage';
 
 export interface VitalRecord {
   id: string;
@@ -45,12 +47,22 @@ const initialState: VitalsState = {
    Thunks
 ======================= */
 
+// Instant paint from the last known-good snapshot while loadVitalRecords
+// resolves - same cache-then-refresh pattern as goalsSlice's
+// loadGoalsCache/loadGoalsFromServer and calendarSlice's
+// loadCalendarCache/loadCalendarData.
+export const loadVitalsCache = createAsyncThunk('vitals/loadCache', async () => {
+  return await loadVitalsCacheFromDisk();
+});
+
 export const loadVitalRecords = createAsyncThunk<VitalRecord[], void, { rejectValue: string }>(
   'vitals/load',
   async (_, { rejectWithValue }) => {
     try {
       const dtos = await fetchVitalRecords();
-      return dtos.map(mapDtoToRecord);
+      const records = dtos.map(mapDtoToRecord);
+      await saveVitalsCacheToDisk(records);
+      return records;
     } catch (err: any) {
       return rejectWithValue(err?.message || 'Unable to load vitals');
     }
@@ -59,11 +71,39 @@ export const loadVitalRecords = createAsyncThunk<VitalRecord[], void, { rejectVa
 
 export const addVitalRecord = createAsyncThunk<VitalRecord, VitalRecordPayload, { rejectValue: string }>(
   'vitals/add',
-  async (payload, { rejectWithValue }) => {
+  async (payload, { rejectWithValue, getState }) => {
     try {
       const dto = await createVitalRecordApi(payload);
-      return mapDtoToRecord(dto);
+      const record = mapDtoToRecord(dto);
+      const state = getState() as { vitals: VitalsState };
+      await saveVitalsCacheToDisk([record, ...state.vitals.records]);
+      return record;
     } catch (err: any) {
+      // No response at all (vs a real 4xx/5xx from the server) means this
+      // never reached the backend - almost always no internet. Logging a
+      // vital reading is exactly the kind of thing that shouldn't fail just
+      // because the user is offline right now: queue it for
+      // syncOfflineQueue to actually send once back online, and apply it
+      // optimistically (a client-side id, swapped for the real one on next
+      // successful loadVitalRecords) so it shows immediately either way.
+      if (!err?.response) {
+        console.warn('Vital record sync failed (offline?), queuing', payload);
+        await StorageService.addToSyncQueue('LOG_VITAL', payload);
+
+        const optimisticRecord: VitalRecord = {
+          id: `offline_${Date.now()}`,
+          timestamp: payload.timestamp || new Date().toISOString(),
+          heartRate: payload.heartRate,
+          systolic: payload.systolic,
+          diastolic: payload.diastolic,
+          weight: payload.weight,
+          temperature: payload.temperature,
+        };
+        const state = getState() as { vitals: VitalsState };
+        await saveVitalsCacheToDisk([optimisticRecord, ...state.vitals.records]);
+        return optimisticRecord;
+      }
+
       // Surfaces the server's real validation message (e.g. an out-of-range
       // value) instead of axios's generic "Request failed with status code
       // 400", matching the fix already applied to EditRecordModal.tsx.
@@ -99,6 +139,14 @@ const vitalsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      /* ---------- Cache ---------- */
+      .addCase(loadVitalsCache.fulfilled, (state, action) => {
+        if (action.payload.length > 0) state.records = action.payload;
+        // No `loading = false` here on purpose - same reasoning as
+        // calendarSlice's loadCalendarCache: the network request still
+        // follows, this just paints something instantly first.
+      })
+
       /* ---------- Load ---------- */
       .addCase(loadVitalRecords.pending, (state) => {
         state.loading = true;

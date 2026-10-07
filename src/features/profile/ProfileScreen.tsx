@@ -3,10 +3,9 @@ import * as Clipboard from 'expo-clipboard';
 import { StatusBar } from 'expo-status-bar';
 import {
   AlertCircle,
+  ArrowUpCircle,
   BookOpen,
-  CalendarCheck,
   ChevronRight,
-  Clock,
   Copy,
   Droplet,
   Eye,
@@ -17,15 +16,12 @@ import {
   LogOut,
   Pill,
   Stethoscope,
-  TrendingUp,
-  UserCog,
-  Users,
-  Wallet,
-  XCircle
+  Users
 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
   InteractionManager,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -42,8 +38,7 @@ import { RootState } from '../../redux/store';
 import { logout as logoutRedux } from '../../redux/slices/authSlice';
 import { clearActiveOrder } from '../../redux/slices/orderSlice';
 import { getProfileDetails, logoutApi } from '../../services/api';
-import { getDoctorAppointmentRequests } from '../../services/api/doctor.api';
-import { formatDoctorName } from '../../utils/formatters';
+import { APP_VERSION } from '../../utils/appVersion';
 import { API_BASE_URL } from '../../services/api/client';
 import { unregisterDeviceToken } from '../../services/api/pushNotification.api';
 import { clearToken } from '../../utils/tokenManagement';
@@ -56,18 +51,12 @@ export default function ProfileScreen() {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   const enabledServices = useSelector((state: RootState) => state.appConfig.enabledServices);
+  const update = useSelector((state: RootState) => state.appConfig.update);
 
   const [loading, setLoading] = useState(true);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
-  const [isDoctor, setIsDoctor] = useState(false);
-  const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
-  const [earnings, setEarnings] = useState(0);
   const [medId, setMedId] = useState<string | null>(null);
-  const [performance, setPerformance] = useState({ rating: 0, reviewCount: 0 });
-  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
-  const [canReapply, setCanReapply] = useState(false);
-  const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const [copiedId, setCopiedId] = useState(false);
 
   // Status Modal State
@@ -78,6 +67,7 @@ export default function ProfileScreen() {
     message: string;
     primaryAction?: () => void;
     primaryActionText?: string;
+    secondaryActionText?: string;
   }>({
     visible: false,
     type: 'idle',
@@ -85,8 +75,8 @@ export default function ProfileScreen() {
     message: ''
   });
 
-  const showStatus = (type: StatusType, title: string, message: string, primaryAction?: () => void, primaryActionText?: string) => {
-    setStatus({ visible: true, type, title, message, primaryAction, primaryActionText });
+  const showStatus = (type: StatusType, title: string, message: string, primaryAction?: () => void, primaryActionText?: string, secondaryActionText?: string) => {
+    setStatus({ visible: true, type, title, message, primaryAction, primaryActionText, secondaryActionText });
   };
 
   const hideStatus = () => setStatus(prev => ({ ...prev, visible: false }));
@@ -108,25 +98,6 @@ export default function ProfileScreen() {
       setProfileImage(profileImageUri);
       setName(profile.name);
       setMedId(profile.med_id);
-      setIsDoctor(profile?.isDoctor || false);
-      setApprovalStatus(profile?.approvalStatus || null);
-      setRejectionReason(profile?.rejectionReason || null);
-      setCanReapply(profile?.canReapply || false);
-
-      if (profile?.isDoctor) {
-        setEarnings(profile.earnings || 0);
-        setPerformance({
-          rating: profile.rating || 0,
-          reviewCount: profile.reviewsCount || 0
-        });
-
-        try {
-          const requestsRes = await getDoctorAppointmentRequests({ limit: 1 });
-          setPendingRequestCount(requestsRes?.data?.counts?.pending || 0);
-        } catch (error) {
-          setPendingRequestCount(0);
-        }
-      }
     } catch (error) {
       // Error fetching profile details
     } finally {
@@ -181,63 +152,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const renderDoctorStatus = () => {
-    if (!isDoctor) return null;
-
-    switch (approvalStatus) {
-      case 'pending':
-        return (
-          <View style={[styles.statusCard, styles.pendingCard]}>
-            <View style={styles.statusHeaderRow}>
-              <Clock size={20} color="#FFA000" />
-              <View style={styles.statusTextContainer}>
-                <Text style={styles.statusTitle}>Profile Under Review</Text>
-                <Text style={styles.statusDescription}>We'll notify you once approved.</Text>
-              </View>
-            </View>
-          </View>
-        );
-      case 'suspended':
-        return (
-          <View style={[styles.statusCard, styles.suspendedCard]}>
-            <View style={styles.statusHeaderRow}>
-              <AlertCircle size={20} color="#E53935" />
-              <View style={styles.statusTextContainer}>
-                <Text style={styles.statusTitle}>Account Suspended</Text>
-                <Text style={styles.statusDescription}>Please contact support.</Text>
-              </View>
-            </View>
-          </View>
-        );
-      case 'rejected':
-        return (
-          <View style={[styles.statusCard, styles.rejectedCard]}>
-            <View style={styles.statusHeaderRow}>
-              <XCircle size={20} color="#E53935" />
-              <View style={styles.statusTextContainer}>
-                <Text style={styles.statusTitle}>Application Rejected</Text>
-                <Text style={styles.statusDescription}>
-                  {rejectionReason || 'Contact support for info.'}
-                </Text>
-              </View>
-            </View>
-
-            {canReapply && (
-              <TouchableOpacity
-                style={styles.reapplyButton}
-                onPress={() => executeAction('OPEN_DOCTOR_ONBOARDING')}
-              >
-                <Text style={styles.reapplyButtonText}>Update & Re-apply</Text>
-                <ChevronRight size={16} color="#B91C1C" />
-              </TouchableOpacity>
-            )}
-          </View>
-        );
-      default:
-        return null;
-    }
-  };
-
   // Launch state: pharmacy is the only live service, so "Orders" sits as a
   // single Account-level link instead of a whole Activity & History
   // section for just one item. Mirrors the backend's own definition of
@@ -258,9 +172,6 @@ export default function ProfileScreen() {
     // same reasoning as why Orders itself moves here in that mode.
     { icon: HeartPulse, label: 'Health Assessments', action: 'OPEN_HEALTH_ASSESSMENTS' },
   ];
-  if (enabledServices.doctorOnboarding && !isDoctor && (!approvalStatus || approvalStatus === 'not-applied')) {
-    accountItems.push({ icon: Stethoscope, label: 'Apply as Doctor', action: 'OPEN_DOCTOR_ONBOARDING' });
-  }
   if (isOrdersOnlyMode) {
     accountItems.push({ icon: Pill, label: 'Orders', action: 'OPEN_MY_MEDICINE_ORDERS' });
   }
@@ -287,7 +198,7 @@ export default function ProfileScreen() {
 
       <View style={{ paddingTop: insets.top + 16, paddingBottom: 8 }}>
         <ProfileHeader
-          name={isDoctor ? formatDoctorName(name) : name}
+          name={name}
           profileImage={profileImage}
           onEditPress={() => executeAction('OPEN_PROFILE_DETAILS')}
         />
@@ -308,79 +219,6 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-
-
-        {/* Doctor Status Messages */}
-        <View style={styles.sectionContainer}>
-          {renderDoctorStatus()}
-        </View>
-
-        {/* Doctor Dashboard (Only if Approved) */}
-        {isDoctor && approvalStatus === 'approved' && (
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Doctor Dashboard</Text>
-            <View style={styles.doctorStatsRow}>
-              <TouchableOpacity
-                style={styles.statCard}
-                onPress={() => executeAction('OPEN_DOCTOR_REVIEWS')}
-                activeOpacity={0.7}
-              >
-                <View style={styles.statHeader}>
-                  <TrendingUp size={16} color="#4B5563" />
-                  <Text style={styles.statLabel}>Rating</Text>
-                </View>
-                <Text style={styles.statValue}>{performance.rating.toFixed(1)}</Text>
-                <Text style={styles.statSub}>{performance.reviewCount} reviews</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.statCard}
-                onPress={() => executeAction('OPEN_DOCTOR_EARNINGS')}
-                activeOpacity={0.7}
-              >
-                <View style={styles.statHeader}>
-                  <Wallet size={16} color="#4B5563" />
-                  <Text style={styles.statLabel}>Earnings</Text>
-                </View>
-                <Text style={styles.statValue}>₹{earnings.toLocaleString()}</Text>
-                <TouchableOpacity onPress={() => executeAction('OPEN_REDEEM')}>
-                  <Text style={styles.redeemText}>Redeem</Text>
-                </TouchableOpacity>
-              </TouchableOpacity>
-            </View>
-
-            {/* Pending Requests Alert */}
-            {pendingRequestCount > 0 && (
-              <TouchableOpacity
-                style={styles.pendingRequestCard}
-                onPress={() => executeAction('OPEN_DOCTOR_PENDING_REQUESTS')}
-              >
-                <View style={styles.pendingIconBox}>
-                  <AlertCircle size={20} color="#fff" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.pendingTitle}>{pendingRequestCount} Pending Appointment Request{pendingRequestCount > 1 ? 's' : ''}</Text>
-                  <Text style={styles.pendingDesc}>Review and accept new patient requests.</Text>
-                </View>
-                <ChevronRight size={20} color="#B45309" />
-              </TouchableOpacity>
-            )}
-
-            <View style={styles.doctorMenu}>
-              <MenuItem
-                icon={UserCog}
-                label="Doctor Profile Settings"
-                onPress={() => executeAction('OPEN_DOCTOR_SETTINGS')}
-              />
-              <MenuItem
-                icon={CalendarCheck}
-                label="Manage Appointments"
-                onPress={() => executeAction('OPEN_MANAGE_APPOINTMENTS')}
-                last
-              />
-            </View>
-          </View>
-        )}
 
         {/* Account Group */}
         <GroupLayout title="Account">
@@ -429,6 +267,11 @@ export default function ProfileScreen() {
             onPress={() => executeAction('OPEN_PRIVACY_POLICY')}
           />
           <MenuItem
+            icon={AlertCircle}
+            label="Medical Disclaimer"
+            onPress={() => executeAction('OPEN_MEDICAL_DISCLAIMER')}
+          />
+          <MenuItem
             icon={LogOut}
             label="Logout"
             onPress={handleLogout}
@@ -438,8 +281,30 @@ export default function ProfileScreen() {
           />
         </GroupLayout>
 
+        {/* Always visible whenever a newer version exists, independent of
+            whether the optional-update popup was dismissed - see
+            UpdateAvailableModal for that separate, version-keyed prompt. */}
+        {update?.updateAvailable && (
+          <TouchableOpacity
+            style={styles.updateCard}
+            activeOpacity={0.8}
+            onPress={() => {
+              if (update.storeUrl) Linking.openURL(update.storeUrl).catch(() => {});
+            }}
+          >
+            <ArrowUpCircle size={22} color="#0FBBA1" />
+            <View style={styles.updateCardTextWrap}>
+              <Text style={styles.updateCardTitle}>Update Available</Text>
+              <Text style={styles.updateCardSubtitle}>
+                A newer version of Medicoo is available{update.latestVersion ? ` (${update.latestVersion})` : ''}.
+              </Text>
+            </View>
+            <ChevronRight size={18} color="#0FBBA1" />
+          </TouchableOpacity>
+        )}
+
         <View style={styles.footer}>
-          <Text style={styles.versionText}>Version 1.0.0</Text>
+          <Text style={styles.versionText}>Version {APP_VERSION}</Text>
         </View>
       </ScrollView>
 
@@ -452,6 +317,7 @@ export default function ProfileScreen() {
         onClose={hideStatus}
         primaryAction={status.primaryAction}
         primaryActionText={status.primaryActionText}
+        secondaryActionText={status.secondaryActionText}
         autoCloseDelay={status.type === 'success' ? 2500 : undefined}
       />
     </View >
@@ -620,5 +486,22 @@ const styles = StyleSheet.create({
   destructiveLabel: { color: '#EF4444' },
 
   footer: { alignItems: 'center', paddingBottom: 40 },
-  versionText: { fontSize: 12, color: '#9CA3AF', opacity: 0.6 }
+  versionText: { fontSize: 12, color: '#9CA3AF', opacity: 0.6 },
+
+  updateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: '#ECFDF9',
+    borderWidth: 1,
+    borderColor: '#CBF5EB',
+  },
+  updateCardTextWrap: { flex: 1 },
+  updateCardTitle: { fontSize: 14, fontWeight: '700', color: '#0C8E78' },
+  updateCardSubtitle: { fontSize: 12, color: '#4B9A8C', marginTop: 2 },
 });

@@ -1,4 +1,4 @@
-import { BLOG_URL, DONATE_BLOOD_URL } from '@/src/config/env';
+import { DONATE_BLOOD_URL } from '@/src/config/env';
 
 import { HomeFeedItem } from './feed.types';
 
@@ -55,7 +55,7 @@ export const FULL_FEED: HomeFeedItem[] = [
         acceptAction: {
             type: 'OPEN_MODAL',
             modalId: 'DONATION_CONFIRM',
-            data: { requestId: 'blood_alert_1' }
+            params: { requestId: 'blood_alert_1' }
         },
         declineAction: {
             type: 'SHOW_TOAST',
@@ -201,11 +201,13 @@ export const FULL_FEED: HomeFeedItem[] = [
         type: 'HEALTH_ARTICLE_SHOWCASE',
         title: 'Health Knowledge Hub',
         subtitle: 'Trending health insights',
-        seeAllAction: { type: 'OPEN_URL', url: BLOG_URL },
+        // Articles now open in-app (HealthArticleDetail modal) instead of
+        // handing off to the old, no-longer-real medicoo.com/blog.
+        seeAllAction: { type: 'OPEN_MODAL', modalId: 'HEALTH_ARTICLES_LIST' },
         articles: [
-            { id: 'a1', title: 'Start your Keto Diet', category: 'Nutrition', readTime: '5 min read', author: 'Dr. A. Gupta', action: { type: 'OPEN_URL', url: `${BLOG_URL}/keto-diet` } },
-            { id: 'a2', title: 'Best Exercises for Back Pain', category: 'Physiotherapy', readTime: '4 min read', author: 'Dr. S. Khan', action: { type: 'OPEN_URL', url: `${BLOG_URL}/back-pain` } },
-            { id: 'a3', title: 'Understanding Diabetes Types', category: 'Disease', readTime: '7 min read', author: 'Dr. M. Roy', action: { type: 'OPEN_URL', url: `${BLOG_URL}/diabetes-types` } },
+            { id: 'a1', title: 'Start your Keto Diet', category: 'Nutrition', readTime: '5 min read', author: 'Dr. A. Gupta', action: { type: 'OPEN_MODAL', modalId: 'HEALTH_ARTICLE', params: { title: 'Start your Keto Diet', category: 'Nutrition', readTime: '5 min read', author: 'Dr. A. Gupta', content: 'A ketogenic diet shifts your body toward burning fat for fuel instead of carbohydrates...' } } },
+            { id: 'a2', title: 'Best Exercises for Back Pain', category: 'Physiotherapy', readTime: '4 min read', author: 'Dr. S. Khan', action: { type: 'OPEN_MODAL', modalId: 'HEALTH_ARTICLE', params: { title: 'Best Exercises for Back Pain', category: 'Physiotherapy', readTime: '4 min read', author: 'Dr. S. Khan', content: 'Gentle stretching and core-strengthening exercises can relieve everyday back pain...' } } },
+            { id: 'a3', title: 'Understanding Diabetes Types', category: 'Disease', readTime: '7 min read', author: 'Dr. M. Roy', action: { type: 'OPEN_MODAL', modalId: 'HEALTH_ARTICLE', params: { title: 'Understanding Diabetes Types', category: 'Disease', readTime: '7 min read', author: 'Dr. M. Roy', content: 'Type 1 and Type 2 diabetes differ in cause and treatment, but both affect how your body manages blood sugar...' } } },
         ]
     },
     {

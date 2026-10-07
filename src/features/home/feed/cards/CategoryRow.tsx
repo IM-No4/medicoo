@@ -50,8 +50,12 @@ export default React.memo(CategoryRow);
 
 const styles = StyleSheet.create({
     container: {
-        marginTop: 8,
-        marginBottom: 28,
+        // No extra marginTop - every other feed card relies solely on its
+        // own marginBottom:28 for the gap before it, so an additional top
+        // margin here stacked with the previous card's bottom margin,
+        // making the gap above this one specifically ~36px instead of the
+        // uniform 28px everywhere else.
+        marginBottom: 30,
     },
     title: {
         fontSize: 13,
@@ -60,7 +64,11 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         textTransform: 'uppercase',
         paddingHorizontal: 20,
-        marginBottom: 14,
+        paddingTop: 6,
+        // Matches SectionHeader.tsx's marginBottom (the shared header used
+        // by most other feed cards) instead of a slightly smaller
+        // one-off value.
+        marginBottom: 16,
     },
     listContent: {
         paddingHorizontal: 20,

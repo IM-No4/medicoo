@@ -2,6 +2,8 @@ import AppIcon from '@/src/components/icons/AppIcon';
 import { feedApi, ShopCategory } from '@/src/services/api/feed.api';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/src/redux/store';
 
 interface Props {
   onSelectCategory: (title: string, tags: string[]) => void;
@@ -16,14 +18,24 @@ export default function SearchCategories({ onSelectCategory }: Props) {
   const [categories, setCategories] = useState<ShopCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Same selectedAddress source HomeScreen/useHomeFeed already read from -
+  // passed through so the backend can apply the exact same serviceability
+  // check the home feed's own category row uses (see feed.api.ts's
+  // getShopCategories comment). Without it, this stayed visible and
+  // tappable even when the home feed had already determined there's no
+  // pharmacy nearby.
+  const selectedAddress = useSelector((state: RootState) => state.address.selectedAddress);
+  const latitude = selectedAddress?.latitude;
+  const longitude = selectedAddress?.longitude;
+
   useEffect(() => {
     let cancelled = false;
-    feedApi.getShopCategories()
+    feedApi.getShopCategories(latitude, longitude)
       .then(data => { if (!cancelled) setCategories(data); })
       .catch(() => { /* leave empty - section just won't render */ })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [latitude, longitude]);
 
   if (loading) {
     return (

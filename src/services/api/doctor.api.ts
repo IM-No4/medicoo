@@ -32,13 +32,6 @@ export const requestReschedule = async (requestId: string, data: { preferredDate
     return res.data;
 };
 
-// Doctor's side of the reschedule flow - accept locks in the patient's
-// proposed time, decline falls back to an automatic refund.
-export const respondToReschedule = async (requestId: string, data: { accept: boolean; remarks?: string }) => {
-    const res = await apiClient.post(`/api/doctor/appointment-requests/${requestId}/reschedule-respond`, data);
-    return res.data;
-};
-
 export const requestAppointment = async (data: {
     doctorId: string;
     preferredDate: string;
@@ -111,27 +104,6 @@ export const getMyDoctorReview = async (doctorId: string): Promise<{ rating: num
     return res.data?.rating ? res.data : null;
 };
 
-export const respondToAppointmentRequest = async (data: {
-    requestId: string;
-    status: 'approved' | 'rejected';
-    remarks?: string;
-}) => {
-    const res = await apiClient.post(`/api/doctor/appointment-requests/${data.requestId}/respond`, {
-        status: data.status,
-        remarks: data.remarks,
-    });
-    return res.data;
-};
-
-export const getDoctorAppointmentRequests = async (params?: {
-    status?: 'all' | 'requests' | 'upcoming' | 'history' | 'pending' | 'approved' | 'rejected' | 'cancelled' | 'completed';
-    page?: number;
-    limit?: number;
-}) => {
-    const res = await apiClient.get('/api/doctor/appointment-requests', { params });
-    return res.data;
-};
-
 export const getDoctorAppointmentRequestDetail = async (requestId: string) => {
     const res = await apiClient.get(`/api/doctor/appointment-requests/${requestId}`);
     return res.data;
@@ -167,13 +139,6 @@ export type ConsultationDetails = {
 
 export const completeAppointmentRequest = async (requestId: string, details?: ConsultationDetailsInput) => {
     const res = await apiClient.post(`/api/doctor/appointment-requests/${requestId}/complete`, details || {});
-    return res.data;
-};
-
-export const getPatientConsultationHistory = async (customerId: string, excludeRequestId?: string) => {
-    const res = await apiClient.get(`/api/doctor/patients/${customerId}/history`, {
-        params: excludeRequestId ? { excludeRequestId } : undefined,
-    });
     return res.data;
 };
 
@@ -215,18 +180,6 @@ export const getPatientDocumentsForDoctor = async (customerId: string) => {
     return res.data.data as { documents: PatientDocumentSummary[] };
 };
 
-// --- New Call & Consultation APIs ---
-
-export const storePatientChannel = async (patientId: string, doctorId: string, channelName: string, slotId: string) => {
-    const res = await apiClient.post('/api/doctor/store-channel', { patientId, doctorId, channelName, slotId });
-    return res.data;
-};
-
-export const fetchPatientReports = async (customerId: string) => {
-    const res = await apiClient.get(`/api/doctor/patient-reports/${customerId}`);
-    return res.data;
-};
-
 export const fetchMedicines = async (query: string) => {
     const res = await apiClient.get('/api/common/medicines', { params: { q: query } });
     return res.data.data as Array<{ sku: number; productName: string; brand: string }>;
@@ -237,97 +190,3 @@ export const fetchLabTests = async (query: string) => {
     return res.data.data as Array<{ testName: string }>;
 };
 
-export const saveConsultationDetails = async (data: any) => {
-    const res = await apiClient.post('/api/doctor/save-consultation', data);
-    return res.data;
-};
-
-// --- Doctor Earnings & Payouts ---
-
-export type DoctorPayoutMethod = {
-    id: string;
-    account_type: 'bank_account' | 'vpa';
-    isDefault: boolean;
-    createdAt: string;
-    vpa?: { username: string; handle: string; address: string };
-    bank_account?: { name: string; ifsc: string; account_number: string };
-};
-
-export type DoctorEarningsTransaction = {
-    id: string;
-    type: 'credit' | 'debit';
-    source: 'appointment_request' | 'slot_booking' | 'payout';
-    label: string;
-    sub?: string;
-    amount: number;
-    status: string;
-    date: string;
-};
-
-export type DoctorEarningsSummary = {
-    totalEarnings: number;
-    holdAmount: number;
-    netEarnings: number;
-    amountWithdrawn: number;
-    amountAvailableToWithdraw: number;
-    platformCommissionRate: number;
-    totalPlatformCommission: number;
-    payoutHistory: Array<{ payoutId: string; amount: number; mode: string; status: string; createdAt: string }>;
-    transactions: DoctorEarningsTransaction[];
-};
-
-export const getDoctorEarnings = async () => {
-    const res = await apiClient.get('/api/user/get-earnings-and-payout-history');
-    return res.data as DoctorEarningsSummary;
-};
-
-export const getDoctorPayoutMethods = async () => {
-    const res = await apiClient.get('/api/user/get-doctor-payout-methods');
-    return res.data as { payoutMethods: DoctorPayoutMethod[] };
-};
-
-export const setDefaultFundAccount = async (accountId: string) => {
-    const res = await apiClient.put(`/api/user/set-default-fund-account/${accountId}`);
-    return res.data;
-};
-
-export const addBankAccount = async (data: { accountHolderName: string; accountNumber: string; bankName: string; ifsc: string }) => {
-    const res = await apiClient.post('/api/doctor-payout/create-fund-account', { type: 'bank_account', ...data });
-    return res.data;
-};
-
-export const addUpiAccount = async (upiId: string) => {
-    const res = await apiClient.post('/api/doctor-payout/create-fund-account', { type: 'vpa', id: upiId });
-    return res.data;
-};
-
-export const requestDoctorPayout = async (amount: number, fundAccountId: string) => {
-    const res = await apiClient.post('/api/doctor-payout/create-payout-order', { amount, fundAccountId });
-    return res.data;
-};
-
-// --- Doctor's own reviews (DoctorReviewsScreen.tsx) ---
-
-export type DoctorReviewItem = {
-    id: string;
-    patientName: string;
-    rating: number;
-    date: string;
-    comment: string;
-};
-
-export type DoctorRatingBreakdown = {
-    stars: number;
-    count: number;
-    percentage: number;
-};
-
-export const getMyDoctorReviews = async () => {
-    const res = await apiClient.get('/api/user/my-doctor-reviews');
-    return res.data.data as {
-        reviews: DoctorReviewItem[];
-        ratingBreakdown: DoctorRatingBreakdown[];
-        averageRating: number;
-        totalReviews: number;
-    };
-};

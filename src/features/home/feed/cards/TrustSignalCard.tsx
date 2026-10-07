@@ -27,7 +27,7 @@ export default React.memo(TrustSignalCard);
 const styles = StyleSheet.create({
     container: {
         marginHorizontal: 20,
-        marginBottom: 28,
+        marginBottom: 30,
         alignItems: 'center'
     },
     content: {

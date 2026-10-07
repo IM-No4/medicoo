@@ -124,7 +124,7 @@ export default React.memo(ProductShowcaseCard);
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: 28,
+        marginBottom: 30,
     },
     listContent: {
         paddingHorizontal: 16,

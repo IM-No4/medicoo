@@ -54,6 +54,10 @@ export default function DoctorDetailsScreen() {
   const isOwnProfile = user?.id && data?.id && String(user.id) === String(data.id);
   const isActionDisabled = isOwnProfile || preview;
   const isNotAccepting = data?.isAcceptingAppointments === false;
+  // Backend still rejects a submitted request either way (maintenanceGate.js)
+  // - this just avoids letting someone fill out the whole form first.
+  const maintenance = useAppSelector(state => state.appConfig.maintenance);
+  const isBookingPaused = Boolean(maintenance?.enabled || maintenance?.services?.consultation === 'maintenance');
 
   // Track this as a resumable activity (only when not preview mode)
   const resolvedDoctorId = doctor?.id || doctor?._id || doctorId;
@@ -121,12 +125,13 @@ export default function DoctorDetailsScreen() {
       intent === 'BOOK' &&
       data &&
       data.isAcceptingAppointments !== false &&
+      !isBookingPaused &&
       !hasAutoBookedRef.current
     ) {
       hasAutoBookedRef.current = true;
       setShowRequestModal(true);
     }
-  }, [intent, data]);
+  }, [intent, data, isBookingPaused]);
 
   const checkFavoriteStatus = async () => {
     const id = doctor?.id || doctor?._id || doctorId;
@@ -334,6 +339,14 @@ export default function DoctorDetailsScreen() {
             {data.description || `${formatDoctorName(data.name)} is a highly skilled ${data.specialty || data.specialization} with over ${data.experience} experience.`}
           </Text>
 
+          {/* Telemedicine Practice Guidelines 2020 S5.2/3.2.5: platform must
+              publicly display every listed RMP's registration number. */}
+          {data.registrationNumber ? (
+            <Text style={styles.registrationText}>
+              Registration No: {data.registrationNumber}
+            </Text>
+          ) : null}
+
           {data.languages && data.languages.length > 0 && (
             <View style={styles.languageContainer}>
               {data.languages.map((lang: string, index: number) => (
@@ -428,19 +441,21 @@ export default function DoctorDetailsScreen() {
         )}
         <View style={styles.bottomBarButtonRow}>
           <TouchableOpacity
-            style={[styles.bookButton, (isActionDisabled || isNotAccepting) && styles.disabledButton, { flex: 1 }]}
+            style={[styles.bookButton, (isActionDisabled || isNotAccepting || isBookingPaused) && styles.disabledButton, { flex: 1 }]}
             onPress={() => {
-              if (isActionDisabled || isNotAccepting) return;
+              if (isActionDisabled || isNotAccepting || isBookingPaused) return;
               setShowRequestModal(true);
             }}
-            disabled={!!(isActionDisabled || isNotAccepting)}
+            disabled={!!(isActionDisabled || isNotAccepting || isBookingPaused)}
           >
             <Text style={styles.bookButtonText}>
               {isActionDisabled
                 ? (preview ? 'Preview Mode' : 'Your Profile')
                 : isNotAccepting
                   ? 'Not Available'
-                  : 'Request Appointment'}
+                  : isBookingPaused
+                    ? 'Temporarily Unavailable'
+                    : 'Request Appointment'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -666,6 +681,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#3A3A3C',
     lineHeight: 22,
+  },
+  registrationText: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginTop: 8,
   },
   feesContainer: {
     flexDirection: 'row',

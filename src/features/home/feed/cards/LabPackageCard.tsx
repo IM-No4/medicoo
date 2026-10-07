@@ -98,7 +98,7 @@ export default React.memo(LabPackageCard);
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: 28,
+        marginBottom: 30,
     },
     listContent: {
         paddingHorizontal: 16,

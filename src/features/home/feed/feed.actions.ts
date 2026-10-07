@@ -18,7 +18,7 @@ export interface NavigateAction extends BaseAction {
 export interface OpenModalAction extends BaseAction {
     type: 'OPEN_MODAL';
     modalId: string;
-    data?: any;
+    params?: Record<string, any>;
 }
 
 export interface ShowToastAction extends BaseAction {

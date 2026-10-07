@@ -39,10 +39,16 @@ function DoctorRecommendationCard({ data, onAction }: Props) {
                         <Text style={styles.placeholderText}>{(item.name || '?').charAt(0)}</Text>
                     </View>
                 )}
-                <View style={styles.ratingBadge}>
-                    <AppIcon name="star" size={10} color="#FFFFFF" />
-                    <Text style={styles.ratingText}>{item.rating}</Text>
-                </View>
+                {/* 0 means genuinely no ratings yet (see homeController.js's
+                    DOCTOR_RECOMMENDATION handler) - showing a star badge
+                    with "0" would read as a bad rating rather than no
+                    rating, so it's left out entirely instead. */}
+                {item.rating > 0 && (
+                    <View style={styles.ratingBadge}>
+                        <AppIcon name="star" size={10} color="#FFFFFF" />
+                        <Text style={styles.ratingText}>{item.rating}</Text>
+                    </View>
+                )}
             </View>
 
             <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
@@ -83,7 +89,7 @@ export default React.memo(DoctorRecommendationCard);
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: 28,
+        marginBottom: 30,
     },
     listContent: {
         paddingHorizontal: 16,
@@ -96,12 +102,12 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         padding: 12,
         alignItems: 'center',
-        // Shadow
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
+        // Flat border-only look, matching ProductShowcaseCard.tsx (no
+        // shadow at all, just borderWidth/borderColor) - any shadow/
+        // elevation here, however tuned down, still read as heavier than
+        // the rest of the feed's cards.
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
     },
     imageContainer: {
         width: 64,

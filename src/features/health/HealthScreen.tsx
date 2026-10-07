@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { executeAction } from '../../actions/ActionExecutor';
+import MedicalDisclaimerNote from '../../components/MedicalDisclaimerNote';
 import { loadOnDeviceSteps, selectTodayCalories, selectTodaySteps } from '../../redux/slices/deviceSlice';
 import { loadVitalRecords } from '../../redux/slices/vitalsSlice';
 import { AppDispatch, RootState } from '../../redux/store';
@@ -23,6 +24,7 @@ import { GoalsCard } from './components/GoalsCard';
 import { HealthHighlights } from './components/HealthHighlights';
 import { HeartRateRing, isNormalHeartRate } from './components/HeartRateRing';
 import { MedicationsSummary } from './components/MedicationsSummary';
+import { RelaxCard } from './components/RelaxCard';
 import { VitalsSnapshot } from './components/VitalsSnapshot';
 import { WeeklyActivityCard } from './components/WeeklyActivityCard';
 
@@ -109,7 +111,7 @@ export default function HealthScreen() {
       )}
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <View style={{ flex: 1 }}>
           {/* <Text style={styles.greeting}>Daily Check-in</Text> */}
           <Text style={styles.headerTitle}>My Health</Text>
@@ -197,9 +199,12 @@ export default function HealthScreen() {
           />
         </View>
 
+        <MedicalDisclaimerNote />
+
         <WeeklyActivityCard />
 
         <MedicationsSummary />
+        <RelaxCard />
         <GoalsCard />
         <VitalsSnapshot />
         <HealthHighlights />

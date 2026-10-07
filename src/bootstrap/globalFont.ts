@@ -1,8 +1,10 @@
 import { StyleSheet, Text, TextInput } from 'react-native';
+import { fontFamilyForWeight } from '../constants/fonts';
 
 /**
- * Forces every <Text>/<TextInput> in the app onto Montserrat, without
- * touching each of the hundreds of call sites individually.
+ * Forces every <Text>/<TextInput> in the app onto the single font defined
+ * in constants/fonts.ts, without touching each of the hundreds of call
+ * sites individually.
  *
  * Why this can't just be Text.defaultProps: React 19 removed defaultProps
  * support for function components, and RN's Text/TextInput are now plain
@@ -20,25 +22,6 @@ import { StyleSheet, Text, TextInput } from 'react-native';
  * text just falls back to the system font rather than breaking anything.
  */
 
-// Custom fonts don't get RN's automatic bold/weight synthesis the way
-// system fonts do, especially on Android - each visual weight has to be
-// its own loaded font file, referenced by its own family name. This maps
-// every fontWeight value already used across the app's styles (300-900,
-// plus 'normal'/'bold') to the matching Montserrat file loaded in App.tsx.
-const WEIGHT_TO_SUFFIX: Record<string, string> = {
-  '100': 'Thin',
-  '200': 'ExtraLight',
-  '300': 'Light',
-  '400': 'Regular',
-  normal: 'Regular',
-  '500': 'Medium',
-  '600': 'SemiBold',
-  '700': 'Bold',
-  bold: 'Bold',
-  '800': 'ExtraBold',
-  '900': 'Black',
-};
-
 function resolveFontFamily(style: unknown): string {
   const flat: any = StyleSheet.flatten(style as any) || {};
 
@@ -46,9 +29,7 @@ function resolveFontFamily(style: unknown): string {
   // any future one-off override keep working exactly as authored.
   if (flat.fontFamily) return flat.fontFamily;
 
-  const suffix = WEIGHT_TO_SUFFIX[String(flat.fontWeight ?? '400')] || 'Regular';
-  const isItalic = flat.fontStyle === 'italic';
-  return `Montserrat-${suffix}${isItalic ? 'Italic' : ''}`;
+  return fontFamilyForWeight(flat.fontWeight, flat.fontStyle === 'italic');
 }
 
 function injectFont(type: unknown, props: any) {
@@ -65,7 +46,7 @@ function patchExport(mod: any, name: string) {
 
 let installed = false;
 
-export function installGlobalMontserratFont() {
+export function installGlobalAppFont() {
   if (installed) return;
   installed = true;
 

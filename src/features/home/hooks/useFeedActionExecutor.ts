@@ -80,6 +80,10 @@ export function useFeedActionExecutor() {
                     console.warn('Modal opening not yet fully implemented for:', action.modalId);
                 } else if (action.modalId === 'UPLOAD_RX') {
                     dispatch(setPrescriptionModalVisible(true));
+                } else if (action.modalId === 'HEALTH_ARTICLE') {
+                    navigation.navigate('HealthArticleDetail', action.params);
+                } else if (action.modalId === 'HEALTH_ARTICLES_LIST') {
+                    navigation.navigate('HealthArticlesList');
                 } else {
                     console.warn('Unknown Modal ID:', action.modalId);
                 }

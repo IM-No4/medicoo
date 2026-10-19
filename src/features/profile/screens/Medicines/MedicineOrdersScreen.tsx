@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import {
   Calendar,
@@ -7,6 +8,7 @@ import {
   Package,
   Search,
   ShoppingBag,
+  Star,
   Truck,
   X,
 } from "lucide-react-native";
@@ -14,6 +16,7 @@ import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Platform,
   RefreshControl,
   StyleSheet,
@@ -25,6 +28,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { executeAction } from "../../../../actions/ActionExecutor";
 import { getMyOrders } from "../../../../services/api";
+import OrderRatingModal, { OrderReviewState } from "../../../../components/modals/OrderRatingModal";
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 interface Order {
   _id: string;
@@ -35,7 +42,10 @@ interface Order {
   status: "Placed" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
   createdAt: string;
   deliveryDate?: string;
+  deliveryMode?: "self" | "partner";
+  review?: OrderReviewState | null;
   items?: any[];
+  storeImage?: string | null;
 }
 
 const formatAmount = (value: any) => {
@@ -48,6 +58,9 @@ const formatAmount = (value: any) => {
 };
 
 export default function MedicineOrdersScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
@@ -55,6 +68,8 @@ export default function MedicineOrdersScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [ratingFor, setRatingFor] = useState<Order | null>(null);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -80,7 +95,19 @@ export default function MedicineOrdersScreen() {
     fetchOrders();
   }, [fetchOrders]);
 
+  // On a dark screen the pastel chips and bright colours glare, so they become soft tints of a muted colour.
+  const DARK_STATUS: Record<string, string> = {
+    Delivered: "#86C9A0",
+    Shipped: "#8FB4E8",
+    Processing: "#86BFDC",
+    Placed: "#A5A8E6",
+    Cancelled: "#E09A9A",
+  };
   const getStatusStyle = (status: string) => {
+    if (theme.isDark) {
+      const tone = DARK_STATUS[status] || "#9CA3AF";
+      return { bg: `${tone}1F`, text: tone };
+    }
     switch (status) {
       case "Delivered":
         return { bg: "#F0FDF4", text: "#16A34A" };
@@ -142,7 +169,13 @@ export default function MedicineOrdersScreen() {
       >
         {/* Left: Icon circle */}
         <View style={[styles.iconCircle, { backgroundColor: statusStyle.bg }]}>
-          {isDeliveryPhase ? (
+          {item.storeImage && !failedImages[item._id] ? (
+            <Image
+              source={{ uri: item.storeImage }}
+              style={styles.storeImage}
+              onError={() => setFailedImages((prev) => ({ ...prev, [item._id]: true }))}
+            />
+          ) : isDeliveryPhase ? (
             <Truck size={20} color={statusStyle.text} />
           ) : (
             <Package size={20} color={statusStyle.text} />
@@ -175,26 +208,40 @@ export default function MedicineOrdersScreen() {
           {/* Metadata: items count, time, date */}
           <View style={styles.metadataRow}>
             <View style={styles.metaItem}>
-              <Package size={12} color="#9CA3AF" />
+              <Package size={12} color={theme.textMuted} />
               <Text style={styles.metaText}>
                 {item.itemsCount} {item.itemsCount === 1 ? "item" : "items"}
               </Text>
             </View>
             <Text style={styles.bullet}>•</Text>
             <View style={styles.metaItem}>
-              <Clock size={12} color="#9CA3AF" />
+              <Clock size={12} color={theme.textMuted} />
               <Text style={styles.metaText}>{formattedTime}</Text>
             </View>
             <Text style={styles.bullet}>•</Text>
             <View style={styles.metaItem}>
-              <Calendar size={12} color="#9CA3AF" />
+              <Calendar size={12} color={theme.textMuted} />
               <Text style={styles.metaText}>{formattedDate}</Text>
             </View>
           </View>
+
+          {/* A delivered order that still has something to rate */}
+          {item.status === "Delivered" && (!item.review?.storeRating || !item.review?.deliveryRating) && (
+            <TouchableOpacity style={styles.rateRow} activeOpacity={0.8} onPress={() => setRatingFor(item)}>
+              <Star size={14} color="#F59E0B" fill="#F59E0B" />
+              <Text style={styles.rateRowText}>
+                {!item.review?.storeRating && !item.review?.deliveryRating
+                  ? "Rate pharmacy & delivery"
+                  : !item.review?.storeRating
+                    ? "Rate the pharmacy"
+                    : "Rate the delivery"}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Right: Chevron Arrow */}
-        <ChevronRight size={16} color="#9CA3AF" style={styles.chevron} />
+        <ChevronRight size={16} color={theme.textMuted} style={styles.chevron} />
       </TouchableOpacity>
     );
   };
@@ -220,16 +267,16 @@ export default function MedicineOrdersScreen() {
           style={styles.backButton}
           activeOpacity={0.7}
         >
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
 
         {searchActive ? (
           <View style={styles.searchBarContainer}>
-            <Search size={16} color="#9CA3AF" style={styles.searchIconInside} />
+            <Search size={16} color={theme.textMuted} style={styles.searchIconInside} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by Order ID..."
-              placeholderTextColor="#9CA3AF"
+              placeholder={t('search_by_order_id')}
+              placeholderTextColor={theme.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoFocus
@@ -245,17 +292,17 @@ export default function MedicineOrdersScreen() {
               }}
               style={styles.clearSearchButton}
             >
-              <X size={16} color="#4B5563" />
+              <X size={16} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
         ) : (
           <>
-            <Text style={styles.headerTitle}>Medicine Orders</Text>
+            <Text style={styles.headerTitle}>{t('medicine_orders')}</Text>
             <TouchableOpacity
               onPress={() => setSearchActive(true)}
               style={styles.searchButton}
             >
-              <Search size={20} color="#1F2937" />
+              <Search size={20} color={theme.text} />
             </TouchableOpacity>
           </>
         )}
@@ -270,14 +317,14 @@ export default function MedicineOrdersScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#0FBBA1"]}
+            colors={["#10B981"]}
           />
         }
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconCircle}>
-                <ShoppingBag size={40} color="#9CA3AF" />
+                <ShoppingBag size={40} color={theme.textMuted} />
               </View>
               <Text style={styles.emptyTitle}>
                 {searchQuery ? "No Results Found" : "No Orders Yet"}
@@ -290,19 +337,31 @@ export default function MedicineOrdersScreen() {
             </View>
           ) : (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#0FBBA1" />
+              <ActivityIndicator size="large" color="#10B981" />
             </View>
           )
         }
+      />
+
+      <OrderRatingModal
+        visible={!!ratingFor}
+        onClose={() => setRatingFor(null)}
+        orderId={ratingFor?._id || ""}
+        storeName={ratingFor?.pharmacyName || "the pharmacy"}
+        deliveryMode={ratingFor?.deliveryMode}
+        review={ratingFor?.review}
+        onSaved={(review) => {
+          setOrders((prev) => prev.map((o) => (o._id === ratingFor?._id ? { ...o, review } : o)));
+        }}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FE",
+    backgroundColor: c.background,
   },
   // Same header recipe as the Family Members / Address Book / Health
   // screens - white bar + shadow, plain icon back button, fontSize
@@ -313,7 +372,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -329,7 +388,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#111827",
+    color: c.text,
   },
   searchButton: {
     padding: 8,
@@ -339,7 +398,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: c.cardSecondary,
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 40,
@@ -352,7 +411,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: "#1F2937",
+    color: c.text,
     paddingVertical: 8,
     fontWeight: "500",
   },
@@ -366,21 +425,23 @@ const styles = StyleSheet.create({
   itemRow: {
     flexDirection: "row",
     padding: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     alignItems: "center",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: c.borderLight,
     marginBottom: 12,
   },
+  storeImage: { width: 44, height: 44, borderRadius: 12 },
   iconCircle: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: c.cardSecondary,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
+    overflow: "hidden",
   },
   detailsContainer: {
     flex: 1,
@@ -405,20 +466,32 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#1F2937",
+    color: c.text,
     marginBottom: 2,
   },
   orderNumberText: {
     fontSize: 11,
     fontWeight: "400",
-    color: "#1F2937",
+    color: c.text,
     marginBottom: 2,
   },
   bullet: {
-    color: "#D1D5DB",
+    color: c.textMuted,
     marginHorizontal: 6,
     fontWeight: "700",
   },
+  rateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    marginTop: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: c.isDark ? "#F59E0B22" : "#FEF3C7",
+  },
+  rateRowText: { fontSize: 12, fontWeight: "800", color: c.isDark ? "#D9B26A" : "#B45309" },
   metadataRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -431,7 +504,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 11,
-    color: "#6B7280",
+    color: c.textSecondary,
   },
   chevron: {
     marginLeft: 8,
@@ -440,7 +513,7 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
+    borderTopColor: c.borderLight,
     paddingTop: 8,
   },
   orderItemDetailRow: {
@@ -463,18 +536,18 @@ const styles = StyleSheet.create({
   orderItemNameText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#374151",
+    color: c.text,
     flex: 1,
     marginRight: 8,
   },
   orderItemPriceText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#374151",
+    color: c.text,
   },
   orderItemSubText: {
     fontSize: 11,
-    color: "#9CA3AF",
+    color: c.textMuted,
   },
   orderItemDiscountText: {
     fontSize: 11,
@@ -489,7 +562,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: c.cardSecondary,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 20,
@@ -497,12 +570,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#1F2937",
+    color: c.text,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: "#6B7280",
+    color: c.textSecondary,
     textAlign: "center",
     paddingHorizontal: 40,
   },

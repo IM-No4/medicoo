@@ -1,7 +1,11 @@
 import { RefreshCw, WifiOff } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { ActivityIndicator, Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { AdaptiveStatusBar } from '../../components/ThemedStatusBar';
 
 type Props = {
     onRetry: () => Promise<void>;
@@ -45,6 +49,9 @@ function usePulse(delay: number) {
 // promise; the actual state transition (back to 'loading' then 'ready') is
 // handled by whichever boot action they call, not by this screen itself.
 export default function OfflineGateScreen({ onRetry, onUseOffline }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const insets = useSafeAreaInsets();
     const [retrying, setRetrying] = useState(false);
 
@@ -84,19 +91,19 @@ export default function OfflineGateScreen({ onRetry, onUseOffline }: Props) {
 
     return (
         <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom + 24 }]}>
-            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+            <AdaptiveStatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
             <View style={styles.illustration}>
                 <Animated.View style={[styles.pulseRing, ringStyle(pulse1)]} />
                 <Animated.View style={[styles.pulseRing, ringStyle(pulse2)]} />
                 <View style={styles.iconCircle}>
-                    <WifiOff size={40} color="#0FBBA1" />
+                    <WifiOff size={40} color="#10B981" />
                 </View>
             </View>
 
-            <Text style={styles.title}>No Internet Connection</Text>
+            <Text style={styles.title}>{t('no_internet_connection')}</Text>
             <Text style={styles.message}>
-                You're not connected to the internet right now. Check your connection and try again, or continue in offline mode.
+                {t('you_re_not_connected_to_the_internet_r')}
             </Text>
 
             <View style={styles.actions}>
@@ -104,28 +111,28 @@ export default function OfflineGateScreen({ onRetry, onUseOffline }: Props) {
                     {retrying ? (
                         <>
                             <ActivityIndicator color="#FFFFFF" size="small" />
-                            <Text style={styles.primaryButtonText}>Checking...</Text>
+                            <Text style={styles.primaryButtonText}>{t('checking')}</Text>
                         </>
                     ) : (
                         <>
                             <RefreshCw size={18} color="#FFFFFF" />
-                            <Text style={styles.primaryButtonText}>Try Again</Text>
+                            <Text style={styles.primaryButtonText}>{t('try_again')}</Text>
                         </>
                     )}
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.7} onPress={onUseOffline} disabled={retrying}>
-                    <Text style={styles.secondaryButtonText}>Use in Offline Mode</Text>
+                    <Text style={styles.secondaryButtonText}>{t('use_in_offline_mode')}</Text>
                 </TouchableOpacity>
             </View>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 32,
@@ -142,27 +149,27 @@ const styles = StyleSheet.create({
         width: 88,
         height: 88,
         borderRadius: 44,
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
     },
     iconCircle: {
         width: 88,
         height: 88,
         borderRadius: 44,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         alignItems: 'center',
         justifyContent: 'center',
     },
     title: {
         fontSize: 20,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 10,
         textAlign: 'center',
     },
     message: {
         fontSize: 14,
         lineHeight: 21,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         marginBottom: 36,
     },
@@ -173,7 +180,7 @@ const styles = StyleSheet.create({
     primaryButton: {
         flexDirection: 'row',
         gap: 8,
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         borderRadius: 16,
         paddingVertical: 16,
         alignItems: 'center',
@@ -190,7 +197,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     secondaryButtonText: {
-        color: '#6B7280',
+        color: c.textSecondary,
         fontSize: 15,
         fontWeight: '600',
     },

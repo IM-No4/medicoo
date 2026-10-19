@@ -1,19 +1,22 @@
 import { Plus, Search, X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fetchLabTests, fetchMedicines, PrescribedLabTestInput, PrescribedMedicineInput } from '../../../services/api/doctor.api';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { Modal } from '../../../components/ThemedModal';
 
 export type ConsultationDraft = {
     notes: string;
@@ -35,6 +38,9 @@ interface Props {
 }
 
 export default function ConsultationDetailsModal({ visible, onClose, onSubmit, mode = 'complete', initialData, onSaveDraft }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
     const [submitting, setSubmitting] = useState(false);
     const [notes, setNotes] = useState('');
@@ -77,7 +83,7 @@ export default function ConsultationDetailsModal({ visible, onClose, onSubmit, m
                     <View style={styles.header}>
                         <Text style={styles.title}>{mode === 'draft' ? 'Consultation Notes' : 'Complete Consultation'}</Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                            <X size={20} color="#6B7280" />
+                            <X size={20} color={theme.textSecondary} />
                         </TouchableOpacity>
                     </View>
                     <Text style={styles.subtitle}>
@@ -87,22 +93,22 @@ export default function ConsultationDetailsModal({ visible, onClose, onSubmit, m
                     </Text>
 
                     <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                        <Text style={styles.sectionLabel}>Diagnosis / Notes</Text>
+                        <Text style={styles.sectionLabel}>{t('diagnosis_notes')}</Text>
                         <TextInput
                             style={styles.notesInput}
                             placeholder="e.g. Seasonal allergy, mild. Advised rest and hydration."
-                            placeholderTextColor="#9CA3AF"
+                            placeholderTextColor={theme.textMuted}
                             multiline
                             value={notes}
                             onChangeText={setNotes}
                         />
 
                         <View style={styles.sectionHeaderRow}>
-                            <Text style={styles.sectionLabel}>Prescribed Medicines</Text>
+                            <Text style={styles.sectionLabel}>{t('prescribed_medicines')}</Text>
                             {!addingMedicine && (
                                 <TouchableOpacity style={styles.addChip} onPress={() => setAddingMedicine(true)}>
-                                    <Plus size={14} color="#0FBBA1" />
-                                    <Text style={styles.addChipText}>Add</Text>
+                                    <Plus size={14} color="#10B981" />
+                                    <Text style={styles.addChipText}>{t('add')}</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -113,7 +119,7 @@ export default function ConsultationDetailsModal({ visible, onClose, onSubmit, m
                                     <Text style={styles.itemSub}>{med.intakeDetails.dosage} · {med.intakeDetails.period}</Text>
                                 </View>
                                 <TouchableOpacity onPress={() => setMedicines(prev => prev.filter((_, i) => i !== index))}>
-                                    <X size={16} color="#9CA3AF" />
+                                    <X size={16} color={theme.textMuted} />
                                 </TouchableOpacity>
                             </View>
                         ))}
@@ -128,11 +134,11 @@ export default function ConsultationDetailsModal({ visible, onClose, onSubmit, m
                         )}
 
                         <View style={styles.sectionHeaderRow}>
-                            <Text style={styles.sectionLabel}>Recommended Lab Tests</Text>
+                            <Text style={styles.sectionLabel}>{t('recommended_lab_tests')}</Text>
                             {!addingLabTest && (
                                 <TouchableOpacity style={styles.addChip} onPress={() => setAddingLabTest(true)}>
-                                    <Plus size={14} color="#0FBBA1" />
-                                    <Text style={styles.addChipText}>Add</Text>
+                                    <Plus size={14} color="#10B981" />
+                                    <Text style={styles.addChipText}>{t('add')}</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -143,7 +149,7 @@ export default function ConsultationDetailsModal({ visible, onClose, onSubmit, m
                                     {!!test.additionalDetails && <Text style={styles.itemSub}>{test.additionalDetails}</Text>}
                                 </View>
                                 <TouchableOpacity onPress={() => setLabTests(prev => prev.filter((_, i) => i !== index))}>
-                                    <X size={16} color="#9CA3AF" />
+                                    <X size={16} color={theme.textMuted} />
                                 </TouchableOpacity>
                             </View>
                         ))}
@@ -165,10 +171,10 @@ export default function ConsultationDetailsModal({ visible, onClose, onSubmit, m
                     ) : (
                         <>
                             <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={submitting}>
-                                {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Save & Complete Consultation</Text>}
+                                {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>{t('save_complete_consultation')}</Text>}
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.skipButton} onPress={handleSubmit} disabled={submitting}>
-                                <Text style={styles.skipButtonText}>Skip & Complete</Text>
+                                <Text style={styles.skipButtonText}>{t('skip_complete')}</Text>
                             </TouchableOpacity>
                         </>
                     )}
@@ -182,6 +188,9 @@ function AddMedicineForm({ onAdd, onCancel }: {
     onAdd: (med: PrescribedMedicineInput) => void;
     onCancel: () => void;
 }) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Array<{ sku: number; productName: string; brand: string }>>([]);
     const [searching, setSearching] = useState(false);
@@ -213,16 +222,16 @@ function AddMedicineForm({ onAdd, onCancel }: {
         return (
             <View style={styles.inlineForm}>
                 <View style={styles.searchRow}>
-                    <Search size={16} color="#9CA3AF" />
+                    <Search size={16} color={theme.textMuted} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search medicine by name"
-                        placeholderTextColor="#9CA3AF"
+                        placeholder={t('search_medicine_by_name')}
+                        placeholderTextColor={theme.textMuted}
                         value={query}
                         onChangeText={setQuery}
                         autoFocus
                     />
-                    {searching && <ActivityIndicator size="small" color="#0FBBA1" />}
+                    {searching && <ActivityIndicator size="small" color="#10B981" />}
                 </View>
                 {results.map((r) => (
                     <TouchableOpacity
@@ -235,10 +244,10 @@ function AddMedicineForm({ onAdd, onCancel }: {
                     </TouchableOpacity>
                 ))}
                 {query.trim().length >= 2 && !searching && results.length === 0 && (
-                    <Text style={styles.noResultsText}>No medicines found.</Text>
+                    <Text style={styles.noResultsText}>{t('no_medicines_found')}</Text>
                 )}
                 <TouchableOpacity style={styles.cancelInlineBtn} onPress={onCancel}>
-                    <Text style={styles.cancelInlineText}>Cancel</Text>
+                    <Text style={styles.cancelInlineText}>{t('cancel')}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -249,28 +258,28 @@ function AddMedicineForm({ onAdd, onCancel }: {
             <Text style={styles.selectedTitle}>{selected.productName}</Text>
             <TextInput
                 style={styles.smallInput}
-                placeholder="Dosage (e.g. 10mg, 1 tablet)"
-                placeholderTextColor="#9CA3AF"
+                placeholder={t('dosage_e_g_10mg_1_tablet')}
+                placeholderTextColor={theme.textMuted}
                 value={dosage}
                 onChangeText={setDosage}
             />
             <TextInput
                 style={styles.smallInput}
-                placeholder="Frequency / duration (e.g. Twice daily, 5 days)"
-                placeholderTextColor="#9CA3AF"
+                placeholder={t('frequency_duration_e_g_twice_daily_5_d')}
+                placeholderTextColor={theme.textMuted}
                 value={period}
                 onChangeText={setPeriod}
             />
             <TextInput
                 style={styles.smallInput}
-                placeholder="Instructions (optional, e.g. after food)"
-                placeholderTextColor="#9CA3AF"
+                placeholder={t('instructions_optional_e_g_after_food')}
+                placeholderTextColor={theme.textMuted}
                 value={instructions}
                 onChangeText={setInstructions}
             />
             <View style={styles.inlineButtonRow}>
                 <TouchableOpacity style={styles.cancelInlineBtn} onPress={onCancel}>
-                    <Text style={styles.cancelInlineText}>Cancel</Text>
+                    <Text style={styles.cancelInlineText}>{t('cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.addInlineBtn, !dosage.trim() && styles.addInlineBtnDisabled]}
@@ -285,7 +294,7 @@ function AddMedicineForm({ onAdd, onCancel }: {
                         },
                     })}
                 >
-                    <Text style={styles.addInlineText}>Add</Text>
+                    <Text style={styles.addInlineText}>{t('add')}</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -296,6 +305,9 @@ function AddLabTestForm({ onAdd, onCancel }: {
     onAdd: (test: PrescribedLabTestInput) => void;
     onCancel: () => void;
 }) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Array<{ testName: string }>>([]);
     const [searching, setSearching] = useState(false);
@@ -325,16 +337,16 @@ function AddLabTestForm({ onAdd, onCancel }: {
         return (
             <View style={styles.inlineForm}>
                 <View style={styles.searchRow}>
-                    <Search size={16} color="#9CA3AF" />
+                    <Search size={16} color={theme.textMuted} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search lab test by name"
-                        placeholderTextColor="#9CA3AF"
+                        placeholder={t('search_lab_test_by_name')}
+                        placeholderTextColor={theme.textMuted}
                         value={query}
                         onChangeText={setQuery}
                         autoFocus
                     />
-                    {searching && <ActivityIndicator size="small" color="#0FBBA1" />}
+                    {searching && <ActivityIndicator size="small" color="#10B981" />}
                 </View>
                 {results.map((r) => (
                     <TouchableOpacity key={r.testName} style={styles.resultRow} onPress={() => setSelected(r.testName)}>
@@ -342,10 +354,10 @@ function AddLabTestForm({ onAdd, onCancel }: {
                     </TouchableOpacity>
                 ))}
                 {query.trim().length >= 2 && !searching && results.length === 0 && (
-                    <Text style={styles.noResultsText}>No lab tests found.</Text>
+                    <Text style={styles.noResultsText}>{t('no_lab_tests_found')}</Text>
                 )}
                 <TouchableOpacity style={styles.cancelInlineBtn} onPress={onCancel}>
-                    <Text style={styles.cancelInlineText}>Cancel</Text>
+                    <Text style={styles.cancelInlineText}>{t('cancel')}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -356,51 +368,51 @@ function AddLabTestForm({ onAdd, onCancel }: {
             <Text style={styles.selectedTitle}>{selected}</Text>
             <TextInput
                 style={styles.smallInput}
-                placeholder="Notes (optional)"
-                placeholderTextColor="#9CA3AF"
+                placeholder={t('notes_optional')}
+                placeholderTextColor={theme.textMuted}
                 value={additionalDetails}
                 onChangeText={setAdditionalDetails}
             />
             <View style={styles.inlineButtonRow}>
                 <TouchableOpacity style={styles.cancelInlineBtn} onPress={onCancel}>
-                    <Text style={styles.cancelInlineText}>Cancel</Text>
+                    <Text style={styles.cancelInlineText}>{t('cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.addInlineBtn}
                     onPress={() => onAdd({ testName: selected, additionalDetails: additionalDetails.trim() })}
                 >
-                    <Text style={styles.addInlineText}>Add</Text>
+                    <Text style={styles.addInlineText}>{t('add')}</Text>
                 </TouchableOpacity>
             </View>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     overlay: { flex: 1, justifyContent: 'flex-end' },
     backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
     content: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 20,
         maxHeight: '88%',
     },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    title: { fontSize: 18, fontWeight: '700', color: '#111827' },
-    closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-    subtitle: { fontSize: 13, color: '#6B7280', marginTop: 4, marginBottom: 16, lineHeight: 18 },
+    title: { fontSize: 18, fontWeight: '700', color: c.text },
+    closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: c.cardSecondary, alignItems: 'center', justifyContent: 'center' },
+    subtitle: { fontSize: 13, color: c.textSecondary, marginTop: 4, marginBottom: 16, lineHeight: 18 },
     scroll: { flexGrow: 0 },
-    sectionLabel: { fontSize: 12, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase' },
+    sectionLabel: { fontSize: 12, fontWeight: '700', color: c.textMuted, textTransform: 'uppercase' },
     sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, marginBottom: 10 },
     notesInput: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 12,
         padding: 14,
         fontSize: 14,
-        color: '#111827',
+        color: c.text,
         minHeight: 80,
         textAlignVertical: 'top',
         marginTop: 8,
@@ -409,30 +421,30 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         borderRadius: 20,
         paddingHorizontal: 12,
         paddingVertical: 6,
     },
-    addChipText: { color: '#0FBBA1', fontSize: 12, fontWeight: '700' },
+    addChipText: { color: '#10B981', fontSize: 12, fontWeight: '700' },
     itemCard: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
         borderRadius: 12,
         padding: 12,
         marginBottom: 8,
     },
     itemInfo: { flex: 1, marginRight: 8 },
-    itemTitle: { fontSize: 14, fontWeight: '600', color: '#111827' },
-    itemSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+    itemTitle: { fontSize: 14, fontWeight: '600', color: c.text },
+    itemSub: { fontSize: 12, color: c.textSecondary, marginTop: 2 },
     inlineForm: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 12,
         padding: 12,
         marginBottom: 8,
@@ -442,37 +454,37 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 10,
         paddingHorizontal: 12,
         paddingVertical: 10,
     },
-    searchInput: { flex: 1, fontSize: 14, color: '#111827' },
-    resultRow: { paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-    resultTitle: { fontSize: 14, fontWeight: '600', color: '#111827' },
-    resultSub: { fontSize: 12, color: '#9CA3AF', marginTop: 1 },
-    noResultsText: { fontSize: 12, color: '#9CA3AF', textAlign: 'center', paddingVertical: 8 },
-    selectedTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
+    searchInput: { flex: 1, fontSize: 14, color: c.text },
+    resultRow: { paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: c.borderLight },
+    resultTitle: { fontSize: 14, fontWeight: '600', color: c.text },
+    resultSub: { fontSize: 12, color: c.textMuted, marginTop: 1 },
+    noResultsText: { fontSize: 12, color: c.textMuted, textAlign: 'center', paddingVertical: 8 },
+    selectedTitle: { fontSize: 14, fontWeight: '700', color: c.text },
     smallInput: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 10,
         paddingHorizontal: 12,
         paddingVertical: 10,
         fontSize: 13,
-        color: '#111827',
+        color: c.text,
     },
     inlineButtonRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
     cancelInlineBtn: { flex: 1, alignItems: 'center', paddingVertical: 10 },
-    cancelInlineText: { color: '#6B7280', fontSize: 13, fontWeight: '600' },
-    addInlineBtn: { flex: 1, backgroundColor: '#0FBBA1', borderRadius: 10, alignItems: 'center', paddingVertical: 10 },
+    cancelInlineText: { color: c.textSecondary, fontSize: 13, fontWeight: '600' },
+    addInlineBtn: { flex: 1, backgroundColor: '#10B981', borderRadius: 10, alignItems: 'center', paddingVertical: 10 },
     addInlineBtnDisabled: { backgroundColor: '#A7D6BB' },
     addInlineText: { color: '#fff', fontSize: 13, fontWeight: '700' },
     submitButton: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         borderRadius: 16,
         paddingVertical: 16,
         alignItems: 'center',
@@ -480,5 +492,5 @@ const styles = StyleSheet.create({
     },
     submitButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
     skipButton: { alignItems: 'center', paddingVertical: 12 },
-    skipButtonText: { color: '#6B7280', fontSize: 13, fontWeight: '600' },
+    skipButtonText: { color: c.textSecondary, fontSize: 13, fontWeight: '600' },
 });

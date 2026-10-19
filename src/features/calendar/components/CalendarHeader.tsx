@@ -1,8 +1,9 @@
 import { Settings } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS } from '../styles';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 // Add the prop here
 type Props = {
@@ -12,6 +13,8 @@ type Props = {
 };
 
 export default function CalendarHeader({ onOpenCalendar, onOpenManage, selectedDate }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   // Format date: "Wednesday, June 25"
   const dateString = selectedDate
@@ -29,7 +32,7 @@ export default function CalendarHeader({ onOpenCalendar, onOpenManage, selectedD
         <View style={styles.actionsRow}>
           {onOpenManage && (
             <TouchableOpacity style={[styles.iconButton, { marginRight: 8 }]} onPress={onOpenManage}>
-              <Settings size={20} color={COLORS.text} />
+              <Settings size={20} color={theme.text} />
             </TouchableOpacity>
           )}
           {/* Connect the onPress handler */}
@@ -42,14 +45,14 @@ export default function CalendarHeader({ onOpenCalendar, onOpenManage, selectedD
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   // Same white bar + shadow recipe as the Records and Health screen
   // headers, so all three read as one consistent header style.
   container: {
     paddingHorizontal: 24,
     paddingBottom: 16,
     marginBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: c.background,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -66,7 +69,7 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
   },
   actionsRow: {
     flexDirection: 'row',
@@ -75,7 +78,7 @@ const styles = StyleSheet.create({
   iconButton: {
     width: 40,
     height: 40,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',

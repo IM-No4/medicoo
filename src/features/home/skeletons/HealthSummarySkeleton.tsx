@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import SkeletonBlock from '../../../components/loaders/SkeletonBlock';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 export default function HealthSummarySkeleton() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.container}>
       <SkeletonBlock height={16} width={140} />
@@ -14,7 +18,7 @@ export default function HealthSummarySkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     paddingHorizontal: 16,
     marginBottom: 30,

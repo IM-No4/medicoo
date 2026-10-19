@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '@/src/components/icons/AppIcon';
 import { SearchResult } from '@/src/search/search.types';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 type Props = {
   suggestions: SearchResult[];
@@ -22,6 +24,8 @@ const getDomainDesign = (domain: string) => {
 };
 
 export default function SearchSuggestions({ suggestions, onSelect }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   if (suggestions.length === 0) return null;
 
   return (
@@ -56,7 +60,7 @@ export default function SearchSuggestions({ suggestions, onSelect }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     paddingTop: 8,
     paddingHorizontal: 16,
@@ -77,11 +81,11 @@ const styles = StyleSheet.create({
   suggestionText: {
     flex: 1,
     fontSize: 15,
-    color: '#1F2937',
+    color: c.text,
     fontWeight: '500',
   },
   domainBadge: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -89,7 +93,7 @@ const styles = StyleSheet.create({
   },
   domainText: {
     fontSize: 10,
-    color: '#6B7280',
+    color: c.textSecondary,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
@@ -98,7 +102,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: c.cardSecondary,
     marginTop: 8,
     marginBottom: 8,
   },

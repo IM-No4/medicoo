@@ -1,6 +1,6 @@
 import AppIcon from '@/src/components/icons/AppIcon';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Image,
   StyleSheet,
@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 type Props = {
   medicine: {
@@ -29,6 +32,9 @@ export default function FeaturedMedicineCard({
   medicine,
   onPress,
 }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { pharmacy } = medicine;
 
   return (
@@ -58,7 +64,7 @@ export default function FeaturedMedicineCard({
 
       {/* Offer Badge */}
       <View style={styles.offerBadge}>
-        <Text style={styles.offerText}>GET 30% OFF</Text>
+        <Text style={styles.offerText}>{t('get_30_off')}</Text>
       </View>
 
       {/* Content Overlay */}
@@ -86,20 +92,20 @@ export default function FeaturedMedicineCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   card: {
     width: 260,
     height: 180,
     borderRadius: 20,
     overflow: 'hidden',
     marginRight: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     position: 'relative',
   },
   imageContainer: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: c.cardSecondary,
   },
   image: {
     width: '100%',
@@ -110,7 +116,7 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F4F8',
+    backgroundColor: c.cardSecondary,
   },
   offerBadge: {
     position: 'absolute',

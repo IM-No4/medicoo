@@ -1,6 +1,8 @@
 import { CalendarClock } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 interface Props {
   title: string;
@@ -16,14 +18,17 @@ export default function EmptyState({
   title,
   message,
   icon: Icon = CalendarClock,
-  iconColor = '#0FBBA1',
-  iconBg = '#EAFBF3',
+  iconColor = '#10B981',
+  iconBg,
   actionLabel,
   onAction,
 }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.container}>
-      <View style={[styles.iconCircle, { backgroundColor: iconBg }]}>
+      {/* The pale mint circle glares on a dark screen: there it is a soft tint of the icon's colour. */}
+      <View style={[styles.iconCircle, { backgroundColor: iconBg ?? (theme.isDark ? `${iconColor}26` : '#EAFBF3') }]}>
         <Icon size={28} color={iconColor} />
       </View>
       <Text style={styles.title}>{title}</Text>
@@ -37,7 +42,7 @@ export default function EmptyState({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     padding: 40,
     alignItems: 'center',
@@ -55,20 +60,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#151517',
+    color: c.text,
     marginBottom: 6,
   },
 
   message: {
     fontSize: 14,
-    color: '#151517',
+    color: c.text,
     opacity: 0.6,
     textAlign: 'center',
   },
 
   actionButton: {
     marginTop: 20,
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 14,

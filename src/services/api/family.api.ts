@@ -27,8 +27,8 @@ export const getIncomingRequests = async () => {
     return res.data;
 };
 
-export const respondToRequest = async (requestId: string, action: 'accept' | 'reject') => {
-    const res = await apiClient.post(`${BASE_URL}/respond-request`, { requestId, action });
+export const respondToRequest = async (requestId: string, action: 'accept' | 'reject', consent?: FamilyConsent) => {
+    const res = await apiClient.post(`${BASE_URL}/respond-request`, { requestId, action, consent });
     return res.data;
 };
 
@@ -63,7 +63,58 @@ export const getMyMemberships = async () => {
 
 // The actual consent control - only affects how much of the caller's own
 // health data the household head who added them (addedBy) can see.
-export const updateMySharingPermissions = async (memberId: string, viewMedicalRecords: boolean) => {
-    const res = await apiClient.patch(`${BASE_URL}/member/${memberId}/permissions`, { viewMedicalRecords });
+export const updateMySharingPermissions = async (memberId: string, changes: Partial<FamilyConsent>) => {
+    const res = await apiClient.patch(`${BASE_URL}/member/${memberId}/permissions`, changes);
+    return res.data;
+};
+
+/** Everything a family member can allow the family head to do. The member chooses each one; none is on until they do. */
+export type FamilyConsentKey =
+    | 'bookConsultations'
+    | 'joinConsultations'
+    | 'viewAppointments'
+    | 'viewPrescriptions'
+    | 'viewDocuments'
+    | 'manageDocuments'
+    | 'viewVitals'
+    | 'viewMedications'
+    | 'viewAdherence'
+    | 'manageMedications'
+    | 'missedDoseAlerts';
+
+export type FamilyConsent = Record<FamilyConsentKey, boolean>;
+
+export interface FamilyConsentItem {
+    key: FamilyConsentKey;
+    group: string;
+    label: string;
+    description: string;
+}
+
+export const getConsentItems = async (): Promise<FamilyConsentItem[]> => {
+    const res = await apiClient.get(`${BASE_URL}/consent-items`);
+    return res.data?.data || [];
+};
+
+// What the family head has seen or done in my records.
+export const getMyAccessLog = async () => {
+    const res = await apiClient.get(`${BASE_URL}/my-memberships/access-log`);
+    return res.data?.data || [];
+};
+
+// === A family member's records, from the family head's account (each needs the member's agreement) ===
+
+export const getFamilyMemberAdherence = async (memberId: string, days = 7) => {
+    const res = await apiClient.get(`${BASE_URL}/member/${memberId}/adherence`, { params: { days } });
+    return res.data;
+};
+
+export const getFamilyMemberDocuments = async (memberId: string) => {
+    const res = await apiClient.get(`${BASE_URL}/member/${memberId}/documents`);
+    return res.data;
+};
+
+export const getFamilyMemberPrescriptions = async (memberId: string) => {
+    const res = await apiClient.get(`${BASE_URL}/member/${memberId}/prescriptions`);
     return res.data;
 };

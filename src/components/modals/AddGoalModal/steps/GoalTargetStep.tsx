@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     View,
     Text,
@@ -9,6 +9,9 @@ import {
 } from 'react-native';
 import { Minus, Plus } from 'lucide-react-native';
 import { GOAL_TYPES } from './GoalTypeStep';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 interface Props {
     data: any;
@@ -16,8 +19,11 @@ interface Props {
 }
 
 export default function GoalTargetStep({ data, onChange }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const goalMeta = GOAL_TYPES.find(g => g.id === data.type);
-    const color = goalMeta?.color ?? '#0FBBA1';
+    const color = goalMeta?.color ?? '#10B981';
     const presets = goalMeta?.presets ?? [1, 5, 10, 20];
     const numTarget = parseFloat(data.target) || 0;
 
@@ -34,7 +40,7 @@ export default function GoalTargetStep({ data, onChange }: Props) {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.heading}>Set your target</Text>
+            <Text style={styles.heading}>{t('set_your_target')}</Text>
             <Text style={styles.subheading}>
                 How much do you aim for {data.type === 'custom' ? 'your goal' : `your ${data.title?.toLowerCase()}`}?
             </Text>
@@ -42,11 +48,11 @@ export default function GoalTargetStep({ data, onChange }: Props) {
             {/* Custom goal name */}
             {data.type === 'custom' && (
                 <View style={styles.section}>
-                    <Text style={styles.label}>Goal Name</Text>
+                    <Text style={styles.label}>{t('goal_name')}</Text>
                     <TextInput
                         style={[styles.textInput, { borderColor: color }]}
                         placeholder="e.g. Read 20 pages daily"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={theme.textMuted}
                         value={data.title}
                         onChangeText={(v) => onChange({ title: v })}
                         returnKeyType="done"
@@ -86,7 +92,7 @@ export default function GoalTargetStep({ data, onChange }: Props) {
             </View>
 
             {/* Presets */}
-            <Text style={styles.presetsLabel}>QUICK PRESETS</Text>
+            <Text style={styles.presetsLabel}>{t('quick_presets')}</Text>
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -113,13 +119,13 @@ export default function GoalTargetStep({ data, onChange }: Props) {
             </ScrollView>
 
             <Text style={styles.hint}>
-                This is your daily target. You can adjust it anytime from Manage Goals.
+                {t('this_is_your_daily_target_you_can_adju')}
             </Text>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         paddingHorizontal: 20,
         paddingBottom: 100,
@@ -127,12 +133,12 @@ const styles = StyleSheet.create({
     heading: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         marginBottom: 6,
     },
     subheading: {
         fontSize: 14,
-        color: '#64748B',
+        color: c.textSecondary,
         marginBottom: 28,
         fontWeight: '500',
     },
@@ -142,24 +148,24 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#64748B',
+        color: c.textSecondary,
         letterSpacing: 0.5,
         marginBottom: 8,
     },
     textInput: {
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
         borderRadius: 16,
         paddingHorizontal: 16,
         paddingVertical: 14,
         fontSize: 16,
         fontWeight: '600',
-        color: '#0F172A',
+        color: c.text,
     },
     stepperCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 24,
         borderWidth: 1,
         padding: 16,
@@ -186,13 +192,13 @@ const styles = StyleSheet.create({
     unitLabel: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#94A3B8',
+        color: c.textMuted,
         marginTop: -4,
     },
     presetsLabel: {
         fontSize: 10,
         fontWeight: '700',
-        color: '#94A3B8',
+        color: c.textMuted,
         letterSpacing: 1.5,
         marginBottom: 12,
     },
@@ -205,18 +211,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 50,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
     },
     presetText: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#475569',
+        color: c.textSecondary,
     },
     hint: {
         fontSize: 13,
-        color: '#94A3B8',
+        color: c.textMuted,
         textAlign: 'center',
         lineHeight: 20,
         fontWeight: '500',

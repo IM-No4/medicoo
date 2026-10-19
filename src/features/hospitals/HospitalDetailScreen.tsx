@@ -1,8 +1,8 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     Platform,
     ScrollView,
@@ -13,8 +13,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '@/src/components/icons/AppIcon';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 export default function HospitalDetailScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
     const route = useRoute<any>();
@@ -28,9 +34,9 @@ export default function HospitalDetailScreen() {
             {/* Header */}
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Hospital Overview</Text>
+                <Text style={styles.headerTitle}>{t('hospital_overview')}</Text>
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <AppIcon name="share" size={20} color="#1C1C1E" />
                 </TouchableOpacity>
@@ -47,7 +53,7 @@ export default function HospitalDetailScreen() {
                     <View style={styles.accreditationRow}>
                         <View style={styles.accreditationBadge}>
                             <AppIcon name="shield-check" size={12} color="#FFFFFF" />
-                            <Text style={styles.accreditationText}>NABH & JCI Accredited</Text>
+                            <Text style={styles.accreditationText}>{t('nabh_jci_accredited')}</Text>
                         </View>
                         <View style={styles.ratingBadge}>
                             <AppIcon name="star" size={12} color="#FDE047" />
@@ -75,31 +81,31 @@ export default function HospitalDetailScreen() {
                     <View style={styles.highlightCard}>
                         <AppIcon name="hospital" size={20} color="#1C6ED5" />
                         <Text style={styles.highlightTitle}>450+ Beds</Text>
-                        <Text style={styles.highlightSubtitle}>Capacity</Text>
+                        <Text style={styles.highlightSubtitle}>{t('capacity')}</Text>
                     </View>
 
                     <View style={styles.highlightCard}>
                         <AppIcon name="ambulance" size={20} color="#DC2626" />
                         <Text style={styles.highlightTitle}>24/7 ICU</Text>
-                        <Text style={styles.highlightSubtitle}>Emergency</Text>
+                        <Text style={styles.highlightSubtitle}>{t('emergency')}</Text>
                     </View>
 
                     <View style={styles.highlightCard}>
                         <AppIcon name="shield-check" size={20} color="#059669" />
-                        <Text style={styles.highlightTitle}>Cashless</Text>
-                        <Text style={styles.highlightSubtitle}>Mediclaim</Text>
+                        <Text style={styles.highlightTitle}>{t('cashless')}</Text>
+                        <Text style={styles.highlightSubtitle}>{t('mediclaim')}</Text>
                     </View>
 
                     <View style={styles.highlightCard}>
                         <AppIcon name="map-pin" size={20} color="#7C3AED" />
                         <Text style={styles.highlightTitle}>1.8 km</Text>
-                        <Text style={styles.highlightSubtitle}>Distance</Text>
+                        <Text style={styles.highlightSubtitle}>{t('distance')}</Text>
                     </View>
                 </View>
 
                 {/* Key Departments */}
                 <View style={styles.sectionCard}>
-                    <Text style={styles.sectionTitle}>Key Departments & Specialties</Text>
+                    <Text style={styles.sectionTitle}>{t('key_departments_specialties')}</Text>
 
                     {[
                         { title: 'Cardiology & Cardiac Surgery', desc: 'Cath lab 24/7, Angioplasty, Open Heart Surgery', icon: 'heart', color: '#EF4444' },
@@ -122,8 +128,8 @@ export default function HospitalDetailScreen() {
 
                 {/* Cashless Insurance Partners */}
                 <View style={styles.sectionCard}>
-                    <Text style={styles.sectionTitle}>Cashless Insurance Partners</Text>
-                    <Text style={styles.insuranceSubtitle}>Over 35+ insurance TPAs accepted for instant cashless claims</Text>
+                    <Text style={styles.sectionTitle}>{t('cashless_insurance_partners')}</Text>
+                    <Text style={styles.insuranceSubtitle}>{t('over_35_insurance_tpas_accepted_for_in')}</Text>
 
                     <View style={styles.insuranceGrid}>
                         {['Star Health', 'HDFC ERGO', 'ICICI Lombard', 'Niva Bupa', 'Care Health', 'Bajaj Allianz'].map((provider, index) => (
@@ -137,7 +143,7 @@ export default function HospitalDetailScreen() {
 
                 {/* Facilities */}
                 <View style={styles.sectionCard}>
-                    <Text style={styles.sectionTitle}>Hospital Facilities & Amenities</Text>
+                    <Text style={styles.sectionTitle}>{t('hospital_facilities_amenities')}</Text>
 
                     <View style={styles.facilitiesGrid}>
                         {[
@@ -163,7 +169,7 @@ export default function HospitalDetailScreen() {
             <View style={[styles.footerBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : 16 }]}>
                 <TouchableOpacity style={styles.callHelplineButton} activeOpacity={0.8}>
                     <AppIcon name="phone" size={18} color="#DC2626" />
-                    <Text style={styles.callHelplineText}>Emergency Call</Text>
+                    <Text style={styles.callHelplineText}>{t('emergency_call')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -177,7 +183,7 @@ export default function HospitalDetailScreen() {
                         end={{ x: 1, y: 0 }}
                         style={styles.bookGradient}
                     >
-                        <Text style={styles.bookText}>Book Appointment</Text>
+                        <Text style={styles.bookText}>{t('book_appointment')}</Text>
                     </LinearGradient>
                 </TouchableOpacity>
             </View>
@@ -187,10 +193,10 @@ export default function HospitalDetailScreen() {
 
 /* ================= STYLES ================= */
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.background,
     },
     header: {
         flexDirection: 'row',
@@ -198,7 +204,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -214,7 +220,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     content: {
         padding: 16,
@@ -294,36 +300,36 @@ const styles = StyleSheet.create({
     },
     highlightCard: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 16,
         padding: 12,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
     },
     highlightTitle: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         marginTop: 6,
     },
     highlightSubtitle: {
         fontSize: 10,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 2,
     },
     sectionCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 16,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
     },
     sectionTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         marginBottom: 14,
     },
     deptRow: {
@@ -332,7 +338,7 @@ const styles = StyleSheet.create({
         gap: 12,
         paddingVertical: 10,
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        borderBottomColor: c.borderLight,
     },
     deptIconWrapper: {
         width: 42,
@@ -344,16 +350,16 @@ const styles = StyleSheet.create({
     deptTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
     },
     deptDesc: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 2,
     },
     insuranceSubtitle: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         marginBottom: 12,
         marginTop: -8,
     },
@@ -366,7 +372,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: '#ECFDF5',
+        backgroundColor: c.successBg,
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 12,
@@ -402,13 +408,13 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         flexDirection: 'row',
         gap: 12,
         paddingHorizontal: 20,
         paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: '#E2E8F0',
+        borderTopColor: c.border,
     },
     callHelplineButton: {
         flexDirection: 'row',
@@ -417,7 +423,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 14,
         borderRadius: 14,
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.errorBg,
         borderWidth: 1,
         borderColor: '#FEE2E2',
     },

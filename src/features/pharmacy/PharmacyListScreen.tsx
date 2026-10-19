@@ -17,7 +17,6 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
-  Modal,
   Platform,
   ScrollView,
   StatusBar,
@@ -31,6 +30,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import AppIcon from "../../components/icons/AppIcon";
 import PrescriptionUploadModal from "../../components/modals/PrescriptionUploadModal";
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { AdaptiveStatusBar } from '../../components/ThemedStatusBar';
+import { Modal } from '../../components/ThemedModal';
 
 const CATEGORIES = [
   { id: "1", name: "All" },
@@ -82,7 +86,11 @@ const PharmacyCard = memo(
     onFavoritePress: (id: string) => void;
     isFavoriteLoading?: boolean;
     authToken?: string | null;
-  }) => (
+  }) => {
+    const { theme } = useTheme();
+    const styles = useMemo(() => createStyles(theme), [theme]);
+    const { t } = useLanguage();
+    return (
     <TouchableOpacity
       style={styles.card}
       onPress={() => onPress(item.id)}
@@ -114,7 +122,7 @@ const PharmacyCard = memo(
           colors={["rgba(247, 247, 247, 0)", "rgba(7, 8, 7, 1)"]}
           style={styles.dealBadge}
         >
-          <Text style={styles.dealBadgeTitle}>FLAT DEAL</Text>
+          <Text style={styles.dealBadgeTitle}>{t('flat_deal')}</Text>
           <Text style={styles.dealBadgeDiscount}>50% OFF</Text>
         </LinearGradient>
         {/* Favorite heart icon on image */}
@@ -144,7 +152,7 @@ const PharmacyCard = memo(
       <View style={styles.cardContent}>
         {/* Verified tag */}
         <View style={styles.verifiedTag}>
-          <Text style={styles.verifiedText}>Verified</Text>
+          <Text style={styles.verifiedText}>{t('verified')}</Text>
           <View style={styles.verifiedUnderline} />
         </View>
 
@@ -181,16 +189,20 @@ const PharmacyCard = memo(
         {/* Currently Offline Badge - Shows when store is closed */}
         {!item.isOpen && (
           <View style={styles.offlineBadge}>
-            <AppIcon name="alarm-clock-off" size={12} color="#6B7280" />
-            <Text style={styles.offlineBadgeText}>Currently Unavailable</Text>
+            <AppIcon name="alarm-clock-off" size={12} color={theme.textSecondary} />
+            <Text style={styles.offlineBadgeText}>{t('currently_unavailable')}</Text>
           </View>
         )}
       </View>
     </TouchableOpacity>
-  ),
+    );
+  },
 );
 
 export default function PharmacyListScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation();
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -371,9 +383,9 @@ export default function PharmacyListScreen() {
       setStatusModal({
         visible: true,
         status: "error",
-        title: "Location Error",
+        title: t('location_error'),
         message:
-          "Location not found. Please ensure you have an address selected or location services enabled.",
+          t('location_not_found_please_ensure_you_h'),
       });
       return;
     }
@@ -390,7 +402,7 @@ export default function PharmacyListScreen() {
   const renderHeader = () => (
     <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
       <View style={styles.locationContainer}>
-        <Text style={styles.headerSubtitle}>Delivering to</Text>
+        <Text style={styles.headerSubtitle}>{t('delivering_to')}</Text>
         <TouchableOpacity
           style={styles.locationButton}
           onPress={() => setIsLocationVisible(true)}
@@ -416,20 +428,20 @@ export default function PharmacyListScreen() {
   const renderSearch = () => (
     <View style={styles.searchSection}>
       <View style={styles.searchContainer}>
-        <AppIcon name="search" size={20} color="#8A8A8E" />
+        <AppIcon name="search" size={20} color={theme.textMuted} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search pharmacies, medicines..."
-          placeholderTextColor="#8A8A8E"
+          placeholder={t('search_pharmacies')}
+          placeholderTextColor={theme.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
-        <Text style={{ color: "#8A8A8E" }}>|</Text>
+        <Text style={{ color: theme.textMuted }}>|</Text>
         <TouchableOpacity
           style={styles.scanButton}
           onPress={() => setIsUploadModalVisible(true)}
         >
-          <AppIcon name="scan-text-icon" size={20} color="#8A8A8E" />
+          <AppIcon name="scan-text-icon" size={20} color={theme.textMuted} />
         </TouchableOpacity>
       </View>
     </View>
@@ -477,13 +489,13 @@ export default function PharmacyListScreen() {
           style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}
         >
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Sort & Filter</Text>
+            <Text style={styles.modalTitle}>{t('sort_filter')}</Text>
             <TouchableOpacity onPress={() => setIsFilterVisible(false)}>
               <AppIcon name="x" size={24} color="#1c1c1e" />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.filterLabel}>Sort by</Text>
+          <Text style={styles.filterLabel}>{t('sort_by')}</Text>
 
           {["default", "rating", "distance"].map((option) => (
             <TouchableOpacity
@@ -513,7 +525,7 @@ export default function PharmacyListScreen() {
             style={styles.applyButton}
             onPress={() => setIsFilterVisible(false)}
           >
-            <Text style={styles.applyButtonText}>Apply</Text>
+            <Text style={styles.applyButtonText}>{t('apply')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -568,7 +580,7 @@ export default function PharmacyListScreen() {
     return (
       <View style={styles.emptyStateContainer}>
         <AppIcon name="search" size={48} color="#C7C7CC" />
-        <Text style={styles.emptyStateTitle}>No Pharmacies Found</Text>
+        <Text style={styles.emptyStateTitle}>{t('no_pharmacies')}</Text>
         <Text style={styles.emptyStateText}>{message}</Text>
         {(hasSearch || hasCategoryFilter) && (
           <TouchableOpacity
@@ -593,7 +605,7 @@ export default function PharmacyListScreen() {
     return (
       <View style={styles.endOfListContainer}>
         <View style={styles.endOfListIcon}>
-          <AppIcon name="map-pin-off" size={24} color="#8A8A8E" />
+          <AppIcon name="map-pin-off" size={24} color={theme.textMuted} />
         </View>
         <Text style={styles.endOfListTitle}>
           {!hasMore ? "You've reached the end" : "That's all nearby"}
@@ -645,7 +657,7 @@ export default function PharmacyListScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <AdaptiveStatusBar barStyle="dark-content" backgroundColor="#fff" />
       {renderHeader()}
 
       <View style={[styles.contentContainer, { paddingBottom: insets.bottom }]}>
@@ -682,7 +694,7 @@ export default function PharmacyListScreen() {
           ListHeaderComponent={() => (
             <>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Nearby Pharmacies</Text>
+                <Text style={styles.sectionTitle}>{t('nearby_pharmacies')}</Text>
               </View>
               {renderCategories()}
             </>
@@ -725,10 +737,10 @@ export default function PharmacyListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.background,
   },
   header: {
     flexDirection: "row",
@@ -736,14 +748,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
   },
   locationContainer: {
     flex: 1,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: "#8A8A8E",
+    color: c.textMuted,
     marginBottom: 2,
   },
   locationButton: {
@@ -753,30 +765,30 @@ const styles = StyleSheet.create({
   locationTextHeader: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#1c1c1e",
+    color: c.text,
     marginHorizontal: 6,
   },
   iconButton: {
     padding: 8,
     position: "relative",
-    backgroundColor: "#ffffff",
+    backgroundColor: c.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: c.border,
   },
   contentContainer: {
     flex: 1,
-    backgroundColor: "#f1f0f5",
+    backgroundColor: c.cardSecondary,
   },
   searchSection: {
     flexDirection: "row",
     paddingHorizontal: 16,
     paddingBottom: 16,
     paddingTop: 4,
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    borderColor: "#E5E7EB",
+    borderColor: c.border,
     borderWidth: 1,
     borderTopWidth: 0,
     zIndex: 1,
@@ -785,18 +797,18 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
+    backgroundColor: c.card,
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 54,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: c.border,
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
     fontSize: 15,
-    color: "#1c1c1e",
+    color: c.text,
   },
   scanButton: {
     width: 32,
@@ -815,11 +827,11 @@ const styles = StyleSheet.create({
   categoryChip: {
     paddingHorizontal: 14,
     paddingVertical: 4,
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: c.border,
   },
   activeCategoryChip: {
     backgroundColor: "#10B981",
@@ -828,7 +840,7 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#8A8A8E",
+    color: c.textMuted,
   },
   activeCategoryText: {
     color: "#fff",
@@ -837,7 +849,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 20,
     minHeight: "100%",
-    backgroundColor: "#FFF",
+    backgroundColor: c.card,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
   },
@@ -852,7 +864,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     letterSpacing: 1,
-    color: "#1c1c1e",
+    color: c.text,
   },
   modalOverlay: {
     flex: 1,
@@ -860,7 +872,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -875,12 +887,12 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1c1c1e",
+    color: c.text,
   },
   filterLabel: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1c1c1e",
+    color: c.text,
     marginBottom: 16,
   },
   filterOption: {
@@ -889,18 +901,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F2F2F7",
+    borderBottomColor: c.borderLight,
   },
   filterOptionText: {
     fontSize: 16,
-    color: "#3C3C43",
+    color: c.text,
   },
   radioButton: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: "#E5E7EB",
+    borderColor: c.border,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -941,7 +953,7 @@ const styles = StyleSheet.create({
   },
   // CARD STYLES - EXACT MATCH TO IMAGE
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     borderRadius: 16,
     marginVertical: 16,
     overflow: "hidden",
@@ -951,14 +963,14 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 16,
-    backgroundColor: "#F2F2F7",
+    backgroundColor: c.cardSecondary,
   },
   cardImageContainer: {
     width: 120,
     height: 144,
     position: "relative",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: c.border,
     borderRadius: 12,
     margin: 2,
     overflow: "hidden",
@@ -998,7 +1010,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
@@ -1033,7 +1045,7 @@ const styles = StyleSheet.create({
   storeName: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#1C1C1E",
+    color: c.text,
     marginBottom: 6,
     letterSpacing: 0.3,
   },
@@ -1053,30 +1065,30 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#1C1C1E",
+    color: c.text,
     marginRight: 3,
   },
   reviewCount: {
     fontSize: 13,
     fontWeight: "400",
-    color: "#1C1C1E",
+    color: c.text,
     marginRight: 6,
   },
   deliveryTimeDot: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#1C1C1E",
+    color: c.text,
     marginRight: 6,
   },
   deliveryTimeText: {
     fontSize: 13,
     fontWeight: "400",
-    color: "#1C1C1E",
+    color: c.text,
   },
   categoriesText: {
     fontSize: 13,
     fontWeight: "400",
-    color: "#6B7280",
+    color: c.textSecondary,
     marginBottom: 4,
     letterSpacing: 0.2,
   },
@@ -1088,18 +1100,18 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 13,
     fontWeight: "400",
-    color: "#6B7280",
+    color: c.textSecondary,
   },
   distanceDot: {
     fontSize: 13,
     fontWeight: "400",
-    color: "#6B7280",
+    color: c.textSecondary,
     marginHorizontal: 6,
   },
   distanceText: {
     fontSize: 13,
     fontWeight: "400",
-    color: "#6B7280",
+    color: c.textSecondary,
   },
   // Currently Offline Badge
   offlineBadge: {
@@ -1110,17 +1122,17 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 6,
     marginTop: 4,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: c.cardSecondary,
   },
   offlineBadgeText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#6B7280",
+    color: c.textSecondary,
     marginLeft: 4,
     letterSpacing: 0.2,
   },
   skeletonBox: {
-    backgroundColor: "#E5E5EA",
+    backgroundColor: c.cardSecondary,
     borderRadius: 4,
   },
   emptyStateContainer: {
@@ -1132,13 +1144,13 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#1c1c1e",
+    color: c.text,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 14,
-    color: "#8A8A8E",
+    color: c.textMuted,
     textAlign: "center",
     lineHeight: 20,
   },
@@ -1160,7 +1172,7 @@ const styles = StyleSheet.create({
   },
   // End of List Section
   endOfListContainer: {
-    backgroundColor: "#F2F2F7",
+    backgroundColor: c.cardSecondary,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 40,
@@ -1172,7 +1184,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#FFF",
+    backgroundColor: c.card,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
@@ -1180,12 +1192,12 @@ const styles = StyleSheet.create({
   endOfListTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1c1c1e",
+    color: c.text,
     marginBottom: 6,
   },
   endOfListSubtitle: {
     fontSize: 13,
-    color: "#8A8A8E",
+    color: c.textMuted,
     textAlign: "center",
   },
   toastContainer: {

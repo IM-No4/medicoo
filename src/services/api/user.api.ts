@@ -19,6 +19,23 @@ export const updateProfile = async (formData: any) => {
     return res.data;
 };
 
+export interface CustomerNotificationSettings {
+    orderUpdates: boolean;
+    appointments: boolean;
+    payments: boolean;
+    medicineReminders: boolean;
+    promotions: boolean;
+    community: boolean;
+}
+
+// Separate from updateProfile (multipart, broader field whitelist) - this
+// is a plain JSON toggle update, mirroring the doctor app's
+// updateDoctorSettings.
+export const updateNotificationSettings = async (notificationSettings: CustomerNotificationSettings) => {
+    const res = await apiClient.put('/api/user/update-notification-settings', { notificationSettings });
+    return res.data;
+};
+
 export const sendEmailOtp = async (email: string) => {
     const res = await apiClient.post('/api/user/send-email-otp', { email });
     return res.data;

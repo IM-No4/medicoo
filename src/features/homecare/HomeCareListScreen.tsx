@@ -1,26 +1,29 @@
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    FlatList,
-    Image,
-    Linking,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Animated,
+  Dimensions,
+  FlatList,
+  Image,
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '@/src/components/icons/AppIcon';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../../components/ThemedModal';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -185,6 +188,9 @@ export const OFFERS_DATA = [
 /* ================= MAIN COMPONENT ================= */
 
 export default function HomeCareListScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
 
@@ -238,11 +244,11 @@ export default function HomeCareListScreen() {
             {/* ---------- Header ---------- */}
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
 
                 <View style={styles.headerTitleContainer}>
-                    <Text style={styles.headerTitle}>Home Care & Nursing</Text>
+                    <Text style={styles.headerTitle}>{t('home_care_nursing')}</Text>
                     <View style={styles.locationRow}>
                         <AppIcon name="map-pin" size={12} color="#EC4899" />
                         <Text style={styles.locationText} numberOfLines={1}>
@@ -257,7 +263,7 @@ export default function HomeCareListScreen() {
                 <View style={styles.searchBox}>
                     <AppIcon name="search" size={18} color="#8E8E93" />
                     <TextInput
-                        placeholder="Search providers, nursing, physiotherapy, elder care..."
+                        placeholder={t('search_providers_nursing_physiotherapy')}
                         placeholderTextColor="#8E8E93"
                         style={styles.searchInput}
                         value={searchQuery}
@@ -343,7 +349,7 @@ export default function HomeCareListScreen() {
                             <View style={styles.cardTopMetaRow}>
                                 <View style={styles.verifiedMetaBadge}>
                                     <AppIcon name="shield-check" size={12} color="#059669" />
-                                    <Text style={styles.verifiedMetaText}>Verified Partner</Text>
+                                    <Text style={styles.verifiedMetaText}>{t('verified_partner')}</Text>
                                 </View>
 
                                 {item.badgeText && (
@@ -393,7 +399,7 @@ export default function HomeCareListScreen() {
                             {/* Card Footer Pricing & Actions */}
                             <View style={styles.cardFooter}>
                                 <View style={{ flex: 1, marginRight: 8 }}>
-                                    <Text style={styles.shiftTypeText}>Starting from</Text>
+                                    <Text style={styles.shiftTypeText}>{t('starting_from')}</Text>
                                     <Text style={styles.cardPrice}>₹{item.startingPrice} <Text style={styles.cardPriceUnit}>/ visit</Text></Text>
                                 </View>
 
@@ -409,7 +415,7 @@ export default function HomeCareListScreen() {
                                             end={{ x: 1, y: 0 }}
                                             style={styles.bookVisitGradient}
                                         >
-                                            <Text style={styles.bookVisitText} numberOfLines={1}>View Services</Text>
+                                            <Text style={styles.bookVisitText} numberOfLines={1}>{t('view_services')}</Text>
                                             <AppIcon name="chevron-right" size={14} color="#FFFFFF" />
                                         </LinearGradient>
                                     </TouchableOpacity>
@@ -453,13 +459,13 @@ export default function HomeCareListScreen() {
                                 <TouchableOpacity style={styles.resetFilterButton} onPress={resetAllFilters} activeOpacity={0.8}>
                                     <LinearGradient colors={['#F472B6', '#EC4899']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.resetFilterGradient}>
                                         <AppIcon name="rotate-ccw" size={16} color="#FFFFFF" />
-                                        <Text style={styles.resetFilterText}>Reset All Filters</Text>
+                                        <Text style={styles.resetFilterText}>{t('reset_all_filters')}</Text>
                                     </LinearGradient>
                                 </TouchableOpacity>
 
                                 {searchQuery !== '' && (
                                     <TouchableOpacity style={styles.clearSearchButton} onPress={() => setSearchQuery('')} activeOpacity={0.7}>
-                                        <Text style={styles.clearSearchText}>Clear Search</Text>
+                                        <Text style={styles.clearSearchText}>{t('clear_search')}</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>
@@ -475,10 +481,10 @@ export default function HomeCareListScreen() {
 
 /* ================= STYLES ================= */
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.background,
     },
     header: {
         flexDirection: 'row',
@@ -486,7 +492,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         gap: 12,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
@@ -506,7 +512,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     locationRow: {
         flexDirection: 'row',
@@ -517,19 +523,19 @@ const styles = StyleSheet.create({
     locationText: {
         fontSize: 12,
         fontWeight: '500',
-        color: '#64748B',
+        color: c.textSecondary,
     },
     searchBarContainer: {
         paddingHorizontal: 16,
         paddingVertical: 10,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        borderBottomColor: c.borderLight,
     },
     searchBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderRadius: 14,
         paddingHorizontal: 12,
         height: 44,
@@ -538,13 +544,13 @@ const styles = StyleSheet.create({
         flex: 1,
         marginLeft: 8,
         fontSize: 14,
-        color: '#0F172A',
+        color: c.text,
     },
     categoriesBar: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         paddingVertical: 10,
         borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
+        borderBottomColor: c.border,
     },
     categoriesRow: {
         paddingHorizontal: 16,
@@ -556,9 +562,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         paddingVertical: 8,
         borderRadius: 20,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         gap: 6,
     },
     categoryChipSelected: {
@@ -568,7 +574,7 @@ const styles = StyleSheet.create({
     categoryChipText: {
         fontSize: 13,
         fontWeight: '500',
-        color: '#475569',
+        color: c.textSecondary,
     },
     categoryChipTextSelected: {
         color: '#FFFFFF',
@@ -636,17 +642,17 @@ const styles = StyleSheet.create({
     resultsCountText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#475569',
+        color: c.textSecondary,
     },
     listSection: {
         gap: 14,
     },
     serviceCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 22,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         position: 'relative',
         shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 3 },
@@ -664,7 +670,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#ECFDF5',
+        backgroundColor: c.successBg,
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 8,
@@ -701,7 +707,7 @@ const styles = StyleSheet.create({
         width: 52,
         height: 52,
         borderRadius: 16,
-        backgroundColor: '#FDF2F8',
+        backgroundColor: c.cardSecondary,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
@@ -710,7 +716,7 @@ const styles = StyleSheet.create({
     serviceTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
     },
     metaRow: {
         flexDirection: 'row',
@@ -725,23 +731,23 @@ const styles = StyleSheet.create({
     },
     reviewText: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         fontWeight: '500',
     },
     dotSeparator: {
-        color: '#94A3B8',
+        color: c.textMuted,
         marginHorizontal: 2,
     },
     accreditationText: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         flex: 1,
     },
     durationChip: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#FDF2F8',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 8,
@@ -771,12 +777,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 6,
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: c.borderLight,
         maxWidth: '100%',
     },
     featurePillActive: {
@@ -785,7 +791,7 @@ const styles = StyleSheet.create({
     },
     featurePillText: {
         fontSize: 11,
-        color: '#475569',
+        color: c.textSecondary,
         fontWeight: '500',
         flexShrink: 1,
     },
@@ -814,12 +820,12 @@ const styles = StyleSheet.create({
     },
     highlightText: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         flexShrink: 1,
     },
     cardDivider: {
         height: 1,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         marginVertical: 12,
     },
     cardFooter: {
@@ -830,17 +836,17 @@ const styles = StyleSheet.create({
     cardPrice: {
         fontSize: 18,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
         marginTop: 2,
     },
     cardPriceUnit: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         fontWeight: '500',
     },
     shiftTypeText: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
     },
     actionsGroup: {
         flexDirection: 'row',
@@ -851,7 +857,7 @@ const styles = StyleSheet.create({
         width: 38,
         height: 38,
         borderRadius: 12,
-        backgroundColor: '#FDF2F8',
+        backgroundColor: c.cardSecondary,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
@@ -877,11 +883,11 @@ const styles = StyleSheet.create({
         paddingVertical: 32,
         paddingHorizontal: 20,
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 24,
         marginTop: 12,
         borderWidth: 1,
-        borderColor: '#F2F4F7',
+        borderColor: c.borderLight,
     },
     illustrationWrapper: {
         width: 180,
@@ -944,9 +950,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 18,
         paddingVertical: 12,
         borderRadius: 14,
-        backgroundColor: '#F2F4F7',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E4E7EC',
+        borderColor: c.border,
     },
     clearSearchText: {
         color: '#344054',

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,14 +7,20 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Sparkles, MapPin, ChevronLeft } from 'lucide-react-native';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function ComingSoonScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
@@ -31,7 +37,7 @@ export default function ComingSoonScreen() {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{featureName}</Text>
         <View style={styles.placeholder} />
@@ -43,32 +49,32 @@ export default function ComingSoonScreen() {
         <View style={styles.graphicContainer}>
           <View style={styles.outerGlow}>
             <View style={styles.innerGlow}>
-              <Sparkles size={48} color="#0FBBA1" />
+              <Sparkles size={48} color="#10B981" />
             </View>
           </View>
           <View style={styles.badge}>
             <MapPin size={12} color="#FFFFFF" />
-            <Text style={styles.badgeText}>Coming Soon</Text>
+            <Text style={styles.badgeText}>{t('coming_soon')}</Text>
           </View>
         </View>
 
         {/* Title & Status */}
         <Text style={styles.mainTitle}>{featureName} Service</Text>
-        <Text style={styles.statusSubtitle}>Under Launch Preparation</Text>
+        <Text style={styles.statusSubtitle}>{t('under_launch')}</Text>
         
         {/* Description */}
         <Text style={styles.messageDescription}>
-          We are currently building partnerships with diagnostic centers, clinic networks, and hospital partners to launch <Text style={styles.boldText}>{featureName}</Text> in your neighborhood soon.
+          We are currently building partnerships with diagnostic centers, clinic networks, and hospital partners to launch <Text style={styles.boldText}>{featureName}</Text> {t('in_your_neighborhood_soon')}
         </Text>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // Full-screen white background, no card/modal aesthetic!
+    backgroundColor: c.background, // Full-screen white background, no card/modal aesthetic!
   },
   header: {
     flexDirection: 'row',
@@ -76,7 +82,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -92,7 +98,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -114,7 +120,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: c.successBg,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -124,7 +130,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: c.successBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -133,12 +139,12 @@ const styles = StyleSheet.create({
     bottom: -10,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 999,
     gap: 4,
-    shadowColor: '#0FBBA1',
+    shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -154,14 +160,14 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#0F172A',
+    color: c.text,
     textAlign: 'center',
     marginTop: 16,
   },
   statusSubtitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: c.textSecondary,
     textAlign: 'center',
     marginTop: 6,
     textTransform: 'uppercase',
@@ -169,13 +175,13 @@ const styles = StyleSheet.create({
   },
   messageDescription: {
     fontSize: 15,
-    color: '#475569',
+    color: c.textSecondary,
     textAlign: 'center',
     marginTop: 24,
     lineHeight: 24,
   },
   boldText: {
     fontWeight: '700',
-    color: '#0F172A',
+    color: c.text,
   },
 });

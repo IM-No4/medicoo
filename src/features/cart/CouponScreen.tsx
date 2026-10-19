@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,16 @@ import {
   ScrollView,
   TextInput,
   Platform,
-  StatusBar,
   ActivityIndicator,
 } from 'react-native';
-import { ChevronLeft, Ticket } from 'lucide-react-native';
+import { ChevronLeft, Info, Ticket } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApiCoupon, getStoreCoupons } from '@/src/services/api/cart.api';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { AdaptiveStatusBar } from '../../components/ThemedStatusBar';
 
 // The shape CartScreen's own discount math already expects (type:
 // percentage/flat/delivery) - kept as-is rather than reworking that logic,
@@ -23,7 +26,7 @@ type DisplayCoupon = {
   code: string;
   description: string;
   detail: string;
-  type: 'percentage' | 'flat' | 'delivery';
+  type: 'percentage' | 'flat' | 'delivery' | 'fixed_total';
   value: number;
   maxValue?: number;
   minOrder: number;
@@ -36,7 +39,7 @@ type DisplayCoupon = {
 };
 
 function toDisplayCoupon(c: ApiCoupon): DisplayCoupon {
-  const type = c.discountType === 'free_shipping' ? 'delivery' : (c.discountType as 'percentage' | 'flat');
+  const type = c.discountType === 'free_shipping' ? 'delivery' : (c.discountType as 'percentage' | 'flat' | 'fixed_total');
   const minOrder = c.minOrderValue ?? 0;
   const detailParts: string[] = [];
   // Leads with the actionable "add ₹X more" nudge when that's the only
@@ -56,6 +59,7 @@ function toDisplayCoupon(c: ApiCoupon): DisplayCoupon {
     description: c.description || (
       type === 'percentage' ? `Get ${c.discountValue}% OFF on medicine orders`
         : type === 'delivery' ? 'Free Delivery on your order'
+          : type === 'fixed_total' ? `Pay just ₹${c.discountValue} on your order`
           : `Flat ₹${c.discountValue} OFF on your order`
     ),
     detail: detailParts.join(' ') || 'Applicable on eligible orders.',
@@ -69,10 +73,14 @@ function toDisplayCoupon(c: ApiCoupon): DisplayCoupon {
 }
 
 export default function CouponScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
   const [promoCode, setPromoCode] = useState('');
+  const [promoMessage, setPromoMessage] = useState('');
   const [coupons, setCoupons] = useState<DisplayCoupon[]>([]);
   const [loading, setLoading] = useState(true);
   const cartAmount = route.params?.amount;
@@ -98,225 +106,180 @@ export default function CouponScreen() {
 
   const handleCustomPromoApply = () => {
     const uppercaseCode = promoCode.trim().toUpperCase();
+    if (!uppercaseCode) {
+      setPromoMessage('Enter a promo code first.');
+      return;
+    }
     const matched = coupons.find(c => c.code === uppercaseCode);
     if (!matched) {
-      alert('Invalid Promo Code');
+      setPromoMessage("That code isn't valid for this order. Check it and try again.");
       return;
     }
     if (!matched.eligible) {
-      alert(`Add ₹${matched.shortfall} more to your cart to use this coupon.`);
+      setPromoMessage(`Add ₹${matched.shortfall} more to your cart to use this coupon.`);
       return;
     }
+    setPromoMessage('');
     handleApplyCoupon(matched);
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <AdaptiveStatusBar barStyle="dark-content" />
+
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Apply Coupon</Text>
+        <Text style={styles.headerTitle}>Coupons</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 16 + insets.bottom }]} showsVerticalScrollIndicator={false}>
-        {/* Custom Code Input */}
-        <View style={styles.promoInputWrapper}>
-          <TextInput
-            style={styles.promoInput}
-            placeholder="Enter promo code"
-            placeholderTextColor="#9CA3AF"
-            autoCapitalize="characters"
-            value={promoCode}
-            onChangeText={setPromoCode}
-          />
-          <TouchableOpacity style={styles.promoApplyBtn} onPress={handleCustomPromoApply}>
-            <Text style={styles.promoApplyBtnText}>Apply</Text>
-          </TouchableOpacity>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Promo code */}
+        <Text style={styles.sectionTitle}>Have a promo code?</Text>
+        <View style={styles.card}>
+          <View style={styles.promoRow}>
+            <TextInput
+              style={styles.promoInput}
+              placeholder={t('enter_promo')}
+              placeholderTextColor={theme.textMuted}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              value={promoCode}
+              onChangeText={(v) => {
+                setPromoCode(v);
+                if (promoMessage) setPromoMessage('');
+              }}
+              onSubmitEditing={handleCustomPromoApply}
+            />
+            <TouchableOpacity
+              style={[styles.applyBtn, !promoCode.trim() && styles.applyBtnDisabled]}
+              onPress={handleCustomPromoApply}
+              disabled={!promoCode.trim()}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.applyBtnText}>{t('apply').toUpperCase()}</Text>
+            </TouchableOpacity>
+          </View>
+          {!!promoMessage && (
+            <View style={styles.promoNotice}>
+              <Info size={14} color={theme.textSecondary} />
+              <Text style={styles.promoNoticeText}>{promoMessage}</Text>
+            </View>
+          )}
         </View>
 
-        <Text style={styles.sectionTitle}>Available Offers</Text>
+        {/* Offers */}
+        <Text style={styles.sectionTitle}>{t('available_offers')}</Text>
 
         {loading ? (
-          <ActivityIndicator color="#007C69" style={{ marginTop: 12 }} />
+          <ActivityIndicator color="#10B981" style={{ marginTop: 16 }} />
         ) : coupons.length === 0 ? (
-          <Text style={styles.emptyText}>No offers available right now - check back soon.</Text>
-        ) : (
-          coupons.map((coupon) => (
-            <View key={coupon.code} style={[styles.couponCard, !coupon.eligible && styles.couponCardIneligible]}>
-              <View style={styles.couponHeader}>
-                <View style={[styles.badgeWrapper, !coupon.eligible && styles.badgeWrapperIneligible]}>
-                  <Ticket size={16} color={coupon.eligible ? '#007C69' : '#9CA3AF'} />
-                  <Text style={[styles.couponCodeText, !coupon.eligible && styles.couponCodeTextIneligible]}>
-                    {coupon.code}
-                  </Text>
-                </View>
-                {coupon.eligible ? (
-                  <TouchableOpacity
-                    style={styles.applyLinkBtn}
-                    onPress={() => handleApplyCoupon(coupon)}
-                  >
-                    <Text style={styles.applyLinkText}>Apply</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={styles.shortfallText}>Add ₹{coupon.shortfall} more</Text>
-                )}
-              </View>
-              <Text style={[styles.couponDesc, !coupon.eligible && styles.couponDescIneligible]}>
-                {coupon.description}
-              </Text>
-              <Text style={styles.couponDetail}>{coupon.detail}</Text>
+          <View style={[styles.card, styles.emptyCard]}>
+            <View style={styles.emptyIcon}>
+              <Ticket size={22} color={theme.textMuted} />
             </View>
-          ))
+            <Text style={styles.emptyText}>{t('no_offers')}</Text>
+          </View>
+        ) : (
+          <View style={styles.card}>
+            {coupons.map((coupon, index) => (
+              <View key={coupon.code} style={[styles.offer, index < coupons.length - 1 && styles.offerDivider]}>
+                <View style={styles.offerTop}>
+                  <View style={[styles.codeChip, !coupon.eligible && styles.codeChipMuted]}>
+                    <Ticket size={14} color={coupon.eligible ? '#10B981' : theme.textMuted} />
+                    <Text style={[styles.codeText, !coupon.eligible && styles.codeTextMuted]}>{coupon.code}</Text>
+                  </View>
+                  {coupon.eligible ? (
+                    <TouchableOpacity style={styles.offerApply} onPress={() => handleApplyCoupon(coupon)} activeOpacity={0.85}>
+                      <Text style={styles.offerApplyText}>{t('apply').toUpperCase()}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text style={styles.shortfallText}>Add ₹{coupon.shortfall} more</Text>
+                  )}
+                </View>
+                <Text style={[styles.offerTitle, !coupon.eligible && styles.offerTitleMuted]}>{coupon.description}</Text>
+                <Text style={styles.offerDetail}>{coupon.detail}</Text>
+              </View>
+            ))}
+          </View>
         )}
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F6F7F9',
-  },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
     }),
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: -8,
-  },
+  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
   },
-  scrollContent: {
-    padding: 16,
-  },
-  promoInputWrapper: {
-    flexDirection: 'row',
-    gap: 12,
-    backgroundColor: '#FFFFFF',
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginBottom: 24,
-  },
+  scrollContent: { paddingHorizontal: 16 },
+  sectionTitle: { fontSize: 14, fontWeight: '700', color: c.text, marginTop: 20, marginBottom: 10 },
+  card: { backgroundColor: c.card, borderRadius: 14, borderWidth: 1, borderColor: c.borderLight, overflow: 'hidden' },
+  promoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
   promoInput: {
     flex: 1,
-    fontSize: 15,
-    color: '#111827',
-    fontWeight: '600',
-    paddingHorizontal: 8,
-  },
-  promoApplyBtn: {
-    backgroundColor: '#007C69',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    height: 46,
     borderRadius: 10,
-    justifyContent: 'center',
-  },
-  promoApplyBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#374151',
-    marginBottom: 16,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  emptyText: {
-    fontSize: 13.5,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  couponCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.inputBorder,
+    backgroundColor: c.inputBg,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    color: c.text,
   },
-  couponHeader: {
+  applyBtn: { height: 46, paddingHorizontal: 20, borderRadius: 10, backgroundColor: '#10B981', alignItems: 'center', justifyContent: 'center' },
+  applyBtnDisabled: { opacity: 0.4 },
+  applyBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800', letterSpacing: 0.6 },
+  promoNotice: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginBottom: 12, padding: 10, borderRadius: 10, backgroundColor: c.cardSecondary },
+  promoNoticeText: { flex: 1, fontSize: 12.5, fontWeight: '500', color: c.textSecondary, lineHeight: 18 },
+  offer: { padding: 14 },
+  offerDivider: { borderBottomWidth: 1, borderBottomColor: c.borderLight },
+  offerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  codeChip: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  badgeWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#E8F5E9',
+    gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#10B981',
+    backgroundColor: c.successBg,
   },
-  couponCodeText: {
-    color: '#007C69',
-    fontWeight: '800',
-    fontSize: 13,
-  },
-  applyLinkBtn: {
-    padding: 4,
-  },
-  applyLinkText: {
-    color: '#007C69',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  couponDesc: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  couponDetail: {
-    fontSize: 12,
-    color: '#6B7280',
-    lineHeight: 16,
-  },
-  // Not-yet-eligible coupons (minOrderValue not met by this cart) stay
-  // visible but visually muted, rather than either fully hiding them or
-  // letting them look identical to ones the user can tap right now.
-  couponCardIneligible: {
-    backgroundColor: '#FAFAFA',
-    borderColor: '#F3F4F6',
-  },
-  badgeWrapperIneligible: {
-    backgroundColor: '#F3F4F6',
-  },
-  couponCodeTextIneligible: {
-    color: '#9CA3AF',
-  },
-  couponDescIneligible: {
-    color: '#6B7280',
-  },
-  shortfallText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#B45309',
-  },
+  codeChipMuted: { borderColor: c.border, backgroundColor: c.cardSecondary },
+  codeText: { fontSize: 13, fontWeight: '800', color: '#10B981', letterSpacing: 0.4 },
+  codeTextMuted: { color: c.textMuted },
+  offerApply: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: '#10B981' },
+  offerApplyText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800', letterSpacing: 0.6 },
+  shortfallText: { fontSize: 12, fontWeight: '700', color: c.warning },
+  offerTitle: { fontSize: 14, fontWeight: '700', color: c.text, marginBottom: 4 },
+  offerTitleMuted: { color: c.textSecondary },
+  offerDetail: { fontSize: 12, color: c.textSecondary, lineHeight: 17 },
+  emptyCard: { alignItems: 'center', paddingVertical: 28, paddingHorizontal: 20, gap: 10 },
+  emptyIcon: { width: 48, height: 48, borderRadius: 14, backgroundColor: c.cardSecondary, alignItems: 'center', justifyContent: 'center' },
+  emptyText: { fontSize: 13.5, color: c.textSecondary, textAlign: 'center' },
 });

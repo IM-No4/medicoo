@@ -15,6 +15,10 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 //     that (going offline mid-session, coming back online, etc).
 interface ConnectivityState {
   isOnline: boolean;
+  // True when the device has internet but OUR backend can't be reached (server
+  // down/restarting). Set by the API client after repeated no-response
+  // failures, cleared by the first request that gets any response.
+  serverUnreachable: boolean;
 }
 
 // Optimistic default (true) rather than "unknown" - avoids every screen
@@ -24,6 +28,7 @@ interface ConnectivityState {
 // milliseconds if actually offline.
 const initialState: ConnectivityState = {
   isOnline: true,
+  serverUnreachable: false,
 };
 
 const connectivitySlice = createSlice({
@@ -33,8 +38,11 @@ const connectivitySlice = createSlice({
     setOnlineStatus(state, action: PayloadAction<boolean>) {
       state.isOnline = action.payload;
     },
+    setServerUnreachable(state, action: PayloadAction<boolean>) {
+      state.serverUnreachable = action.payload;
+    },
   },
 });
 
-export const { setOnlineStatus } = connectivitySlice.actions;
+export const { setOnlineStatus, setServerUnreachable } = connectivitySlice.actions;
 export default connectivitySlice.reducer;

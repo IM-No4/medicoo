@@ -1,9 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, HeartHandshake, Info, ShieldAlert, Stethoscope } from 'lucide-react-native';
-import React from 'react';
-import { Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MEDICAL_DISCLAIMER_TITLE } from '../../constants/medicalDisclaimer';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { AdaptiveStatusBar } from '../../components/ThemedStatusBar';
 
 // Deliberately not the bare LegalPage component Terms/Privacy use - that's
 // just a header + one block of justified text, which reads fine for those
@@ -37,24 +40,26 @@ const POINTS: { icon: any; iconBg: string; iconColor: string; heading: string; b
     {
         icon: HeartHandshake,
         iconBg: '#F0FDF4',
-        iconColor: '#0FBBA1',
+        iconColor: '#10B981',
         heading: 'Always Consult a Professional',
         body: 'Always consult a qualified healthcare professional for medical advice, diagnosis, or treatment, and before making any decisions related to your health or medications.',
     },
 ];
 
 export default function MedicalDisclaimerScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <AdaptiveStatusBar barStyle="dark-content" backgroundColor="#fff" />
 
             {/* Header - same recipe as the rest of the app's screens */}
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{MEDICAL_DISCLAIMER_TITLE}</Text>
                 <View style={{ width: 40 }} />
@@ -84,19 +89,19 @@ export default function MedicalDisclaimerScreen() {
             {/* Fixed (non-scrolling) safe-area footer - see LegalPage.tsx's
                 matching footer comment: guarantees this strip is always
                 solid white and never has a card scrolled into it. */}
-            <View style={{ height: Math.max(insets.bottom, 16), backgroundColor: '#FFFFFF' }} />
+            <View style={{ height: Math.max(insets.bottom, 16), backgroundColor: theme.card }} />
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     // Absolute + StyleSheet.absoluteFillObject instead of flex: 1 - see
     // LegalPage.tsx's container comment for the full reasoning (nav bar
     // forced fully transparent app-wide, and a flex: 1 root on this nested
     // route was coming up short of the true screen bottom).
-    container: { ...StyleSheet.absoluteFillObject, backgroundColor: '#FFFFFF' },
+    container: { ...StyleSheet.absoluteFillObject, backgroundColor: c.card },
     header: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -108,13 +113,13 @@ const styles = StyleSheet.create({
         }),
     },
     backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
-    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
     scroll: { flex: 1 },
     content: { padding: 20 },
     card: {
         flexDirection: 'row',
         gap: 14,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 16,
         padding: 16,
         marginBottom: 12,
@@ -132,6 +137,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     cardText: { flex: 1 },
-    cardHeading: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 4 },
-    cardBody: { fontSize: 14, lineHeight: 21, color: '#4B5563' },
+    cardHeading: { fontSize: 15, fontWeight: '700', color: c.text, marginBottom: 4 },
+    cardBody: { fontSize: 14, lineHeight: 21, color: c.textSecondary },
 });

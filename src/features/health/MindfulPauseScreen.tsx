@@ -1,9 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft, Pause, Play, RotateCcw } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Animated, BackHandler, Easing, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 // A short guided mindfulness pause - same self-contained, zero-network
 // pattern as BreathingExerciseScreen.tsx and StretchBreakScreen.tsx. A
@@ -29,6 +32,9 @@ function formatTime(totalSeconds: number) {
 }
 
 export default function MindfulPauseScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
@@ -128,9 +134,9 @@ export default function MindfulPauseScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mindful Pause</Text>
+        <Text style={styles.headerTitle}>{t('mindful_pause')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -138,12 +144,12 @@ export default function MindfulPauseScreen() {
         {completed ? (
           <>
             <Text style={styles.doneEmoji}>🌿</Text>
-            <Text style={styles.doneTitle}>Well done</Text>
-            <Text style={styles.intro}>A full minute for yourself - however that felt, it counts.</Text>
+            <Text style={styles.doneTitle}>{t('well_done')}</Text>
+            <Text style={styles.intro}>{t('a_full_minute_for_yourself_however_tha')}</Text>
           </>
         ) : (
           <>
-            <Text style={styles.intro}>A minute to pause, breathe, and reset.</Text>
+            <Text style={styles.intro}>{t('a_minute_to_pause_breathe_and_reset')}</Text>
 
             <View style={styles.circleArea}>
               <Animated.View style={[styles.circle, { transform: [{ scale: pulse }] }]} />
@@ -160,7 +166,7 @@ export default function MindfulPauseScreen() {
           {completed ? (
             <>
               <RotateCcw size={20} color="#FFFFFF" />
-              <Text style={styles.playButtonText}>Do It Again</Text>
+              <Text style={styles.playButtonText}>{t('do_it_again')}</Text>
             </>
           ) : (
             <>
@@ -174,22 +180,22 @@ export default function MindfulPauseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
     }),
   },
   backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
   content: {
     flex: 1,
     alignItems: 'center',
@@ -199,7 +205,7 @@ const styles = StyleSheet.create({
   intro: {
     fontSize: 13.5,
     lineHeight: 20,
-    color: '#6B7280',
+    color: c.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
   },
@@ -228,7 +234,7 @@ const styles = StyleSheet.create({
     width: CIRCLE_MAX,
     height: CIRCLE_MAX,
     borderRadius: CIRCLE_MAX / 2,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: c.cardSecondary,
     borderWidth: 2,
     borderColor: '#7C3AED',
   },
@@ -240,7 +246,7 @@ const styles = StyleSheet.create({
   prompt: {
     fontSize: 15,
     lineHeight: 22,
-    color: '#374151',
+    color: c.text,
     textAlign: 'center',
     marginBottom: 32,
     minHeight: 66,

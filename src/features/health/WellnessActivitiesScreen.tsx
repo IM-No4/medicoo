@@ -1,9 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { Brain, ChevronLeft, ChevronRight, Eye, Heart, Lightbulb, Moon, Music, Sparkles, Wind } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 // Each accent is chosen for what the activity actually is, not just to
 // look distinct from its neighbors: cyan for breathing (air), emerald for
@@ -92,6 +95,9 @@ const ACTIVITIES = [
 // turning into an 8-card wall of near-identical tiles) so all of these
 // stay reachable offline without each needing its own full grid card.
 export default function WellnessActivitiesScreen() {
+  const { t } = useLanguage();
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
 
@@ -101,7 +107,7 @@ export default function WellnessActivitiesScreen() {
 
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Take a Moment</Text>
                 <View style={{ width: 40 }} />
@@ -109,22 +115,22 @@ export default function WellnessActivitiesScreen() {
 
             <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
                 <Text style={styles.intro}>
-                    A few short activities to reset, unwind, or just have a little fun - no internet needed.
+                    {t('a_few_short_activities_to_reset_unwind')}
                 </Text>
 
                 {ACTIVITIES.map((activity) => (
                     <TouchableOpacity
                         key={activity.key}
-                        style={[styles.card, { backgroundColor: activity.tint }]}
+                        style={[styles.card, { backgroundColor: isDark ? activity.accent + '26' : activity.tint }]}
                         activeOpacity={0.85}
                         onPress={() => navigation.navigate(activity.screen)}
                     >
-                        <View style={[styles.iconBox, { backgroundColor: '#FFFFFF' }]}>
+                        <View style={[styles.iconBox, { backgroundColor: theme.card }]}>
                             <activity.Icon size={24} color={activity.accent} />
                         </View>
                         <View style={styles.cardInfo}>
-                            <Text style={styles.cardTitle}>{activity.label}</Text>
-                            <Text style={styles.cardSubtitle}>{activity.subtitle}</Text>
+                            <Text style={styles.cardTitle}>{t(activity.label)}</Text>
+                            <Text style={styles.cardSubtitle}>{t(activity.subtitle)}</Text>
                         </View>
                         <ChevronRight size={20} color={activity.accent} />
                     </TouchableOpacity>
@@ -134,27 +140,27 @@ export default function WellnessActivitiesScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.card },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
         }),
     },
     backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
-    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
     content: { padding: 20, paddingBottom: 40, gap: 12 },
     intro: {
         fontSize: 13.5,
         lineHeight: 20,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginBottom: 8,
     },
     card: {
@@ -172,6 +178,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     cardInfo: { flex: 1 },
-    cardTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 3 },
-    cardSubtitle: { fontSize: 12.5, color: '#6B7280' },
+    cardTitle: { fontSize: 15, fontWeight: '700', color: c.text, marginBottom: 3 },
+    cardSubtitle: { fontSize: 12.5, color: c.textSecondary },
 });

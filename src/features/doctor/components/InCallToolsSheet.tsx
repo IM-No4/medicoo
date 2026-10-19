@@ -1,7 +1,11 @@
 import { CheckCircle2, FileText, FlaskConical, Pill, X } from 'lucide-react-native';
-import React from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { Modal } from '../../../components/ThemedModal';
 
 interface Props {
     visible: boolean;
@@ -19,6 +23,9 @@ interface Props {
 // gives each its own clearly-labeled entry point rather than one generic
 // "Notes" button, since that's what was asked for.
 export default function InCallToolsSheet({ visible, onClose, onOpenNotes, onOpenReports, onComplete }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
 
     const rows = [
@@ -34,15 +41,15 @@ export default function InCallToolsSheet({ visible, onClose, onOpenNotes, onOpen
                 <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
                 <View style={[styles.content, { paddingBottom: insets.bottom + 16 }]}>
                     <View style={styles.header}>
-                        <Text style={styles.title}>Consultation Tools</Text>
+                        <Text style={styles.title}>{t('consultation_tools')}</Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                            <X size={20} color="#6B7280" />
+                            <X size={20} color={theme.textSecondary} />
                         </TouchableOpacity>
                     </View>
                     {rows.map((row) => (
                         <TouchableOpacity key={row.key} style={styles.row} onPress={row.onPress}>
                             <View style={styles.iconBox}>
-                                <row.Icon size={20} color="#0FBBA1" />
+                                <row.Icon size={20} color="#10B981" />
                             </View>
                             <Text style={styles.rowLabel}>{row.label}</Text>
                         </TouchableOpacity>
@@ -50,9 +57,9 @@ export default function InCallToolsSheet({ visible, onClose, onOpenNotes, onOpen
                     {onComplete && (
                         <TouchableOpacity style={[styles.row, styles.completeRow]} onPress={onComplete}>
                             <View style={styles.iconBox}>
-                                <CheckCircle2 size={20} color="#0FBBA1" />
+                                <CheckCircle2 size={20} color="#10B981" />
                             </View>
-                            <Text style={styles.rowLabel}>Complete Consultation</Text>
+                            <Text style={styles.rowLabel}>{t('complete_consultation')}</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -61,34 +68,34 @@ export default function InCallToolsSheet({ visible, onClose, onOpenNotes, onOpen
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     overlay: { flex: 1, justifyContent: 'flex-end' },
     backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
     content: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 20,
     },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-    title: { fontSize: 18, fontWeight: '700', color: '#111827' },
-    closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
+    title: { fontSize: 18, fontWeight: '700', color: c.text },
+    closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: c.cardSecondary, alignItems: 'center', justifyContent: 'center' },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 14,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderLight,
     },
     completeRow: { borderBottomWidth: 0, marginTop: 4 },
     iconBox: {
         width: 40,
         height: 40,
         borderRadius: 10,
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 14,
     },
-    rowLabel: { fontSize: 15, fontWeight: '600', color: '#111827' },
+    rowLabel: { fontSize: 15, fontWeight: '600', color: c.text },
 });

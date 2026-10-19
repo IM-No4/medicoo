@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { Product, ProductShowcaseFeedItem } from '../feed.types';
@@ -12,8 +12,14 @@ type Props = {
 };
 
 import { ShowcaseSection } from '../feed.types';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 function ProductShowcaseCard({ data, onAction }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const handleSectionPress = (section: ShowcaseSection) => {
         console.log('Navigating to Search with query:', section.title, 'and tags:', section.tags);
         if (onAction) {
@@ -50,7 +56,7 @@ function ProductShowcaseCard({ data, onAction }: Props) {
                             <Image source={{ uri: section.imageUrl }} style={styles.image} resizeMode="cover" />
                         ) : (
                             <View style={styles.placeholderImage}>
-                                <AppIcon name="shopping-bag" size={24} color="#9CA3AF" />
+                                <AppIcon name="shopping-bag" size={24} color={theme.textMuted} />
                             </View>
                         )}
                     </View>
@@ -59,7 +65,7 @@ function ProductShowcaseCard({ data, onAction }: Props) {
                         <Text style={styles.productName} numberOfLines={2}>{section.title}</Text>
                         <View style={styles.footerRow}>
                             <View style={styles.arrowIcon}>
-                                <AppIcon name="arrow-right" size={14} color="#5a6773ff" />
+                                <AppIcon name="arrow-right" size={14} color={theme.textSecondary} />
                             </View>
                         </View>
                     </View>
@@ -76,7 +82,7 @@ function ProductShowcaseCard({ data, onAction }: Props) {
                         <Image source={{ uri: product.image }} style={styles.image} resizeMode="contain" />
                     ) : (
                         <View style={styles.placeholderImage}>
-                            <AppIcon name="shopping-bag" size={24} color="#9CA3AF" />
+                            <AppIcon name="shopping-bag" size={24} color={theme.textMuted} />
                         </View>
                     )}
                 </View>
@@ -93,10 +99,10 @@ function ProductShowcaseCard({ data, onAction }: Props) {
                                 )}
                             </View>
                         ) : (
-                            <Text style={styles.viewDetailsText}>View Details</Text>
+                            <Text style={styles.viewDetailsText}>{t('view_details')}</Text>
                         )}
                         <View style={styles.arrowIcon}>
-                            <AppIcon name="arrow-right" size={14} color="#5a6773ff" />
+                            <AppIcon name="arrow-right" size={14} color={theme.textSecondary} />
                         </View>
                     </View>
                 </View>
@@ -122,7 +128,7 @@ function ProductShowcaseCard({ data, onAction }: Props) {
 
 export default React.memo(ProductShowcaseCard);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         marginBottom: 30,
     },
@@ -132,16 +138,16 @@ const styles = StyleSheet.create({
     productCard: {
         width: 140,
         marginHorizontal: 8,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 16,
         padding: 12,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
     },
     imageContainer: {
         width: '100%',
         height: 85,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderRadius: 8,
         marginBottom: 12,
         justifyContent: 'center',
@@ -165,7 +171,7 @@ const styles = StyleSheet.create({
     productName: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#1F2937',
+        color: c.text,
         marginBottom: 0,
         height: 36, // Fixed height for alignment
     },
@@ -183,31 +189,32 @@ const styles = StyleSheet.create({
     priceText: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     originalPriceText: {
         fontSize: 11,
-        color: '#9CA3AF',
+        color: c.textMuted,
         textDecorationLine: 'line-through',
     },
     viewDetailsText: {
         fontSize: 11,
         fontWeight: '600',
-        color: '#6B7280',
+        color: c.textSecondary,
         flexShrink: 1,
     },
     arrowIcon: {
-        backgroundColor: '#ffffffff',
+        // A white chip glows on a dark card: there it is the card's own raised surface.
+        backgroundColor: c.isDark ? c.cardSecondary : '#ffffff',
         width: 24,
         height: 24,
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
         boxShadow: undefined,
-        elevation: 1,
+        elevation: c.isDark ? 0 : 1,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: c.isDark ? 0 : 0.1,
         shadowRadius: 4,
     },
     detailsContainer: {
@@ -215,7 +222,7 @@ const styles = StyleSheet.create({
     },
     tagText: {
         fontSize: 11,
-        color: '#6B7280',
+        color: c.textSecondary,
         fontWeight: '500',
     }
 });

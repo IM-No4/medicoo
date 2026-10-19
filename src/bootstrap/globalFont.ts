@@ -34,7 +34,11 @@ function resolveFontFamily(style: unknown): string {
 
 function injectFont(type: unknown, props: any) {
   if ((type !== Text && type !== TextInput) || !props) return props;
-  return { ...props, style: [props.style, { fontFamily: resolveFontFamily(props.style) }] };
+  // includeFontPadding:false is a DEFAULT (first in the array, so any style that
+  // sets it explicitly still wins). Poppins has tall built-in line metrics, and
+  // Android adds that as blank space above and below every line of text - which
+  // is what inflated buttons, chips and headers across the app.
+  return { ...props, style: [{ includeFontPadding: false }, props.style, { fontFamily: resolveFontFamily(props.style) }] };
 }
 
 function patchExport(mod: any, name: string) {

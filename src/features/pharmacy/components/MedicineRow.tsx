@@ -6,6 +6,9 @@ import React, { useMemo } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import QuantityControl from "./QuantityControl";
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface Props {
   medicine: any;
@@ -26,6 +29,9 @@ export default function MedicineRow({
   isLast = false,
   onPress,
 }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const dispatch = useDispatch();
   const carts = useSelector((state: RootState) => state.cart);
   const storeCart = carts[storeId];
@@ -171,7 +177,7 @@ export default function MedicineRow({
             </View>
 
             {/* <TouchableOpacity style={styles.favoriteIcon}>
-              <AppIcon name="heart" size={16} color="#9CA3AF" />
+              <AppIcon name="heart" size={16} color={theme.textMuted} />
             </TouchableOpacity> */}
           </View>
 
@@ -240,7 +246,7 @@ export default function MedicineRow({
               <Text
                 style={[styles.addText, !storeOpen && styles.addTextDisabled]}
               >
-                ADD
+                {t('add_2')}
               </Text>
               <AppIcon
                 name="plus"
@@ -258,16 +264,16 @@ export default function MedicineRow({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     marginHorizontal: 0,
     paddingHorizontal: 24,
     paddingTop: 10,
     paddingBottom: 12,
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: c.border,
   },
   cardFirst: {
     borderTopLeftRadius: 24,
@@ -278,12 +284,12 @@ const styles = StyleSheet.create({
   },
   cardLast: {
     borderBottomWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: c.borderLight,
     paddingBottom: 24,
   },
   separator: {
     height: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: c.cardSecondary,
     marginTop: 14,
     marginHorizontal: 4,
   },
@@ -296,7 +302,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     position: "relative",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 10,
@@ -312,7 +318,7 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F9FAFB",
+    backgroundColor: c.cardSecondary,
   },
   discountBadge: {
     position: "absolute",
@@ -346,7 +352,7 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: c.errorBg,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -373,14 +379,14 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#1F2937",
+    color: c.text,
     marginBottom: 2,
     lineHeight: 20,
   },
   brand: {
     fontSize: 12,
     fontWeight: "500",
-    color: "#6B7280",
+    color: c.textSecondary,
     marginBottom: 2,
   },
   descriptionSection: {
@@ -389,7 +395,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 12,
-    color: "#8A8A8E",
+    color: c.textMuted,
     lineHeight: 18,
   },
   bottomSection: {
@@ -398,7 +404,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 6,
     borderTopWidth: 0,
-    borderTopColor: "#F3F4F6",
+    borderTopColor: c.borderLight,
     paddingBottom: 4,
     gap: 12,
   },
@@ -414,16 +420,16 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#111827",
+    color: c.text,
   },
   originalPrice: {
     fontSize: 13,
-    color: "#9CA3AF",
+    color: c.textMuted,
     textDecorationLine: "line-through",
   },
   packSize: {
     fontSize: 11,
-    color: "#6B7280",
+    color: c.textSecondary,
   },
   actionContainer: {
     justifyContent: "center",
@@ -432,7 +438,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     borderWidth: 1.5,
     borderColor: "#16A34A",
     paddingHorizontal: 14,
@@ -440,8 +446,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   addButtonDisabled: {
-    backgroundColor: "#F3F4F6",
-    borderColor: "#D1D5DB",
+    backgroundColor: c.cardSecondary,
+    borderColor: c.border,
     opacity: 0.6,
   },
   addText: {
@@ -450,6 +456,6 @@ const styles = StyleSheet.create({
     color: "#16A34A",
   },
   addTextDisabled: {
-    color: "#9CA3AF",
+    color: c.textMuted,
   },
 });

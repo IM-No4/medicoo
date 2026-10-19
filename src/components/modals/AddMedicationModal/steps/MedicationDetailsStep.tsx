@@ -1,13 +1,18 @@
 import { Pill } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Text, TextInput, View } from 'react-native';
-import { styles } from '../styles';
+import { createStyles } from '../styles';
+import { useTheme } from '../../../../theme/ThemeContext';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 export default function MedicationDetailsStep({
   data,
   onChange,
   onNext,
 }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
   return (
     <View style={styles.stepContainer}>
 
@@ -15,22 +20,22 @@ export default function MedicationDetailsStep({
           else in the app (Medo's avatar, LogVitals field icons) rather
           than a bespoke composition. */}
       <View style={styles.iconHeader}>
-        <View style={[styles.iconCircle, { backgroundColor: '#0FBBA1' }]}>
+        <View style={[styles.iconCircle, { backgroundColor: '#10B981' }]}>
           <Pill size={36} color="#FFFFFF" />
         </View>
       </View>
 
       {/* Title */}
-      <Text style={styles.stepTitle}>Medication Name</Text>
+      <Text style={styles.stepTitle}>{t('medication_name')}</Text>
       <Text style={styles.stepSubtitle}>
-        Enter the name of your medication
+        {t('enter_the_name_of_your_medication')}
       </Text>
 
       {/* Input */}
       <TextInput
         style={styles.input}
-        placeholder="Add Medication Name"
-        placeholderTextColor="#555"
+        placeholder={t('add_medication_name')}
+        placeholderTextColor={theme.textSecondary}
         value={data.medicineName}
         onChangeText={value => onChange({ medicineName: value })}
         autoFocus

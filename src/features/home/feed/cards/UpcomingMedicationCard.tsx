@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Dimensions, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../../redux/store';
@@ -8,6 +8,9 @@ import { getLocalDateString } from '../../../../utils/dateUtils';
 import { timeToMinutes } from '../../../calendar/utils/scheduleSort';
 import MedicineCard from '../../../calendar/components/MedicineCard';
 import { UpcomingMedicationFeedItem } from '../feed.types';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 type Props = {
   data: UpcomingMedicationFeedItem;
@@ -33,6 +36,9 @@ const SIDE_PADDING = 20;
 const LOOP_COPIES = 50;
 
 function UpcomingMedicationCard({ data }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
   const dispatch = useDispatch<AppDispatch>();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -106,7 +112,7 @@ function UpcomingMedicationCard({ data }: Props) {
           {count > 1 ? ` · ${Math.min(activeIndex, count - 1) + 1} OF ${count}` : ''}
         </Text>
         <TouchableOpacity onPress={() => navigation.navigate('ManageMedications')}>
-          <Text style={styles.seeAll}>View All</Text>
+          <Text style={styles.seeAll}>{t('view_all')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -152,7 +158,7 @@ function UpcomingMedicationCard({ data }: Props) {
 
 export default React.memo(UpcomingMedicationCard);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     // MedicineCard.tsx (rendered inside this card, single or in the
     // FlatList) already carries its own marginBottom:12 - meant for
@@ -173,14 +179,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 13,
-    color: '#494949',
+    color: c.text,
     letterSpacing: 2,
     fontWeight: '700',
   },
   seeAll: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#0FBBA1',
+    color: '#10B981',
   },
   stackArea: {
     position: 'relative',
@@ -191,7 +197,7 @@ const styles = StyleSheet.create({
   // above, kept in sync with this same radius/color.
   medicineCardBorder: {
     borderRadius: 16,
-    borderColor: '#F1F5F9',
+    borderColor: c.borderLight,
   },
   peekCard: {
     position: 'absolute',
@@ -199,9 +205,9 @@ const styles = StyleSheet.create({
     right: SIDE_PADDING + 10,
     height: 76,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: c.borderLight,
   },
   peekCardBack: {
     top: -10,

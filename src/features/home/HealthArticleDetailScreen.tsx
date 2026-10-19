@@ -1,10 +1,12 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft, Share2 } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '../../components/icons/AppIcon';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 // Reads a single Health Knowledge Hub article in-app, as a modal - replaces
 // the old behavior of handing off to an external medicoo.com/blog URL that
@@ -12,6 +14,8 @@ import AppIcon from '../../components/icons/AppIcon';
 // the feed action (see homeController.js's HEALTH_ARTICLE_SHOWCASE case),
 // so opening this needs no extra network round trip.
 export default function HealthArticleDetailScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
@@ -39,10 +43,10 @@ export default function HealthArticleDetailScreen() {
       <StatusBar style="dark" />
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 8) }]}>
         <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <ChevronLeft size={22} color="#0F172A" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.headerButton} onPress={handleShare} activeOpacity={0.8}>
-          <Share2 size={19} color="#0F172A" />
+          <Share2 size={19} color={theme.text} />
         </TouchableOpacity>
       </View>
 
@@ -52,7 +56,7 @@ export default function HealthArticleDetailScreen() {
             <Image source={{ uri: imageUrl }} style={styles.heroImage} resizeMode="cover" />
           ) : (
             <View style={styles.heroPlaceholder}>
-              <AppIcon name="file-text" size={48} color="#94A3B8" />
+              <AppIcon name="file-text" size={48} color={theme.textMuted} />
             </View>
           )}
 
@@ -82,15 +86,15 @@ export default function HealthArticleDetailScreen() {
 
       {/* Fixed (non-scrolling) solid footer behind the bottom nav bar - see
           the top strip comment above for why this has to be self-painted. */}
-      <View style={{ height: Math.max(insets.bottom, 16), backgroundColor: '#FFFFFF' }} />
+      <View style={{ height: Math.max(insets.bottom, 16), backgroundColor: theme.card }} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.background,
   },
   header: {
     flexDirection: 'row',
@@ -98,7 +102,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
   },
   headerButton: {
     width: 36,
@@ -108,7 +112,7 @@ const styles = StyleSheet.create({
   },
   heroWrapper: {
     height: 260,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: c.cardSecondary,
     position: 'relative',
   },
   heroImage: {
@@ -124,7 +128,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 20,
     bottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 99,
@@ -132,7 +136,7 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#111827',
+    color: c.text,
   },
   body: {
     padding: 20,
@@ -141,7 +145,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#0F172A',
+    color: c.text,
     lineHeight: 30,
     marginBottom: 10,
   },
@@ -153,7 +157,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 13,
-    color: '#64748B',
+    color: c.textSecondary,
     fontWeight: '600',
   },
   dot: {

@@ -37,6 +37,11 @@ export const getOrderChatHistory = async (orderId: string) => {
     return res.data;
 };
 
+export const sendOrderChatFeedback = async (orderId: string, helpful: boolean) => {
+    const res = await apiClient.post(`/api/user/orders/${orderId}/chat/feedback`, { helpful });
+    return res.data;
+};
+
 export const restartOrderChat = async (orderId: string) => {
     const res = await apiClient.post(`/api/user/orders/${orderId}/chat/restart`);
     return res.data;

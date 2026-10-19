@@ -1,9 +1,11 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { FeedAction } from '../feed.actions';
 import { PromoFeedItem, PromoItem } from '../feed.types';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
 
 type Props = {
   data: PromoFeedItem;
@@ -11,6 +13,8 @@ type Props = {
 };
 
 const PromoItemCard = ({ item, onAction }: { item: PromoItem; onAction?: (action: FeedAction) => void }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const gradientColors = item.background
     ? [item.background.start, item.background.end]
     : ['#4f9cff', '#2563eb'];
@@ -65,6 +69,8 @@ const PromoItemCard = ({ item, onAction }: { item: PromoItem; onAction?: (action
 };
 
 function PromoCard({ data, onAction }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   if (data.displayMode === 'CAROUSEL') {
     return (
       <View style={styles.container}>
@@ -97,7 +103,7 @@ function PromoCard({ data, onAction }: Props) {
 
 export default React.memo(PromoCard);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: 30,
   },
@@ -160,7 +166,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   button: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.card,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 12,

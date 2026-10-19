@@ -10,7 +10,7 @@ import {
     ShieldCheck,
     User
 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     ScrollView,
@@ -22,8 +22,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
 import { downloadLabReport, getLabTestDetail } from '../../../../services/api';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 export default function LabTestDetailScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation();
     const route = useRoute<any>();
     const insets = useSafeAreaInsets();
@@ -85,16 +91,16 @@ export default function LabTestDetailScreen() {
     const handleDownload = async () => {
         try {
             await downloadLabReport(testId);
-            showStatus('success', 'Report Downloaded', 'The lab report has been successfully saved to your device gallery.');
+            showStatus('success', t('report_downloaded'), t('the_lab_report_has_been_successfully_s'));
         } catch (e) {
-            showStatus('success', 'Report Downloaded', 'The lab report has been successfully saved to your device gallery.');
+            showStatus('success', t('report_downloaded'), t('the_lab_report_has_been_successfully_s'));
         }
     };
 
     if (loading) {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color="#0FBBA1" />
+                <ActivityIndicator size="large" color="#10B981" />
             </View>
         );
     }
@@ -103,14 +109,14 @@ export default function LabTestDetailScreen() {
         <View style={styles.container}>
             <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ChevronLeft size={24} color="#111827" />
+                    <ChevronLeft size={24} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Test Report</Text>
+                <Text style={styles.headerTitle}>{t('test_report')}</Text>
                 <TouchableOpacity
                     style={styles.moreButton}
-                    onPress={() => showStatus('info', 'Share Report', 'Sharing functionality will be available in the next update.')}
+                    onPress={() => showStatus('info', t('share_report'), t('sharing_functionality_will_be_availabl'))}
                 >
-                    <Share2 size={20} color="#111827" />
+                    <Share2 size={20} color={theme.text} />
                 </TouchableOpacity>
             </View>
 
@@ -123,7 +129,7 @@ export default function LabTestDetailScreen() {
                     <Text style={styles.testNameLarge}>{test.testName}</Text>
                     <Text style={styles.labBrandName}>{test.labName}</Text>
                     <View style={styles.labAddressRow}>
-                        <MapPin size={14} color="#9CA3AF" />
+                        <MapPin size={14} color={theme.textMuted} />
                         <Text style={styles.labAddressText}>{test.labAddress}</Text>
                     </View>
                 </View>
@@ -131,17 +137,17 @@ export default function LabTestDetailScreen() {
                 {/* Patient Summary */}
                 <View style={styles.patientCard}>
                     <View style={styles.patientItem}>
-                        <User size={16} color="#6B7280" />
+                        <User size={16} color={theme.textSecondary} />
                         <View>
-                            <Text style={styles.patientLabel}>Patient Name</Text>
+                            <Text style={styles.patientLabel}>{t('patient_name')}</Text>
                             <Text style={styles.patientValue}>{test.patientName}</Text>
                         </View>
                     </View>
                     <View style={styles.patientDivider} />
                     <View style={styles.patientItem}>
-                        <Info size={16} color="#6B7280" />
+                        <Info size={16} color={theme.textSecondary} />
                         <View>
-                            <Text style={styles.patientLabel}>ID / Age / Gender</Text>
+                            <Text style={styles.patientLabel}>{t('id_age_gender')}</Text>
                             <Text style={styles.patientValue}>BT-9921 / {test.patientAge} / {test.patientGender}</Text>
                         </View>
                     </View>
@@ -150,22 +156,22 @@ export default function LabTestDetailScreen() {
                 {/* Report Data */}
                 <View style={styles.reportSection}>
                     <View style={styles.sectionHeader}>
-                        <FileText size={18} color="#111827" />
-                        <Text style={styles.sectionTitle}>Observation Summary</Text>
+                        <FileText size={18} color={theme.text} />
+                        <Text style={styles.sectionTitle}>{t('observation_summary')}</Text>
                         <ShieldCheck size={16} color="#10B981" style={{ marginLeft: 'auto' }} />
-                        <Text style={styles.verifiedText}>NABL Verified</Text>
+                        <Text style={styles.verifiedText}>{t('nabl_verified')}</Text>
                     </View>
 
                     <View style={styles.resultsCard}>
                         <View style={styles.tableHeader}>
-                            <Text style={[styles.colHeader, { flex: 2 }]}>Component</Text>
-                            <Text style={[styles.colHeader, { flex: 1 }]}>Result</Text>
-                            <Text style={[styles.colHeader, { flex: 1.5 }]}>Reference Range</Text>
+                            <Text style={[styles.colHeader, { flex: 2 }]}>{t('component')}</Text>
+                            <Text style={[styles.colHeader, { flex: 1 }]}>{t('result')}</Text>
+                            <Text style={[styles.colHeader, { flex: 1.5 }]}>{t('reference_range')}</Text>
                         </View>
                         {test.components.map((comp: any, idx: number) => (
                             <View key={idx} style={styles.tableRow}>
                                 <Text style={[styles.colText, { flex: 2, fontWeight: '700' }]}>{comp.name}</Text>
-                                <Text style={[styles.colText, { flex: 1, color: '#111827', fontWeight: '800' }]}>{comp.value}</Text>
+                                <Text style={[styles.colText, { flex: 1, color: theme.text, fontWeight: '800' }]}>{comp.value}</Text>
                                 <Text style={[styles.colText, { flex: 1.5, fontSize: 11 }]}>{comp.range}</Text>
                             </View>
                         ))}
@@ -173,7 +179,7 @@ export default function LabTestDetailScreen() {
 
                     <View style={styles.noteBox}>
                         <Info size={14} color="#3B82F6" />
-                        <Text style={styles.noteText}>Reports are verified by senior pathologists. Always consult with your doctor for interpretation.</Text>
+                        <Text style={styles.noteText}>{t('reports_are_verified_by_senior_patholo')}</Text>
                     </View>
                 </View>
 
@@ -181,7 +187,7 @@ export default function LabTestDetailScreen() {
                 <View style={styles.footerActions}>
                     <TouchableOpacity style={styles.downloadFullButton} onPress={handleDownload}>
                         <Download size={20} color="#fff" />
-                        <Text style={styles.downloadFullText}>Download Full Report (PDF)</Text>
+                        <Text style={styles.downloadFullText}>{t('download_full_report_pdf')}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -200,10 +206,10 @@ export default function LabTestDetailScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FE',
+        backgroundColor: c.background,
     },
     center: {
         flex: 1,
@@ -216,7 +222,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 20,
         paddingBottom: 20,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
     },
     backButton: {
         padding: 8,
@@ -225,7 +231,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     moreButton: {
         padding: 8,
@@ -236,7 +242,7 @@ const styles = StyleSheet.create({
     },
     labSection: {
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         paddingVertical: 32,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 30,
@@ -250,7 +256,7 @@ const styles = StyleSheet.create({
         width: 72,
         height: 72,
         borderRadius: 24,
-        backgroundColor: '#EEF2FF',
+        backgroundColor: c.infoBg,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 16,
@@ -258,7 +264,7 @@ const styles = StyleSheet.create({
     testNameLarge: {
         fontSize: 22,
         fontWeight: '900',
-        color: '#111827',
+        color: c.text,
         textAlign: 'center',
         marginBottom: 8,
     },
@@ -275,17 +281,17 @@ const styles = StyleSheet.create({
     },
     labAddressText: {
         fontSize: 13,
-        color: '#9CA3AF',
+        color: c.textMuted,
     },
     patientCard: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         margin: 20,
         borderRadius: 24,
         padding: 20,
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
     },
     patientItem: {
         flex: 1,
@@ -295,19 +301,19 @@ const styles = StyleSheet.create({
     },
     patientLabel: {
         fontSize: 11,
-        color: '#9CA3AF',
+        color: c.textMuted,
         fontWeight: '600',
         textTransform: 'uppercase',
     },
     patientValue: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     patientDivider: {
         width: 1,
         height: 30,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         marginHorizontal: 16,
     },
     reportSection: {
@@ -322,7 +328,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     verifiedText: {
         fontSize: 12,
@@ -331,39 +337,39 @@ const styles = StyleSheet.create({
         marginLeft: 4,
     },
     resultsCard: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 24,
         padding: 8,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
     },
     tableHeader: {
         flexDirection: 'row',
         paddingVertical: 12,
         paddingHorizontal: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderLight,
     },
     colHeader: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#9CA3AF',
+        color: c.textMuted,
     },
     tableRow: {
         flexDirection: 'row',
         paddingVertical: 16,
         paddingHorizontal: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#F9FAFB',
+        borderBottomColor: c.borderLight,
     },
     colText: {
         fontSize: 13,
-        color: '#4B5563',
+        color: c.textSecondary,
     },
     noteBox: {
         flexDirection: 'row',
         gap: 10,
-        backgroundColor: '#EFF6FF',
+        backgroundColor: c.infoBg,
         padding: 16,
         borderRadius: 16,
         marginTop: 20,

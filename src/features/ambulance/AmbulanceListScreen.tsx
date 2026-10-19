@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
@@ -15,6 +15,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '@/src/components/icons/AppIcon';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 export interface AmbulanceUnit {
     id: string;
@@ -181,6 +184,9 @@ export const AMBULANCE_PROVIDERS: AmbulanceProvider[] = [
 ];
 
 export default function AmbulanceListScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
 
@@ -209,11 +215,11 @@ export default function AmbulanceListScreen() {
             {/* ---------- Header ---------- */}
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
 
                 <View style={styles.headerTitleContainer}>
-                    <Text style={styles.headerTitle}>Ambulance Providers</Text>
+                    <Text style={styles.headerTitle}>{t('ambulance_providers')}</Text>
                     <View style={styles.locationRow}>
                         <AppIcon name="locate-fixed" size={12} color="#DC2626" />
                         <Text style={styles.locationText} numberOfLines={1}>
@@ -233,7 +239,7 @@ export default function AmbulanceListScreen() {
                 <View style={styles.searchBox}>
                     <AppIcon name="search" size={18} color="#8E8E93" />
                     <TextInput
-                        placeholder="Search local ambulance service providers..."
+                        placeholder={t('search_local_ambulance_service_provide')}
                         placeholderTextColor="#8E8E93"
                         style={styles.searchInput}
                         value={searchQuery}
@@ -254,7 +260,7 @@ export default function AmbulanceListScreen() {
                     onPress={() => setSelectedFilter('all')}
                 >
                     <Text style={[styles.filterChipText, selectedFilter === 'all' && styles.filterChipTextActive]}>
-                        All Providers
+                        {t('all_providers')}
                     </Text>
                 </TouchableOpacity>
 
@@ -264,7 +270,7 @@ export default function AmbulanceListScreen() {
                 >
                     <AppIcon name="star" size={12} color={selectedFilter === 'premium' ? '#FFFFFF' : '#475569'} />
                     <Text style={[styles.filterChipText, selectedFilter === 'premium' && styles.filterChipTextActive]}>
-                        Top Rated (4.8+)
+                        {t('top_rated_4_8')}
                     </Text>
                 </TouchableOpacity>
 
@@ -305,7 +311,7 @@ export default function AmbulanceListScreen() {
                             </View>
 
                             <View style={styles.priceSection}>
-                                <Text style={styles.startsLabel}>STARTS AT</Text>
+                                <Text style={styles.startsLabel}>{t('starts_at')}</Text>
                                 <Text style={styles.startsPrice}>₹{item.startingPrice}</Text>
                                 <Text style={styles.perVisit}>/ visit</Text>
                             </View>
@@ -322,7 +328,7 @@ export default function AmbulanceListScreen() {
                                 style={styles.viewFleetButton}
                                 onPress={() => navigation.navigate('AmbulanceDetail', { providerId: item.id })}
                             >
-                                <Text style={styles.viewFleetText}>View Fleet</Text>
+                                <Text style={styles.viewFleetText}>{t('view_fleet')}</Text>
                                 <AppIcon name="chevron-right" size={14} color="#DC2626" />
                             </TouchableOpacity>
                         </View>
@@ -331,8 +337,8 @@ export default function AmbulanceListScreen() {
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
                         <AppIcon name="search" size={48} color="#CBD5E1" />
-                        <Text style={styles.emptyText}>No Ambulance Service Providers Found</Text>
-                        <Text style={styles.emptySub}>Try adjusting search query or clearing filters.</Text>
+                        <Text style={styles.emptyText}>{t('no_ambulance_service_providers_found')}</Text>
+                        <Text style={styles.emptySub}>{t('try_adjusting_search_query_or_clearing')}</Text>
                     </View>
                 }
             />
@@ -342,10 +348,10 @@ export default function AmbulanceListScreen() {
 
 /* ================= STYLES ================= */
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.background,
     },
     header: {
         flexDirection: 'row',
@@ -353,7 +359,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         gap: 12,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
@@ -373,7 +379,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     locationRow: {
         flexDirection: 'row',
@@ -384,7 +390,7 @@ const styles = StyleSheet.create({
     locationText: {
         fontSize: 12,
         fontWeight: '500',
-        color: '#64748B',
+        color: c.textSecondary,
     },
     sosHeaderButton: {
         backgroundColor: '#DC2626',
@@ -403,14 +409,14 @@ const styles = StyleSheet.create({
     searchBarContainer: {
         paddingHorizontal: 16,
         paddingVertical: 10,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        borderBottomColor: c.borderLight,
     },
     searchBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderRadius: 14,
         paddingHorizontal: 12,
         height: 44,
@@ -419,15 +425,15 @@ const styles = StyleSheet.create({
         flex: 1,
         marginLeft: 8,
         fontSize: 14,
-        color: '#0F172A',
+        color: c.text,
     },
     filtersBar: {
         flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        borderBottomColor: c.borderLight,
         gap: 8,
     },
     filterChip: {
@@ -436,9 +442,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 8,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         gap: 4,
     },
     filterChipActive: {
@@ -448,7 +454,7 @@ const styles = StyleSheet.create({
     filterChipText: {
         fontSize: 11,
         fontWeight: '700',
-        color: '#475569',
+        color: c.textSecondary,
     },
     filterChipTextActive: {
         color: '#FFFFFF',
@@ -458,11 +464,11 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     providerCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 16,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -481,7 +487,7 @@ const styles = StyleSheet.create({
     providerName: {
         fontSize: 15,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
     },
     providerAccreditation: {
         fontSize: 10,
@@ -491,7 +497,7 @@ const styles = StyleSheet.create({
     },
     providerAddress: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 4,
     },
     badgesRow: {
@@ -507,7 +513,7 @@ const styles = StyleSheet.create({
     ratingText: {
         fontSize: 11,
         fontWeight: '700',
-        color: '#475569',
+        color: c.textSecondary,
     },
     priceSection: {
         alignItems: 'flex-end',
@@ -515,23 +521,23 @@ const styles = StyleSheet.create({
     startsLabel: {
         fontSize: 8,
         fontWeight: '800',
-        color: '#94A3B8',
+        color: c.textMuted,
         letterSpacing: 0.5,
     },
     startsPrice: {
         fontSize: 18,
         fontWeight: '900',
-        color: '#0F172A',
+        color: c.text,
         marginTop: 2,
     },
     perVisit: {
         fontSize: 10,
-        color: '#64748B',
+        color: c.textSecondary,
         fontWeight: '500',
     },
     dividerLine: {
         height: 1,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         marginVertical: 12,
     },
     cardFooter: {
@@ -542,7 +548,7 @@ const styles = StyleSheet.create({
     availableTypes: {
         fontSize: 11,
         fontWeight: '600',
-        color: '#64748B',
+        color: c.textSecondary,
     },
     viewFleetButton: {
         flexDirection: 'row',
@@ -561,12 +567,12 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 14,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
         marginTop: 12,
     },
     emptySub: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 4,
     },
 });

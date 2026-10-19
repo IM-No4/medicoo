@@ -1,26 +1,29 @@
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    FlatList,
-    Image,
-    Linking,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Animated,
+  Dimensions,
+  FlatList,
+  Image,
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '@/src/components/icons/AppIcon';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../../components/ThemedModal';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -173,6 +176,9 @@ const HOSPITALS_DATA: HospitalItem[] = [
 /* ================= MAIN COMPONENT ================= */
 
 export default function HospitalListScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
 
@@ -256,11 +262,11 @@ export default function HospitalListScreen() {
             {/* ---------- Header ---------- */}
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
 
                 <View style={styles.headerTitleContainer}>
-                    <Text style={styles.headerTitle}>Hospitals & Centers</Text>
+                    <Text style={styles.headerTitle}>{t('hospitals_centers')}</Text>
                     <View style={styles.locationRow}>
                         <AppIcon name="map-pin" size={12} color="#059669" />
                         <Text style={styles.locationText} numberOfLines={1}>
@@ -279,7 +285,7 @@ export default function HospitalListScreen() {
                 <View style={styles.searchBox}>
                     <AppIcon name="search" size={18} color="#8E8E93" />
                     <TextInput
-                        placeholder="Search hospitals, specialties, ICU, emergency..."
+                        placeholder={t('search_hospitals_specialties_icu_emerg')}
                         placeholderTextColor="#8E8E93"
                         style={styles.searchInput}
                         value={searchQuery}
@@ -337,7 +343,7 @@ export default function HospitalListScreen() {
                     onPress={() => setActiveTab('specialty')}
                 >
                     <Text style={[styles.tabText, activeTab === 'specialty' && styles.tabTextActive]}>
-                        Specialty Centers
+                        {t('specialty_centers')}
                     </Text>
                 </TouchableOpacity>
 
@@ -346,7 +352,7 @@ export default function HospitalListScreen() {
                     onPress={() => setActiveTab('emergency')}
                 >
                     <Text style={[styles.tabText, activeTab === 'emergency' && styles.tabTextActive]}>
-                        Emergency 24/7
+                        {t('emergency_24_7')}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -367,13 +373,13 @@ export default function HospitalListScreen() {
                         </View>
                         <View style={{ flex: 1 }}>
                             <Text style={styles.emergencyBannerTitle}>24/7 Emergency Medical Care</Text>
-                            <Text style={styles.emergencyBannerSubtitle}>Instant ICU admission & ambulance booking</Text>
+                            <Text style={styles.emergencyBannerSubtitle}>{t('instant_icu_admission_ambulance_bookin')}</Text>
                         </View>
                     </View>
 
                     <TouchableOpacity style={styles.emergencyCallButton} activeOpacity={0.8} onPress={callEmergencyHelpline}>
                         <AppIcon name="phone" size={16} color="#DC2626" />
-                        <Text style={styles.emergencyCallText}>Call Helpline 108</Text>
+                        <Text style={styles.emergencyCallText}>{t('call_helpline_108')}</Text>
                     </TouchableOpacity>
                 </LinearGradient>
 
@@ -384,7 +390,7 @@ export default function HospitalListScreen() {
                     </Text>
                     <TouchableOpacity style={styles.sortTrigger} onPress={() => setSortModalVisible(true)}>
                         <Text style={styles.sortTriggerText}>{getSortLabel()}</Text>
-                        <AppIcon name="chevron-down" size={14} color="#6B7280" />
+                        <AppIcon name="chevron-down" size={14} color={theme.textSecondary} />
                     </TouchableOpacity>
                 </View>
 
@@ -428,7 +434,7 @@ export default function HospitalListScreen() {
                                 {hospital.isAccredited && (
                                     <View style={styles.accreditedBadge}>
                                         <AppIcon name="shield-check" size={12} color="#059669" />
-                                        <Text style={styles.accreditedText}>NABH Accredited</Text>
+                                        <Text style={styles.accreditedText}>{t('nabh_accredited')}</Text>
                                     </View>
                                 )}
                                 {hospital.isEmergencyReady && (
@@ -444,7 +450,7 @@ export default function HospitalListScreen() {
 
                             {/* Specialties Grid */}
                             <View style={styles.specialtiesWrapper}>
-                                <Text style={styles.specialtiesLabel}>Key Departments:</Text>
+                                <Text style={styles.specialtiesLabel}>{t('key_departments')}</Text>
                                 <View style={styles.specialtiesGrid}>
                                     {hospital.specialties.map((spec, i) => (
                                         <View key={i} style={styles.specialtyChip}>
@@ -459,7 +465,7 @@ export default function HospitalListScreen() {
                             {/* Card Footer Actions */}
                             <View style={styles.cardFooter}>
                                 <View>
-                                    <Text style={styles.feeLabel}>OPD Consultation</Text>
+                                    <Text style={styles.feeLabel}>{t('opd_consultation')}</Text>
                                     <Text style={styles.feeValue}>{hospital.consultationFee}</Text>
                                 </View>
 
@@ -518,13 +524,13 @@ export default function HospitalListScreen() {
                                 <TouchableOpacity style={styles.resetFilterButton} onPress={resetAllFilters} activeOpacity={0.8}>
                                     <LinearGradient colors={['#1C6ED5', '#1557B0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.resetFilterGradient}>
                                         <AppIcon name="rotate-ccw" size={16} color="#FFFFFF" />
-                                        <Text style={styles.resetFilterText}>Reset All Filters</Text>
+                                        <Text style={styles.resetFilterText}>{t('reset_all_filters')}</Text>
                                     </LinearGradient>
                                 </TouchableOpacity>
 
                                 {searchQuery !== '' && (
                                     <TouchableOpacity style={styles.clearSearchButton} onPress={() => setSearchQuery('')} activeOpacity={0.7}>
-                                        <Text style={styles.clearSearchText}>Clear Search</Text>
+                                        <Text style={styles.clearSearchText}>{t('clear_search')}</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>
@@ -543,7 +549,7 @@ export default function HospitalListScreen() {
                     </TouchableWithoutFeedback>
 
                     <View style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}>
-                        <Text style={styles.modalTitle}>Sort Hospitals By</Text>
+                        <Text style={styles.modalTitle}>{t('sort_hospitals_by')}</Text>
                         {[
                             { id: 'distance', label: 'Nearest First' },
                             { id: 'rating', label: 'Highest Rated' },
@@ -577,13 +583,13 @@ export default function HospitalListScreen() {
 
                     <View style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}>
                         <View style={styles.modalHeaderRow}>
-                            <Text style={styles.modalTitle}>Filter Hospitals</Text>
+                            <Text style={styles.modalTitle}>{t('filter_hospitals')}</Text>
                             <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
                                 <AppIcon name="x" size={22} color="#1C1C1E" />
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={styles.filterSectionTitle}>Specialties & Departments</Text>
+                        <Text style={styles.filterSectionTitle}>{t('specialties_departments')}</Text>
                         <View style={styles.filterChipGrid}>
                             {CATEGORIES.map((cat) => (
                                 <TouchableOpacity
@@ -602,7 +608,7 @@ export default function HospitalListScreen() {
                             style={styles.applyFilterButton}
                             onPress={() => setFilterModalVisible(false)}
                         >
-                            <Text style={styles.applyFilterText}>Apply Filters</Text>
+                            <Text style={styles.applyFilterText}>{t('apply_filters')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -613,10 +619,10 @@ export default function HospitalListScreen() {
 
 /* ================= STYLES ================= */
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.background,
     },
     header: {
         flexDirection: 'row',
@@ -624,7 +630,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         gap: 12,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
@@ -644,7 +650,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     locationRow: {
         flexDirection: 'row',
@@ -655,13 +661,13 @@ const styles = StyleSheet.create({
     locationText: {
         fontSize: 12,
         fontWeight: '500',
-        color: '#64748B',
+        color: c.textSecondary,
     },
     emergencyCallHeaderButton: {
         width: 42,
         height: 42,
         borderRadius: 21,
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.errorBg,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
@@ -672,16 +678,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingVertical: 10,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         gap: 10,
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        borderBottomColor: c.borderLight,
     },
     searchBox: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderRadius: 14,
         paddingHorizontal: 12,
         height: 44,
@@ -690,21 +696,21 @@ const styles = StyleSheet.create({
         flex: 1,
         marginLeft: 8,
         fontSize: 14,
-        color: '#0F172A',
+        color: c.text,
     },
     filterIconButton: {
         width: 44,
         height: 44,
         borderRadius: 14,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
     categoriesBar: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         paddingVertical: 10,
         borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
+        borderBottomColor: c.border,
     },
     categoriesRow: {
         paddingHorizontal: 16,
@@ -716,9 +722,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         paddingVertical: 8,
         borderRadius: 20,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         gap: 6,
     },
     categoryChipSelected: {
@@ -728,7 +734,7 @@ const styles = StyleSheet.create({
     categoryChipText: {
         fontSize: 13,
         fontWeight: '500',
-        color: '#475569',
+        color: c.textSecondary,
     },
     categoryChipTextSelected: {
         color: '#FFFFFF',
@@ -736,10 +742,10 @@ const styles = StyleSheet.create({
     },
     tabsContainer: {
         flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         paddingHorizontal: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
+        borderBottomColor: c.border,
     },
     tabButton: {
         flex: 1,
@@ -754,7 +760,7 @@ const styles = StyleSheet.create({
     tabText: {
         fontSize: 13,
         fontWeight: '500',
-        color: '#64748B',
+        color: c.textSecondary,
     },
     tabTextActive: {
         fontWeight: '700',
@@ -785,7 +791,7 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -800,7 +806,7 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     emergencyCallButton: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -823,7 +829,7 @@ const styles = StyleSheet.create({
     resultsCountText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#475569',
+        color: c.textSecondary,
     },
     sortTrigger: {
         flexDirection: 'row',
@@ -833,17 +839,17 @@ const styles = StyleSheet.create({
     sortTriggerText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#64748B',
+        color: c.textSecondary,
     },
     listSection: {
         gap: 14,
     },
     hospitalCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.04,
@@ -859,7 +865,7 @@ const styles = StyleSheet.create({
         width: 52,
         height: 52,
         borderRadius: 16,
-        backgroundColor: '#EFF6FF',
+        backgroundColor: c.infoBg,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
@@ -873,12 +879,12 @@ const styles = StyleSheet.create({
     hospitalName: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         flex: 1,
     },
     hospitalAddress: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 2,
     },
     ratingDistanceRow: {
@@ -891,7 +897,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#FEF3C7',
+        backgroundColor: c.warningBg,
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 8,
@@ -903,7 +909,7 @@ const styles = StyleSheet.create({
     },
     ratingCountText: {
         fontSize: 10,
-        color: '#B45309',
+        color: c.warning,
     },
     distanceBadge: {
         flexDirection: 'row',
@@ -925,7 +931,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#ECFDF5',
+        backgroundColor: c.successBg,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -939,7 +945,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.errorBg,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -950,7 +956,7 @@ const styles = StyleSheet.create({
         color: '#DC2626',
     },
     icuBadge: {
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -958,7 +964,7 @@ const styles = StyleSheet.create({
     icuText: {
         fontSize: 11,
         fontWeight: '600',
-        color: '#475569',
+        color: c.textSecondary,
     },
     specialtiesWrapper: {
         marginBottom: 10,
@@ -975,21 +981,21 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     specialtyChip: {
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 6,
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: c.borderLight,
     },
     specialtyChipText: {
         fontSize: 11,
-        color: '#475569',
+        color: c.textSecondary,
         fontWeight: '500',
     },
     cardDivider: {
         height: 1,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         marginVertical: 12,
     },
     cardFooter: {
@@ -999,12 +1005,12 @@ const styles = StyleSheet.create({
     },
     feeLabel: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
     },
     feeValue: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         marginTop: 2,
     },
     actionsGroup: {
@@ -1016,7 +1022,7 @@ const styles = StyleSheet.create({
         width: 38,
         height: 38,
         borderRadius: 12,
-        backgroundColor: '#EFF6FF',
+        backgroundColor: c.infoBg,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
@@ -1040,11 +1046,11 @@ const styles = StyleSheet.create({
         paddingVertical: 32,
         paddingHorizontal: 20,
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 24,
         marginTop: 12,
         borderWidth: 1,
-        borderColor: '#F2F4F7',
+        borderColor: c.borderLight,
     },
     illustrationWrapper: {
         width: 180,
@@ -1107,9 +1113,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 18,
         paddingVertical: 12,
         borderRadius: 14,
-        backgroundColor: '#F2F4F7',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E4E7EC',
+        borderColor: c.border,
     },
     clearSearchText: {
         color: '#344054',
@@ -1125,7 +1131,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.4)',
     },
     modalContent: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 20,
@@ -1139,23 +1145,23 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         marginBottom: 16,
     },
     sortOption: {
         paddingVertical: 14,
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        borderBottomColor: c.borderLight,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
     sortOptionSelected: {
-        backgroundColor: '#F0F9FF',
+        backgroundColor: c.infoBg,
     },
     sortOptionText: {
         fontSize: 15,
-        color: '#0F172A',
+        color: c.text,
     },
     sortOptionTextSelected: {
         color: '#1C6ED5',
@@ -1174,7 +1180,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     modalFilterChip: {
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 14,
         paddingVertical: 8,
         borderRadius: 12,
@@ -1184,7 +1190,7 @@ const styles = StyleSheet.create({
     },
     modalFilterChipText: {
         fontSize: 13,
-        color: '#475569',
+        color: c.textSecondary,
         fontWeight: '600',
     },
     modalFilterChipTextSelected: {

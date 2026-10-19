@@ -1,11 +1,10 @@
 import AppIcon from '@/src/components/icons/AppIcon';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  Modal,
   PanResponder,
   ScrollView,
   StyleSheet,
@@ -15,6 +14,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDoctorName } from '../../utils/formatters';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../ThemedModal';
 
 interface Prescription {
   id: string;
@@ -41,6 +44,9 @@ export default function PrescriptionUploadModal({
   onPrescriptionSelected,
   existingPrescriptions = [],
 }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [selectedPrescription, setSelectedPrescription] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
   const translateY = useState(new Animated.Value(0))[0];
@@ -173,9 +179,9 @@ export default function PrescriptionUploadModal({
           <View style={styles.header} {...panResponder.panHandlers}>
             <View style={styles.dragIndicator} />
             <View style={styles.headerContent}>
-              <Text style={styles.title}>Select Prescription</Text>
+              <Text style={styles.title}>{t('select_prescription')}</Text>
               <Text style={styles.subtitle}>
-                Choose an existing prescription or upload a new one
+                {t('choose_an_existing_prescription_or_upl')}
               </Text>
             </View>
           </View>
@@ -186,7 +192,7 @@ export default function PrescriptionUploadModal({
           >
             {/* Upload Options */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Upload New</Text>
+              <Text style={styles.sectionTitle}>{t('upload_new')}</Text>
               
               <View style={styles.uploadOptions}>
                 <TouchableOpacity
@@ -203,9 +209,9 @@ export default function PrescriptionUploadModal({
                     <AppIcon name="camera" size={24} color="#FFFFFF" />
                   </LinearGradient>
                   <View style={styles.uploadTextContainer}>
-                    <Text style={styles.uploadTitle}>Scan using Camera</Text>
+                    <Text style={styles.uploadTitle}>{t('scan_using_camera')}</Text>
                     <Text style={styles.uploadDescription}>
-                      Take a photo of your prescription
+                      {t('take_a_photo_of_your_prescription')}
                     </Text>
                   </View>
                   <AppIcon name="chevron-right" size={20} color="#C7C7CC" />
@@ -227,9 +233,9 @@ export default function PrescriptionUploadModal({
                     <AppIcon name="image" size={24} color="#FFFFFF" />
                   </LinearGradient>
                   <View style={styles.uploadTextContainer}>
-                    <Text style={styles.uploadTitle}>Upload from Gallery</Text>
+                    <Text style={styles.uploadTitle}>{t('upload_from_gallery')}</Text>
                     <Text style={styles.uploadDescription}>
-                      Choose from your photo library
+                      {t('choose_from_your_photo_library')}
                     </Text>
                   </View>
                   <AppIcon name="chevron-right" size={20} color="#C7C7CC" />
@@ -240,7 +246,7 @@ export default function PrescriptionUploadModal({
             {/* Existing Prescriptions */}
             {existingPrescriptions.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Recent Prescriptions</Text>
+                <Text style={styles.sectionTitle}>{t('recent_prescriptions')}</Text>
                 
                 <View style={styles.prescriptionsList}>
                   {existingPrescriptions.map((prescription, index) => (
@@ -271,24 +277,24 @@ export default function PrescriptionUploadModal({
 
                         <View style={styles.prescriptionBody}>
                           <View style={styles.prescriptionRow}>
-                            <AppIcon name="stethoscope" size={16} color="#6B7280" />
-                            <Text style={styles.prescriptionLabel}>Doctor:</Text>
+                            <AppIcon name="stethoscope" size={16} color={theme.textSecondary} />
+                            <Text style={styles.prescriptionLabel}>{t('doctor')}</Text>
                             <Text style={styles.prescriptionValue}>
                               {formatDoctorName(prescription.doctorName)}
                             </Text>
                           </View>
 
                           <View style={styles.prescriptionRow}>
-                            <AppIcon name="calendar" size={16} color="#6B7280" />
-                            <Text style={styles.prescriptionLabel}>Date:</Text>
+                            <AppIcon name="calendar" size={16} color={theme.textSecondary} />
+                            <Text style={styles.prescriptionLabel}>{t('date')}</Text>
                             <Text style={styles.prescriptionValue}>
                               {formatDate(prescription.prescriptionDate)}
                             </Text>
                           </View>
 
                           <View style={styles.prescriptionRow}>
-                            <AppIcon name="pill" size={16} color="#6B7280" />
-                            <Text style={styles.prescriptionLabel}>Items:</Text>
+                            <AppIcon name="pill" size={16} color={theme.textSecondary} />
+                            <Text style={styles.prescriptionLabel}>{t('items')}</Text>
                             <Text style={styles.prescriptionValue}>
                               {prescription.items} {prescription.items === 1 ? 'medicine' : 'medicines'}
                             </Text>
@@ -296,7 +302,7 @@ export default function PrescriptionUploadModal({
 
                           {prescription.diagnosis && (
                             <View style={styles.diagnosisContainer}>
-                              <Text style={styles.diagnosisLabel}>Diagnosis:</Text>
+                              <Text style={styles.diagnosisLabel}>{t('diagnosis')}</Text>
                               <Text style={styles.diagnosisText}>
                                 {prescription.diagnosis}
                               </Text>
@@ -325,7 +331,7 @@ export default function PrescriptionUploadModal({
                 onPress={onClose}
                 disabled={isLoading}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -337,7 +343,7 @@ export default function PrescriptionUploadModal({
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <>
-                    <Text style={styles.confirmButtonText}>Use Prescription</Text>
+                    <Text style={styles.confirmButtonText}>{t('use_prescription')}</Text>
                     <AppIcon name="arrow-right" size={18} color="#FFFFFF" />
                   </>
                 )}
@@ -350,7 +356,7 @@ export default function PrescriptionUploadModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -360,7 +366,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     height: '90%',
@@ -370,7 +376,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    borderBottomColor: c.borderLight,
   },
   dragIndicator: {
     width: 36,
@@ -386,13 +392,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: c.text,
     letterSpacing: 0.3,
   },
   subtitle: {
     fontSize: 12,
     fontWeight: '400',
-    color: '#6B7280',
+    color: c.textSecondary,
     letterSpacing: 0.2,
   },
   content: {
@@ -406,12 +412,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: c.text,
     marginBottom: 12,
     letterSpacing: 0.2,
   },
   uploadOptions: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
     borderRadius: 16,
     padding: 4,
   },
@@ -435,32 +441,32 @@ const styles = StyleSheet.create({
   uploadTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: c.text,
     letterSpacing: 0.2,
   },
   uploadDescription: {
     fontSize: 12,
     fontWeight: '400',
-    color: '#6B7280',
+    color: c.textSecondary,
     letterSpacing: 0.1,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: c.cardSecondary,
     marginHorizontal: 12,
   },
   prescriptionsList: {
     gap: 0,
   },
   prescriptionCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
     borderRadius: 16,
     padding: 16,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   prescriptionCardSelected: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: c.successBg,
     borderColor: '#10B981',
   },
   prescriptionHeader: {
@@ -470,7 +476,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   prescriptionIdContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
@@ -486,7 +492,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#D1D1D6',
+    borderColor: c.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -510,13 +516,13 @@ const styles = StyleSheet.create({
   prescriptionLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#6B7280',
+    color: c.textSecondary,
     letterSpacing: 0.1,
   },
   prescriptionValue: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: c.text,
     letterSpacing: 0.1,
     flex: 1,
   },
@@ -524,19 +530,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: c.border,
   },
   diagnosisLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: c.textSecondary,
     marginBottom: 4,
     letterSpacing: 0.3,
   },
   diagnosisText: {
     fontSize: 12,
     fontWeight: '400',
-    color: '#1C1C1E',
+    color: c.text,
     letterSpacing: 0.1,
   },
   prescriptionDivider: {
@@ -551,20 +557,20 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F2F2F7',
+    borderTopColor: c.borderLight,
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 16,
     borderRadius: 12,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: c.cardSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: c.text,
     letterSpacing: 0.2,
   },
   confirmButton: {

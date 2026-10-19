@@ -1,12 +1,18 @@
 import { useNavigation } from '@react-navigation/native';
 import { ChevronRight, Pill, Plus } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../redux/store';
 import { HealthSection } from './HealthSection';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 export function MedicationsSummary() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const { data: calendarData } = useSelector((state: RootState) => state.calendar);
 
@@ -36,7 +42,7 @@ export function MedicationsSummary() {
     };
 
     return (
-        <HealthSection title="Medications" icon={<Pill size={14} color="#0FBBA1" />}>
+        <HealthSection title={t('medications')} icon={<Pill size={14} color="#10B981" />}>
             {activeMedsCount === 0 ? (
                 <TouchableOpacity
                     style={styles.emptyCard}
@@ -44,15 +50,15 @@ export function MedicationsSummary() {
                     onPress={handleAddMedication}
                 >
                     <View style={styles.emptyIconBox}>
-                        <Pill size={24} color="#0FBBA1" />
+                        <Pill size={24} color="#10B981" />
                     </View>
-                    <Text style={styles.emptyTitle}>No Medications Configured</Text>
+                    <Text style={styles.emptyTitle}>{t('no_medications')}</Text>
                     <Text style={styles.emptySubtitle}>
-                        Track your daily schedules and get reminded on time.
+                        {t('track_your_daily_schedules_and_get_rem')}
                     </Text>
                     <View style={styles.emptyBtn}>
                         <Plus size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
-                        <Text style={styles.emptyBtnText}>Add Medication</Text>
+                        <Text style={styles.emptyBtnText}>{t('add_medication')}</Text>
                     </View>
                 </TouchableOpacity>
             ) : (
@@ -63,7 +69,7 @@ export function MedicationsSummary() {
                 >
                     <View style={styles.content}>
                         <View style={styles.medIconBox}>
-                            <Pill size={24} color="#0FBBA1" />
+                            <Pill size={24} color="#10B981" />
                         </View>
 
                         <View style={{ flex: 1 }}>
@@ -84,8 +90,8 @@ export function MedicationsSummary() {
                     </View>
 
                     <View style={styles.cardFooter}>
-                        <Text style={styles.footerLink}>View Schedule</Text>
-                        <ChevronRight size={16} color="#0FBBA1" />
+                        <Text style={styles.footerLink}>{t('view_schedule')}</Text>
+                        <ChevronRight size={16} color="#10B981" />
                     </View>
                 </TouchableOpacity>
             )}
@@ -93,9 +99,9 @@ export function MedicationsSummary() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 16,
         borderWidth: 1,
@@ -106,33 +112,33 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 16,
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         alignItems: 'center',
         justifyContent: 'center'
     },
-    title: { fontSize: 16, fontWeight: '700', color: '#111827' },
-    subtext: { fontSize: 13, color: '#6B7280', marginTop: 2 },
+    title: { fontSize: 16, fontWeight: '700', color: c.text },
+    subtext: { fontSize: 13, color: c.textSecondary, marginTop: 2 },
     badge: {
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 6
     },
-    badgeText: { fontSize: 11, color: '#0FBBA1', fontWeight: '700' },
+    badgeText: { fontSize: 11, color: '#10B981', fontWeight: '700' },
 
     progressSection: { marginBottom: 16 },
     progressBg: {
         height: 8,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         borderRadius: 4,
         overflow: 'hidden'
     },
     progressFill: {
         height: '100%',
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         borderRadius: 4
     },
-    progressLabel: { fontSize: 12, color: '#9CA3AF', marginTop: 6, fontWeight: '500' },
+    progressLabel: { fontSize: 12, color: c.textMuted, marginTop: 6, fontWeight: '500' },
 
     cardFooter: {
         flexDirection: 'row',
@@ -141,13 +147,13 @@ const styles = StyleSheet.create({
         gap: 4,
         paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: '#F9FAFB'
+        borderTopColor: c.borderLight
     },
-    footerLink: { fontSize: 14, fontWeight: '700', color: '#0FBBA1' },
+    footerLink: { fontSize: 14, fontWeight: '700', color: '#10B981' },
     
     /* Empty State styles */
     emptyCard: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 20,
         paddingVertical: 28,
         paddingHorizontal: 20,
@@ -159,7 +165,7 @@ const styles = StyleSheet.create({
         width: 52,
         height: 52,
         borderRadius: 18,
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,
@@ -167,12 +173,12 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 4,
     },
     emptySubtitle: {
         fontSize: 12,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         marginBottom: 16,
         lineHeight: 18,
@@ -180,7 +186,7 @@ const styles = StyleSheet.create({
     emptyBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 10,

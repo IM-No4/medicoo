@@ -1,6 +1,6 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     FlatList,
     Platform,
@@ -10,13 +10,19 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../../components/ThemedStatusBar';
 import AppIcon from '../../../components/icons/AppIcon';
 import { executeAction } from '../../../actions/ActionExecutor';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 type FilterType = 'all' | 'consultation' | 'medicine' | 'lab';
 
 export default function RecentActivityScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const insets = useSafeAreaInsets();
@@ -72,7 +78,7 @@ export default function RecentActivityScreen() {
                 <Text style={[styles.status, { color: item.statusColor || '#6B7280' }]}>
                     {item.status}
                 </Text>
-                <ChevronRight size={16} color="#D1D5DB" />
+                <ChevronRight size={16} color={theme.textMuted} />
             </View>
         </TouchableOpacity>
     );
@@ -83,9 +89,9 @@ export default function RecentActivityScreen() {
             {/* Header */}
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Activity History</Text>
+                <Text style={styles.headerTitle}>{t('activity_history_title')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -118,9 +124,9 @@ export default function RecentActivityScreen() {
                 contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 20 }]}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <AppIcon name="info" size={48} color="#9CA3AF" />
-                        <Text style={styles.emptyTitle}>No Activities Found</Text>
-                        <Text style={styles.emptySubtitle}>There are no logs in this category.</Text>
+                        <AppIcon name="info" size={48} color={theme.textMuted} />
+                        <Text style={styles.emptyTitle}>{t('no_activities')}</Text>
+                        <Text style={styles.emptySubtitle}>{t('no_logs_category')}</Text>
                     </View>
                 }
             />
@@ -146,10 +152,10 @@ function getActivityColor(type: string) {
     }
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FE',
+        backgroundColor: c.background,
     },
     header: {
         flexDirection: 'row',
@@ -157,7 +163,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -173,30 +179,30 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     tabsContainer: {
         flexDirection: 'row',
         paddingHorizontal: 20,
         paddingVertical: 12,
         gap: 8,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderLight,
     },
     tab: {
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 10,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
     },
     activeTab: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
     },
     tabText: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#6B7280',
+        color: c.textSecondary,
     },
     activeTabText: {
         color: '#fff',
@@ -208,9 +214,9 @@ const styles = StyleSheet.create({
     cardItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
         borderRadius: 16,
         padding: 14,
         shadowColor: "#000",
@@ -233,12 +239,12 @@ const styles = StyleSheet.create({
     itemTitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
         marginBottom: 2,
     },
     date: {
         fontSize: 12,
-        color: '#9CA3AF',
+        color: c.textMuted,
     },
     statusContainer: {
         flexDirection: 'row',
@@ -257,13 +263,13 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#1F2937',
+        color: c.text,
         marginTop: 12,
         marginBottom: 4,
     },
     emptySubtitle: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
     },
 });

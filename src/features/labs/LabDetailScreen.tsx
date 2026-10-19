@@ -1,8 +1,8 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     Platform,
     ScrollView,
@@ -13,8 +13,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '@/src/components/icons/AppIcon';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 export default function LabDetailScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
@@ -30,9 +36,9 @@ export default function LabDetailScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lab Test Details</Text>
+        <Text style={styles.headerTitle}>{t('lab_test_details')}</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <AppIcon name="share" size={20} color="#1C1C1E" />
         </TouchableOpacity>
@@ -49,7 +55,7 @@ export default function LabDetailScreen() {
           <View style={styles.accreditationRow}>
             <View style={styles.accreditationBadge}>
               <AppIcon name="shield-check" size={12} color="#FFFFFF" />
-              <Text style={styles.accreditationText}>NABL & CAP Certified Lab</Text>
+              <Text style={styles.accreditationText}>{t('nabl_cap_certified_lab')}</Text>
             </View>
             <View style={styles.ratingBadge}>
               <AppIcon name="star" size={12} color="#FDE047" />
@@ -74,19 +80,19 @@ export default function LabDetailScreen() {
           <View style={styles.highlightCard}>
             <AppIcon name="clock" size={20} color="#059669" />
             <Text style={styles.highlightTitle}>12-24 Hrs</Text>
-            <Text style={styles.highlightSubtitle}>Report Speed</Text>
+            <Text style={styles.highlightSubtitle}>{t('report_speed')}</Text>
           </View>
 
           <View style={styles.highlightCard}>
             <AppIcon name="home" size={20} color="#7C3AED" />
-            <Text style={styles.highlightTitle}>Free Pickup</Text>
-            <Text style={styles.highlightSubtitle}>At Your Home</Text>
+            <Text style={styles.highlightTitle}>{t('free_pickup')}</Text>
+            <Text style={styles.highlightSubtitle}>{t('at_your_home')}</Text>
           </View>
 
           <View style={styles.highlightCard}>
             <AppIcon name="sun" size={20} color="#D97706" />
             <Text style={styles.highlightTitle}>10-12 Hrs</Text>
-            <Text style={styles.highlightSubtitle}>Fasting Req.</Text>
+            <Text style={styles.highlightSubtitle}>{t('fasting_req')}</Text>
           </View>
         </View>
 
@@ -117,29 +123,29 @@ export default function LabDetailScreen() {
 
         {/* How Home Collection Works */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>How Home Sample Collection Works</Text>
+          <Text style={styles.sectionTitle}>{t('how_home_sample_collection_works')}</Text>
 
           <View style={styles.stepRow}>
             <View style={styles.stepNumber}><Text style={styles.stepNumberText}>1</Text></View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.stepTitle}>Book Slot Online</Text>
-              <Text style={styles.stepDescription}>Select your preferred date & time for sample pickup.</Text>
+              <Text style={styles.stepTitle}>{t('book_slot_online')}</Text>
+              <Text style={styles.stepDescription}>{t('select_your_preferred_date_time_for_sa')}</Text>
             </View>
           </View>
 
           <View style={styles.stepRow}>
             <View style={styles.stepNumber}><Text style={styles.stepNumberText}>2</Text></View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.stepTitle}>Phlebotomist Pick-up</Text>
-              <Text style={styles.stepDescription}>Vaccinated professional collects samples safely at home.</Text>
+              <Text style={styles.stepTitle}>{t('phlebotomist_pick_up')}</Text>
+              <Text style={styles.stepDescription}>{t('vaccinated_professional_collects_sampl')}</Text>
             </View>
           </View>
 
           <View style={styles.stepRow}>
             <View style={styles.stepNumber}><Text style={styles.stepNumberText}>3</Text></View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.stepTitle}>Digital Report in 12-24 Hrs</Text>
-              <Text style={styles.stepDescription}>Download certified PDF reports directly on your mobile app.</Text>
+              <Text style={styles.stepTitle}>{t('digital_report_in_12_24_hrs')}</Text>
+              <Text style={styles.stepDescription}>{t('download_certified_pdf_reports_directl')}</Text>
             </View>
           </View>
         </View>
@@ -150,7 +156,7 @@ export default function LabDetailScreen() {
       {/* Footer Booking Bar */}
       <View style={[styles.footerBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : 16 }]}>
         <View>
-          <Text style={styles.footerPriceLabel}>Total Amount</Text>
+          <Text style={styles.footerPriceLabel}>{t('total_amount')}</Text>
           <Text style={styles.footerPrice}>₹799 <Text style={styles.footerOriginalPrice}>₹2,800</Text></Text>
         </View>
 
@@ -175,10 +181,10 @@ export default function LabDetailScreen() {
 
 /* ================= STYLES ================= */
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: c.background,
   },
   header: {
     flexDirection: 'row',
@@ -186,7 +192,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -202,7 +208,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
   },
   content: {
     padding: 16,
@@ -290,36 +296,36 @@ const styles = StyleSheet.create({
   },
   highlightCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 16,
     padding: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: c.border,
   },
   highlightTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
+    color: c.text,
     marginTop: 6,
   },
   highlightSubtitle: {
     fontSize: 10,
-    color: '#64748B',
+    color: c.textSecondary,
     marginTop: 2,
   },
   sectionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 20,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: c.border,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0F172A',
+    color: c.text,
     marginBottom: 14,
   },
   testItemRow: {
@@ -328,24 +334,24 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: c.borderLight,
   },
   checkIconWrapper: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: c.successBg,
     justifyContent: 'center',
     alignItems: 'center',
   },
   testItemName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: c.text,
   },
   testItemCount: {
     fontSize: 11,
-    color: '#64748B',
+    color: c.textSecondary,
     marginTop: 2,
   },
   stepRow: {
@@ -357,7 +363,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: c.infoBg,
     borderWidth: 1,
     borderColor: '#BFDBFE',
     justifyContent: 'center',
@@ -371,11 +377,11 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0F172A',
+    color: c.text,
   },
   stepDescription: {
     fontSize: 12,
-    color: '#64748B',
+    color: c.textSecondary,
     marginTop: 2,
   },
   footerBar: {
@@ -383,27 +389,27 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: c.border,
   },
   footerPriceLabel: {
     fontSize: 11,
-    color: '#64748B',
+    color: c.textSecondary,
   },
   footerPrice: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#0F172A',
+    color: c.text,
   },
   footerOriginalPrice: {
     fontSize: 13,
-    color: '#94A3B8',
+    color: c.textMuted,
     textDecorationLine: 'line-through',
     fontWeight: '500',
   },

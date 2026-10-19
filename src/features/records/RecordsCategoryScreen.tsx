@@ -8,19 +8,18 @@ import {
   MediaTypeOptions,
   requestCameraPermissionsAsync
 } from 'expo-image-picker';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ArrowDownWideNarrow, ArrowUpWideNarrow, ChevronLeft, Eye, FolderOpen, MoreVertical, Plus, Search, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -28,6 +27,10 @@ import AddRecordModal from './components/AddRecordModal';
 import EditRecordModal from './components/EditRecordModal';
 import { DocumentTypeValue, getDocumentTypeMeta } from './documentTypes';
 import { RecordItem } from './types';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../../components/ThemedModal';
 
 // Must match the backend's hard cap in customerController.js's uploadDocument
 // (UPLOAD_LIMIT_REACHED at 10 user_upload documents). Surfaced to the user
@@ -35,6 +38,9 @@ import { RecordItem } from './types';
 const MAX_UPLOADS = 10;
 
 export default function RecordsCategoryScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
@@ -173,15 +179,15 @@ export default function RecordsCategoryScreen() {
     setMenuItem(null);
     showStatus(
       'warning',
-      'Delete Document?',
-      'Are you sure you want to permanently remove this document? This action cannot be reversed.',
+      t('delete_document'),
+      t('are_you_sure_you_want_to_permanently_r'),
       async () => {
         hideStatus();
         try {
           await deleteDocument(item.id);
           await loadRecords();
         } catch (error) {
-          showStatus('error', 'Deletion Failed', 'We couldn\'t delete the document. Please check your connection and try again.');
+          showStatus('error', t('deletion_failed'), t('we_couldn_t_delete_the_document_please'));
         }
       },
       'Delete'
@@ -255,7 +261,7 @@ export default function RecordsCategoryScreen() {
 
       <View style={[styles.topBar, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.topBarTitle} numberOfLines={1}>{label}</Text>
         <View style={styles.headerSpacer} />
@@ -263,16 +269,16 @@ export default function RecordsCategoryScreen() {
 
       {loading ? (
         <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#0FBBA1" />
+          <ActivityIndicator size="large" color="#10B981" />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.searchBar}>
-            <Search size={18} color="#9CA3AF" />
+            <Search size={18} color={theme.textMuted} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search your file.."
-              placeholderTextColor="#9CA3AF"
+              placeholder={t('search_your_file')}
+              placeholderTextColor={theme.textMuted}
               value={search}
               onChangeText={setSearch}
             />
@@ -282,9 +288,9 @@ export default function RecordsCategoryScreen() {
               onPress={() => setSortOrder(o => (o === 'newest' ? 'oldest' : 'newest'))}
             >
               {sortOrder === 'newest' ? (
-                <ArrowDownWideNarrow size={18} color="#374151" />
+                <ArrowDownWideNarrow size={18} color={theme.text} />
               ) : (
-                <ArrowUpWideNarrow size={18} color="#0FBBA1" />
+                <ArrowUpWideNarrow size={18} color="#10B981" />
               )}
             </TouchableOpacity>
           </View>
@@ -313,9 +319,9 @@ export default function RecordsCategoryScreen() {
           {sections.length === 0 ? (
             <EmptyState
               icon={FolderOpen}
-              iconColor="#0FBBA1"
+              iconColor="#10B981"
               iconBg="#EAFBF3"
-              title="No records found"
+              title={t('no_records_found')}
               message={`Your ${label.toLowerCase()} will appear here.`}
               actionLabel="Add a document"
               onAction={handleAddPress}
@@ -351,7 +357,7 @@ export default function RecordsCategoryScreen() {
                             setMenuItem(item);
                           }}
                         >
-                          <MoreVertical size={18} color="#9CA3AF" />
+                          <MoreVertical size={18} color={theme.textMuted} />
                         </TouchableOpacity>
                       </TouchableOpacity>
                     );
@@ -406,7 +412,7 @@ export default function RecordsCategoryScreen() {
                 if (item) handleRecordPress(item);
               }}
             >
-              <Eye size={18} color="#374151" />
+              <Eye size={18} color={theme.text} />
               <Text style={styles.menuRowText}>View Details</Text>
             </TouchableOpacity>
             {menuItem && !menuItem.isSystem && (
@@ -432,10 +438,10 @@ export default function RecordsCategoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F8FC',
+    backgroundColor: c.background,
   },
 
   // Blends into the page background rather than sitting on its own white
@@ -449,7 +455,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -470,7 +476,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
     textAlign: 'center',
   },
 
@@ -484,7 +490,7 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     borderRadius: 16,
     height: 52,
     paddingHorizontal: 16,
@@ -498,7 +504,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 10,
     fontSize: 15,
-    color: '#111827',
+    color: c.text,
   },
   filterIconBtn: {
     marginLeft: 8,
@@ -510,7 +516,7 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     borderRadius: 12,
     marginRight: 10,
     ...Platform.select({
@@ -519,12 +525,12 @@ const styles = StyleSheet.create({
     }),
   },
   chipActive: {
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
   },
   chipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: c.text,
   },
   chipTextActive: {
     color: '#fff',
@@ -536,14 +542,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: c.text,
     marginBottom: 12,
   },
 
   // Soft shadow, no border - rounded corners on the outer card only, rows
   // are flat siblings inside separated by a hairline divider.
   groupCard: {
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     borderRadius: 18,
     overflow: 'hidden',
     ...Platform.select({
@@ -559,7 +565,7 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F7',
+    borderBottomColor: c.borderLight,
   },
   iconAvatar: {
     width: 46,
@@ -576,17 +582,17 @@ const styles = StyleSheet.create({
   rowTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: c.text,
   },
   rowSubtitle: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: c.textMuted,
     fontWeight: '500',
     marginTop: 2,
   },
   rowDate: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: c.textMuted,
     fontWeight: '500',
     marginTop: 1,
   },
@@ -597,10 +603,10 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0FBBA1',
+    shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
@@ -615,7 +621,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 24,
     width: 200,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     borderRadius: 16,
     paddingVertical: 6,
     ...Platform.select({
@@ -633,7 +639,7 @@ const styles = StyleSheet.create({
   menuRowText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
   },
   menuRowTextDanger: {
     color: '#EF4444',

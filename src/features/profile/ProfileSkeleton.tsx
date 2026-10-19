@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import SkeletonBlock from '../../components/loaders/SkeletonBlock';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 function GroupSkeleton({ rows }: { rows: number }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.section}>
       <SkeletonBlock height={12} width={110} style={{ marginBottom: 12 }} />
@@ -22,6 +26,8 @@ function GroupSkeleton({ rows }: { rows: number }) {
 // Account / Activity / Support menu groups) so the loading state reads as
 // "this page" rather than a generic spinner.
 export default function ProfileSkeleton() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.container}>
       <SkeletonBlock height={140} borderRadius={24} style={{ marginBottom: 16 }} />
@@ -34,7 +40,7 @@ export default function ProfileSkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     paddingTop: 16,
   },
@@ -43,7 +49,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   groupCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 16,
     paddingHorizontal: 16,
   },
@@ -54,6 +60,6 @@ const styles = StyleSheet.create({
   },
   menuRowDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: c.borderLight,
   },
 });

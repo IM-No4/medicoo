@@ -1,7 +1,9 @@
 import AppIcon from '@/src/components/icons/AppIcon';
 import { SearchResult } from '@/src/search/search.types';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 type Props = {
   item: SearchResult;
@@ -9,13 +11,15 @@ type Props = {
 };
 
 export default function ResultItem({ item, onPress }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
       <View style={styles.icon}>
         <AppIcon
           name={getIcon(item.domain)}
           size={18}
-          color="#1F2937"
+          color={theme.text}
         />
       </View>
 
@@ -44,20 +48,20 @@ function getIcon(domain: SearchResult['domain']) {
   }
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: c.border,
   },
   icon: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -68,11 +72,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
   },
   subtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: c.textSecondary,
     marginTop: 2,
   },
 });

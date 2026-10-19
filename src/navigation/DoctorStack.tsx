@@ -24,6 +24,7 @@ export type DoctorStackParamList = {
   BookingSuccess: {
     isRequest?: boolean;
     requestId?: string;
+    forName?: string | null;
   };
 };
 

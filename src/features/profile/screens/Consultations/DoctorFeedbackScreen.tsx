@@ -1,6 +1,6 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft, Star, Stethoscope } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     Image,
@@ -18,8 +18,14 @@ import StatusModal, { StatusType } from '../../../../components/modals/StatusMod
 import { getMyDoctorReview, submitDoctorFeedback } from '../../../../services/api';
 import { API_BASE_URL } from '../../../../services/api/client';
 import { formatDoctorName } from '../../../../utils/formatters';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 export default function DoctorFeedbackScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation();
     const route = useRoute<any>();
     const insets = useSafeAreaInsets();
@@ -67,7 +73,7 @@ export default function DoctorFeedbackScreen() {
 
     const handleSubmit = async () => {
         if (rating === 0) {
-            showStatus('warning', 'Rating Required', 'Please provide a star rating to help us improve our services.');
+            showStatus('warning', t('rating_required'), t('please_provide_a_star_rating_to_help_u'));
             return;
         }
 
@@ -95,7 +101,7 @@ export default function DoctorFeedbackScreen() {
                 message: error?.message,
             });
             const serverMessage = error?.response?.data?.message;
-            showStatus('error', 'Could Not Submit', serverMessage || 'We could not save your review right now. Please try again.');
+            showStatus('error', t('could_not_submit'), serverMessage || 'We could not save your review right now. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -108,7 +114,7 @@ export default function DoctorFeedbackScreen() {
         >
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{isUpdate ? 'Update Review' : 'Write a Review'}</Text>
                 <View style={{ width: 40 }} />
@@ -127,7 +133,7 @@ export default function DoctorFeedbackScreen() {
                         />
                     ) : (
                         <View style={[styles.avatar, styles.placeholderAvatar]}>
-                            <Stethoscope size={32} color="#0FBBA1" />
+                            <Stethoscope size={32} color="#10B981" />
                         </View>
                     )}
                     <Text style={styles.doctorName}>{formatDoctorName(doctor.name)}</Text>
@@ -135,8 +141,8 @@ export default function DoctorFeedbackScreen() {
                 </View>
 
                 <View style={styles.ratingSection}>
-                    <Text style={styles.ratingTitle}>How was your consultation?</Text>
-                    <Text style={styles.ratingSubtitle}>Tap to rate your experience</Text>
+                    <Text style={styles.ratingTitle}>{t('how_was_your_consultation')}</Text>
+                    <Text style={styles.ratingSubtitle}>{t('tap_to_rate_your_experience')}</Text>
 
                     <View style={styles.starsRow}>
                         {[1, 2, 3, 4, 5].map((s) => (
@@ -156,11 +162,11 @@ export default function DoctorFeedbackScreen() {
                 </View>
 
                 <View style={styles.reviewSection}>
-                    <Text style={styles.reviewLabel}>Your Feedback (Optional)</Text>
+                    <Text style={styles.reviewLabel}>{t('your_feedback_optional')}</Text>
                     <TextInput
                         style={styles.textInput}
-                        placeholder="Tell us what you liked or how we can improve..."
-                        placeholderTextColor="#9CA3AF"
+                        placeholder={t('tell_us_what_you_liked_or_how_we_can_i')}
+                        placeholderTextColor={theme.textMuted}
                         multiline
                         numberOfLines={6}
                         value={review}
@@ -200,10 +206,10 @@ export default function DoctorFeedbackScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
     },
     // Same header recipe as the rest of the Profile screens - white bar +
     // shadow, plain icon back button, fontSize 20/600/#111827 title.
@@ -213,7 +219,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -229,7 +235,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     content: {
         padding: 24,
@@ -246,7 +252,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     placeholderAvatar: {
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
@@ -255,12 +261,12 @@ const styles = StyleSheet.create({
     doctorName: {
         fontSize: 20,
         fontWeight: '800',
-        color: '#111827',
+        color: c.text,
         marginBottom: 4,
     },
     specialtyText: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         fontWeight: '500',
     },
     ratingSection: {
@@ -271,12 +277,12 @@ const styles = StyleSheet.create({
     ratingTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 8,
     },
     ratingSubtitle: {
         fontSize: 14,
-        color: '#9CA3AF',
+        color: c.textMuted,
         marginBottom: 24,
     },
     starsRow: {
@@ -292,36 +298,36 @@ const styles = StyleSheet.create({
     reviewLabel: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#374151',
+        color: c.text,
         marginBottom: 12,
     },
     textInput: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 20,
         padding: 20,
         fontSize: 16,
-        color: '#111827',
+        color: c.text,
         height: 160,
     },
     footer: {
         padding: 24,
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
+        borderTopColor: c.borderLight,
     },
     submitButton: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         paddingVertical: 18,
         borderRadius: 18,
         alignItems: 'center',
-        shadowColor: '#0FBBA1',
+        shadowColor: '#10B981',
         shadowOpacity: 0.3,
         shadowRadius: 10,
         elevation: 5,
     },
     disabledButton: {
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.cardSecondary,
         shadowOpacity: 0,
         elevation: 0,
     },

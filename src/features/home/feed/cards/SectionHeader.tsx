@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 interface Props {
     title: string;
@@ -15,6 +18,9 @@ interface Props {
 // means they can't drift out of sync again. Matches the small-caps label
 // style already used by HealthSummary/GoalsCard's "ACTIVE GOALS" header.
 export default function SectionHeader({ title, subtitle, onSeeAll }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     return (
         <View style={styles.header}>
             <View>
@@ -23,14 +29,14 @@ export default function SectionHeader({ title, subtitle, onSeeAll }: Props) {
             </View>
             {!!onSeeAll && (
                 <TouchableOpacity onPress={onSeeAll}>
-                    <Text style={styles.seeAll}>See All</Text>
+                    <Text style={styles.seeAll}>{t('see_all')}</Text>
                 </TouchableOpacity>
             )}
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -40,14 +46,14 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 13,
-        color: '#494949',
+        color: c.text,
         letterSpacing: 2,
         fontWeight: '700',
         textTransform: 'uppercase',
     },
     subtitle: {
         fontSize: 12,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginTop: 4,
     },
     seeAll: {

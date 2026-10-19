@@ -1,7 +1,9 @@
 import { Gauge } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { styles } from '../styles';
+import { createStyles } from '../styles';
+import { useTheme } from '../../../../theme/ThemeContext';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 const UNITS = ['mg', 'mcg', 'g', 'ml', '%'];
 
@@ -11,6 +13,9 @@ interface StrengthStepProps {
 }
 
 export default function StrengthStep({ data, onChange }: StrengthStepProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     return (
         <View style={styles.stepContainer}>
 
@@ -23,20 +28,20 @@ export default function StrengthStep({ data, onChange }: StrengthStepProps) {
                 </View>
             </View>
 
-            <Text style={styles.stepTitle}>Add the Medication Strength</Text>
+            <Text style={styles.stepTitle}>{t('add_the_medication_strength')}</Text>
 
-            <Text style={styles.sectionLabel}>Strength</Text>
+            <Text style={styles.sectionLabel}>{t('strength')}</Text>
             <TextInput
                 style={styles.input}
-                placeholder="Add Strength"
-                placeholderTextColor="#555"
+                placeholder={t('add_strength')}
+                placeholderTextColor={theme.textSecondary}
                 keyboardType="numeric"
                 value={data.strength}
                 onChangeText={value => onChange({ strength: value })}
                 returnKeyType="done"
             />
 
-            <Text style={styles.sectionLabel}>Choose Unit</Text>
+            <Text style={styles.sectionLabel}>{t('choose_unit')}</Text>
             <View style={styles.listGroup}>
                 {UNITS.map((unit, index) => {
                     const isLast = index === UNITS.length - 1;
@@ -54,7 +59,7 @@ export default function StrengthStep({ data, onChange }: StrengthStepProps) {
                                 ]}>
                                     {unit}
                                 </Text>
-                                {isSelected && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#0FBBA1' }} />}
+                                {isSelected && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' }} />}
                             </TouchableOpacity>
                             {!isLast && <View style={styles.separator} />}
                         </View>

@@ -1,12 +1,18 @@
 import { useNavigation } from '@react-navigation/native';
 import { Activity, Plus, TrendingUp, Weight } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../redux/store';
 import { HealthSection } from './HealthSection';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 export function VitalsSnapshot() {
+  const { t } = useLanguage();
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
   const { records } = useSelector((state: RootState) => state.vitals);
 
@@ -25,7 +31,7 @@ export function VitalsSnapshot() {
 
   return (
     <HealthSection
-      title="Vitals Snapshot"
+      title={t('vitals_snapshot')}
       icon={
         <View style={styles.headerActionsContainer}>
           <TouchableOpacity
@@ -33,8 +39,8 @@ export function VitalsSnapshot() {
             onPress={() => navigation.navigate('LogVitals')}
             activeOpacity={0.7}
           >
-            <Plus size={12} color="#0FBBA1" style={{ marginRight: 2 }} />
-            <Text style={styles.headerActionBtnText}>Log</Text>
+            <Plus size={12} color="#10B981" style={{ marginRight: 2 }} />
+            <Text style={styles.headerActionBtnText}>{t('log')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -42,7 +48,7 @@ export function VitalsSnapshot() {
             onPress={() => navigation.navigate('VitalsHistory')}
             activeOpacity={0.7}
           >
-            <Text style={styles.headerActionBtnText}>History</Text>
+            <Text style={styles.headerActionBtnText}>{t('history')}</Text>
           </TouchableOpacity>
         </View>
       }
@@ -51,21 +57,21 @@ export function VitalsSnapshot() {
         <View style={styles.topRow}>
           {/* Weight */}
           <VitalCard
-            label="Weight"
+            label={t('weight')}
             value={latestWeight !== undefined ? `${latestWeight}` : '--'}
             unit="KG"
             icon={<Weight size={16} color="#8B5CF6" />}
-            bgColor="#F5F3FF"
+            bgColor={isDark ? '#8B5CF626' : '#F5F3FF'}
             onPress={() => openHistory('weight')}
           />
 
           {/* Blood Pressure */}
           <VitalCard
-            label="Blood Pressure"
+            label={t('blood_pressure')}
             value={latestSystolic !== undefined && latestDiastolic !== undefined ? `${latestSystolic}/${latestDiastolic}` : '--'}
             unit="mmHg"
             icon={<Activity size={16} color="#3B82F6" />}
-            bgColor="#EFF6FF"
+            bgColor={isDark ? '#3B82F626' : '#EFF6FF'}
             onPress={() => openHistory('blood_pressure')}
           />
         </View>
@@ -75,6 +81,8 @@ export function VitalsSnapshot() {
 }
 
 function VitalCard({ label, value, unit, icon, bgColor, onPress }: any) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <TouchableOpacity
       style={styles.vitalCard}
@@ -98,7 +106,7 @@ function VitalCard({ label, value, unit, icon, bgColor, onPress }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   headerActionsContainer: {
     flexDirection: 'row',
     gap: 8,
@@ -107,17 +115,17 @@ const styles = StyleSheet.create({
   headerActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: c.successBg,
     paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#DCFCE7',
+    borderColor: c.isDark ? 'rgba(16,185,129,0.25)' : '#DCFCE7',
   },
   headerActionBtnText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#0FBBA1',
+    color: '#10B981',
     textTransform: 'uppercase',
   },
   vitalsContainer: {
@@ -129,7 +137,7 @@ const styles = StyleSheet.create({
   },
   vitalCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
@@ -159,17 +167,17 @@ const styles = StyleSheet.create({
   vitalValue: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#0F172A',
+    color: c.text,
   },
   vitalUnit: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: c.textMuted,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
   vitalLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: c.textSecondary,
     fontWeight: '600',
     marginTop: 2,
   },

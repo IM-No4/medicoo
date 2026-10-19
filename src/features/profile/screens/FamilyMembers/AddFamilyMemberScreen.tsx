@@ -2,26 +2,30 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Calendar, Camera, ChevronDown, ChevronLeft, User, X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MediaPickerModal from '../../../../components/modals/image-picker/MediaPickerModal';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
 import { addFamilyMember } from '../../../../services/api';
 import { formatDateForApi, formatDateForDisplay } from '../../../../utils/formatters';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
+import { Modal } from '../../../../components/ThemedModal';
+import { AuthImage } from '../../../../components/AuthImage';
 
 const RELATIONS = [
     { label: 'Spouse', value: 'spouse' },
@@ -43,6 +47,9 @@ const GENDERS = [
 ];
 
 export default function AddFamilyMemberScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation();
     const route = useRoute<any>();
     const insets = useSafeAreaInsets();
@@ -95,11 +102,7 @@ export default function AddFamilyMemberScreen() {
                 gender: existingMember.gender,
             });
             if (existingMember.profileImage) {
-                setProfileImageUri(
-                    existingMember.profileImage.startsWith('http')
-                        ? existingMember.profileImage
-                        : `data:image/jpeg;base64,${existingMember.profileImage}`
-                );
+                setProfileImageUri(existingMember.profileImage);
             }
         }
     }, [isEditing, existingMember]);
@@ -119,7 +122,7 @@ export default function AddFamilyMemberScreen() {
                 handleImageSelected(result.assets[0]);
             }
         } catch (e) {
-            showStatus('error', 'Error', 'Failed to open gallery');
+            showStatus('error', t('error'), t('failed_to_open_gallery'));
         }
     };
 
@@ -128,7 +131,7 @@ export default function AddFamilyMemberScreen() {
         try {
             const { status } = await ImagePicker.requestCameraPermissionsAsync();
             if (status !== 'granted') {
-                showStatus('warning', 'Permission needed', 'Camera permission is required to take photos.');
+                showStatus('warning', t('permission_needed'), t('camera_permission_is_required_to_take_2'));
                 return;
             }
 
@@ -142,7 +145,7 @@ export default function AddFamilyMemberScreen() {
                 handleImageSelected(result.assets[0]);
             }
         } catch (e) {
-            showStatus('error', 'Error', 'Failed to open camera');
+            showStatus('error', t('error'), t('failed_to_open_camera'));
         }
     };
 
@@ -159,11 +162,11 @@ export default function AddFamilyMemberScreen() {
         try {
             if (mode === 'link' && !isEditing) {
                 if (!linkId.trim()) {
-                    showStatus('warning', 'Validation Error', 'Please enter a MED ID.');
+                    showStatus('warning', t('validation_error'), t('please_enter_a_med_id'));
                     return;
                 }
                 if (!linkRelation) {
-                    showStatus('warning', 'Validation Error', 'Please select a relation.');
+                    showStatus('warning', t('validation_error'), t('please_select_a_relation'));
                     return;
                 }
 
@@ -178,19 +181,19 @@ export default function AddFamilyMemberScreen() {
                 });
             } else {
                 if (!formData.name.trim()) {
-                    showStatus('warning', 'Validation Error', 'Please enter a name.');
+                    showStatus('warning', t('validation_error'), t('please_enter_a_name'));
                     return;
                 }
                 if (!formData.relation) {
-                    showStatus('warning', 'Validation Error', 'Please select a relation.');
+                    showStatus('warning', t('validation_error'), t('please_select_a_relation'));
                     return;
                 }
                 if (!formData.dob) {
-                    showStatus('warning', 'Validation Error', 'Please select a date of birth.');
+                    showStatus('warning', t('validation_error'), t('please_select_a_date_of_birth'));
                     return;
                 }
                 if (!formData.gender) {
-                    showStatus('warning', 'Validation Error', 'Please select a gender.');
+                    showStatus('warning', t('validation_error'), t('please_select_a_gender'));
                     return;
                 }
 
@@ -223,14 +226,14 @@ export default function AddFamilyMemberScreen() {
 
             showStatus(
                 'success',
-                'Success',
+                t('success'),
                 `Family member ${isEditing ? 'updated' : (mode === 'link' ? 'link request sent' : 'added')} successfully.`
             );
 
         } catch (error: any) {
             console.error(error);
             const message = error?.response?.data?.message || 'Failed to save family member details.';
-            showStatus('error', 'Error', message);
+            showStatus('error', t('error'), message);
         }
     };
 
@@ -284,7 +287,7 @@ export default function AddFamilyMemberScreen() {
         >
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{isEditing ? 'Edit Details' : 'Add Family Member'}</Text>
                 <View style={{ width: 40 }} />
@@ -299,7 +302,7 @@ export default function AddFamilyMemberScreen() {
                                     activeOpacity={0.7}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 >
-                                    <Text style={[styles.tabText, mode === 'create' && styles.activeTabText]}>Create New</Text>
+                                    <Text style={[styles.tabText, mode === 'create' && styles.activeTabText]}>{t('create_new')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={[styles.tab, mode === 'link' && styles.activeTab]}
@@ -307,7 +310,7 @@ export default function AddFamilyMemberScreen() {
                                     activeOpacity={0.7}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 >
-                                    <Text style={[styles.tabText, mode === 'link' && styles.activeTabText]}>Link Existing</Text>
+                                    <Text style={[styles.tabText, mode === 'link' && styles.activeTabText]}>{t('link_existing')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -325,9 +328,9 @@ export default function AddFamilyMemberScreen() {
                         <View style={styles.avatarSection}>
                             <View style={styles.avatarCircle}>
                                 {profileImageUri ? (
-                                    <Image source={{ uri: profileImageUri }} style={styles.avatarImage} />
+                                    <AuthImage uri={profileImageUri} style={styles.avatarImage} />
                                 ) : (
-                                    <User size={40} color="#0FBBA1" />
+                                    <User size={40} color="#10B981" />
                                 )}
                                 <TouchableOpacity
                                     style={styles.cameraButton}
@@ -343,17 +346,17 @@ export default function AddFamilyMemberScreen() {
 
                         <View style={styles.form}>
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Full Name *</Text>
+                                <Text style={styles.label}>{t('Full Name *')}</Text>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Enter full name"
+                                    placeholder={t('enter_full_name')}
                                     value={formData.name}
                                     onChangeText={(t) => setFormData({ ...formData, name: t })}
                                 />
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Relation *</Text>
+                                <Text style={styles.label}>{t('Relation *')}</Text>
                                 <View style={styles.chipContainer}>
                                     {RELATIONS.map(rel => (
                                         <TouchableOpacity
@@ -367,14 +370,14 @@ export default function AddFamilyMemberScreen() {
                                             <Text style={[
                                                 styles.chipText,
                                                 formData.relation === rel.value && styles.chipTextActive
-                                            ]}>{rel.label}</Text>
+                                            ]}>{t(rel.label)}</Text>
                                         </TouchableOpacity>
                                     ))}
                                 </View>
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Date of Birth *</Text>
+                                <Text style={styles.label}>{t('Date of Birth *')}</Text>
                                 <TouchableOpacity
                                     style={styles.dateInput}
                                     onPress={() => setShowDatePicker(true)}
@@ -382,12 +385,12 @@ export default function AddFamilyMemberScreen() {
                                     <Text style={[styles.dateText, !formData.dob && styles.placeholderText]}>
                                         {formData.dob ? formatDateForDisplay(formData.dob) : 'Select Date of Birth'}
                                     </Text>
-                                    <Calendar size={18} color="#9CA3AF" />
+                                    <Calendar size={18} color={theme.textMuted} />
                                 </TouchableOpacity>
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Gender *</Text>
+                                <Text style={styles.label}>{t('Gender *')}</Text>
                                 <TouchableOpacity
                                     style={styles.dropdownTrigger}
                                     onPress={() => openSelection('gender')}
@@ -396,7 +399,7 @@ export default function AddFamilyMemberScreen() {
                                     <Text style={[styles.dropdownText, !formData.gender && styles.placeholderText]}>
                                         {GENDERS.find(g => g.value === formData.gender)?.label || 'Select Gender'}
                                     </Text>
-                                    <ChevronDown size={20} color="#9CA3AF" />
+                                    <ChevronDown size={20} color={theme.textMuted} />
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -405,15 +408,15 @@ export default function AddFamilyMemberScreen() {
                     <View style={styles.form}>
                         <View style={styles.infoBox}>
                             <Text style={styles.infoText}>
-                                Enter the MED ID of the family member you want to link. They must already have a Medicoo account.
+                                {t('enter_the_med_id_of_the_family_member')}
                             </Text>
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>MED ID *</Text>
+                            <Text style={styles.label}>{t('MED ID *')}</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="Enter MED ID (e.g. MED-123456)"
+                                placeholder={t('enter_med_id_e_g_med_123456')}
                                 value={linkId}
                                 onChangeText={setLinkId}
                                 autoCapitalize="none"
@@ -421,7 +424,7 @@ export default function AddFamilyMemberScreen() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Relation *</Text>
+                            <Text style={styles.label}>{t('Relation *')}</Text>
                             <View style={styles.chipContainer}>
                                 {RELATIONS.map(rel => (
                                     <TouchableOpacity
@@ -435,7 +438,7 @@ export default function AddFamilyMemberScreen() {
                                         <Text style={[
                                             styles.chipText,
                                             linkRelation === rel.value && styles.chipTextActive
-                                        ]}>{rel.label}</Text>
+                                        ]}>{t(rel.label)}</Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>
@@ -498,7 +501,7 @@ export default function AddFamilyMemberScreen() {
                             <View style={styles.pickerModalHeader}>
                                 <Text style={styles.modalTitle}>{selectionModal?.title}</Text>
                                 <TouchableOpacity onPress={() => setSelectionModal(null)}>
-                                    <X size={24} color="#6B7280" />
+                                    <X size={24} color={theme.textSecondary} />
                                 </TouchableOpacity>
                             </View>
                             <ScrollView style={{ maxHeight: 300 }}>
@@ -514,7 +517,7 @@ export default function AddFamilyMemberScreen() {
                                                 selectionModal.field === 'relation' ? formData.relation :
                                                     linkRelation) === option.value && styles.selectedOptionText
                                         ]}>
-                                            {option.label}
+                                            {t(option.label)}
                                         </Text>
                                         {(selectionModal.field === 'gender' ? formData.gender :
                                             selectionModal.field === 'relation' ? formData.relation :
@@ -542,16 +545,16 @@ export default function AddFamilyMemberScreen() {
                 onClose={() => setMediaPickerVisible(false)}
                 onCameraSelect={launchCamera}
                 onGallerySelect={launchLibrary}
-                title="Change Photo"
+                title={t('change_photo')}
             />
         </KeyboardAvoidingView>
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     screen: {
         flex: 1,
-        backgroundColor: '#F8F9FE',
+        backgroundColor: c.background,
     },
     // Same white bar + shadow + title treatment as the Calendar/Records/
     // Health screen headers, so this reads as a real screen rather than a
@@ -562,7 +565,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -578,7 +581,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     content: {
         padding: 20,
@@ -587,15 +590,15 @@ const styles = StyleSheet.create({
     tabsWrapper: {
         paddingHorizontal: 20,
         paddingTop: 16,
-        backgroundColor: '#F8F9FE',
+        backgroundColor: c.cardSecondary,
     },
     tabContainer: {
         flexDirection: 'row',
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         padding: 4,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
     },
     tab: {
         flex: 1,
@@ -604,15 +607,15 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     activeTab: {
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
     },
     tabText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#6B7280',
+        color: c.textSecondary,
     },
     activeTabText: {
-        color: '#0FBBA1',
+        color: '#10B981',
     },
     avatarSection: {
         alignItems: 'center',
@@ -622,12 +625,12 @@ const styles = StyleSheet.create({
         width: 100,
         height: 100,
         borderRadius: 50,
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,
         borderWidth: 1,
-        borderColor: '#DCFCE7',
+        borderColor: c.isDark ? 'rgba(16,185,129,0.25)' : '#DCFCE7',
         position: 'relative',
     },
     avatarImage: {
@@ -639,7 +642,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 0,
         right: 0,
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         width: 32,
         height: 32,
         borderRadius: 16,
@@ -651,13 +654,13 @@ const styles = StyleSheet.create({
     uploadText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#0FBBA1',
+        color: '#10B981',
     },
     form: {
         gap: 20,
     },
     infoBox: {
-        backgroundColor: '#EFF6FF',
+        backgroundColor: c.infoBg,
         padding: 16,
         borderRadius: 12,
         borderWidth: 1,
@@ -674,23 +677,23 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#374151',
+        color: c.text,
         marginLeft: 4,
     },
     input: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 12,
         fontSize: 16,
-        color: '#1F2937',
+        color: c.text,
     },
     dateInput: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 12,
@@ -700,9 +703,9 @@ const styles = StyleSheet.create({
         height: 52,
     },
     dropdownTrigger: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 12,
@@ -720,45 +723,45 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
     },
     chipActive: {
-        backgroundColor: '#F0FDF4',
-        borderColor: '#0FBBA1',
+        backgroundColor: c.successBg,
+        borderColor: '#10B981',
     },
     chipText: {
         fontSize: 12,
-        color: '#6B7280',
+        color: c.textSecondary,
         fontWeight: '500',
     },
     chipTextActive: {
-        color: '#0FBBA1',
+        color: '#10B981',
         fontWeight: '600',
     },
     dropdownText: {
         fontSize: 16,
-        color: '#1F2937',
+        color: c.text,
     },
     dateText: {
         fontSize: 16,
-        color: '#1F2937',
+        color: c.text,
     },
     placeholderText: {
-        color: '#9CA3AF',
+        color: c.textMuted,
     },
     row: {
         flexDirection: 'row',
     },
     footer: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         padding: 20,
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
+        borderTopColor: c.borderLight,
     },
     saveButton: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         paddingVertical: 16,
         borderRadius: 14,
         alignItems: 'center',
@@ -774,7 +777,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 24,
@@ -788,7 +791,7 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 20,
         fontWeight: '700',
-        color: '#1F2937',
+        color: c.text,
     },
     optionItem: {
         flexDirection: 'row',
@@ -796,20 +799,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderLight,
     },
     optionText: {
         fontSize: 16,
-        color: '#4B5563',
+        color: c.textSecondary,
     },
     selectedOptionText: {
-        color: '#0FBBA1',
+        color: '#10B981',
         fontWeight: '600',
     },
     selectedDot: {
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
     },
 });

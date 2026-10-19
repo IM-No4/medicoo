@@ -1,9 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft, Pause, Play } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Animated, BackHandler, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 // A simple guided "box breathing" exercise (4s in - 4s hold - 4s out - 4s
 // hold, repeating) - purely a client-side animation loop, no data, no
@@ -23,6 +26,9 @@ const PHASES: { label: Phase; duration: number; toValue: number }[] = [
 const CIRCLE_MAX = 260;
 
 export default function BreathingExerciseScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
 
@@ -88,15 +94,15 @@ export default function BreathingExerciseScreen() {
 
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Breathing Exercise</Text>
+                <Text style={styles.headerTitle}>{t('breathing_exercise')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
             <View style={styles.content}>
                 <Text style={styles.intro}>
-                    A minute of box breathing - 4 seconds in, 4 seconds hold, 4 seconds out, 4 seconds hold.
+                    {t('a_minute_of_box_breathing_4_seconds_in')}
                 </Text>
 
                 <View style={styles.circleArea}>
@@ -113,7 +119,7 @@ export default function BreathingExerciseScreen() {
                             { transform: [{ scale }] },
                         ]}
                     />
-                    <Text style={styles.phaseLabel}>{running ? PHASES[phaseIndex].label : 'Ready?'}</Text>
+                    <Text style={styles.phaseLabel}>{running ? t(PHASES[phaseIndex].label) : t('Ready?')}</Text>
                 </View>
 
                 <Text style={styles.cycleCount}>{cycles} {cycles === 1 ? 'cycle' : 'cycles'} completed</Text>
@@ -127,22 +133,22 @@ export default function BreathingExerciseScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.card },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
         }),
     },
     backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
-    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
     content: {
         flex: 1,
         alignItems: 'center',
@@ -152,7 +158,7 @@ const styles = StyleSheet.create({
     intro: {
         fontSize: 13.5,
         lineHeight: 20,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         marginBottom: 32,
     },
@@ -171,7 +177,7 @@ const styles = StyleSheet.create({
         width: CIRCLE_MAX,
         height: CIRCLE_MAX,
         borderRadius: CIRCLE_MAX / 2,
-        backgroundColor: '#ECFEFF',
+        backgroundColor: c.successBg,
         borderWidth: 2,
         borderColor: '#0891B2',
     },
@@ -182,7 +188,7 @@ const styles = StyleSheet.create({
     },
     cycleCount: {
         fontSize: 13,
-        color: '#9CA3AF',
+        color: c.textMuted,
         marginBottom: 32,
     },
     playButton: {

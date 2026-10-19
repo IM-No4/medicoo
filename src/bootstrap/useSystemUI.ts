@@ -10,7 +10,6 @@ export function useSystemUI() {
     // setBackgroundColorAsync is not supported and triggers a warning.
     // NavigationBar.setBackgroundColorAsync('#ffffff');
 
-    // Dark icons (or gray depending on system)
-    NavigationBar.setButtonStyleAsync('dark');
+    // Nav bar icon style follows the active theme - see ThemeContext.tsx.
   }, []);
 }

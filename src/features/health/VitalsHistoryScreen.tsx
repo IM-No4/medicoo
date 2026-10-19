@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { Activity, ChevronLeft, Heart, Plus, Thermometer, Weight } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -7,6 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { VitalRecord } from '../../redux/slices/vitalsSlice';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 type MetricType = 'heart_rate' | 'blood_pressure' | 'weight' | 'temperature';
 type RangeType = 'D' | 'W' | 'M' | '6M';
@@ -41,6 +44,9 @@ const iconForMetric = (key: MetricType) => {
 // pre-selected from wherever its card was tapped (Vitals Snapshot, Home's
 // Health Summary), instead of a modal popup.
 export default function VitalsHistoryScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
@@ -147,9 +153,9 @@ export default function VitalsHistoryScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Vitals History</Text>
+        <Text style={styles.headerTitle}>{t('vitals_history')}</Text>
         {/* Jumps straight into logging whichever vital is currently active
             here (activeMetric) rather than a generic blank form - LogVitals
             already covers all four vitals in one screen, this just
@@ -159,7 +165,7 @@ export default function VitalsHistoryScreen() {
           onPress={() => navigation.navigate('LogVitals', { focusMetric: activeMetric })}
           activeOpacity={0.7}
         >
-          <Plus size={22} color="#0FBBA1" />
+          <Plus size={22} color="#10B981" />
         </TouchableOpacity>
       </View>
 
@@ -178,7 +184,7 @@ export default function VitalsHistoryScreen() {
               onPress={() => setActiveMetric(m.key)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.metricPillText, active && { color: m.color }]}>{m.label}</Text>
+              <Text style={[styles.metricPillText, active && { color: m.color }]}>{t(m.label)}</Text>
             </TouchableOpacity>
           );
         })}
@@ -298,7 +304,7 @@ export default function VitalsHistoryScreen() {
           )}
         </View>
 
-        <Text style={styles.listSectionTitle}>LOGGED RECORDS</Text>
+        <Text style={styles.listSectionTitle}>{t('logged_records')}</Text>
 
         {metricRecords.length === 0 ? (
           <View style={styles.emptyList}>
@@ -340,10 +346,10 @@ export default function VitalsHistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.background,
   },
   // Same header recipe as the rest of the app - white bar + shadow, plain
   // icon back button, fontSize 20/600/#111827 title.
@@ -353,7 +359,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -370,22 +376,22 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: c.successBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
   /* Apple Health-style D/W/M/6M segmented control */
   rangeBar: {
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: c.borderLight,
   },
   rangeSegment: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: c.cardSecondary,
     borderRadius: 9,
     padding: 2,
   },
@@ -397,17 +403,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rangeBtnActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderWidth: 1,
     borderColor: '#e5e7eb76',
   },
   rangeBtnText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#64748B',
+    color: c.textSecondary,
   },
   rangeBtnTextActive: {
-    color: '#0F172A',
+    color: c.text,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -421,17 +427,17 @@ const styles = StyleSheet.create({
   valueHeaderTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#0F172A',
+    color: c.text,
   },
   valueHeaderDate: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: c.textMuted,
     fontWeight: '600',
     marginTop: 2,
   },
   /* Graph styles */
   graphCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 18,
     padding: 12,
     borderWidth: 1,
@@ -445,7 +451,7 @@ const styles = StyleSheet.create({
   },
   emptyGraphText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: c.textMuted,
     textAlign: 'center',
     paddingHorizontal: 16,
   },
@@ -462,7 +468,7 @@ const styles = StyleSheet.create({
   yAxisText: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: c.textMuted,
   },
   graphViewport: {
     flex: 1,
@@ -476,7 +482,7 @@ const styles = StyleSheet.create({
   },
   gridLine: {
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: c.infoBg,
     width: '100%',
   },
   barsContainer: {
@@ -504,7 +510,7 @@ const styles = StyleSheet.create({
   xAxisText: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#64748B',
+    color: c.textSecondary,
   },
   /* Text-label pill metric switcher, above the date-range selector.
      flexGrow: 0 keeps the ScrollView itself from stretching to fill the
@@ -526,20 +532,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderWidth: 1,
     borderColor: '#e5e7eb76',
   },
   metricPillText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#6B7280',
+    color: c.textSecondary,
   },
   /* Log Row list styles */
   listSectionTitle: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: c.textMuted,
     letterSpacing: 0.8,
     marginBottom: 8,
   },
@@ -549,7 +555,7 @@ const styles = StyleSheet.create({
   },
   emptyListText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: c.textMuted,
   },
   logList: {
     gap: 6,
@@ -557,7 +563,7 @@ const styles = StyleSheet.create({
   logRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderWidth: 1,
     borderColor: '#e5e7eb76',
     borderRadius: 12,
@@ -578,11 +584,11 @@ const styles = StyleSheet.create({
   logDate: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1E293B',
+    color: c.text,
   },
   logTime: {
     fontSize: 10,
-    color: '#64748B',
+    color: c.textSecondary,
     fontWeight: '500',
   },
   logValueRow: {
@@ -591,11 +597,11 @@ const styles = StyleSheet.create({
   logValue: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0F172A',
+    color: c.text,
   },
   logUnit: {
     fontSize: 8,
-    color: '#94A3B8',
+    color: c.textMuted,
     fontWeight: '700',
   },
 });

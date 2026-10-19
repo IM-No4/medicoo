@@ -1,25 +1,28 @@
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    FlatList,
-    Image,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Animated,
+  Dimensions,
+  FlatList,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '@/src/components/icons/AppIcon';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../../components/ThemedModal';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -365,6 +368,9 @@ const LABS_DATA: DiagnosticLabItem[] = [
 /* ================= MAIN COMPONENT ================= */
 
 export default function LabListScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
 
@@ -477,11 +483,11 @@ export default function LabListScreen() {
             {/* ---------- Header ---------- */}
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
 
                 <View style={styles.headerTitleContainer}>
-                    <Text style={styles.headerTitle}>Lab Tests & Packages</Text>
+                    <Text style={styles.headerTitle}>{t('lab_tests_packages')}</Text>
                     <View style={styles.locationRow}>
                         <AppIcon name="map-pin" size={12} color="#7C3AED" />
                         <Text style={styles.locationText} numberOfLines={1}>
@@ -512,7 +518,7 @@ export default function LabListScreen() {
                 <View style={styles.searchBox}>
                     <AppIcon name="search" size={18} color="#8E8E93" />
                     <TextInput
-                        placeholder="Search 1000+ tests, full body packages, labs..."
+                        placeholder={t('search_1000_tests_full_body_packages_l')}
                         placeholderTextColor="#8E8E93"
                         style={styles.searchInput}
                         value={searchQuery}
@@ -640,7 +646,7 @@ export default function LabListScreen() {
                     </Text>
                     <TouchableOpacity style={styles.sortTrigger} onPress={() => setSortModalVisible(true)}>
                         <Text style={styles.sortTriggerText}>{getSortLabel()}</Text>
-                        <AppIcon name="chevron-down" size={14} color="#6B7280" />
+                        <AppIcon name="chevron-down" size={14} color={theme.textSecondary} />
                     </TouchableOpacity>
                 </View>
 
@@ -654,7 +660,7 @@ export default function LabListScreen() {
                                     {item.isBestseller && (
                                         <View style={styles.bestsellerRibbon}>
                                             <AppIcon name="star" size={10} color="#FFFFFF" />
-                                            <Text style={styles.bestsellerText}>BESTSELLER</Text>
+                                            <Text style={styles.bestsellerText}>{t('bestseller')}</Text>
                                         </View>
                                     )}
 
@@ -717,7 +723,7 @@ export default function LabListScreen() {
                                             ) : (
                                                 <>
                                                     <AppIcon name="plus" size={14} color="#FFFFFF" />
-                                                    <Text style={styles.addCartText}>Add Test</Text>
+                                                    <Text style={styles.addCartText}>{t('add_test')}</Text>
                                                 </>
                                             )}
                                         </TouchableOpacity>
@@ -814,11 +820,11 @@ export default function LabListScreen() {
 
                                 <View style={styles.labCardFooter}>
                                     <View style={styles.slotRow}>
-                                        <AppIcon name="clock" size={12} color="#6B7280" />
+                                        <AppIcon name="clock" size={12} color={theme.textSecondary} />
                                         <Text style={styles.slotText}>Next Pickup: {lab.nextSlot}</Text>
                                     </View>
                                     <View style={styles.browseLabButton}>
-                                        <Text style={styles.browseLabText}>View Tests</Text>
+                                        <Text style={styles.browseLabText}>{t('view_tests')}</Text>
                                         <AppIcon name="chevron-right" size={14} color="#1C6ED5" />
                                     </View>
                                 </View>
@@ -865,13 +871,13 @@ export default function LabListScreen() {
                                 <TouchableOpacity style={styles.resetFilterButton} onPress={resetAllFilters} activeOpacity={0.8}>
                                     <LinearGradient colors={['#1C6ED5', '#1557B0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.resetFilterGradient}>
                                         <AppIcon name="rotate-ccw" size={16} color="#FFFFFF" />
-                                        <Text style={styles.resetFilterText}>Reset All Filters</Text>
+                                        <Text style={styles.resetFilterText}>{t('reset_all_filters')}</Text>
                                     </LinearGradient>
                                 </TouchableOpacity>
 
                                 {searchQuery !== '' && (
                                     <TouchableOpacity style={styles.clearSearchButton} onPress={() => setSearchQuery('')} activeOpacity={0.7}>
-                                        <Text style={styles.clearSearchText}>Clear Search</Text>
+                                        <Text style={styles.clearSearchText}>{t('clear_search')}</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>
@@ -903,7 +909,7 @@ export default function LabListScreen() {
                             onPress={() => navigation.navigate('LabDetail', { labId: selectedCart[0]?.id || 'lab1' })}
                             activeOpacity={0.9}
                         >
-                            <Text style={styles.checkoutText}>Proceed to Book</Text>
+                            <Text style={styles.checkoutText}>{t('proceed_to_book')}</Text>
                             <AppIcon name="arrow-right" size={16} color="#1C6ED5" />
                         </TouchableOpacity>
                     </LinearGradient>
@@ -918,7 +924,7 @@ export default function LabListScreen() {
                     </TouchableWithoutFeedback>
 
                     <View style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}>
-                        <Text style={styles.modalTitle}>Sort Tests By</Text>
+                        <Text style={styles.modalTitle}>{t('sort_tests_by')}</Text>
                         {[
                             { id: 'popularity', label: 'Popularity' },
                             { id: 'price_low', label: 'Price: Low to High' },
@@ -952,13 +958,13 @@ export default function LabListScreen() {
 
                     <View style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}>
                         <View style={styles.modalHeaderRow}>
-                            <Text style={styles.modalTitle}>Filter Lab Tests</Text>
+                            <Text style={styles.modalTitle}>{t('filter_lab_tests')}</Text>
                             <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
                                 <AppIcon name="x" size={22} color="#1C1C1E" />
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={styles.filterSectionTitle}>Categories</Text>
+                        <Text style={styles.filterSectionTitle}>{t('categories')}</Text>
                         <View style={styles.filterChipGrid}>
                             {CATEGORIES.map((cat) => (
                                 <TouchableOpacity
@@ -977,7 +983,7 @@ export default function LabListScreen() {
                             style={styles.applyFilterButton}
                             onPress={() => setFilterModalVisible(false)}
                         >
-                            <Text style={styles.applyFilterText}>Apply Filters</Text>
+                            <Text style={styles.applyFilterText}>{t('apply_filters')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -988,10 +994,10 @@ export default function LabListScreen() {
 
 /* ================= STYLES ================= */
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.background,
     },
     header: {
         flexDirection: 'row',
@@ -999,7 +1005,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         gap: 12,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
@@ -1019,7 +1025,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     locationRow: {
         flexDirection: 'row',
@@ -1030,17 +1036,17 @@ const styles = StyleSheet.create({
     locationText: {
         fontSize: 12,
         fontWeight: '500',
-        color: '#64748B',
+        color: c.textSecondary,
     },
     cartHeaderButton: {
         width: 42,
         height: 42,
         borderRadius: 21,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         position: 'relative',
     },
     cartBadge: {
@@ -1067,16 +1073,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingVertical: 10,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         gap: 10,
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        borderBottomColor: c.borderLight,
     },
     searchBox: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderRadius: 14,
         paddingHorizontal: 12,
         height: 44,
@@ -1085,21 +1091,21 @@ const styles = StyleSheet.create({
         flex: 1,
         marginLeft: 8,
         fontSize: 14,
-        color: '#0F172A',
+        color: c.text,
     },
     filterIconButton: {
         width: 44,
         height: 44,
         borderRadius: 14,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
     categoriesBar: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         paddingVertical: 10,
         borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
+        borderBottomColor: c.border,
     },
     categoriesRow: {
         paddingHorizontal: 16,
@@ -1111,9 +1117,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         paddingVertical: 8,
         borderRadius: 20,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         gap: 6,
     },
     categoryChipSelected: {
@@ -1123,7 +1129,7 @@ const styles = StyleSheet.create({
     categoryChipText: {
         fontSize: 13,
         fontWeight: '500',
-        color: '#475569',
+        color: c.textSecondary,
     },
     categoryChipTextSelected: {
         color: '#FFFFFF',
@@ -1131,10 +1137,10 @@ const styles = StyleSheet.create({
     },
     tabsContainer: {
         flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         paddingHorizontal: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
+        borderBottomColor: c.border,
     },
     tabButton: {
         flex: 1,
@@ -1149,7 +1155,7 @@ const styles = StyleSheet.create({
     tabText: {
         fontSize: 13,
         fontWeight: '500',
-        color: '#64748B',
+        color: c.textSecondary,
     },
     tabTextActive: {
         fontWeight: '700',
@@ -1231,7 +1237,7 @@ const styles = StyleSheet.create({
         textDecorationLine: 'line-through',
     },
     bannerButton: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 12,
@@ -1251,7 +1257,7 @@ const styles = StyleSheet.create({
     resultsCountText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#475569',
+        color: c.textSecondary,
     },
     sortTrigger: {
         flexDirection: 'row',
@@ -1261,17 +1267,17 @@ const styles = StyleSheet.create({
     sortTriggerText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#64748B',
+        color: c.textSecondary,
     },
     listSection: {
         gap: 12,
     },
     packageCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         position: 'relative',
         shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 2 },
@@ -1307,7 +1313,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#F5F3FF',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -1321,7 +1327,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#ECFDF5',
+        backgroundColor: c.successBg,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -1334,12 +1340,12 @@ const styles = StyleSheet.create({
     packageTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         marginBottom: 2,
     },
     packageFasting: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         marginBottom: 10,
     },
     includesPillWrapper: {
@@ -1357,18 +1363,18 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     includeChip: {
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 6,
     },
     includeChipText: {
         fontSize: 11,
-        color: '#475569',
+        color: c.textSecondary,
         fontWeight: '500',
     },
     moreChip: {
-        backgroundColor: '#EFF6FF',
+        backgroundColor: c.infoBg,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 6,
@@ -1380,7 +1386,7 @@ const styles = StyleSheet.create({
     },
     cardDivider: {
         height: 1,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         marginVertical: 12,
     },
     cardFooter: {
@@ -1396,15 +1402,15 @@ const styles = StyleSheet.create({
     cardPrice: {
         fontSize: 18,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
     },
     cardOriginalPrice: {
         fontSize: 13,
-        color: '#94A3B8',
+        color: c.textMuted,
         textDecorationLine: 'line-through',
     },
     discountBadge: {
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.errorBg,
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 6,
@@ -1416,7 +1422,7 @@ const styles = StyleSheet.create({
     },
     accreditationText: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 2,
     },
     addCartButton: {
@@ -1442,11 +1448,11 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     testCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 16,
         padding: 14,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
     },
     testMain: {
         flexDirection: 'row',
@@ -1457,18 +1463,18 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 12,
-        backgroundColor: '#EFF6FF',
+        backgroundColor: c.infoBg,
         justifyContent: 'center',
         alignItems: 'center',
     },
     testName: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
     },
     testSubinfo: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 2,
     },
     testTagsRow: {
@@ -1481,7 +1487,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#ECFDF5',
+        backgroundColor: c.successBg,
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 6,
@@ -1493,7 +1499,7 @@ const styles = StyleSheet.create({
     },
     testLabText: {
         fontSize: 11,
-        color: '#94A3B8',
+        color: c.textMuted,
     },
     testFooter: {
         flexDirection: 'row',
@@ -1501,7 +1507,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 10,
         borderTopWidth: 1,
-        borderTopColor: '#F8FAFC',
+        borderTopColor: c.borderLight,
     },
     testDiscountText: {
         color: '#EF4444',
@@ -1509,7 +1515,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     addCartButtonSmall: {
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 14,
         paddingVertical: 6,
         borderRadius: 10,
@@ -1519,14 +1525,14 @@ const styles = StyleSheet.create({
     addCartTextSmall: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#1E293B',
+        color: c.text,
     },
     labCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         gap: 12,
     },
     labCardHeader: {
@@ -1543,18 +1549,18 @@ const styles = StyleSheet.create({
     labCardName: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
     },
     labCardAddress: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 2,
     },
     ratingBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#FEF3C7',
+        backgroundColor: c.warningBg,
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 8,
@@ -1566,7 +1572,7 @@ const styles = StyleSheet.create({
     },
     ratingCountText: {
         fontSize: 10,
-        color: '#B45309',
+        color: c.warning,
     },
     labMetaRow: {
         flexDirection: 'row',
@@ -1576,17 +1582,17 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: c.borderLight,
     },
     labMetaText: {
         fontSize: 11,
         fontWeight: '600',
-        color: '#475569',
+        color: c.textSecondary,
     },
     labCardFooter: {
         flexDirection: 'row',
@@ -1594,7 +1600,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 10,
         borderTopWidth: 1,
-        borderTopColor: '#F1F5F9',
+        borderTopColor: c.borderLight,
     },
     slotRow: {
         flexDirection: 'row',
@@ -1603,7 +1609,7 @@ const styles = StyleSheet.create({
     },
     slotText: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
     },
     browseLabButton: {
         flexDirection: 'row',
@@ -1619,11 +1625,11 @@ const styles = StyleSheet.create({
         paddingVertical: 32,
         paddingHorizontal: 20,
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 24,
         marginTop: 12,
         borderWidth: 1,
-        borderColor: '#F2F4F7',
+        borderColor: c.borderLight,
     },
     illustrationWrapper: {
         width: 180,
@@ -1686,9 +1692,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 18,
         paddingVertical: 12,
         borderRadius: 14,
-        backgroundColor: '#F2F4F7',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E4E7EC',
+        borderColor: c.border,
     },
     clearSearchText: {
         color: '#344054',
@@ -1704,7 +1710,7 @@ const styles = StyleSheet.create({
         paddingTop: 12,
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
         borderTopWidth: 1,
-        borderTopColor: '#E2E8F0',
+        borderTopColor: c.border,
     },
     stickyCartGradient: {
         flexDirection: 'row',
@@ -1728,7 +1734,7 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -1748,7 +1754,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     checkoutButton: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
@@ -1770,7 +1776,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.4)',
     },
     modalContent: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 20,
@@ -1784,23 +1790,23 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         marginBottom: 16,
     },
     sortOption: {
         paddingVertical: 14,
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        borderBottomColor: c.borderLight,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
     sortOptionSelected: {
-        backgroundColor: '#F0F9FF',
+        backgroundColor: c.infoBg,
     },
     sortOptionText: {
         fontSize: 15,
-        color: '#0F172A',
+        color: c.text,
     },
     sortOptionTextSelected: {
         color: '#1C6ED5',
@@ -1819,7 +1825,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     modalFilterChip: {
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 14,
         paddingVertical: 8,
         borderRadius: 12,
@@ -1829,7 +1835,7 @@ const styles = StyleSheet.create({
     },
     modalFilterChipText: {
         fontSize: 13,
-        color: '#475569',
+        color: c.textSecondary,
         fontWeight: '600',
     },
     modalFilterChipTextSelected: {

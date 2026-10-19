@@ -1,4 +1,4 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
@@ -6,6 +6,8 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Provider, useDispatch } from 'react-redux';
+import { ThemeProvider, useTheme } from '../theme/ThemeContext';
+import { LanguageProvider } from '../i18n/LanguageContext';
 
 import RootNavigator from '../navigation/RootNavigator';
 import { handleDeepLink } from '../navigation/deepLinkHandler';
@@ -15,11 +17,12 @@ import { AppDispatch, store } from '../redux/store';
 import { loadGoalsCache, loadGoalsFromServer } from '../redux/slices/goalsSlice';
 import { loadVitalsCache } from '../redux/slices/vitalsSlice';
 import { loadProfileCache, loadProfileFromServer } from '../redux/slices/profileSlice';
-import { loadOnDeviceSteps, loadConnectedDeviceCache } from '../redux/slices/deviceSlice';
+import { loadConnectedDeviceCache } from '../redux/slices/deviceSlice';
 import { loadCalendarCache } from '../redux/slices/calendarSlice';
 import { checkLegalAcceptance } from '../redux/slices/legalSlice';
 import { loadAppConfig } from '../redux/slices/appConfigSlice';
 import { startOfflineSyncCoordinator } from '../services/offlineSync';
+import { startForegroundSync } from '../services/health/stepsAutoSync';
 import { refreshAndScheduleMedicineReminders } from '../services/notifications/medicineReminderScheduler';
 import { getLocalDateString } from '../utils/dateUtils';
 
@@ -33,6 +36,7 @@ import { usePostLoginEffects } from '../features/auth/usePostLoginEffects';
 import { isStepsTrackingEnabled, isNativeStepsWriteEnabled } from '../services/health/stepsTrackingFlags';
 import { ensureNativeStepsBackgroundTaskRegistered } from '../services/health/nativeStepsBackgroundTask';
 import { FONT_MAP } from '../constants/fonts';
+import { useLanguage } from '../i18n/LanguageContext';
 
 // No JS splash screen in the flow anymore - the native splash (configured
 // in app.json, same logo/background as the app icon) stays up for the
@@ -61,7 +65,8 @@ function AppContent() {
     dispatch(loadProfileCache());
     dispatch(loadProfileFromServer());
     dispatch(loadConnectedDeviceCache());
-    dispatch(loadOnDeviceSteps());
+    // Steps and friend invites: read now and every time the app comes back (from any screen, not just Health).
+    const stopForegroundSync = startForegroundSync(dispatch, store.getState);
     // Today's medicines/appointments cache - previously only ever populated
     // by actually opening the Calendar tab (CalendarScreen.tsx is the only
     // other caller), so a session that went offline without visiting it
@@ -93,7 +98,10 @@ function AppContent() {
     // this effect) would leak the interval/AppState listener rather than
     // stopping it - it'd keep firing sync attempts for a session that no
     // longer exists.
-    return () => stopOfflineSync();
+    return () => {
+      stopOfflineSync();
+      stopForegroundSync();
+    };
   }, [boot.status, boot.isAuthenticated, dispatch]);
   /**
    * ✅ Handle deep links ONLY after boot is ready
@@ -170,11 +178,13 @@ function AppContent() {
 // exact same ready/offline outcome runBootSequence would have reached
 // anyway, just later.
 function SlowBootScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
   return (
-    <View style={styles.slowBootContainer}>
-      <ActivityIndicator size="large" color="#0FBBA1" />
-      <Text style={styles.slowBootTitle}>Hang tight...</Text>
-      <Text style={styles.slowBootSubtitle}>Your connection seems a little slow right now</Text>
+    <View style={[styles.slowBootContainer, { backgroundColor: theme.background }]}>
+      <ActivityIndicator size="large" color="#10B981" />
+      <Text style={[styles.slowBootTitle, { color: theme.text }]}>{t('hang_tight')}</Text>
+      <Text style={[styles.slowBootSubtitle, { color: theme.textSecondary }]}>{t('your_connection_seems_a_little_slow_ri')}</Text>
     </View>
   );
 }
@@ -191,6 +201,7 @@ function SlowBootScreen() {
 // one. pointerEvents="none" so it never swallows the edge gesture.
 function SystemNavBarBackground() {
   const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
 
   if (Platform.OS !== 'android' || insets.bottom <= 0) return null;
 
@@ -203,7 +214,7 @@ function SystemNavBarBackground() {
         right: 0,
         bottom: 0,
         height: insets.bottom,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: isDark ? '#080E17' : '#FFFFFF',
       }}
     />
   );
@@ -231,6 +242,29 @@ const styles = StyleSheet.create({
   },
 });
 
+// Gives React Navigation the active palette so screens that don't paint their
+// own background (and the transition flash between screens) match the theme.
+function ThemedNavigationContainer({ children }: { children: React.ReactNode }) {
+  const { theme, isDark } = useTheme();
+  const base = isDark ? DarkTheme : DefaultTheme;
+  const navTheme = {
+    ...base,
+    colors: {
+      ...base.colors,
+      background: theme.background,
+      card: theme.card,
+      text: theme.text,
+      border: theme.border,
+      primary: theme.primary,
+    },
+  };
+  return (
+    <NavigationContainer ref={navigationRef} linking={linking} theme={navTheme}>
+      {children}
+    </NavigationContainer>
+  );
+}
+
 export default function App() {
   const [fontsLoaded, fontError] = useFonts(FONT_MAP);
   const fontsReady = fontsLoaded || !!fontError;
@@ -252,18 +286,21 @@ export default function App() {
   }
 
   return (
-    <ErrorBoundary>
-      <Provider store={store}>
-        <SafeAreaProvider>
-          <NavigationContainer
-            ref={navigationRef}
-            linking={linking}
-          >
-            <AppContent />
-          </NavigationContainer>
-          <SystemNavBarBackground />
-        </SafeAreaProvider>
-      </Provider>
-    </ErrorBoundary>
+    // Store + language + theme sit OUTSIDE the error boundary so even its crash
+    // screen renders in the user's chosen light/dark theme.
+    <Provider store={store}>
+      <LanguageProvider>
+        <ThemeProvider>
+          <ErrorBoundary>
+            <SafeAreaProvider>
+              <ThemedNavigationContainer>
+                <AppContent />
+              </ThemedNavigationContainer>
+              <SystemNavBarBackground />
+            </SafeAreaProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
+      </LanguageProvider>
+    </Provider>
   );
 }

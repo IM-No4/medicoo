@@ -5,10 +5,13 @@ import { AttachedPrescription, CartItem, StoreCart } from "@/src/redux/slices/ca
 import { RootState } from "@/src/redux/store";
 import { uploadDocument } from "@/src/services/api/document.api";
 import { getStoreDetails } from "@/src/services/api/pharmacy.api";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
+import { loadLastMethod, SavedChoice } from "@/src/payments/pendingStore";
+import { useSettlePendingMedicinePayments } from "@/src/payments/medicineCheckout";
+import { fetchOrderQuote, OrderQuote, QuoteRefused } from "@/src/services/api/quote.api";
 import * as Contacts from "expo-contacts";
 import * as ImagePicker from "expo-image-picker";
-import { StatusBar } from "expo-status-bar";
+import { StatusBar } from '@/src/components/ThemedStatusBar';
 import {
   ChevronDown,
   ChevronLeft,
@@ -26,12 +29,11 @@ import {
   Upload,
   User,
 } from "lucide-react-native";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -46,6 +48,10 @@ import { executeAction } from "../../actions/ActionExecutor";
 import { useTrackActivity } from "../../hooks/useTrackActivity";
 import { setSelectedAddress } from "../../redux/slices/addressSlice";
 import { getProfileDetails } from "../../services/api/user.api";
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../../components/ThemedModal';
 
 const formatPrice = (amount: number): string => {
   const parts = amount.toFixed(2).split(".");
@@ -59,8 +65,19 @@ const formatPrice = (amount: number): string => {
 const SERVICEABILITY_RADIUS_KM = 10;
 
 export default function CartScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  // The payment method the customer last chose (kept on this device) - shown in the footer so
+  // they aren't asked to choose every time.
+  const [savedPayment, setSavedPayment] = useState<SavedChoice | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      loadLastMethod().then(setSavedPayment);
+    }, [])
+  );
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const { storeID } = route.params || {};
@@ -107,8 +124,8 @@ export default function CartScreen() {
 
   const handleUploadNewPrescription = (storeId: string) => {
     Alert.alert(
-      "Add Prescription",
-      "Choose how you'd like to add your prescription",
+      t('add_prescription'),
+      t('choose_how_you_d_like_to_add_your_pres'),
       [
         { text: "Take Photo", onPress: () => pickPrescriptionImage(storeId, "camera") },
         { text: "Choose from Gallery", onPress: () => pickPrescriptionImage(storeId, "gallery") },
@@ -206,6 +223,9 @@ export default function CartScreen() {
   // entirely with no way to get back to them. It's now only used to pick
   // which store tab starts selected, below.
   const storeCarts = useMemo(() => Object.values(carts), [carts]);
+  // A payment the customer started and then left (or whose app was closed): settle it if the server has
+  // finished the order, and know which stores are still confirming so the cart doesn't invite a second payment.
+  const confirmingPayments = useSettlePendingMedicinePayments(storeCarts as any);
 
   React.useEffect(() => {
     let active = true;
@@ -362,6 +382,50 @@ export default function CartScreen() {
     }
   }, [route.params?.appliedCoupon]);
 
+  // The bill is the server's: fees, GST on them, coupon, policy wording. We send the cart and the address and show what
+  // comes back, so a change to a fee or a rate needs no app update. (services/api/quote.api.ts)
+  const [quotes, setQuotes] = useState<Record<string, OrderQuote>>({});
+  const [quoteErrors, setQuoteErrors] = useState<Record<string, string>>({});
+  const quoteKey = useMemo(
+    () =>
+      JSON.stringify([
+        Object.values(carts).map((c: any) => [c.storeId, Object.values(c.items).map((i: any) => [i.medicineId, i.quantity, i.price, i.discountPrice])]),
+        selectedAddress?.latitude,
+        selectedAddress?.longitude,
+        appliedCoupon?.code,
+      ]),
+    [carts, selectedAddress?.latitude, selectedAddress?.longitude, appliedCoupon?.code],
+  );
+  React.useEffect(() => {
+    let active = true;
+    const timer = setTimeout(async () => {
+      for (const storeCart of Object.values(carts) as any[]) {
+        const items = Object.values(storeCart.items).map((i: any) => ({ productId: i.medicineId, quantity: i.quantity, price: i.price, discountPrice: i.discountPrice }));
+        if (items.length === 0) continue;
+        try {
+          const quote = await fetchOrderQuote({ storeId: storeCart.storeId, items, address: selectedAddress, couponCode: appliedCoupon?.code });
+          if (!active) return;
+          setQuotes((prev) => ({ ...prev, [storeCart.storeId]: quote }));
+          setQuoteErrors((prev) => ({ ...prev, [storeCart.storeId]: "" }));
+        } catch (error: any) {
+          if (!active) return;
+          if (error instanceof QuoteRefused && error.code.startsWith("COUPON_") && appliedCoupon) {
+            // The server will not honour this coupon (expired, used up, minimum not met): drop it and say why.
+            alert(error.message);
+            setAppliedCoupon(null);
+            return;
+          }
+          setQuoteErrors((prev) => ({ ...prev, [storeCart.storeId]: error instanceof QuoteRefused ? error.message : "We couldn't work out your bill. Check your connection." }));
+        }
+      }
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quoteKey]);
+
   React.useEffect(() => {
     if (selectedAddress) {
       setTempReceiverName(selectedAddress.receiverName || myProfile?.name || "");
@@ -419,25 +483,25 @@ export default function CartScreen() {
     progress: 0.6,
   });
 
-  const renderCartItem = (item: CartItem, storeId: string) => {
+  const renderCartItem = (item: CartItem, storeId: string, isLast: boolean) => {
+    const hasDiscount = !!item.discountPrice && item.discountPrice < item.price;
     return (
-      <View style={styles.itemRow} key={item.sku}>
+      <View style={[styles.itemRow, isLast && styles.itemRowLast]} key={item.sku}>
         <View style={styles.itemImageWrapper}>
           {item.image ? (
-            <Image
-              source={{ uri: item.image }}
-              style={styles.itemImage}
-              resizeMode="cover"
-            />
+            <Image source={{ uri: item.image }} style={styles.itemImage} resizeMode="contain" />
           ) : (
             <View style={styles.itemImagePlaceholder}>
-              <Clock size={16} color="#6B7280" />
+              <Clock size={16} color={theme.textSecondary} />
             </View>
           )}
         </View>
 
+        {/* name + brand on top; price and stepper share the last line */}
         <View style={styles.itemMainInfo}>
-          <Text style={styles.itemNameText}>{item.name}</Text>
+          <Text style={styles.itemNameText} numberOfLines={2}>
+            {item.name}
+          </Text>
           {item.brand && item.brand !== "Not Available" && (
             <Text style={styles.itemBrandText} numberOfLines={1}>
               by {item.brand}
@@ -446,31 +510,20 @@ export default function CartScreen() {
 
           <View style={styles.itemBottomRow}>
             <View style={styles.priceRowContainer}>
-              {item.discountPrice && item.discountPrice < item.price ? (
-                <>
-                  <Text style={styles.itemOriginalPriceText}>
-                    ₹{formatPrice(item.price * item.quantity)}
-                  </Text>
-                  <Text style={styles.itemDiscountPriceText}>
-                    ₹{formatPrice(item.discountPrice * item.quantity)}
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.itemDiscountPriceText}>
-                  ₹{formatPrice(item.price * item.quantity)}
-                </Text>
+              <Text style={styles.itemDiscountPriceText}>
+                ₹{formatPrice((hasDiscount ? (item.discountPrice as number) : item.price) * item.quantity)}
+              </Text>
+              {hasDiscount && (
+                <Text style={styles.itemOriginalPriceText}>₹{formatPrice(item.price * item.quantity)}</Text>
               )}
             </View>
-
-            <View style={styles.itemQuantityControl}>
-              <QuantityControl
-                storeId={storeId}
-                sku={item.sku}
-                quantity={item.quantity}
-                productId={item.medicineId}
-                size="small"
-              />
-            </View>
+            <QuantityControl
+              storeId={storeId}
+              sku={item.sku}
+              quantity={item.quantity}
+              productId={item.medicineId}
+              size="small"
+            />
           </View>
         </View>
       </View>
@@ -485,39 +538,17 @@ export default function CartScreen() {
       (sum, item) => sum + (item.discountPrice || item.price) * item.quantity,
       0,
     );
-    const distanceKm = storeDistances[storeCart.storeId];
-    // Flat ₹30 base regardless of distance made a store 10m away cost the
-    // same as one 5km away - a store under 1km gets a flat, much lower fee
-    // instead of the base-plus-per-km formula used for real distances.
-    const deliveryFee = subtotal > 500
-      ? 0
-      : distanceKm !== undefined
-        ? (distanceKm < 1 ? 10 : Math.round(30 + distanceKm * 5))
-        : 40;
-    // Same distance already driving deliveryFee above - was a flat "30
-    // mins" regardless of which store/address was actually selected.
-    const deliveryEtaMins = distanceKm !== undefined ? Math.round(20 + distanceKm * 3) : 30;
-    const platformFee = storePlatformFees[storeCart.storeId] ?? 5;
-    const otherCharges = 2; // Flat packing/handling fee of ₹2
-    const taxes = subtotal * 0.18; // GST
+    // Everything below comes from the server's quote. Until it arrives there is nothing to charge, so nothing is shown.
+    const quote = quotes[storeCart.storeId];
+    const quoteError = quoteErrors[storeCart.storeId];
+    const deliveryEtaMins = quote?.deliveryEtaMins ?? 30;
+    const deliveryFee = quote?.deliveryFee ?? 0;
+    const platformFee = quote?.platformFee ?? 0;
+    const otherCharges = quote?.packaging ?? 0;
+    const taxes = quote?.feeGst ?? 0;
     const gstAndOtherCharges = taxes + platformFee + otherCharges;
-
-    // Coupon discount logic
-    let couponDiscount = 0;
-    if (appliedCoupon) {
-      if (appliedCoupon.type === "percentage") {
-        couponDiscount = Math.min(
-          subtotal * (appliedCoupon.value / 100),
-          appliedCoupon.maxValue || 9999,
-        );
-      } else if (appliedCoupon.type === "flat") {
-        couponDiscount = appliedCoupon.value;
-      } else if (appliedCoupon.type === "delivery") {
-        couponDiscount = deliveryFee;
-      }
-    }
-
-    const total = Math.max(subtotal + deliveryFee + gstAndOtherCharges - couponDiscount, 0);
+    const couponDiscount = quote?.discount ?? 0;
+    const total = quote?.total ?? 0;
 
     const receiverName = selectedAddress?.receiverName || myProfile?.name || "Add receiver details";
     const receiverPhone = selectedAddress?.receiverNumber || myMobile || "";
@@ -530,7 +561,7 @@ export default function CartScreen() {
     return (
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 140 }}
+        contentContainerStyle={{ paddingBottom: 140 + insets.bottom }}
       >
         <View style={styles.pharmacyCard}>
           {/* Top Delivery Address & Time Row */}
@@ -541,7 +572,7 @@ export default function CartScreen() {
               onPress={() => navigation.navigate("AddressBookModal")}
             >
               <View style={styles.topAddressLeft}>
-                <MapPin size={16} color="#089643" />
+                <MapPin size={16} color="#10B981" />
                 <View style={styles.topAddressTextCol}>
                   <Text style={styles.topAddressLabelText} numberOfLines={1}>
                     Delivering to {selectedAddress?.label || "Home"}
@@ -554,14 +585,16 @@ export default function CartScreen() {
 
               <View style={styles.topAddressRight}>
                 <View style={styles.topTimeBadge}>
-                  <Clock size={12} color="#089643" />
+                  <Clock size={12} color="#10B981" />
                   <Text style={styles.topTimeText}>{deliveryEtaMins} mins</Text>
                 </View>
-                <ChevronDown size={16} color="#64748B" />
+                <ChevronDown size={16} color={theme.textSecondary} />
               </View>
             </TouchableOpacity>
           )}
 
+          {/* Store + items */}
+          <View style={styles.sectionCard}>
           {/* Pharmacy Header */}
           <View style={styles.pharmacyHeader}>
             <TouchableOpacity
@@ -572,31 +605,33 @@ export default function CartScreen() {
               }
             >
               <View style={styles.pharmacyIconBadge}>
-                <ShoppingBag size={16} color="#374151" />
+                <ShoppingBag size={16} color={theme.text} />
               </View>
               <Text style={styles.pharmacyNameText}>{storeCart.storeName}</Text>
-              <ChevronDown size={18} color="#6B7280" />
+              <ChevronRight size={16} color={theme.textSecondary} style={{ marginLeft: -4 }} />
             </TouchableOpacity>
           </View>
 
           {/* Items List */}
           <View style={styles.itemsListContainer}>
-            {cartItems.map((item) => renderCartItem(item, storeCart.storeId))}
+            {cartItems.map((item, index) => renderCartItem(item, storeCart.storeId, index === cartItems.length - 1))}
+          </View>
+
           </View>
 
           {/* Prescription Requirement */}
           {needsPrescription && (
             <View style={styles.prescriptionSection}>
               <View style={styles.prescriptionWarningRow}>
-                <ShieldAlert size={16} color="#B45309" />
+                <ShieldAlert size={16} color={theme.warning} />
                 <Text style={styles.prescriptionWarningText}>
-                  Some items in this order need a valid prescription
+                  {t('some_items_in_this_order_need_a_valid')}
                 </Text>
               </View>
 
               {attachedPrescription ? (
                 <View style={styles.prescriptionAttachedCard}>
-                  <FileText size={18} color="#089643" />
+                  <FileText size={18} color="#10B981" />
                   <Text style={styles.prescriptionAttachedLabel} numberOfLines={1}>
                     {attachedPrescription.label}
                   </Text>
@@ -604,7 +639,7 @@ export default function CartScreen() {
                     onPress={() => setSelectSheetStoreId(storeCart.storeId)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.receiverChangeBtnText}>Change</Text>
+                    <Text style={styles.receiverChangeBtnText}>{t('change')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -614,8 +649,8 @@ export default function CartScreen() {
                     onPress={() => setSelectSheetStoreId(storeCart.storeId)}
                     activeOpacity={0.8}
                   >
-                    <FileText size={16} color="#089643" />
-                    <Text style={styles.prescriptionOptionText}>Select Existing</Text>
+                    <FileText size={16} color="#10B981" />
+                    <Text style={styles.prescriptionOptionText}>{t('select_existing')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.prescriptionOptionBtn}
@@ -623,7 +658,7 @@ export default function CartScreen() {
                     disabled={isUploadingForThisStore}
                     activeOpacity={0.8}
                   >
-                    <Upload size={16} color="#089643" />
+                    <Upload size={16} color="#10B981" />
                     <Text style={styles.prescriptionOptionText}>
                       {isUploadingForThisStore ? "Uploading..." : "Upload New"}
                     </Text>
@@ -633,6 +668,8 @@ export default function CartScreen() {
             </View>
           )}
 
+          {/* Instructions, coupon, receiver */}
+          <View style={styles.sectionCard}>
           {/* Instructions */}
           {isEditingInstructions ? (
             <View style={styles.instructionsInputWrapper}>
@@ -640,8 +677,8 @@ export default function CartScreen() {
                 style={styles.instructionsInput}
                 multiline
                 numberOfLines={3}
-                placeholder="Write delivery instructions here... (e.g., ring the bell, keep at gate)"
-                placeholderTextColor="#9CA3AF"
+                placeholder={t('delivery_instructions_placeholder')}
+                placeholderTextColor={theme.textMuted}
                 value={instructions}
                 onChangeText={setInstructions}
                 autoFocus
@@ -653,7 +690,7 @@ export default function CartScreen() {
                     setIsEditingInstructions(false);
                   }}
                 >
-                  <Text style={styles.cancelInstructionsText}>Cancel</Text>
+                  <Text style={styles.cancelInstructionsText}>{t('cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.saveInstructionsBtn}
@@ -661,7 +698,7 @@ export default function CartScreen() {
                     setIsEditingInstructions(false);
                   }}
                 >
-                  <Text style={styles.saveInstructionsText}>Done</Text>
+                  <Text style={styles.saveInstructionsText}>SAVE</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -670,7 +707,9 @@ export default function CartScreen() {
               style={styles.instructionButton}
               onPress={() => setIsEditingInstructions(true)}
             >
-              <Plus size={16} color="#4B5563" />
+              <View style={styles.instructionIcon}>
+                <Plus size={16} color={theme.textSecondary} />
+              </View>
               <Text style={styles.instructionText} numberOfLines={1}>
                 {instructions
                   ? `Instructions: ${instructions}`
@@ -696,7 +735,7 @@ export default function CartScreen() {
                 </View>
               </View>
               <TouchableOpacity onPress={() => setAppliedCoupon(null)}>
-                <Text style={styles.removeCouponText}>Remove</Text>
+                <Text style={styles.removeCouponText}>{t('remove')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -709,9 +748,9 @@ export default function CartScreen() {
                 })
               }
             >
-              <Ticket size={20} color="#E11D48" />
-              <Text style={styles.couponText}>Use Coupons / Offers</Text>
-              <ChevronRight size={18} color="#9CA3AF" />
+              <Ticket size={18} color="#E11D48" />
+              <Text style={styles.couponText}>{t('use_coupons')}</Text>
+              <ChevronRight size={18} color={theme.textMuted} />
             </TouchableOpacity>
           )}
 
@@ -720,8 +759,8 @@ export default function CartScreen() {
           {/* Receiver Details */}
           <View style={styles.receiverOneLinerRow}>
             <View style={styles.receiverOneLinerLeft}>
-              <User size={14} color="#64748B" />
-              <Text style={styles.receiverLabelPrefix}>Receiver:</Text>
+              <User size={14} color={theme.textSecondary} />
+              <Text style={styles.receiverLabelPrefix}>{t('receiver')}</Text>
               <Text style={styles.receiverDetailsText} numberOfLines={1}>
                 {receiverName}{receiverPhone ? `, ${receiverPhone}` : ""}
               </Text>
@@ -730,84 +769,74 @@ export default function CartScreen() {
               onPress={() => setIsReceiverModalVisible(true)}
               style={styles.receiverChangeBtn}
             >
-              <Text style={styles.receiverChangeBtnText}>Change</Text>
+              <Text style={styles.receiverChangeBtnText}>{t('change')}</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Billing Details */}
-          <View style={styles.billingContainer}>
-            <Text style={styles.billingTitle}>Bill Summary</Text>
-            <View style={styles.billRow}>
-              <Text style={styles.billLabel}>Item Total</Text>
-              <Text style={styles.billValue}>₹{formatPrice(subtotal)}</Text>
-            </View>
-            {couponDiscount > 0 && (
-              <View style={styles.billRow}>
-                <Text
-                  style={[
-                    styles.billLabel,
-                    { color: "#007C69", fontWeight: "700" },
-                  ]}
-                >
-                  Coupon Discount ({appliedCoupon.code})
-                </Text>
-                <Text
-                  style={[
-                    styles.billValue,
-                    { color: "#007C69", fontWeight: "700" },
-                  ]}
-                >
-                  -₹{formatPrice(couponDiscount)}
-                </Text>
-              </View>
-            )}
-            <View style={styles.billRow}>
-              <Text style={styles.billLabel}>Delivery Fee</Text>
-              <Text style={styles.billValue}>₹{formatPrice(deliveryFee)}</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.billRowToggleable}
-              onPress={() => toggleGstCharges(storeCart.storeId)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.billRowLabelCol}>
-                <Text style={styles.billLabel}>GST and other charges</Text>
-                {isGstChargesExpanded[storeCart.storeId] ? (
-                  <ChevronUp size={14} color="#6B7280" style={styles.chevronIcon} />
-                ) : (
-                  <ChevronDown size={14} color="#6B7280" style={styles.chevronIcon} />
-                )}
-              </View>
-              <Text style={styles.billValue}>₹{formatPrice(gstAndOtherCharges)}</Text>
-            </TouchableOpacity>
+          </View>
 
-            {isGstChargesExpanded[storeCart.storeId] && (
-              <View style={styles.breakupContainer}>
-                <View style={styles.breakupRow}>
-                  <Text style={styles.breakupLabel}>GST (18%)</Text>
-                  <Text style={styles.breakupValue}>₹{formatPrice(taxes)}</Text>
-                </View>
-                <View style={styles.breakupRow}>
-                  <Text style={styles.breakupLabel}>Platform Fee</Text>
-                  <Text style={styles.breakupValue}>₹{formatPrice(platformFee)}</Text>
-                </View>
-                <View style={styles.breakupRow}>
-                  <Text style={styles.breakupLabel}>Packaging & Handling</Text>
-                  <Text style={styles.breakupValue}>₹{formatPrice(otherCharges)}</Text>
-                </View>
+          {/* Billing Details */}
+          <View style={[styles.sectionCard, styles.billingContainer]}>
+            <Text style={styles.billingTitle}>{t('bill_summary')}</Text>
+            {!quote ? (
+              <View style={styles.billRow}>
+                <Text style={styles.billLabel}>{quoteError || "Working out your bill..."}</Text>
               </View>
+            ) : (
+              <>
+                {quote.lines
+                  .filter((l) => l.group === "main")
+                  .map((l) => (
+                    <View key={l.id} style={styles.billRow}>
+                      <Text style={[styles.billLabel, l.kind === "discount" && { color: "#007C69", fontWeight: "700" }]}>{l.label}</Text>
+                      <Text style={[styles.billValue, l.kind === "discount" && { color: "#007C69", fontWeight: "700" }]}>
+                        {l.free ? "FREE" : `${l.amount < 0 ? "-" : ""}₹${formatPrice(Math.abs(l.amount))}`}
+                      </Text>
+                    </View>
+                  ))}
+                {quote.lines.some((l) => l.group === "charges") && (
+                  <>
+                    <TouchableOpacity
+                      style={styles.billRowToggleable}
+                      onPress={() => toggleGstCharges(storeCart.storeId)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.billRowLabelCol}>
+                        <Text style={styles.billLabel}>{t('gst_charges')}</Text>
+                        {isGstChargesExpanded[storeCart.storeId] ? (
+                          <ChevronUp size={14} color={theme.textSecondary} style={styles.chevronIcon} />
+                        ) : (
+                          <ChevronDown size={14} color={theme.textSecondary} style={styles.chevronIcon} />
+                        )}
+                      </View>
+                      <Text style={styles.billValue}>₹{formatPrice(quote.lines.filter((l) => l.group === "charges").reduce((sum, l) => sum + l.amount, 0))}</Text>
+                    </TouchableOpacity>
+                    {isGstChargesExpanded[storeCart.storeId] && (
+                      <View style={styles.breakupContainer}>
+                        {quote.lines
+                          .filter((l) => l.group === "charges")
+                          .map((l) => (
+                            <View key={l.id} style={styles.breakupRow}>
+                              <Text style={styles.breakupLabel}>{l.label}</Text>
+                              <Text style={styles.breakupValue}>₹{formatPrice(l.amount)}</Text>
+                            </View>
+                          ))}
+                      </View>
+                    )}
+                  </>
+                )}
+              </>
             )}
             <View style={[styles.billRow, styles.grandTotalRow]}>
-              <Text style={styles.grandTotalLabel}>Grand Total</Text>
+              <Text style={styles.grandTotalLabel}>{t('grand_total')}</Text>
               <Text style={styles.grandTotalValue}>₹{formatPrice(total)}</Text>
             </View>
           </View>
 
           <View style={styles.policyCard}>
-            <Info size={16} color="#9CA3AF" />
+            <Info size={16} color={theme.textMuted} />
             <Text style={styles.policyText}>
-              Orders cannot be cancelled once packed. Any discrepancy will be
-              handled by our support.
+              {quote ? `${quote.policy.cancellation} ${quote.policy.returns}` : "Orders cannot be cancelled once packed. Any discrepancy will be handled by our support."}
             </Text>
           </View>
         </View>
@@ -825,19 +854,19 @@ export default function CartScreen() {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <ChevronLeft size={22} color="#111827" />
+            <ChevronLeft size={22} color={theme.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Cart</Text>
+          <Text style={styles.headerTitle}>{t('cart')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <View style={styles.emptyContent}>
           <View style={styles.emptyIconCircle}>
-            <ShoppingBag size={36} color="#0FBBA1" />
+            <ShoppingBag size={36} color="#10B981" />
           </View>
-          <Text style={styles.emptyTitle}>Nothing in your cart</Text>
+          <Text style={styles.emptyTitle}>{t('nothing_in_cart')}</Text>
           <Text style={styles.emptySubtitle}>
-            Browse our pharmacies and add medicines to your cart
+            {t('browse_our_pharmacies_and_add_medicine')}
           </Text>
           <TouchableOpacity
             style={styles.browseButton}
@@ -845,7 +874,7 @@ export default function CartScreen() {
             activeOpacity={0.85}
           >
             <ShoppingBag size={18} color="#fff" />
-            <Text style={styles.browseButtonText}>Browse Pharmacies</Text>
+            <Text style={styles.browseButtonText}>{t('browse_pharmacies')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -879,42 +908,28 @@ export default function CartScreen() {
       (sum, item) => sum + (item.discountPrice || item.price) * item.quantity,
       0,
     );
-    const distanceKm = storeDistances[storeCart.storeId];
-    // Flat ₹30 base regardless of distance made a store 10m away cost the
-    // same as one 5km away - a store under 1km gets a flat, much lower fee
-    // instead of the base-plus-per-km formula used for real distances.
-    const deliveryFee = subtotal > 500
-      ? 0
-      : distanceKm !== undefined
-        ? (distanceKm < 1 ? 10 : Math.round(30 + distanceKm * 5))
-        : 40;
-    const platformFee = storePlatformFees[storeCart.storeId] ?? 5;
-    const otherCharges = 2; // Flat packing/handling fee of ₹2
-    const taxes = subtotal * 0.18; // GST
-    const gstAndOtherCharges = taxes + platformFee + otherCharges;
-
-    let couponDiscount = 0;
-    if (appliedCoupon) {
-      if (appliedCoupon.type === "percentage") {
-        couponDiscount = Math.min(
-          subtotal * (appliedCoupon.value / 100),
-          appliedCoupon.maxValue || 9999,
-        );
-      } else if (appliedCoupon.type === "flat") {
-        couponDiscount = appliedCoupon.value;
-      } else if (appliedCoupon.type === "delivery") {
-        couponDiscount = deliveryFee;
-      }
-    }
-
-    const total = Math.max(subtotal + deliveryFee + gstAndOtherCharges - couponDiscount, 0);
+    const quote = quotes[storeCart.storeId];
+    const deliveryFee = quote?.deliveryFee ?? 0;
+    const platformFee = quote?.platformFee ?? 0;
+    const otherCharges = quote?.packaging ?? 0;
+    const taxes = quote?.feeGst ?? 0;
+    const couponDiscount = quote?.discount ?? 0;
+    const total = quote?.total ?? 0;
 
     // No address selected used to be silently invisible past this point -
     // checkout would proceed straight through with the "John Doe" / fake
     // phone placeholder and whatever fallback coordinates downstream
     // screens default to. Now it's a hard stop that sends the user to pick
     // a real one first.
-    const handleProceedToCheckout = () => {
+    // `autoPay`: Pay with the saved method (processing screen). `resumeOnly`: just check on a payment already started.
+    const handleProceedToCheckout = (autoPay = false, resumeOnly = false) => {
+      if (autoPay && !resumeOnly && !savedPayment) return; // Pay is disabled until a payment method is chosen
+      if (!quote) {
+        alert("We are still working out your bill. Please try again in a moment.");
+        return;
+      }
+      // A saved card needs its details typed, so it (and "Change") opens the options list.
+      const openProcessing = resumeOnly || (autoPay && !!savedPayment && savedPayment.method !== 'card');
       if (!selectedAddress) {
         alert("Please select a delivery address before proceeding to pay.");
         navigation.navigate("AddressBookModal");
@@ -928,41 +943,56 @@ export default function CartScreen() {
         alert("This store doesn't deliver to your selected address. Please change your delivery address or remove these items.");
         return;
       }
-      executeAction("OPEN_CHECKOUT", {
+      executeAction(openProcessing ? "OPEN_PAYMENT_PROCESSING" : "OPEN_CHECKOUT", {
         storeId: storeCart.storeId,
         amount: total,
         deliveryFee: deliveryFee,
         subtotal: subtotal,
         taxes: taxes,
         couponDiscount: couponDiscount,
+        couponCode: quote.coupon?.code,
         platformFee: platformFee,
         otherCharges: otherCharges,
         prescriptionMode: attachedPrescription?.mode,
         prescriptionDocumentId: attachedPrescription?.documentId,
         prescriptionId: attachedPrescription?.prescriptionId,
         prescriptionRequired: needsPrescription,
+        ...(openProcessing ? { autoPay: true, resumeOnly } : {}),
       });
     };
+
+
 
     return (
       <View
         style={[
           styles.stickyFooter,
-          { paddingBottom: insets.bottom > 0 ? insets.bottom : 16 },
+          { paddingBottom: insets.bottom + 16 },
         ]}
       >
-        {isOffline ? (
-          <View style={styles.offlineFooterRow}>
-            <Info size={18} color="#EF4444" />
-            <Text style={styles.offlineFooterText}>
-              This store is currently offline
+        {confirmingPayments[storeCart.storeId] ? (
+          <View style={styles.noticeRow}>
+            <ActivityIndicator size="small" color="#10B981" />
+            <View style={styles.noticeTextCol}>
+              <Text style={styles.noticeTitle}>Confirming your payment</Text>
+              <Text style={styles.noticeSub}>We'll update your order as soon as it's confirmed.</Text>
+            </View>
+            <TouchableOpacity style={styles.noticeAction} onPress={() => handleProceedToCheckout(true, true)} activeOpacity={0.8}>
+              <Text style={styles.noticeActionText}>Check</Text>
+            </TouchableOpacity>
+          </View>
+        ) : isOffline ? (
+          <View style={styles.noticeRow}>
+            <Info size={18} color={theme.textSecondary} />
+            <Text style={styles.noticeTitleFlex}>
+              {t('this_store_is_currently_offline')}
             </Text>
           </View>
         ) : notServiceable ? (
-          <View style={styles.offlineFooterRow}>
-            <Info size={18} color="#EF4444" />
-            <Text style={styles.offlineFooterText}>
-              This store doesn't deliver to your selected address
+          <View style={styles.noticeRow}>
+            <Info size={18} color={theme.textSecondary} />
+            <Text style={styles.noticeTitleFlex}>
+              {t('this_store_doesn_t_deliver_to_your_sel')}
             </Text>
           </View>
         ) : (
@@ -970,15 +1000,26 @@ export default function CartScreen() {
             {/* Left Division: Payment Details */}
             <TouchableOpacity
               style={styles.paymentCol}
-              onPress={handleProceedToCheckout}
+              onPress={() => handleProceedToCheckout(false)}
               activeOpacity={0.7}
             >
-              <CreditCard size={18} color="#089643" />
+              <CreditCard size={18} color="#10B981" />
               <View style={styles.paymentTextCol}>
-                <Text style={styles.selectedPaymentText}>
-                  Payment Options
-                </Text>
-                <Text style={styles.changePaymentLink}>UPI, Cards, COD</Text>
+                {savedPayment ? (
+                  <>
+                    <Text style={styles.selectedPaymentText} numberOfLines={1}>
+                      {savedPayment.label}
+                    </Text>
+                    <Text style={styles.changePaymentLink} numberOfLines={1}>
+                      {savedPayment.sub ? `${savedPayment.sub} • ` : ''}Change
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.selectedPaymentText}>Payment</Text>
+                    <Text style={styles.changePaymentLink}>Select payment method</Text>
+                  </>
+                )}
               </View>
             </TouchableOpacity>
 
@@ -986,17 +1027,17 @@ export default function CartScreen() {
             <TouchableOpacity
               style={[
                 styles.payBtnRight,
-                isPrescriptionMissing && styles.payBtnRightDisabled,
+                (isPrescriptionMissing || !savedPayment) && styles.payBtnRightDisabled,
               ]}
               activeOpacity={0.8}
-              onPress={handleProceedToCheckout}
+              disabled={(!savedPayment && !isPrescriptionMissing) || !quote}
+              onPress={() => handleProceedToCheckout(true)}
             >
               <Text style={styles.payBtnText}>
                 {isPrescriptionMissing
                   ? "Add Prescription to Pay"
                   : `Pay ₹${formatPrice(total)}`}
               </Text>
-              {!isPrescriptionMissing && <ChevronRight size={16} color="#FFFFFF" />}
             </TouchableOpacity>
           </View>
         )}
@@ -1015,7 +1056,7 @@ export default function CartScreen() {
           style={styles.backButton}
           activeOpacity={0.7}
         >
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.headerTitleContainer}
@@ -1026,7 +1067,7 @@ export default function CartScreen() {
             {storeCarts.length > 1 ? `My Carts (${storeCarts.length})` : "My Cart"}
           </Text>
           {storeCarts.length > 1 && (
-            <ChevronDown size={18} color="#111827" />
+            <ChevronDown size={18} color={theme.text} />
           )}
         </TouchableOpacity>
         <View style={{ width: 40 }} />
@@ -1062,38 +1103,38 @@ export default function CartScreen() {
         >
           <TouchableOpacity style={styles.bottomSheetContent} activeOpacity={1}>
             <View style={styles.dragHandle} />
-            <Text style={styles.modalTitle}>Edit Receiver Details</Text>
+            <Text style={styles.modalTitle}>{t('edit_receiver')}</Text>
 
             <ScrollView
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 0 }}
             >
-              <Text style={styles.inputLabel}>Receiver Name</Text>
+              <Text style={styles.inputLabel}>{t('receiver_name')}</Text>
               <TextInput
                 style={styles.modalInput}
                 value={tempReceiverName}
                 onChangeText={setTempReceiverName}
-                placeholder="Enter name"
-                placeholderTextColor="#9CA3AF"
+                placeholder={t('enter_name')}
+                placeholderTextColor={theme.textMuted}
               />
 
-              <Text style={styles.inputLabel}>Mobile Number</Text>
+              <Text style={styles.inputLabel}>{t('mobile_number')}</Text>
               <View style={styles.mobileInputContainer}>
                 <TextInput
                   style={styles.mobileInput}
                   value={tempReceiverPhone}
                   onChangeText={setTempReceiverPhone}
-                  placeholder="Enter mobile number"
+                  placeholder={t('enter_mobile')}
                   keyboardType="phone-pad"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={theme.textMuted}
                 />
                 <TouchableOpacity
                   style={styles.contactIconBtn}
                   onPress={handleContactIconPress}
                   activeOpacity={0.7}
                 >
-                  <User size={20} color="#089643" />
+                  <User size={20} color="#10B981" />
                 </TouchableOpacity>
               </View>
 
@@ -1102,13 +1143,13 @@ export default function CartScreen() {
                   style={[styles.modalButton, styles.cancelButton]}
                   onPress={() => setIsReceiverModalVisible(false)}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.saveButton]}
                   onPress={handleSaveReceiver}
                 >
-                  <Text style={styles.saveButtonText}>Save</Text>
+                  <Text style={styles.saveButtonText}>{t('save')}</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -1143,7 +1184,7 @@ export default function CartScreen() {
           >
             <View style={styles.dragHandle} />
             <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalHeaderTitle}>Select Contact</Text>
+              <Text style={styles.modalHeaderTitle}>{t('select_contact')}</Text>
               <TouchableOpacity
                 onPress={() => {
                   setIsContactModalVisible(false);
@@ -1152,14 +1193,14 @@ export default function CartScreen() {
                 style={styles.modalCloseIconBtn}
                 activeOpacity={0.7}
               >
-                <AppIcon name="x" size={20} color="#6B7280" />
+                <AppIcon name="x" size={20} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
 
             <TextInput
               style={styles.contactSearchInput}
-              placeholder="Search contacts by name or number..."
-              placeholderTextColor="#9CA3AF"
+              placeholder={t('search_contacts')}
+              placeholderTextColor={theme.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoFocus
@@ -1171,7 +1212,7 @@ export default function CartScreen() {
               keyboardShouldPersistTaps="handled"
             >
               {filteredContacts.length === 0 ? (
-                <Text style={styles.noContactsText}>No contacts found</Text>
+                <Text style={styles.noContactsText}>{t('no_contacts')}</Text>
               ) : (
                 filteredContacts.map((c: any) => (
                   <TouchableOpacity
@@ -1229,7 +1270,7 @@ export default function CartScreen() {
         >
           <TouchableOpacity style={styles.bottomSheetContent} activeOpacity={1}>
             <View style={styles.dragHandle} />
-            <Text style={styles.modalTitle}>Switch Cart</Text>
+            <Text style={styles.modalTitle}>{t('switch_cart')}</Text>
 
             <ScrollView showsVerticalScrollIndicator={false}>
               {storeCarts.map((item) => {
@@ -1286,18 +1327,18 @@ export default function CartScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F6F7F9",
+    backgroundColor: c.background,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingBottom: 16,
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -1309,9 +1350,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
+    fontSize: 17,
+    fontWeight: "700",
+    color: c.text,
   },
   backButton: {
     width: 40,
@@ -1329,21 +1370,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   pharmacyCard: {
-    backgroundColor: "#FFFFFF",
-    margin: 0,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  sectionCard: {
+    backgroundColor: c.card,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: c.borderLight,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
   },
   pharmacyHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    padding: 20,
-    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 4,
   },
   pharmacyNameRow: {
     flexDirection: "row",
@@ -1355,14 +1400,14 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: c.cardSecondary,
     alignItems: "center",
     justifyContent: "center",
   },
   pharmacyNameText: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#111827",
+    fontSize: 16,
+    fontWeight: "700",
+    color: c.text,
   },
   deliveryTimeRow: {
     flexDirection: "row",
@@ -1372,34 +1417,39 @@ const styles = StyleSheet.create({
   },
   deliveryTimeText: {
     fontSize: 12,
-    color: "#6B7280",
+    color: c.textSecondary,
     fontWeight: "600",
   },
   addMoreText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#0FBBA1",
-    backgroundColor: "#F0FDF4",
+    color: "#10B981",
+    backgroundColor: c.successBg,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   itemsListContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   itemRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: c.borderLight,
+  },
+  itemRowLast: {
+    borderBottomWidth: 0,
   },
   itemImageWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
+    width: 64,
+    height: 64,
+    borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: "#F9FAFB",
+    backgroundColor: c.cardSecondary,
+    borderWidth: 1,
+    borderColor: c.borderLight,
   },
   itemImage: {
     width: "100%",
@@ -1410,45 +1460,43 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: c.cardSecondary,
   },
   itemMainInfo: {
     flex: 1,
-    height: 80,
     marginLeft: 12,
-    justifyContent: "space-between",
+    gap: 2,
   },
   itemNameText: {
-    fontSize: 14,
+    fontSize: 12.5,
     fontWeight: "600",
-    color: "#1F2937",
-    lineHeight: 18,
+    color: c.text,
+    lineHeight: 17,
   },
   itemBrandText: {
     fontSize: 11,
-    color: "#8A8A8E",
+    color: c.textMuted,
     fontWeight: "500",
-    marginTop: 0,
   },
   itemBottomRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    width: "100%",
+    marginTop: 8,
   },
   priceRowContainer: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "baseline",
     gap: 8,
   },
   itemDiscountPriceText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#111827",
+    color: c.text,
   },
   itemOriginalPriceText: {
     fontSize: 11,
-    color: "#9CA3AF",
+    color: c.textMuted,
     textDecorationLine: "line-through",
   },
   itemQuantityControl: {
@@ -1457,17 +1505,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   prescriptionSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    gap: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 16,
+    gap: 12,
+    backgroundColor: c.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: c.borderLight,
   },
   prescriptionWarningRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#FFFBEB",
+    backgroundColor: c.warningBg,
     borderWidth: 1,
     borderColor: "#FDE68A",
     borderRadius: 10,
@@ -1476,9 +1527,9 @@ const styles = StyleSheet.create({
   },
   prescriptionWarningText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#B45309",
+    color: c.warning,
   },
   prescriptionOptionsRow: {
     flexDirection: "row",
@@ -1490,7 +1541,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: c.successBg,
     borderWidth: 1,
     borderColor: "#BBF7D0",
     borderRadius: 10,
@@ -1499,13 +1550,13 @@ const styles = StyleSheet.create({
   prescriptionOptionText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#089643",
+    color: "#10B981",
   },
   prescriptionAttachedCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: c.successBg,
     borderWidth: 1,
     borderColor: "#BBF7D0",
     borderRadius: 10,
@@ -1516,36 +1567,46 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: "600",
-    color: "#166534",
+    color: c.success,
   },
   instructionButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 20,
+    gap: 10,
+    paddingHorizontal: 16,
     paddingVertical: 12,
   },
+  instructionIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: c.cardSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   instructionText: {
-    fontSize: 13,
-    color: "#4B5563",
+    flex: 1,
+    fontSize: 14,
+    color: c.textSecondary,
     fontWeight: "500",
   },
   cardDivider: {
     height: 1,
-    backgroundColor: "#F3F4F6",
-    marginHorizontal: 20,
+    backgroundColor: c.borderLight,
+    marginHorizontal: 16,
   },
   couponRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     gap: 12,
   },
   couponText: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#1F2937",
+    fontSize: 13,
+    fontWeight: "600",
+    color: c.text,
   },
   sectionContainer: {
     padding: 20,
@@ -1561,7 +1622,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: "800",
-    color: "#111827",
+    color: c.text,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -1571,7 +1632,7 @@ const styles = StyleSheet.create({
     color: "#E11D48",
   },
   receiverInfoBox: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: c.cardSecondary,
     padding: 16,
     borderRadius: 16,
     gap: 2,
@@ -1579,15 +1640,15 @@ const styles = StyleSheet.create({
   receiverName: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#111827",
+    color: c.text,
   },
   receiverPhone: {
     fontSize: 12,
-    color: "#6B7280",
+    color: c.textSecondary,
     fontWeight: "500",
   },
   addressBox: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: c.cardSecondary,
     padding: 16,
     borderRadius: 16,
     gap: 4,
@@ -1595,21 +1656,21 @@ const styles = StyleSheet.create({
   addressLabelText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#111827",
+    color: c.text,
   },
   fullAddressText: {
     fontSize: 12,
-    color: "#6B7280",
+    color: c.textSecondary,
     lineHeight: 18,
   },
   billingContainer: {
-    padding: 20,
+    padding: 16,
   },
   billingTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 12,
+    fontSize: 14,
+    fontWeight: "700",
+    color: c.text,
+    marginBottom: 10,
   },
   billRow: {
     flexDirection: "row",
@@ -1617,13 +1678,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   billLabel: {
-    fontSize: 14,
-    color: "#6B7280",
+    fontSize: 12.5,
+    color: c.textSecondary,
     fontWeight: "500",
   },
   billValue: {
-    fontSize: 14,
-    color: "#111827",
+    fontSize: 12.5,
+    color: c.text,
     fontWeight: "600",
   },
   billRowToggleable: {
@@ -1640,13 +1701,13 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   breakupContainer: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: c.cardSecondary,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 8,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: c.borderLight,
   },
   breakupRow: {
     flexDirection: "row",
@@ -1654,41 +1715,42 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   breakupLabel: {
-    fontSize: 12,
-    color: "#6B7280",
+    fontSize: 11.5,
+    color: c.textSecondary,
     fontWeight: "500",
   },
   breakupValue: {
-    fontSize: 12,
-    color: "#4B5563",
+    fontSize: 11.5,
+    color: c.textSecondary,
     fontWeight: "600",
   },
   grandTotalRow: {
-    marginTop: 8,
-    paddingTop: 12,
+    marginTop: 6,
+    paddingTop: 14,
+    marginBottom: 0,
     borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
+    borderTopColor: c.borderLight,
   },
   grandTotalLabel: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: "#111827",
+    fontSize: 14,
+    fontWeight: "700",
+    color: c.text,
   },
   grandTotalValue: {
-    fontSize: 18,
-    fontWeight: "900",
-    color: "#111827",
+    fontSize: 14,
+    fontWeight: "700",
+    color: c.text,
   },
   checkoutFooter: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
+    borderTopColor: c.borderLight,
   },
   paymentMethodSelect: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F9FAFB",
+    backgroundColor: c.cardSecondary,
     padding: 12,
     borderRadius: 12,
     gap: 8,
@@ -1698,14 +1760,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: "700",
-    color: "#374151",
+    color: c.text,
   },
   payButton: {
-    backgroundColor: "#0FBBA1",
+    backgroundColor: "#10B981",
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 20,
-    shadowColor: "#0FBBA1",
+    shadowColor: "#10B981",
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 8,
@@ -1737,19 +1799,19 @@ const styles = StyleSheet.create({
   },
   policyCard: {
     flexDirection: "row",
-    gap: 12,
-    padding: 20,
-    marginTop: 10,
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
     alignItems: "flex-start",
   },
   policyText: {
     flex: 1,
-    fontSize: 11,
-    color: "#9CA3AF",
-    lineHeight: 16,
+    fontSize: 12,
+    color: c.textMuted,
+    lineHeight: 17,
   },
   emptyContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
   },
   emptyContent: {
     flex: 1,
@@ -1761,7 +1823,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: c.successBg,
     borderWidth: 1,
     borderColor: "#DCFCE7",
     alignItems: "center",
@@ -1771,12 +1833,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#111827",
+    color: c.text,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: "#6B7280",
+    color: c.textSecondary,
     textAlign: "center",
     lineHeight: 20,
     marginBottom: 32,
@@ -1785,7 +1847,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#0FBBA1",
+    backgroundColor: "#10B981",
     paddingHorizontal: 28,
     paddingVertical: 16,
     borderRadius: 16,
@@ -1800,11 +1862,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
+    borderTopColor: c.borderLight,
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 14,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.05,
@@ -1816,6 +1878,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  noticeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: c.cardSecondary,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  noticeTextCol: { flex: 1 },
+  noticeTitle: { fontSize: 14, fontWeight: "700", color: c.text },
+  noticeTitleFlex: { flex: 1, fontSize: 13.5, fontWeight: "600", color: c.textSecondary, lineHeight: 19 },
+  noticeSub: { fontSize: 12, color: c.textSecondary, marginTop: 2 },
+  noticeAction: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: "#10B981" },
+  noticeActionText: { fontSize: 13, fontWeight: "800", color: "#FFFFFF" },
   offlineFooterRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1826,7 +1903,7 @@ const styles = StyleSheet.create({
   offlineFooterText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#374151",
+    color: c.text,
   },
   paymentCol: {
     flexDirection: "row",
@@ -1841,7 +1918,7 @@ const styles = StyleSheet.create({
   selectedPaymentText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1F2937",
+    color: c.text,
   },
   changePaymentLink: {
     fontSize: 12,
@@ -1853,15 +1930,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
     backgroundColor: "#10B981",
-    borderRadius: 12,
+    borderRadius: 10,
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     minWidth: 140,
   },
   payBtnText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "800",
     color: "#FFFFFF",
   },
@@ -1873,7 +1949,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     borderRadius: 24,
     padding: 24,
     width: "100%",
@@ -1887,7 +1963,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 17,
     fontWeight: "800",
-    color: "#111827",
+    color: c.text,
     marginBottom: 20,
     textAlign: "center",
   },
@@ -1896,26 +1972,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 14,
     borderRadius: 14,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: c.cardSecondary,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: c.borderLight,
     marginBottom: 10,
   },
   storeSwitcherRowActive: {
-    backgroundColor: "#F0FDF4",
-    borderColor: "#0FBBA1",
+    backgroundColor: c.successBg,
+    borderColor: "#10B981",
   },
   storeSwitcherIconWrap: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
   storeSwitcherIconWrapOffline: {
-    backgroundColor: "#FEF2F2",
+    backgroundColor: c.errorBg,
   },
   storeSwitcherTextCol: {
     flex: 1,
@@ -1924,39 +2000,39 @@ const styles = StyleSheet.create({
   storeSwitcherName: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1F2937",
+    color: c.text,
     marginBottom: 2,
   },
   storeSwitcherSubtext: {
     fontSize: 12,
-    color: "#6B7280",
+    color: c.textSecondary,
   },
   storeSwitcherCheck: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "#0FBBA1",
+    backgroundColor: "#10B981",
     alignItems: "center",
     justifyContent: "center",
   },
   inputLabel: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#374151",
+    color: c.text,
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 6,
     marginTop: 12,
   },
   modalInput: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: c.cardSecondary,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: c.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
-    color: "#111827",
+    color: c.text,
   },
   modalButtonsRow: {
     flexDirection: "row",
@@ -1971,12 +2047,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cancelButton: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: c.cardSecondary,
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#4B5563",
+    color: c.textSecondary,
   },
   saveButton: {
     backgroundColor: "#007C69",
@@ -1993,16 +2069,16 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: c.borderLight,
     borderRadius: 12,
   },
   paymentOptionActive: {
-    backgroundColor: "#E8F5E9",
+    backgroundColor: c.successBg,
   },
   paymentOptionText: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#374151",
+    color: c.text,
   },
   paymentOptionTextActive: {
     color: "#007C69",
@@ -2015,58 +2091,60 @@ const styles = StyleSheet.create({
     backgroundColor: "#007C69",
   },
   instructionsInputWrapper: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 10,
   },
   instructionsInput: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: c.inputBg,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
+    borderColor: c.inputBorder,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 14,
-    color: "#111827",
+    fontSize: 13.5,
+    color: c.text,
     textAlignVertical: "top",
-    minHeight: 60,
+    minHeight: 72,
   },
   instructionsActionRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    gap: 12,
+    alignItems: "center",
+    gap: 8,
   },
   cancelInstructionsBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    height: 40,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
   cancelInstructionsText: {
     fontSize: 13,
-    color: "#4B5563",
-    fontWeight: "600",
+    color: c.textSecondary,
+    fontWeight: "700",
   },
   saveInstructionsBtn: {
-    backgroundColor: "#007C69",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    height: 40,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    backgroundColor: "#10B981",
+    alignItems: "center",
+    justifyContent: "center",
   },
   saveInstructionsText: {
     fontSize: 13,
     color: "#FFFFFF",
-    fontWeight: "700",
+    fontWeight: "800",
+    letterSpacing: 0.6,
   },
   appliedCouponContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FFF",
-    padding: 16,
-    marginHorizontal: 20,
-    marginVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#A5D6A7",
+    backgroundColor: c.successBg,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   appliedCouponInfo: {
     flexDirection: "row",
@@ -2074,30 +2152,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   appliedCouponCode: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: "#007C69",
   },
   appliedCouponSavings: {
-    fontSize: 12,
-    color: "#2E7D32",
+    fontSize: 11.5,
+    color: c.success,
     marginTop: 2,
   },
   removeCouponText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "700",
-    color: "#C62828",
+    color: c.error,
     paddingHorizontal: 4,
   },
   topAddressRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#F0FDF4",
-    paddingHorizontal: 20,
+    backgroundColor: c.card,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#DCFCE7",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: c.borderLight,
   },
   topAddressLeft: {
     flexDirection: "row",
@@ -2109,14 +2190,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topAddressLabelText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
-    color: "#166534",
+    color: c.text,
   },
   topAddressFullText: {
-    fontSize: 11,
-    color: "#1E3A8A",
-    marginTop: 1,
+    fontSize: 12,
+    color: c.textSecondary,
+    marginTop: 2,
   },
   topAddressRight: {
     flexDirection: "row",
@@ -2127,25 +2208,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#DCFCE7",
+    backgroundColor: c.successBg,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   topTimeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
-    color: "#166534",
+    color: c.success,
   },
   receiverOneLinerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#F8FAFC",
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
   },
   receiverOneLinerLeft: {
     flexDirection: "row",
@@ -2154,14 +2232,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   receiverLabelPrefix: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#64748B",
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: c.textSecondary,
   },
   receiverDetailsText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: "600",
-    color: "#1E293B",
+    color: c.text,
     flex: 1,
   },
   receiverChangeBtn: {
@@ -2171,10 +2249,10 @@ const styles = StyleSheet.create({
   receiverChangeBtnText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#089643",
+    color: "#10B981",
   },
   offlineCartBadge: {
-    backgroundColor: "#FEE2E2",
+    backgroundColor: c.errorBg,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -2195,7 +2273,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   bottomSheetContent: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: 24,
@@ -2206,7 +2284,7 @@ const styles = StyleSheet.create({
   dragHandle: {
     width: 40,
     height: 4,
-    backgroundColor: "#E5E7EB",
+    backgroundColor: c.cardSecondary,
     borderRadius: 2,
     alignSelf: "center",
     marginBottom: 16,
@@ -2214,7 +2292,7 @@ const styles = StyleSheet.create({
   contactsSectionTitle: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#4B5563",
+    color: c.textSecondary,
     marginTop: 20,
     marginBottom: 10,
     textTransform: "uppercase",
@@ -2223,9 +2301,9 @@ const styles = StyleSheet.create({
   mobileInputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F9FAFB",
+    backgroundColor: c.cardSecondary,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: c.border,
     borderRadius: 12,
     paddingRight: 8,
   },
@@ -2234,29 +2312,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
-    color: "#111827",
+    color: c.text,
   },
   contactIconBtn: {
     padding: 8,
   },
   contactSearchInput: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: c.cardSecondary,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: c.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 14,
-    color: "#111827",
+    color: c.text,
     marginBottom: 12,
   },
   contactsList: {
     maxHeight: "100%",
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: c.borderLight,
     borderRadius: 12,
     paddingHorizontal: 10,
-    backgroundColor: "#FCFDFD",
+    backgroundColor: c.card,
     marginBottom: 12,
   },
   contactItem: {
@@ -2265,13 +2343,13 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: c.borderLight,
   },
   contactAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#E8F5E9",
+    backgroundColor: c.successBg,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -2283,16 +2361,16 @@ const styles = StyleSheet.create({
   contactName: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#1F2937",
+    color: c.text,
   },
   contactPhone: {
     fontSize: 12,
-    color: "#6B7280",
+    color: c.textSecondary,
     marginTop: 2,
   },
   noContactsText: {
     fontSize: 13,
-    color: "#9CA3AF",
+    color: c.textMuted,
     textAlign: "center",
     paddingVertical: 12,
   },
@@ -2309,6 +2387,6 @@ const styles = StyleSheet.create({
   modalHeaderTitle: {
     fontSize: 17,
     fontWeight: "800",
-    color: "#111827",
+    color: c.text,
   },
 });

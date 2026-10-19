@@ -1,7 +1,11 @@
 import { Camera, FileText, Image as ImageIcon, X } from 'lucide-react-native';
-import React from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { Modal } from '../../ThemedModal';
 
 interface MediaPickerModalProps {
     visible: boolean;
@@ -20,6 +24,9 @@ export default function MediaPickerModal({
     onDocumentSelect,
     title = 'Select Media',
 }: MediaPickerModalProps) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
 
     return (
@@ -35,7 +42,7 @@ export default function MediaPickerModal({
                         <View style={styles.header}>
                             <Text style={styles.title}>{title}</Text>
                             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                                <X size={24} color="#6B7280" />
+                                <X size={24} color={theme.textSecondary} />
                             </TouchableOpacity>
                         </View>
 
@@ -45,7 +52,7 @@ export default function MediaPickerModal({
                                 <View style={[styles.iconBox, { backgroundColor: '#E0F2F1' }]}>
                                     <Camera size={24} color="#009688" />
                                 </View>
-                                <Text style={styles.optionLabel}>Camera</Text>
+                                <Text style={styles.optionLabel}>{t('camera')}</Text>
                             </TouchableOpacity>
 
                             {/* Gallery Option */}
@@ -53,7 +60,7 @@ export default function MediaPickerModal({
                                 <View style={[styles.iconBox, { backgroundColor: '#E3F2FD' }]}>
                                     <ImageIcon size={24} color="#2196F3" />
                                 </View>
-                                <Text style={styles.optionLabel}>Gallery</Text>
+                                <Text style={styles.optionLabel}>{t('gallery')}</Text>
                             </TouchableOpacity>
 
                             {/* Document Option (Conditional) */}
@@ -62,7 +69,7 @@ export default function MediaPickerModal({
                                     <View style={[styles.iconBox, { backgroundColor: '#FFF3E0' }]}>
                                         <FileText size={24} color="#FF9800" />
                                     </View>
-                                    <Text style={styles.optionLabel}>Document</Text>
+                                    <Text style={styles.optionLabel}>{t('document')}</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -73,14 +80,14 @@ export default function MediaPickerModal({
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
     },
     content: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 24,
@@ -94,7 +101,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     optionsContainer: {
         flexDirection: 'row',
@@ -116,6 +123,6 @@ const styles = StyleSheet.create({
     optionLabel: {
         fontSize: 14,
         fontWeight: '500',
-        color: '#374151',
+        color: c.text,
     },
 });

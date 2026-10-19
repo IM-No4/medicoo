@@ -1,20 +1,28 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Animated,
+  PanResponder,
+  Dimensions,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '../../../components/icons/AppIcon';
 import StatusModal, { StatusType } from '../../../components/modals/StatusModal';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { Modal } from '../../../components/ThemedModal';
+import { executeAction } from '../../../actions/ActionExecutor';
+import BookingForPicker, { BookingTarget } from './BookingForPicker';
+import { takePreferredBookingMember } from '../bookingTarget';
 
 const { width, height } = Dimensions.get('window');
 
@@ -29,6 +37,8 @@ interface RequestAppointmentModalProps {
     };
     weeklyAvailability?: Record<string, { enabled: boolean; start: string; end: string }>;
     urgentSurchargePercent?: number;
+    // A pending/approved request with this doctor already exists - blocks a second one.
+    activeAppointment?: { requestId: string; status: string } | null;
     onRequest: (data: any) => Promise<void>;
 }
 
@@ -41,7 +51,7 @@ const CONSULTATION_TYPES = [
 ];
 
 // Theme Color
-const THEME_COLOR = '#0FBBA1'; // Doctor Onboarding Green / Branding Color
+const THEME_COLOR = '#10B981'; // Doctor Onboarding Green / Branding Color
 
 export default function RequestAppointmentModal({
     visible,
@@ -50,8 +60,12 @@ export default function RequestAppointmentModal({
     consultationFees,
     weeklyAvailability,
     urgentSurchargePercent,
+    activeAppointment,
     onRequest,
 }: RequestAppointmentModalProps) {
+  const { t } = useLanguage();
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [selectedTime, setSelectedTime] = useState(new Date());
     const [showTimePicker, setShowTimePicker] = useState(false);
@@ -59,8 +73,59 @@ export default function RequestAppointmentModal({
     const [dates, setDates] = useState<any[]>([]);
     const [reason, setReason] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    // Who the consultation is for: null = myself
+    const [target, setTarget] = useState<BookingTarget>({ memberId: null, name: 'Myself', hasAccount: false });
 
     const insets = useSafeAreaInsets();
+
+    // Drag the header (handle + title row) down to dismiss. Past the threshold the
+    // sheet slides the rest of the way off-screen and then closes; a short drag
+    // springs back. The sheet is reset each time it opens.
+    const dragY = useRef(new Animated.Value(0)).current;
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
+    const sheetHeightRef = useRef(height);
+    sheetHeightRef.current = height;
+
+    useEffect(() => {
+        if (visible) dragY.setValue(0);
+    }, [visible, dragY]);
+
+    // Opened from a family member's page: already booking for them.
+    useEffect(() => {
+        if (!visible) return;
+        const preferred = takePreferredBookingMember();
+        if (preferred) setTarget({ memberId: preferred.memberId, name: preferred.name, hasAccount: preferred.hasAccount });
+    }, [visible]);
+
+    const handlePan = useMemo(
+        () =>
+            PanResponder.create({
+                onStartShouldSetPanResponder: () => true,
+                onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 2,
+                // Once the drag starts, nothing (the ScrollView below, the modal)
+                // may take it over mid-gesture - that was what made it feel broken.
+                onPanResponderTerminationRequest: () => false,
+                onPanResponderMove: (_, g) => {
+                    dragY.setValue(Math.max(0, g.dy));
+                },
+                onPanResponderRelease: (_, g) => {
+                    if (g.dy > 90 || g.vy > 0.8) {
+                        Animated.timing(dragY, {
+                            toValue: sheetHeightRef.current,
+                            duration: 160,
+                            useNativeDriver: true,
+                        }).start(() => onCloseRef.current());
+                    } else {
+                        Animated.spring(dragY, { toValue: 0, useNativeDriver: true, bounciness: 0 }).start();
+                    }
+                },
+                onPanResponderTerminate: () => {
+                    Animated.spring(dragY, { toValue: 0, useNativeDriver: true, bounciness: 0 }).start();
+                },
+            }),
+        [dragY]
+    );
 
     // Status Modal State
     const [status, setStatus] = useState<{
@@ -133,7 +198,7 @@ export default function RequestAppointmentModal({
             if (isToday) {
                 const minTime = new Date(now.getTime() + 15 * 60000);
                 if (selected.getTime() < minTime.getTime()) {
-                    showStatus('warning', 'Invalid Time', 'Please select a time at least 15 minutes from now for immediate consultations.');
+                    showStatus('warning', t('invalid_time'), t('please_select_a_time_at_least_15_minut'));
                     return;
                 }
             }
@@ -177,9 +242,12 @@ export default function RequestAppointmentModal({
     const surcharge = getSurchargeInfo();
     const totalWithSurcharge = getFee() + surcharge.amount;
 
+    const blocked = !!activeAppointment && ['pending', 'approved'].includes(activeAppointment.status);
+
     const handlePayment = async () => {
+        if (blocked) return;
         if (!reason.trim()) {
-            showStatus('warning', 'Reason required', "Please let the doctor know why you'd like to consult them.");
+            showStatus('warning', t('reason_required'), t('please_let_the_doctor_know_why_you_d_l'));
             return;
         }
 
@@ -194,11 +262,13 @@ export default function RequestAppointmentModal({
                 type: selectedType,
                 fee: fee,
                 reason: reason.trim(),
+                forMemberId: target.memberId,
+                forName: target.memberId ? target.name : null,
             });
         } catch (error: any) {
             showStatus(
                 'error',
-                'Request failed',
+                t('request_failed_2'),
                 error?.response?.data?.message || 'Could not send your appointment request. Please try again.'
             );
         } finally {
@@ -215,23 +285,27 @@ export default function RequestAppointmentModal({
                 onRequestClose={onClose}
             >
                 <View style={styles.overlay}>
-                    <View style={[styles.container, { height: height * 0.92, paddingBottom: insets.bottom + 10 }]}>
-                        {/* Handle bar */}
-                        <View style={styles.handleBar}>
-                            <View style={styles.handle} />
-                        </View>
+                    {/* Tapping the dimmed area outside the sheet closes it */}
+                    <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+                    <Animated.View style={[styles.container, { height: height * 0.92, paddingBottom: insets.bottom + 10, transform: [{ translateY: dragY }] }]}>
+                        {/* Handle + title row: the drag-to-dismiss area */}
+                        <View {...handlePan.panHandlers}>
+                            <View style={styles.handleBar}>
+                                <View style={styles.handle} />
+                            </View>
 
-                        <View style={styles.header}>
-                            <Text style={styles.title}>Request Appointment</Text>
-                            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                                <AppIcon name="x" size={24} color="#1c1c1e" />
-                            </TouchableOpacity>
+                            <View style={styles.header}>
+                                <Text style={styles.title}>{t('request_appointment')}</Text>
+                            </View>
                         </View>
 
                         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
 
+                            {/* 0. Who is it for (only shown when you have family members) */}
+                            <BookingForPicker value={target.memberId} onChange={setTarget} />
+
                             {/* 1. Date Selection - Chips */}
-                            <Text style={styles.sectionTitle}>Preferred Date</Text>
+                            <Text style={styles.sectionTitle}>{t('preferred_date')}</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.datesContainer}>
                                 {dates.map((item) => {
                                     const isSelected = item.fullDate.toDateString() === selectedDate.toDateString();
@@ -258,7 +332,7 @@ export default function RequestAppointmentModal({
                                     <View style={[styles.iconBoxSmall, { backgroundColor: '#F2F2F7' }]}>
                                         <AppIcon name="clock" size={20} color={THEME_COLOR} />
                                     </View>
-                                    <Text style={styles.timeLabel}>Preferred Time</Text>
+                                    <Text style={styles.timeLabel}>{t('preferred_time')}</Text>
                                 </View>
                                 <View style={styles.timeRowRight}>
                                     <Text style={styles.timeValue}>
@@ -281,7 +355,7 @@ export default function RequestAppointmentModal({
                             )}
 
                             {/* 3. Consultation Mode */}
-                            <Text style={styles.sectionTitle}>Consultation Mode</Text>
+                            <Text style={styles.sectionTitle}>{t('consultation_mode')}</Text>
                             <View style={styles.typesContainer}>
                                 {CONSULTATION_TYPES.map((type) => {
                                     const isSelected = selectedType === type.id;
@@ -307,6 +381,8 @@ export default function RequestAppointmentModal({
                                             break;
                                     }
 
+                                    if (isDark) iconBg = `${iconColor}26`;
+
                                     return (
                                         <TouchableOpacity
                                             key={type.id}
@@ -327,7 +403,7 @@ export default function RequestAppointmentModal({
                                             </View>
 
                                             <View style={styles.cardContent}>
-                                                <Text style={styles.typeLabel}>{type.label}</Text>
+                                                <Text style={styles.typeLabel}>{t(type.label)}</Text>
                                                 <Text style={styles.typeFee}>₹{fee || 0}</Text>
                                             </View>
                                         </TouchableOpacity>
@@ -336,10 +412,10 @@ export default function RequestAppointmentModal({
                             </View>
 
                             {/* 4. Reason for visit */}
-                            <Text style={styles.sectionTitle}>Reason for Visit</Text>
+                            <Text style={styles.sectionTitle}>{t('reason_for_visit')}</Text>
                             <TextInput
                                 style={styles.reasonInput}
-                                placeholder="Briefly describe your symptoms or reason for consultation..."
+                                placeholder={t('briefly_describe_your_symptoms_or_reas')}
                                 placeholderTextColor="#8e8e93"
                                 value={reason}
                                 onChangeText={setReason}
@@ -350,7 +426,7 @@ export default function RequestAppointmentModal({
                             {/* 5. Payment Info */}
                             {surcharge.applies && (
                                 <View style={styles.surchargeNotice}>
-                                    <AppIcon name="alert-triangle" size={16} color="#B45309" />
+                                    <AppIcon name="alert-triangle" size={16} color={theme.warning} />
                                     <Text style={styles.surchargeNoticeText}>
                                         This time is outside {doctorName}'s regular hours - a {surcharge.percent}% urgent
                                         care surcharge (₹{surcharge.amount}) applies.
@@ -372,19 +448,38 @@ export default function RequestAppointmentModal({
 
                         {/* Footer Action */}
                         <View style={styles.footer}>
+                            {blocked && (
+                                <TouchableOpacity
+                                    style={styles.blockedNotice}
+                                    activeOpacity={0.8}
+                                    onPress={() => {
+                                        onClose();
+                                        executeAction('OPEN_CONSULTATION_DETAIL', { requestId: activeAppointment!.requestId });
+                                    }}
+                                >
+                                    <AppIcon name="calendar-days" size={16} color={theme.warning} />
+                                    <Text style={styles.blockedNoticeText}>
+                                        {activeAppointment!.status === 'approved'
+                                            ? `You already have an upcoming appointment with ${doctorName}.`
+                                            : `Your request to ${doctorName} is still pending.`}
+                                        {' '}View it
+                                    </Text>
+                                    <AppIcon name="chevron-right" size={16} color={theme.warning} />
+                                </TouchableOpacity>
+                            )}
                             <TouchableOpacity
-                                style={[styles.payButton, submitting && styles.payButtonDisabled]}
+                                style={[styles.payButton, (submitting || blocked) && styles.payButtonDisabled]}
                                 onPress={handlePayment}
-                                disabled={submitting}
+                                disabled={submitting || blocked}
                             >
                                 {submitting ? (
                                     <ActivityIndicator color="#fff" />
                                 ) : (
-                                    <Text style={styles.payButtonText}>Send Request</Text>
+                                    <Text style={styles.payButtonText}>{t('send_request')}</Text>
                                 )}
                             </TouchableOpacity>
                         </View>
-                    </View>
+                    </Animated.View>
                 </View>
             </Modal>
 
@@ -400,14 +495,14 @@ export default function RequestAppointmentModal({
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
     },
     container: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         // Height handled inline or here default
@@ -415,12 +510,12 @@ const styles = StyleSheet.create({
     },
     handleBar: {
         alignItems: 'center',
-        paddingVertical: 10,
+        paddingVertical: 16,
     },
     handle: {
         width: 40,
         height: 4,
-        backgroundColor: '#E5E5EA',
+        backgroundColor: c.cardSecondary,
         borderRadius: 2,
     },
     header: {
@@ -430,12 +525,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingBottom: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#F2F2F7',
+        borderBottomColor: c.borderLight,
     },
     title: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#1c1c1e',
+        color: c.text,
     },
     closeButton: {
         padding: 4,
@@ -446,7 +541,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#1c1c1e',
+        color: c.text,
         marginBottom: 12,
     },
     datesContainer: {
@@ -457,11 +552,11 @@ const styles = StyleSheet.create({
         height: 60,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#E5E5EA',
+        borderColor: c.border,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
     },
     activeDateChip: {
         backgroundColor: THEME_COLOR,
@@ -474,14 +569,14 @@ const styles = StyleSheet.create({
     },
     dayText: {
         fontSize: 12,
-        color: '#8e8e93',
+        color: c.textSecondary,
         marginBottom: 4,
         textTransform: 'uppercase',
     },
     dateText: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#1c1c1e',
+        color: c.text,
     },
     activeText: {
         color: '#fff',
@@ -490,12 +585,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         paddingVertical: 12,
         paddingHorizontal: 16,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#E5E5EA',
+        borderColor: c.border,
         marginBottom: 24,
         marginTop: 8,
     },
@@ -514,7 +609,7 @@ const styles = StyleSheet.create({
     timeLabel: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#1c1c1e',
+        color: c.text,
     },
     timeRowRight: {
         flexDirection: 'row',
@@ -534,9 +629,9 @@ const styles = StyleSheet.create({
     },
     typeCard: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderWidth: 1,
-        borderColor: '#E5E5EA',
+        borderColor: c.border,
         borderRadius: 16,
         paddingVertical: 12,
         paddingHorizontal: 4,
@@ -546,7 +641,7 @@ const styles = StyleSheet.create({
     },
     activeTypeCard: {
         borderColor: THEME_COLOR,
-        backgroundColor: '#ffffffff',
+        backgroundColor: c.primaryBg,
         borderWidth: 1.5,
     },
     cardHeader: {
@@ -567,24 +662,24 @@ const styles = StyleSheet.create({
     typeLabel: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#1c1c1e',
+        color: c.text,
         marginBottom: 2,
         textAlign: 'center',
     },
     typeFee: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#1c1c1e',
+        color: c.text,
     },
 
     reasonInput: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderWidth: 1,
-        borderColor: '#E5E5EA',
+        borderColor: c.border,
         borderRadius: 16,
         padding: 16,
         fontSize: 14,
-        color: '#1c1c1e',
+        color: c.text,
         minHeight: 80,
         textAlignVertical: 'top',
         marginBottom: 24,
@@ -594,7 +689,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'flex-start',
         gap: 8,
-        backgroundColor: '#FFFBEB',
+        backgroundColor: c.warningBg,
         borderRadius: 12,
         borderWidth: 1,
         borderColor: '#FDE68A',
@@ -604,15 +699,15 @@ const styles = StyleSheet.create({
     surchargeNoticeText: {
         flex: 1,
         fontSize: 12,
-        color: '#92400E',
+        color: c.warning,
         lineHeight: 17,
     },
     paymentInfoContainer: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderRadius: 16,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#F2F2F7',
+        borderColor: c.borderLight,
         marginTop: 8,
         marginBottom: 0,
     },
@@ -625,7 +720,7 @@ const styles = StyleSheet.create({
     payLabel: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#1c1c1e',
+        color: c.text,
     },
     payAmount: {
         fontSize: 16,
@@ -634,8 +729,25 @@ const styles = StyleSheet.create({
     },
     disclaimer: {
         fontSize: 12,
-        color: '#8e8e93',
+        color: c.textSecondary,
         lineHeight: 18,
+    },
+    blockedNotice: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: c.warningBg,
+        borderRadius: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        marginBottom: 10,
+    },
+    blockedNoticeText: {
+        flex: 1,
+        fontSize: 12.5,
+        fontWeight: '600',
+        color: c.warning,
+        lineHeight: 17,
     },
     footer: {
         paddingHorizontal: 20,

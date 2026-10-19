@@ -1,8 +1,9 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
-import React, { useCallback, useEffect, useState } from 'react';
+import { StatusBar } from '../../components/ThemedStatusBar';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { COLORS, styles } from './styles';
+import { createStyles } from './styles';
+import { useTheme } from '../../theme/ThemeContext';
 import { formatDoctorName } from '../../utils/formatters';
 import { getLocalDateString } from '../../utils/dateUtils';
 
@@ -24,8 +25,12 @@ import { AppDispatch, RootState } from '../../redux/store';
 import { useNavigation } from '@react-navigation/native';
 import { Settings } from 'lucide-react-native';
 import { timeToMinutes } from './utils/scheduleSort';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export default function CalendarScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const [isFocused, setIsFocused] = useState(false);
 
     useFocusEffect(
@@ -157,7 +162,7 @@ export default function CalendarScreen() {
                         {sortedAppointments.length > 0 && (
                             <>
                                 <View style={styles.sectionHeaderRow}>
-                                    <Text style={styles.sectionTitle}>Today's schedule</Text>
+                                    <Text style={styles.sectionTitle}>{t('today_s_schedule')}</Text>
                                 </View>
                                 <View style={{ marginHorizontal: 24 }}>
                                     {sortedAppointments.map((item: any) => (
@@ -194,7 +199,7 @@ export default function CalendarScreen() {
                                         onPress={() => navigation.navigate('ManageMedications' as never)}
                                         activeOpacity={0.7}
                                     >
-                                        <Settings size={12} color={COLORS.primary} style={{ marginRight: 4 }} />
+                                        <Settings size={12} color={theme.primary} style={{ marginRight: 4 }} />
                                         <Text style={styles.manageBtnText}>Manage</Text>
                                     </TouchableOpacity>
                                 </View>

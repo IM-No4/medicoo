@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { RenderMedicationIcon } from '../config/shapes';
-import { styles } from '../styles';
+import { createStyles } from '../styles';
+import { useTheme } from '../../../../theme/ThemeContext';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 const PALETTE = [
   '#FFFFFF', // White
@@ -54,6 +56,9 @@ function chunk<T>(items: T[], size: number): T[][] {
 }
 
 export default function ColorStep({ data, onChange }: ColorStepProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
   const renderSection = (label: string, field: string, options: string[]) => (
     <View style={{ marginBottom: 24 }}>
       <Text style={styles.colorLabel}>{label}</Text>
@@ -80,7 +85,7 @@ export default function ColorStep({ data, onChange }: ColorStepProps) {
                 {isSelected && (
                   <View style={{
                     width: '100%', height: '100%', borderRadius: 999,
-                    borderWidth: 2, borderColor: '#121212'
+                    borderWidth: 2, borderColor: theme.text
                   }} />
                 )}
               </TouchableOpacity>
@@ -108,7 +113,7 @@ export default function ColorStep({ data, onChange }: ColorStepProps) {
         </View>
       </View>
 
-      <Text style={styles.stepTitle}>Choose Colours</Text>
+      <Text style={styles.stepTitle}>{t('choose_colours')}</Text>
 
       {isCapsule ? (
         <>

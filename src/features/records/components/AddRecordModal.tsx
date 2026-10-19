@@ -1,17 +1,21 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Camera, Image, Info } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-    Animated,
-    Modal,
-    PanResponder,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  PanResponder,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { AdaptiveStatusBar } from '../../../components/ThemedStatusBar';
+import { Modal } from '../../../components/ThemedModal';
 
 interface Props {
     visible: boolean;
@@ -30,6 +34,9 @@ export default function AddRecordModal({
     uploadCount,
     maxUploads,
 }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
     const translateY = useState(new Animated.Value(0))[0];
     const isLimitReached = uploadCount >= maxUploads;
@@ -76,7 +83,7 @@ export default function AddRecordModal({
             transparent
             onRequestClose={onClose}
         >
-            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+            <AdaptiveStatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
             <View style={styles.backdrop}>
                 <TouchableOpacity
                     style={styles.backdropTouchable}
@@ -96,7 +103,7 @@ export default function AddRecordModal({
                     {/* Header */}
                     <View style={styles.header} {...panResponder.panHandlers}>
                         <View style={styles.dragIndicator} />
-                        <Text style={styles.title}>Add Record</Text>
+                        <Text style={styles.title}>{t('add_record')}</Text>
                         <Text style={styles.subtitle}>
                             {isLimitReached
                                 ? 'Upload limit reached'
@@ -115,10 +122,10 @@ export default function AddRecordModal({
                                     Limit of {maxUploads} uploads reached
                                 </Text>
                                 <Text style={styles.limitText}>
-                                    You can still view all system-generated prescriptions and reports. To upload more, please remove an old document or contact support.
+                                    {t('you_can_still_view_all_system_generate')}
                                 </Text>
                                 <TouchableOpacity style={styles.gotItButton} onPress={onClose}>
-                                    <Text style={styles.gotItText}>Got it</Text>
+                                    <Text style={styles.gotItText}>{t('got_it')}</Text>
                                 </TouchableOpacity>
                             </View>
                         ) : (
@@ -137,9 +144,9 @@ export default function AddRecordModal({
                                         <Camera color="#fff" size={24} />
                                     </LinearGradient>
                                     <View style={styles.textContainer}>
-                                        <Text style={styles.actionTitle}>Scan Document</Text>
+                                        <Text style={styles.actionTitle}>{t('scan_document')}</Text>
                                         <Text style={styles.actionSubtitle}>
-                                            Use camera to scan report or prescription
+                                            {t('use_camera_to_scan_report_or_prescript')}
                                         </Text>
                                     </View>
                                 </TouchableOpacity>
@@ -158,9 +165,9 @@ export default function AddRecordModal({
                                         <Image color="#fff" size={24} />
                                     </LinearGradient>
                                     <View style={styles.textContainer}>
-                                        <Text style={styles.actionTitle}>Upload from Gallery</Text>
+                                        <Text style={styles.actionTitle}>{t('upload_from_gallery')}</Text>
                                         <Text style={styles.actionSubtitle}>
-                                            Select image or PDF from device
+                                            {t('select_image_or_pdf_from_device')}
                                         </Text>
                                     </View>
                                 </TouchableOpacity>
@@ -173,7 +180,7 @@ export default function AddRecordModal({
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     backdrop: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -183,7 +190,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     container: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         paddingBottom: 20,
@@ -193,7 +200,7 @@ const styles = StyleSheet.create({
         paddingBottom: 16,
         paddingHorizontal: 20,
         borderBottomWidth: 1,
-        borderBottomColor: '#F2F2F7',
+        borderBottomColor: c.borderLight,
         alignItems: 'center',
     },
     dragIndicator: {
@@ -206,12 +213,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 20,
         fontWeight: '700',
-        color: '#1C1C1E',
+        color: c.text,
         marginBottom: 4,
     },
     subtitle: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
     },
     content: {
         padding: 24,
@@ -220,12 +227,12 @@ const styles = StyleSheet.create({
     actionCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         padding: 16,
         borderRadius: 20,
         gap: 16,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
     },
     iconContainer: {
         width: 48,
@@ -240,11 +247,11 @@ const styles = StyleSheet.create({
     actionTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#1C1C1E',
+        color: c.text,
     },
     actionSubtitle: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginTop: 2,
     },
     // Limit styles
@@ -256,7 +263,7 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: '#FEF3C7',
+        backgroundColor: c.warningBg,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 16,
@@ -264,19 +271,19 @@ const styles = StyleSheet.create({
     limitTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#1C1C1E',
+        color: c.text,
         marginBottom: 8,
         textAlign: 'center',
     },
     limitText: {
         fontSize: 15,
-        color: '#4B5563',
+        color: c.textSecondary,
         textAlign: 'center',
         lineHeight: 22,
         marginBottom: 24,
     },
     gotItButton: {
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         paddingVertical: 12,
         paddingHorizontal: 32,
         borderRadius: 12,
@@ -284,6 +291,6 @@ const styles = StyleSheet.create({
     gotItText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#1C1C1E',
+        color: c.text,
     },
 });

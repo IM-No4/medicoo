@@ -1,19 +1,23 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { HealthTipFeedItem } from '../feed.types';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
 
 type Props = {
   data: HealthTipFeedItem;
 };
 
 function HealthTipCard({ data }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const accentColor = data.accentColor || '#10B981';
 
   return (
-    <View style={[styles.container, { backgroundColor: `${accentColor}10` }]}>
+    <View style={[styles.container, { borderColor: `${accentColor}40` }]}>
       <View style={styles.header}>
-        <View style={[styles.iconBox, { backgroundColor: `${accentColor}20` }]}>
+        <View style={[styles.iconBox, { backgroundColor: `${accentColor}22` }]}>
           <AppIcon name={data.icon as any || "lightbulb"} size={20} color={accentColor} />
         </View>
         <Text style={[styles.heading, { color: accentColor }]}>{data.title || "Daily Insight"}</Text>
@@ -36,14 +40,14 @@ function HealthTipCard({ data }: Props) {
 
 export default React.memo(HealthTipCard);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     marginHorizontal: 20,
     marginBottom: 30,
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
+    backgroundColor: c.card,
   },
   header: {
     flexDirection: 'row',
@@ -66,7 +70,7 @@ const styles = StyleSheet.create({
   },
   content: {
     fontSize: 13,
-    color: '#1F2937',
+    color: c.text,
     fontWeight: '600',
     lineHeight: 24,
     marginBottom: 16,
@@ -81,7 +85,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.5)',
   },
   tagText: {
     fontSize: 11,

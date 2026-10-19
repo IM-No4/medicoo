@@ -4,11 +4,10 @@ import { clearSelectedAddress, setSelectedAddress } from '@/src/redux/slices/add
 import { RootState } from '@/src/redux/store';
 import { getUserAddresses } from '@/src/services/api/address.api';
 import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,6 +17,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../ThemedModal';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -52,6 +55,9 @@ interface Props {
 // Removed MOCK_ADDRESSES
 
 export default function AddressSelectorBottomSheet({ visible, onClose }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
@@ -136,7 +142,7 @@ export default function AddressSelectorBottomSheet({ visible, onClose }: Props) 
           {/* Handle bar */}
           <View style={styles.handleBar} />
 
-          <Text style={styles.title}>Select a delivery address</Text>
+          <Text style={styles.title}>{t('select_a_delivery_address')}</Text>
 
           <ScrollView
             style={styles.scrollView}
@@ -146,9 +152,9 @@ export default function AddressSelectorBottomSheet({ visible, onClose }: Props) 
 
             {/* Saved Addresses List */}
             {loading ? (
-              <ActivityIndicator size="small" color="#0FBBA1" style={{ marginVertical: 20 }} />
+              <ActivityIndicator size="small" color="#10B981" style={{ marginVertical: 20 }} />
             ) : addresses.length === 0 ? (
-              <Text style={{ textAlign: 'center', color: '#6B7280', marginVertical: 20 }}>No saved addresses found.</Text>
+              <Text style={{ textAlign: 'center', color: theme.textSecondary, marginVertical: 20 }}>{t('no_saved_addresses_found')}</Text>
             ) : (
               addresses.map((item) => {
                 const itemId = item._id || item.id;
@@ -170,14 +176,14 @@ export default function AddressSelectorBottomSheet({ visible, onClose }: Props) 
                     activeOpacity={0.7}
                   >
                     <View style={styles.iconContainer}>
-                      <AppIcon name={getIcon(item.label || item.type)} size={20} color={isActive ? "#0FBBA1" : "#6B7280"} />
+                      <AppIcon name={getIcon(item.label || item.type)} size={20} color={isActive ? "#10B981" : "#6B7280"} />
                     </View>
                     <View style={styles.cardContent}>
                       <View style={styles.cardHeaderRow}>
                         <Text style={styles.cardTitle}>{item.label}</Text>
                         {distanceText ? (
                           <View style={styles.distanceBadge}>
-                            <AppIcon name="navigation" size={10} color="#6B7280" />
+                            <AppIcon name="navigation" size={10} color={theme.textSecondary} />
                             <Text style={styles.distanceText}>{distanceText}</Text>
                           </View>
                         ) : null}
@@ -204,9 +210,9 @@ export default function AddressSelectorBottomSheet({ visible, onClose }: Props) 
               onPress={handleAddNew}
               activeOpacity={0.7}
             >
-              <AppIcon name="plus" size={18} color="#0FBBA1" />
+              <AppIcon name="plus" size={18} color="#10B981" />
               <Text style={styles.addButtonText}>
-                Add New Address
+                {t('add_new_address')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -216,7 +222,7 @@ export default function AddressSelectorBottomSheet({ visible, onClose }: Props) 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -226,7 +232,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: SCREEN_HEIGHT * 0.85,
@@ -243,7 +249,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: c.text,
     paddingHorizontal: 20,
     marginBottom: 16,
   },
@@ -260,20 +266,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderRadius: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
   },
   activeCard: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#0FBBA1',
+    backgroundColor: c.successBg,
+    borderColor: '#10B981',
   },
   iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -296,7 +302,7 @@ const styles = StyleSheet.create({
   distanceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
@@ -305,38 +311,38 @@ const styles = StyleSheet.create({
   distanceText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#6B7280',
+    color: c.textSecondary,
     marginTop: Platform.OS === 'ios' ? 1 : 0,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: c.text,
     marginBottom: 4,
   },
   cardSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: c.textSecondary,
     lineHeight: 20,
   },
   checkCircle: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: c.cardSecondary,
     marginVertical: 16,
   },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: c.textSecondary,
     marginBottom: 16,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -345,23 +351,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: c.border,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: c.successBg,
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#0FBBA1',
+    borderColor: '#10B981',
     width: '100%',
   },
   addButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0FBBA1',
+    color: '#10B981',
   },
 });

@@ -1,7 +1,7 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft, Pencil, Pill, Plus, Trash2 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     Platform,
@@ -19,6 +19,9 @@ import { MAX_SYNC_ATTEMPTS } from '../../redux/slices/calendarSlice';
 import { StorageService } from '../../services/storage';
 import { loadMedicineSchedules, saveMedicineSchedules } from '../../services/storage/medicineSchedulesStorage';
 import { scheduleLocalMedicineReminders } from '../../services/notifications/medicineReminderScheduler';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface MedSchedule {
     _id: string;
@@ -60,6 +63,9 @@ function isPastSchedule(schedule: MedSchedule): boolean {
 }
 
 export default function ManageMedicationsScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
     const [schedules, setSchedules] = useState<MedSchedule[]>([]);
@@ -155,7 +161,7 @@ export default function ManageMedicationsScreen() {
     const handleDelete = (id: string, name: string) => {
         showStatus(
             'warning',
-            'Delete Medication',
+            t('delete_medication'),
             `Are you sure you want to delete ${name}? This cannot be undone.`,
             async () => {
                 hideStatus();
@@ -188,7 +194,7 @@ export default function ManageMedicationsScreen() {
                         await StorageService.addToSyncQueue('DELETE_MEDICINE', { id });
                         removeLocally();
                     } else {
-                        showStatus('error', 'Error', 'Failed to delete medication.');
+                        showStatus('error', t('error'), t('failed_to_delete_medication'));
                     }
                 }
             },
@@ -234,7 +240,7 @@ export default function ManageMedicationsScreen() {
                         onPress={() => handleEdit(item)}
                         activeOpacity={0.7}
                     >
-                        <Pencil size={16} color="#0FBBA1" />
+                        <Pencil size={16} color="#10B981" />
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.deleteBtn}
@@ -258,35 +264,35 @@ export default function ManageMedicationsScreen() {
                 rather than the filled-circle style this screen had before. */}
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>My Medications</Text>
+                <Text style={styles.headerTitle}>{t('my_medications')}</Text>
                 <TouchableOpacity style={styles.addHeaderBtn} onPress={() => navigation.navigate('AddMedication')} activeOpacity={0.7}>
-                    <Plus size={22} color="#1F2937" />
+                    <Plus size={22} color={theme.text} />
                 </TouchableOpacity>
             </View>
 
             {loading ? (
                 <View style={styles.center}>
-                    <ActivityIndicator color="#0FBBA1" size="large" />
+                    <ActivityIndicator color="#10B981" size="large" />
                 </View>
             ) : schedules.length === 0 ? (
                 <View style={styles.center}>
                     <View style={styles.emptyIconBox}>
-                        <Pill size={36} color="#94A3B8" />
+                        <Pill size={36} color={theme.textMuted} />
                     </View>
-                    <Text style={styles.emptyTitle}>No Medications Added</Text>
-                    <Text style={styles.emptySubtitle}>Add your medications to get daily reminders.</Text>
+                    <Text style={styles.emptyTitle}>{t('no_medications_added')}</Text>
+                    <Text style={styles.emptySubtitle}>{t('add_your_medications_to_get_daily_remi')}</Text>
                     <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.navigate('AddMedication')} activeOpacity={0.8}>
                         <Plus size={16} color="#FFF" style={{ marginRight: 6 }} />
-                        <Text style={styles.emptyBtnText}>Add First Medication</Text>
+                        <Text style={styles.emptyBtnText}>{t('add_first_medication')}</Text>
                     </TouchableOpacity>
                 </View>
             ) : (
                 <ScrollView contentContainerStyle={[styles.list, { paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
                     {activeSchedules.length > 0 && (
                         <>
-                            <Text style={styles.sectionLabel}>EDIT OR REMOVE MEDICATION SCHEDULES</Text>
+                            <Text style={styles.sectionLabel}>{t('edit_or_remove_medication_schedules')}</Text>
                             {activeSchedules.map(item => renderMedCard(item, false))}
                         </>
                     )}
@@ -297,7 +303,7 @@ export default function ManageMedicationsScreen() {
                         history, so this list shouldn't hide them entirely. */}
                     {pastSchedules.length > 0 && (
                         <>
-                            <Text style={[styles.sectionLabel, styles.pastSectionLabel]}>PAST & REMOVED MEDICATIONS</Text>
+                            <Text style={[styles.sectionLabel, styles.pastSectionLabel]}>{t('past_removed_medications')}</Text>
                             {pastSchedules.map(item => renderMedCard(item, true))}
                         </>
                     )}
@@ -317,10 +323,10 @@ export default function ManageMedicationsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.background,
     },
     header: {
         flexDirection: 'row',
@@ -328,7 +334,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -344,7 +350,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     addHeaderBtn: {
         padding: 8,
@@ -359,7 +365,7 @@ const styles = StyleSheet.create({
     sectionLabel: {
         fontSize: 10,
         fontWeight: '700',
-        color: '#94A3B8',
+        color: c.textMuted,
         letterSpacing: 1,
         marginBottom: 12,
     },
@@ -370,25 +376,25 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 5,
         borderRadius: 8,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
     },
     pastBadgeText: {
         fontSize: 11,
         fontWeight: '700',
-        color: '#94A3B8',
+        color: c.textMuted,
     },
     medCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         gap: 12,
     },
     disabledCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
     },
     medIconBox: {
         width: 44,
@@ -404,15 +410,15 @@ const styles = StyleSheet.create({
     medName: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
     },
     disabledText: {
-        color: '#64748B',
+        color: c.textSecondary,
         textDecorationLine: 'line-through',
     },
     medDosage: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         fontWeight: '500',
     },
     pendingSyncText: {
@@ -430,7 +436,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 10,
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -438,7 +444,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 10,
-        backgroundColor: '#FEE2E2',
+        backgroundColor: c.errorBg,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -452,7 +458,7 @@ const styles = StyleSheet.create({
         width: 72,
         height: 72,
         borderRadius: 36,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 16,
@@ -460,12 +466,12 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         marginBottom: 6,
     },
     emptySubtitle: {
         fontSize: 13,
-        color: '#64748B',
+        color: c.textSecondary,
         textAlign: 'center',
         lineHeight: 20,
         marginBottom: 24,
@@ -473,7 +479,7 @@ const styles = StyleSheet.create({
     emptyBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         paddingVertical: 12,
         paddingHorizontal: 24,
         borderRadius: 14,

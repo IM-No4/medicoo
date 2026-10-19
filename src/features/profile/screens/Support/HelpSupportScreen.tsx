@@ -1,5 +1,4 @@
 import { WEB_APP_URL } from '@/src/config/env';
-import { APP_VERSION } from '@/src/utils/appVersion';
 import { useNavigation } from '@react-navigation/native';
 import {
     ChevronDown,
@@ -13,7 +12,8 @@ import {
     Search,
     Shield
 } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { getReturnPolicy, ReturnPolicy } from '../../../../services/api/returns.api';
 import {
     Alert,
     LayoutAnimation,
@@ -28,6 +28,9 @@ import {
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 const SUPPORT_EMAIL = 'support@medicoo.in';
 
@@ -60,10 +63,18 @@ const FAQS = [
 ];
 
 export default function HelpSupportScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
     const [searchQuery, setSearchQuery] = useState('');
     const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
+    // Who to write to if you are not satisfied (the e-commerce rules ask for this to be published). Shown once it is set up.
+    const [policy, setPolicy] = useState<ReturnPolicy | null>(null);
+    useEffect(() => {
+        getReturnPolicy().then(setPolicy).catch(() => undefined);
+    }, []);
 
     const toggleFaq = (id: string) => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -78,19 +89,26 @@ export default function HelpSupportScreen() {
 
     const handleEmailPress = () => {
         Linking.openURL(`mailto:${SUPPORT_EMAIL}`).catch(() => {
-            Alert.alert('Unable to open email', `Please reach us at ${SUPPORT_EMAIL}`);
+            Alert.alert(t('unable_to_open_email'), `Please reach us at ${SUPPORT_EMAIL}`);
         });
     };
 
-    // No general phone line exists yet - this stays honest about that
+    // The helpline number is a setting (Admin > System Settings). Until one is set, this stays honest about it
     // instead of pretending the channel is live.
-    const handleUnavailableChannel = (title: string) => {
-        Alert.alert(title, `This isn't available yet - please email us at ${SUPPORT_EMAIL} in the meantime.`);
+    const helpline = policy?.grievanceTeam || null;
+    const handleCallPress = () => {
+        if (!helpline) {
+            Alert.alert('Call Us', `This isn't available yet - please email us at ${SUPPORT_EMAIL} in the meantime.`);
+            return;
+        }
+        Linking.openURL(`tel:${helpline.ivrNumber.replace(/\s/g, '')}`).catch(() => {
+            Alert.alert('Call Us', `Please dial ${helpline.ivrNumber}`);
+        });
     };
 
     const handleAboutPress = () => {
         Linking.openURL(WEB_APP_URL).catch(() => {
-            Alert.alert('Unable to open link', WEB_APP_URL);
+            Alert.alert(t('unable_to_open_link'), WEB_APP_URL);
         });
     };
 
@@ -98,55 +116,60 @@ export default function HelpSupportScreen() {
         <View style={styles.container}>
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Help & Support</Text>
+                <Text style={styles.headerTitle}>{t('help_support')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 {/* Search Bar */}
                 <View style={styles.searchContainer}>
-                    <Search size={20} color="#9CA3AF" />
+                    <Search size={20} color={theme.textMuted} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search for help..."
-                        placeholderTextColor="#9CA3AF"
+                        placeholder={t('search_for_help')}
+                        placeholderTextColor={theme.textMuted}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                     />
                 </View>
 
                 {/* Contact Options */}
-                <Text style={styles.sectionLabel}>Contact Us</Text>
+                <Text style={styles.sectionLabel}>{t('contact_us')}</Text>
                 <View style={styles.contactGrid}>
                     <TouchableOpacity style={styles.contactCard} activeOpacity={0.8} onPress={() => navigation.navigate('LiveChat')}>
-                        <View style={[styles.iconBox, { backgroundColor: '#F0FDF4' }]}>
-                            <MessageCircle size={22} color="#0FBBA1" />
+                        <View style={[styles.iconBox, { backgroundColor: theme.successBg }]}>
+                            <MessageCircle size={22} color="#10B981" />
                         </View>
-                        <Text style={styles.contactLabel}>Chat</Text>
-                        <Text style={styles.contactSub}>Chat with us</Text>
+                        <Text style={styles.contactLabel}>{t('chat')}</Text>
+                        <Text style={styles.contactSub}>{t('chat_with_us')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.contactCard} activeOpacity={0.8} onPress={handleEmailPress}>
                         <View style={[styles.iconBox, { backgroundColor: '#EFF6FF' }]}>
                             <Mail size={22} color="#3B82F6" />
                         </View>
-                        <Text style={styles.contactLabel}>Email Us</Text>
-                        <Text style={styles.contactSub} numberOfLines={1}>Get in touch</Text>
+                        <Text style={styles.contactLabel}>{t('email_us')}</Text>
+                        <Text style={styles.contactSub} numberOfLines={1}>{t('get_in_touch')}</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.contactCard} activeOpacity={0.8} onPress={() => handleUnavailableChannel('Call Us')}>
+                    <TouchableOpacity style={styles.contactCard} activeOpacity={0.8} onPress={handleCallPress}>
                         <View style={[styles.iconBox, { backgroundColor: '#FFF7ED' }]}>
                             <Phone size={22} color="#F59E0B" />
                         </View>
-                        <Text style={styles.contactLabel}>Call Us</Text>
-                        <Text style={styles.contactSub}>Coming Soon</Text>
+                        <Text style={styles.contactLabel}>{t('call_us')}</Text>
+                        <Text style={styles.contactSub} numberOfLines={1}>{helpline ? helpline.availability : t('coming_soon')}</Text>
                     </TouchableOpacity>
                 </View>
+                {helpline ? (
+                    <Text style={{ fontSize: 12, color: theme.textMuted, marginTop: 10, lineHeight: 17 }}>
+                        Call {helpline.ivrNumber} for any complaint - whoever on our team is free takes your call. We acknowledge every complaint within {helpline.acknowledgeWithinHours} hours and resolve it within {helpline.resolveWithinDays} days.
+                    </Text>
+                ) : null}
 
                 {/* FAQs */}
-                <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Frequently Asked Questions</Text>
+                <Text style={[styles.sectionLabel, { marginTop: 28 }]}>{t('frequently_asked_questions')}</Text>
                 <View style={styles.faqList}>
                     {filteredFaqs.length === 0 && (
                         <View style={styles.noResultsBox}>
@@ -165,9 +188,9 @@ export default function HelpSupportScreen() {
                                 <View style={styles.faqHeader}>
                                     <Text style={[styles.faqQuestion, isExpanded && styles.faqQuestionExpanded]}>{faq.question}</Text>
                                     {isExpanded ? (
-                                        <ChevronDown size={18} color="#9CA3AF" />
+                                        <ChevronDown size={18} color={theme.textMuted} />
                                     ) : (
-                                        <ChevronRight size={18} color="#9CA3AF" />
+                                        <ChevronRight size={18} color={theme.textMuted} />
                                     )}
                                 </View>
                                 {isExpanded && (
@@ -179,16 +202,16 @@ export default function HelpSupportScreen() {
                 </View>
 
                 {/* Quick Links */}
-                <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Other Information</Text>
+                <Text style={[styles.sectionLabel, { marginTop: 28 }]}>{t('other_information')}</Text>
                 <View style={styles.linkList}>
                     <TouchableOpacity style={styles.linkItem} activeOpacity={0.7} onPress={handleAboutPress}>
                         <View style={styles.linkLeft}>
-                            <View style={[styles.linkIconBox, { backgroundColor: '#F0FDF4' }]}>
-                                <Info size={18} color="#0FBBA1" />
+                            <View style={[styles.linkIconBox, { backgroundColor: theme.successBg }]}>
+                                <Info size={18} color="#10B981" />
                             </View>
-                            <Text style={styles.linkText}>About Medicoo</Text>
+                            <Text style={styles.linkText}>{t('about_medicoo')}</Text>
                         </View>
-                        <ChevronRight size={18} color="#D1D5DB" />
+                        <ChevronRight size={18} color={theme.textMuted} />
                     </TouchableOpacity>
                     <View style={styles.divider} />
                     <TouchableOpacity style={styles.linkItem} activeOpacity={0.7} onPress={() => navigation.navigate('CommunityGuidelines')}>
@@ -196,9 +219,9 @@ export default function HelpSupportScreen() {
                             <View style={[styles.linkIconBox, { backgroundColor: '#EFF6FF' }]}>
                                 <FileText size={18} color="#3B82F6" />
                             </View>
-                            <Text style={styles.linkText}>Community Guidelines</Text>
+                            <Text style={styles.linkText}>{t('community_guidelines')}</Text>
                         </View>
-                        <ChevronRight size={18} color="#D1D5DB" />
+                        <ChevronRight size={18} color={theme.textMuted} />
                     </TouchableOpacity>
                     <View style={styles.divider} />
                     <TouchableOpacity style={styles.linkItem} activeOpacity={0.7} onPress={() => navigation.navigate('SecurityStandards')}>
@@ -206,24 +229,22 @@ export default function HelpSupportScreen() {
                             <View style={[styles.linkIconBox, { backgroundColor: '#FFF7ED' }]}>
                                 <Shield size={18} color="#F59E0B" />
                             </View>
-                            <Text style={styles.linkText}>Security Standards</Text>
+                            <Text style={styles.linkText}>{t('security_standards')}</Text>
                         </View>
-                        <ChevronRight size={18} color="#D1D5DB" />
+                        <ChevronRight size={18} color={theme.textMuted} />
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.footer}>
-                    <Text style={styles.versionText}>Medicoo App v{APP_VERSION}</Text>
-                </View>
+                <View style={styles.footer} />
             </ScrollView>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FE',
+        backgroundColor: c.background,
     },
     // Same header recipe as the Family Members / Address Book / Medicine
     // Orders screens - white bar + shadow, plain icon back button,
@@ -234,7 +255,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -250,7 +271,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     content: {
         padding: 20,
@@ -259,12 +280,12 @@ const styles = StyleSheet.create({
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         paddingHorizontal: 16,
         height: 52,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: c.borderLight,
         marginBottom: 24,
         gap: 12,
         shadowColor: '#0F172A',
@@ -276,14 +297,14 @@ const styles = StyleSheet.create({
     searchInput: {
         flex: 1,
         fontSize: 15,
-        color: '#111827',
+        color: c.text,
     },
     // Small-caps section label, matching the style used across the home
     // feed's section headers (HEALTH SUMMARY / ACTIVE GOALS) for a
     // consistent visual language app-wide.
     sectionLabel: {
         fontSize: 13,
-        color: '#494949',
+        color: c.text,
         letterSpacing: 2,
         fontWeight: '700',
         textTransform: 'uppercase',
@@ -295,13 +316,13 @@ const styles = StyleSheet.create({
     },
     contactCard: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         paddingVertical: 18,
         paddingHorizontal: 10,
         borderRadius: 20,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: c.borderLight,
         shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.03,
@@ -319,23 +340,23 @@ const styles = StyleSheet.create({
     contactLabel: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 3,
     },
     contactSub: {
         fontSize: 10,
-        color: '#9CA3AF',
+        color: c.textMuted,
         fontWeight: '600',
     },
     noResultsBox: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: c.borderLight,
     },
     noResultsText: {
         fontSize: 14,
-        color: '#9CA3AF',
+        color: c.textMuted,
         textAlign: 'center',
         paddingVertical: 20,
     },
@@ -343,11 +364,11 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     faqItem: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 18,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: c.borderLight,
         shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.02,
@@ -365,26 +386,26 @@ const styles = StyleSheet.create({
     faqQuestion: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#1F2937',
+        color: c.text,
         flex: 1,
         paddingRight: 16,
     },
     faqQuestionExpanded: {
-        color: '#111827',
+        color: c.text,
         fontWeight: '700',
     },
     faqAnswer: {
         marginTop: 12,
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         lineHeight: 20,
     },
     linkList: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 20,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: c.borderLight,
         shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.02,
@@ -412,21 +433,14 @@ const styles = StyleSheet.create({
     linkText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#374151',
+        color: c.text,
     },
     divider: {
         height: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         marginHorizontal: 16,
     },
     footer: {
-        marginTop: 36,
-        alignItems: 'center',
-        paddingBottom: 20,
-    },
-    versionText: {
-        fontSize: 12,
-        color: '#9CA3AF',
-        fontWeight: '500',
+        height: 36,
     },
 });

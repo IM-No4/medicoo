@@ -1,7 +1,7 @@
 import { apiClient } from './client';
 
 export const getMyAppointmentRequests = async (params?: {
-    status?: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'completed';
+    status?: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'completed' | 'expired';
     page?: number;
     limit?: number;
 }) => {
@@ -39,6 +39,8 @@ export const requestAppointment = async (data: {
     reason: string;
     consultationType?: 'chat' | 'voice' | 'video';
     urgencyLevel?: 'low' | 'medium' | 'high' | 'urgent';
+    // Booking for a family member: their id in the family group. Leave out to book for yourself.
+    forMemberId?: string | null;
     patientDetails?: {
         name?: string;
         age?: number;
@@ -56,12 +58,18 @@ export const requestAppointment = async (data: {
 
 export const createAppointmentPayment = async (requestId: string) => {
     const res = await apiClient.post(`/api/user/appointment-requests/${requestId}/create-payment`);
-    return res.data.data as { orderId: string; amount: number; currency: string; keyId: string } | { free: true };
+    return res.data.data as
+        | { gateway: 'razorpay'; orderId: string; amount: number; currency: string; keyId: string }
+        | { gateway: 'cashfree'; orderId: string; cfOrderId: string; paymentSessionId: string; orderStatus: string; mode: 'sandbox' | 'production' }
+        | { free: true };
+
 };
 
 export const verifyAppointmentPayment = async (
     requestId: string,
-    data: { razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string }
+    data:
+        | { razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string }
+        | { paymentGateway: 'cashfree'; cashfreeOrderId: string }
 ) => {
     const res = await apiClient.post(`/api/user/appointment-requests/${requestId}/verify-payment`, data);
     return res.data;
@@ -69,7 +77,16 @@ export const verifyAppointmentPayment = async (
 
 export const getCallToken = async (requestId: string) => {
     const res = await apiClient.get(`/api/user/appointment-requests/${requestId}/call-token`);
-    return res.data.data as { appId: string; channelName: string; token: string; uid: number };
+    return res.data.data as {
+        appId: string;
+        channelName: string;
+        token: string;
+        uid: number;
+        /** 'doctor' | 'patient' | 'booker' */
+        role?: 'doctor' | 'patient' | 'booker';
+        /** who each Agora uid is: 1 doctor, 2 patient side, 3 the person who booked (when the patient has their own account) */
+        participants?: { uid: number; role: string; name: string }[];
+    };
 };
 
 export const getDoctorById = async (id: string) => {

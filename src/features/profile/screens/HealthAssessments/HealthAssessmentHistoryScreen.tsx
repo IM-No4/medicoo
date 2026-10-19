@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, ChevronRight, HeartPulse, Plus } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     Platform,
@@ -15,6 +15,9 @@ import {
     getHealthRiskAssessmentHistory,
     HealthRiskAssessmentResult,
 } from '../../../../services/api/healthRiskAssessment.api';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 const BUCKET_COLOR: Record<string, string> = {
     'Needs attention': '#F59E0B',
@@ -28,6 +31,9 @@ const formatDate = (dateString: string) => {
 };
 
 export default function HealthAssessmentHistoryScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
 
@@ -49,9 +55,9 @@ export default function HealthAssessmentHistoryScreen() {
         <View style={styles.container}>
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Health Assessments</Text>
+                <Text style={styles.headerTitle}>{t('health_assessments')}</Text>
                 <View style={styles.headerSpacer} />
             </View>
 
@@ -66,19 +72,19 @@ export default function HealthAssessmentHistoryScreen() {
                     activeOpacity={0.85}
                 >
                     <View style={styles.newIconContainer}>
-                        <Plus size={20} color="#0FBBA1" />
+                        <Plus size={20} color="#10B981" />
                     </View>
-                    <Text style={styles.newCardText}>Take a new wellness check-in</Text>
-                    <ChevronRight size={18} color="#0FBBA1" />
+                    <Text style={styles.newCardText}>{t('take_a_new_wellness_check_in')}</Text>
+                    <ChevronRight size={18} color="#10B981" />
                 </TouchableOpacity>
 
                 {loading ? (
-                    <ActivityIndicator size="large" color="#0FBBA1" style={{ marginTop: 40 }} />
+                    <ActivityIndicator size="large" color="#10B981" style={{ marginTop: 40 }} />
                 ) : assessments.length === 0 ? (
-                    <Text style={styles.emptyText}>No wellness check-ins yet.</Text>
+                    <Text style={styles.emptyText}>{t('no_wellness_check_ins_yet')}</Text>
                 ) : (
                     assessments.map((assessment) => {
-                        const color = BUCKET_COLOR[assessment.overallBucket] ?? '#0FBBA1';
+                        const color = BUCKET_COLOR[assessment.overallBucket] ?? '#10B981';
                         return (
                             <TouchableOpacity
                                 key={assessment.id}
@@ -87,7 +93,7 @@ export default function HealthAssessmentHistoryScreen() {
                                 activeOpacity={0.7}
                             >
                                 <View style={styles.iconContainer}>
-                                    <HeartPulse size={20} color="#0FBBA1" />
+                                    <HeartPulse size={20} color="#10B981" />
                                 </View>
                                 <View style={styles.cardContent}>
                                     <Text style={styles.cardTitle}>{formatDate(assessment.createdAt)}</Text>
@@ -107,8 +113,8 @@ export default function HealthAssessmentHistoryScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8F9FE' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
     flexOne: { flex: 1 },
     // Same header recipe as the Family Members / Address Book screens -
     // white bar + shadow, plain icon back button, fontSize 20/600/#111827
@@ -119,7 +125,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -132,7 +138,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginLeft: -8,
     },
-    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
     headerSpacer: { width: 40 },
     scrollContent: { padding: 20, flexGrow: 1 },
     newCard: {
@@ -140,7 +146,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 16,
         borderRadius: 16,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         marginBottom: 20,
         gap: 12,
         shadowColor: '#000',
@@ -153,14 +159,14 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F0FDFA',
+        backgroundColor: c.successBg,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    newCardText: { flex: 1, fontSize: 14, fontWeight: '700', color: '#0FBBA1' },
+    newCardText: { flex: 1, fontSize: 13, fontWeight: '700', color: '#10B981' },
     emptyText: {
         fontSize: 13,
-        color: '#9CA3AF',
+        color: c.textMuted,
         marginTop: 20,
         textAlign: 'center',
     },
@@ -169,7 +175,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 16,
         borderRadius: 16,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         marginBottom: 12,
         shadowColor: '#000',
         shadowOpacity: 0.05,
@@ -181,14 +187,14 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F0FDFA',
+        backgroundColor: c.successBg,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 12,
     },
     cardContent: { flex: 1, marginRight: 8 },
-    cardTitle: { fontSize: 14, fontWeight: '600', color: '#1F2937', marginBottom: 2 },
-    cardSubtitle: { fontSize: 12, color: '#6B7280' },
+    cardTitle: { fontSize: 13.5, fontWeight: '700', color: c.text, marginBottom: 2 },
+    cardSubtitle: { fontSize: 12, color: c.textSecondary },
     bucketPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-    bucketPillText: { fontSize: 12, fontWeight: '700' },
+    bucketPillText: { fontSize: 11, fontWeight: '700' },
 });

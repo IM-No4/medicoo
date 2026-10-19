@@ -1,8 +1,8 @@
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../../components/ThemedStatusBar';
 import * as Location from 'expo-location';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { executeAction } from '../../../actions/ActionExecutor';
@@ -11,10 +11,17 @@ import StatusModal, { StatusType } from '../../../components/modals/StatusModal'
 import { applyAsDonor } from '../../../redux/slices/bloodDonationSlice';
 import { AppDispatch } from '../../../redux/store';
 import { getProfileDetails } from '../../../services/api';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { Modal } from '../../../components/ThemedModal';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 export default function BloodDonorApplicationScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const dispatch = useDispatch<AppDispatch>();
     const insets = useSafeAreaInsets();
     const [loadingProfile, setLoadingProfile] = useState(false);
@@ -68,19 +75,19 @@ export default function BloodDonorApplicationScreen() {
 
     const handleSubmit = async () => {
         if (!form.bloodGroup || !form.address) {
-            showStatus('warning', 'Incomplete Form', 'Please select your blood group and provide your address.');
+            showStatus('warning', t('incomplete_form'), t('please_select_your_blood_group_and_pro'));
             return;
         }
 
         try {
             setSubmitting(true);
-            showStatus('loading', 'Submitting Application', 'Please wait while we process your donor registration...');
+            showStatus('loading', t('submitting_application'), t('please_wait_while_we_process_your_dono'));
 
             // Real device location is required here, not a placeholder -
             // it's what nearby blood requests are matched against.
             const { status: permissionStatus } = await Location.requestForegroundPermissionsAsync();
             if (permissionStatus !== 'granted') {
-                showStatus('warning', 'Location needed', 'Please enable location access so nearby patients can find you when they need blood.');
+                showStatus('warning', t('location_needed'), t('please_enable_location_access_so_nearb'));
                 setSubmitting(false);
                 return;
             }
@@ -99,7 +106,7 @@ export default function BloodDonorApplicationScreen() {
 
             showStatus(
                 'success',
-                'Application Successful!',
+                t('application_successful'),
                 `Congratulations! You are now a registered blood donor. We've awarded you ${result.points || 500} points for joining our mission to save lives!`,
                 () => {
                     hideStatus();
@@ -109,7 +116,7 @@ export default function BloodDonorApplicationScreen() {
             );
         } catch (error: any) {
             console.error('Donor application failed:', error);
-            showStatus('error', 'Application Failed', error || 'Failed to apply as donor. Please try again.');
+            showStatus('error', t('application_failed'), error || 'Failed to apply as donor. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -120,20 +127,20 @@ export default function BloodDonorApplicationScreen() {
             <StatusBar style="dark" />
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => executeAction('GO_BACK')} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Donor Application</Text>
+                <Text style={styles.headerTitle}>{t('donor_application')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
             {loadingProfile ? (
                 <View style={[styles.form, { paddingVertical: 100, alignItems: 'center' }]}>
                     <ActivityIndicator size="large" color="#EF4444" />
-                    <Text style={{ marginTop: 12, color: '#6B7280' }}>Fetching your profile...</Text>
+                    <Text style={{ marginTop: 12, color: theme.textSecondary }}>{t('fetching_your_profile')}</Text>
                 </View>
             ) : (
                 <View style={styles.form}>
-                    <Text style={styles.label}>Select Blood Group</Text>
+                    <Text style={styles.label}>{t('select_blood_group')}</Text>
                     <TouchableOpacity
                         style={styles.pickerTrigger}
                         onPress={() => setShowPicker(true)}
@@ -142,13 +149,13 @@ export default function BloodDonorApplicationScreen() {
                         <Text style={[styles.pickerValue, !form.bloodGroup && styles.placeholder]}>
                             {form.bloodGroup || 'Select your blood group'}
                         </Text>
-                        <AppIcon name="chevron-down" size={20} color="#6B7280" />
+                        <AppIcon name="chevron-down" size={20} color={theme.textSecondary} />
                     </TouchableOpacity>
 
-                    <Text style={styles.label}>Residential Address</Text>
+                    <Text style={styles.label}>{t('residential_address')}</Text>
                     <TextInput
                         style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
-                        placeholder="Enter your full address"
+                        placeholder={t('enter_your_full_address')}
                         multiline
                         numberOfLines={4}
                         value={form.address}
@@ -165,8 +172,8 @@ export default function BloodDonorApplicationScreen() {
                             {form.availableForEmergency && <AppIcon name="check" size={16} color="#FFFFFF" />}
                         </View>
                         <View style={styles.checkboxText}>
-                            <Text style={styles.checkboxLabel}>Available for emergencies</Text>
-                            <Text style={styles.checkboxSubLabel}>We will notify you when there's an urgent need near you.</Text>
+                            <Text style={styles.checkboxLabel}>{t('available_for_emergencies')}</Text>
+                            <Text style={styles.checkboxSubLabel}>{t('we_will_notify_you_when_there_s_an_urg')}</Text>
                         </View>
                     </TouchableOpacity>
 
@@ -178,7 +185,7 @@ export default function BloodDonorApplicationScreen() {
                         {submitting ? (
                             <ActivityIndicator color="#FFFFFF" />
                         ) : (
-                            <Text style={styles.submitButtonText}>Submit Application</Text>
+                            <Text style={styles.submitButtonText}>{t('submit_application')}</Text>
                         )}
                     </TouchableOpacity>
                 </View>
@@ -197,7 +204,7 @@ export default function BloodDonorApplicationScreen() {
             <Modal visible={showPicker} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Select Blood Group</Text>
+                        <Text style={styles.modalTitle}>{t('select_blood_group')}</Text>
                         <View style={styles.groupGrid}>
                             {BLOOD_GROUPS.map((group) => (
                                 <TouchableOpacity
@@ -215,7 +222,7 @@ export default function BloodDonorApplicationScreen() {
                             ))}
                         </View>
                         <TouchableOpacity style={styles.closeButton} onPress={() => setShowPicker(false)}>
-                            <Text style={styles.closeButtonText}>Close</Text>
+                            <Text style={styles.closeButtonText}>{t('close')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -224,10 +231,10 @@ export default function BloodDonorApplicationScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
     },
     scrollContent: {
         paddingBottom: 40,
@@ -238,7 +245,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -254,7 +261,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     form: {
         padding: 24,
@@ -262,36 +269,36 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#374151',
+        color: c.text,
         marginBottom: 8,
     },
     input: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 12,
         padding: 16,
         fontSize: 16,
-        color: '#111827',
+        color: c.text,
         marginBottom: 24,
     },
     pickerTrigger: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 12,
         padding: 16,
         marginBottom: 24,
     },
     pickerValue: {
         fontSize: 16,
-        color: '#111827',
+        color: c.text,
     },
     placeholder: {
-        color: '#9CA3AF',
+        color: c.textMuted,
     },
     checkboxRow: {
         flexDirection: 'row',
@@ -304,7 +311,7 @@ const styles = StyleSheet.create({
         height: 24,
         borderRadius: 6,
         borderWidth: 2,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 2,
@@ -319,11 +326,11 @@ const styles = StyleSheet.create({
     checkboxLabel: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#374151',
+        color: c.text,
     },
     checkboxSubLabel: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginTop: 2,
         lineHeight: 18,
     },
@@ -353,14 +360,14 @@ const styles = StyleSheet.create({
         padding: 24,
     },
     modalContent: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 24,
         padding: 24,
     },
     modalTitle: {
         fontSize: 20,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 20,
         textAlign: 'center',
     },
@@ -375,18 +382,18 @@ const styles = StyleSheet.create({
         aspectRatio: 1,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         alignItems: 'center',
         justifyContent: 'center',
     },
     groupItemActive: {
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.errorBg,
         borderColor: '#EF4444',
     },
     groupText: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#4B5563',
+        color: c.textSecondary,
     },
     groupTextActive: {
         color: '#EF4444',

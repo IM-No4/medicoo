@@ -1,11 +1,16 @@
-import { Wrench } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { ActivityIndicator, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Clock, ShieldCheck, Wrench } from 'lucide-react-native';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { ActivityIndicator, Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { runBootSequence } from '../../bootstrap/BootCoordinator';
 import { AppDispatch, RootState } from '../../redux/store';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { AdaptiveStatusBar } from '../../components/ThemedStatusBar';
 
 // Shown by RootNavigator instead of the normal Auth/Onboarding/Main stacks
 // while boot.status === 'maintenance' - see BootCoordinator.ts. Only ever
@@ -14,10 +19,24 @@ import { AppDispatch, RootState } from '../../redux/store';
 // instead (see appConfigSlice's `restricted` flag), never shown this
 // screen. No "continue anyway" - there's nothing to protect here.
 export default function MaintenanceScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const insets = useSafeAreaInsets();
     const dispatch = useDispatch<AppDispatch>();
     const maintenance = useSelector((state: RootState) => state.appConfig.maintenance);
     const [retrying, setRetrying] = useState(false);
+    const spin = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const loop = Animated.loop(
+            Animated.timing(spin, { toValue: 1, duration: 12000, easing: Easing.linear, useNativeDriver: true }),
+        );
+        loop.start();
+        return () => loop.stop();
+    }, [spin]);
+
+    const spinDeg = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
     const handleRetry = async () => {
         if (retrying) return;
@@ -31,10 +50,35 @@ export default function MaintenanceScreen() {
 
     return (
         <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom + 24 }]}>
-            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+            <AdaptiveStatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-            <View style={styles.iconCircle}>
-                <Wrench size={40} color="#0FBBA1" />
+            <View style={styles.illustration}>
+                <LinearGradient
+                    colors={[theme.primaryBg, theme.background]}
+                    style={styles.haloCircle}
+                />
+                <Animated.View style={[styles.dashRing, { transform: [{ rotate: spinDeg }] }]}>
+                    {Array.from({ length: 12 }).map((_, i) => (
+                        <View
+                            key={i}
+                            style={[
+                                styles.dash,
+                                { transform: [{ rotate: `${i * 30}deg` }, { translateY: -62 }] },
+                            ]}
+                        />
+                    ))}
+                </Animated.View>
+
+                <View style={styles.iconCircle}>
+                    <Wrench size={36} color="#10B981" />
+                </View>
+
+                <View style={[styles.badge, styles.badgeClock]}>
+                    <Clock size={16} color={theme.warning} />
+                </View>
+                <View style={[styles.badge, styles.badgeShield]}>
+                    <ShieldCheck size={16} color="#10B981" />
+                </View>
             </View>
 
             <Text style={styles.title}>{maintenance?.title || 'Under Maintenance'}</Text>
@@ -46,46 +90,94 @@ export default function MaintenanceScreen() {
                 {retrying ? (
                     <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                    <Text style={styles.primaryButtonText}>Try Again</Text>
+                    <Text style={styles.primaryButtonText}>{t('try_again')}</Text>
                 )}
             </TouchableOpacity>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 32,
+    },
+    illustration: {
+        width: 180,
+        height: 180,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 32,
+    },
+    haloCircle: {
+        position: 'absolute',
+        width: 180,
+        height: 180,
+        borderRadius: 90,
+    },
+    dashRing: {
+        position: 'absolute',
+        width: 180,
+        height: 180,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    dash: {
+        position: 'absolute',
+        width: 4,
+        height: 10,
+        borderRadius: 2,
+        backgroundColor: c.primaryLight,
     },
     iconCircle: {
         width: 88,
         height: 88,
         borderRadius: 44,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 24,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        elevation: 2,
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        elevation: 3,
+    },
+    badge: {
+        position: 'absolute',
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: c.card,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+        elevation: 3,
+    },
+    badgeClock: {
+        top: 8,
+        right: 4,
+    },
+    badgeShield: {
+        bottom: 12,
+        left: 0,
     },
     title: {
         fontSize: 20,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 10,
         textAlign: 'center',
     },
     message: {
         fontSize: 14,
         lineHeight: 21,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         marginBottom: 36,
     },
@@ -93,7 +185,7 @@ const styles = StyleSheet.create({
         width: '100%',
         flexDirection: 'row',
         gap: 8,
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         borderRadius: 16,
         paddingVertical: 16,
         alignItems: 'center',

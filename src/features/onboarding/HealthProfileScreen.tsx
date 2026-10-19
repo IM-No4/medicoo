@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
@@ -11,7 +12,6 @@ import {
   Easing,
   FlatList,
   Image,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -29,6 +29,11 @@ import { completeOnboarding } from "../../redux/slices/authSlice";
 import { submitOnboarding } from "../../services/api/onboarding.api";
 import { getProfileDetails } from "../../services/api/user.api";
 import { useOnboarding } from "./OnboardingContext";
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../../components/ThemedModal';
+import { useImageSource } from '../../components/AuthImage';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
 // const ITEM_HEIGHT = 50;
@@ -57,6 +62,9 @@ const BLOOD_OPTIONS = [
 
 /* ---------------- SELECTION LIST MODAL COMPONENT ---------------- */
 function SelectionModal({ visible, title, options, selected, onClose }: any) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [tempSelected, setTempSelected] = useState(selected);
   const insets = useSafeAreaInsets();
 
@@ -72,7 +80,7 @@ function SelectionModal({ visible, title, options, selected, onClose }: any) {
         <View style={[styles.sheet, { height: SCREEN_HEIGHT * 0.5, paddingBottom: Math.max(insets.bottom, 24) }]}>
           <View style={styles.pickerHeader}>
             <TouchableOpacity onPress={() => onClose(selected)}>
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>{t('cancel')}</Text>
             </TouchableOpacity>
             <Text style={styles.pickerTitle}>{title}</Text>
             <TouchableOpacity onPress={() => onClose(tempSelected)}>
@@ -96,10 +104,10 @@ function SelectionModal({ visible, title, options, selected, onClose }: any) {
                     styles.optionText,
                     isSelected && styles.optionTextSelected
                   ]}>
-                    {option.label}
+                    {t(option.label)}
                   </Text>
                   {isSelected && (
-                    <Check size={20} color="#0FBBA1" strokeWidth={3} />
+                    <Check size={20} color="#10B981" strokeWidth={3} />
                   )}
                 </TouchableOpacity>
               );
@@ -113,6 +121,9 @@ function SelectionModal({ visible, title, options, selected, onClose }: any) {
 
 /* ---------------- HEIGHT PICKER COMPONENT ---------------- */
 function HeightPickerModal({ visible, initialFt, initialIn, onClose }: any) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [tempFt, setTempFt] = useState(initialFt);
   const [tempIn, setTempIn] = useState(initialIn);
   const insets = useSafeAreaInsets();
@@ -132,9 +143,9 @@ function HeightPickerModal({ visible, initialFt, initialIn, onClose }: any) {
         <View style={[styles.sheet, { height: SCREEN_HEIGHT * 0.55, paddingBottom: Math.max(insets.bottom, 20) }]}>
           <View style={styles.pickerHeader}>
             <TouchableOpacity onPress={() => onClose(initialFt, initialIn)}>
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>{t('cancel')}</Text>
             </TouchableOpacity>
-            <Text style={styles.pickerTitle}>Select Height</Text>
+            <Text style={styles.pickerTitle}>{t('select_height')}</Text>
             <TouchableOpacity onPress={() => onClose(tempFt, tempIn)}>
               <Text style={styles.doneText}>OK</Text>
             </TouchableOpacity>
@@ -222,6 +233,9 @@ function HeightPickerModal({ visible, initialFt, initialIn, onClose }: any) {
 
 /* ---------------- WEIGHT PICKER COMPONENT ---------------- */
 function WeightPickerModal({ visible, initialWeight, onClose }: any) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [tempWeight, setTempWeight] = useState(initialWeight);
   const insets = useSafeAreaInsets();
 
@@ -239,9 +253,9 @@ function WeightPickerModal({ visible, initialWeight, onClose }: any) {
         <View style={[styles.sheet, { height: SCREEN_HEIGHT * 0.45, paddingBottom: Math.max(insets.bottom, 20) }]}>
           <View style={styles.pickerHeader}>
             <TouchableOpacity onPress={() => onClose(initialWeight)}>
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>{t('cancel')}</Text>
             </TouchableOpacity>
-            <Text style={styles.pickerTitle}>Select Weight</Text>
+            <Text style={styles.pickerTitle}>{t('select_weight')}</Text>
             <TouchableOpacity onPress={() => onClose(tempWeight)}>
               <Text style={styles.doneText}>OK</Text>
             </TouchableOpacity>
@@ -293,6 +307,9 @@ function WeightPickerModal({ visible, initialWeight, onClose }: any) {
 
 /* ---------------- MAIN COMPONENT ---------------- */
 export default function HealthProfileScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { update, data } = useOnboarding();
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -334,6 +351,9 @@ export default function HealthProfileScreen() {
   const hideStatus = () => setStatus(prev => ({ ...prev, visible: false }));
 
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  // Resolves a stored path / URL / base64 and adds the auth header the
+  // protected profile-pictures folder requires (null while the token loads).
+  const avatarSource = useImageSource(avatarUri);
   const [loading, setLoading] = useState(false);
   const fade = useRef(new Animated.Value(1)).current;
 
@@ -409,7 +429,7 @@ export default function HealthProfileScreen() {
   const openCamera = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      showStatus('warning', 'Permission Denied', 'Camera access is required to take a profile photo.');
+      showStatus('warning', t('permission_denied'), t('camera_access_is_required_to_take_a_pr'));
       return;
     }
     const res = await ImagePicker.launchCameraAsync({
@@ -424,7 +444,7 @@ export default function HealthProfileScreen() {
   const openGallery = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      showStatus('warning', 'Permission Denied', 'Gallery access is required to select a profile photo.');
+      showStatus('warning', t('permission_denied'), t('gallery_access_is_required_to_select_a'));
       return;
     }
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -439,7 +459,7 @@ export default function HealthProfileScreen() {
   const submit = async () => {
     // Validate required fields
     if (!name || !gender || !dob) {
-      showStatus('warning', 'Missing Details', 'Please fill in all mandatory fields (Name, Gender, and Birth Date) to create your profile.');
+      showStatus('warning', t('missing_details'), t('please_fill_in_all_mandatory_fields_na'));
       return;
     }
 
@@ -481,7 +501,7 @@ export default function HealthProfileScreen() {
       dispatch(completeOnboarding());
       dispatch(setOnboardingCompleted());
     } catch (err: any) {
-      showStatus('error', 'Profile Error', err?.message || 'We couldn\'t create your health profile. Please check your connection and try again.');
+      showStatus('error', t('profile_error'), err?.message || 'We couldn\'t create your health profile. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -496,7 +516,7 @@ export default function HealthProfileScreen() {
     <View style={{ flex: 1, backgroundColor: "#E4F2EE" }}>
       <View style={styles.header}>
         <LinearGradient
-          colors={['#0FBBA1', '#007C69']}
+          colors={['#10B981', '#007C69']}
           start={Platform.select({
             ios: { x: 0, y: 0 },
             android: { x: 0.2, y: 0 },
@@ -515,14 +535,14 @@ export default function HealthProfileScreen() {
           style={[StyleSheet.absoluteFill, { opacity: 0.04 }]}
         />
 
-        <Text style={styles.headerTitle}>Create a Health Profile</Text>
+        <Text style={styles.headerTitle}>{t('create_a_health_profile')}</Text>
       </View>
 
       <View style={styles.card}>
         <View style={styles.avatarWrap}>
           <View style={styles.avatar}>
             <Animated.Image
-              source={avatarUri ? { uri: avatarUri } : defaultAvatar}
+              source={avatarUri ? (avatarSource ?? defaultAvatar) : defaultAvatar}
               style={{
                 width: 92,
                 height: 92,
@@ -537,12 +557,12 @@ export default function HealthProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.label}>Full name</Text>
+        <Text style={styles.label}>{t('full_name')}</Text>
         <TextInput style={styles.input} value={name} onChangeText={setName} />
 
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.label}>Relative</Text>
+            <Text style={styles.label}>{t('relative')}</Text>
             <View style={styles.disabledBox}>
               <Text>Me</Text>
             </View>
@@ -551,16 +571,16 @@ export default function HealthProfileScreen() {
           <View style={{ width: 12 }} />
 
           <View style={{ flex: 1 }}>
-            <Text style={styles.label}>Gender</Text>
+            <Text style={styles.label}>{t('gender')}</Text>
             <TouchableOpacity style={styles.selectBox} onPress={() => setShowGenderPicker(true)}>
               <Text>{getGenderLabel()}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <Text style={styles.label}>Date of birth</Text>
+        <Text style={styles.label}>{t('date_of_birth')}</Text>
         <TouchableOpacity style={styles.dobBox} onPress={() => setShowDobPicker(true)}>
-          <Calendar size={18} color="#6B7280" />
+          <Calendar size={18} color={theme.textSecondary} />
           <Text style={{ flex: 1 }}>{dob || "Select"}</Text>
           {dob && <Text style={styles.ageInline}>{age} yrs</Text>}
         </TouchableOpacity>
@@ -595,7 +615,7 @@ export default function HealthProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.label}>Blood group</Text>
+        <Text style={styles.label}>{t('blood_group')}</Text>
         <TouchableOpacity style={styles.selectBox} onPress={() => setShowBloodPicker(true)}>
           <Text>{blood || "Select"}</Text>
         </TouchableOpacity>
@@ -608,7 +628,7 @@ export default function HealthProfileScreen() {
           {loading ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text style={{ color: "#fff", fontWeight: "600" }}>Create profile</Text>
+            <Text style={{ color: "#fff", fontWeight: "600" }}>{t('create_profile')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -635,7 +655,7 @@ export default function HealthProfileScreen() {
 
       <SelectionModal
         visible={showGenderPicker}
-        title="Select Gender"
+        title={t('select_gender')}
         options={GENDER_OPTIONS}
         selected={gender}
         onClose={(value: string) => {
@@ -646,7 +666,7 @@ export default function HealthProfileScreen() {
 
       <SelectionModal
         visible={showBloodPicker}
-        title="Select Blood Group"
+        title={t('select_blood_group')}
         options={BLOOD_OPTIONS}
         selected={blood}
         onClose={(value: string) => {
@@ -663,12 +683,12 @@ export default function HealthProfileScreen() {
             </TouchableWithoutFeedback>
             <View style={[styles.sheet, { height: SCREEN_HEIGHT * 0.3, paddingBottom: Math.max(insets.bottom, 24) }]}>
               <View style={styles.grabber} />
-              <Text style={styles.sheetTitle}>Profile photo</Text>
+              <Text style={styles.sheetTitle}>{t('profile_photo')}</Text>
               <TouchableOpacity style={styles.sheetItem} onPress={openCamera}>
-                <Text style={styles.sheetItemText}>Take photo</Text>
+                <Text style={styles.sheetItemText}>{t('take_photo')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.sheetItem} onPress={openGallery}>
-                <Text style={styles.sheetItemText}>Choose from gallery</Text>
+                <Text style={styles.sheetItemText}>{t('choose_from_gallery')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -687,7 +707,7 @@ export default function HealthProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   header: {
     height: 165,
     borderBottomLeftRadius: 42,
@@ -705,7 +725,7 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: 18,
     marginTop: -58,
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     borderRadius: 22,
     padding: 20,
     elevation: 8,
@@ -722,7 +742,7 @@ const styles = StyleSheet.create({
     width: 102,
     height: 102,
     borderRadius: 51,
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     alignItems: "center",
     justifyContent: "center",
     elevation: 5,
@@ -735,37 +755,37 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     alignItems: "center",
     justifyContent: "center",
     elevation: 3,
     borderWidth: 2,
     borderColor: "#fff",
   },
-  label: { marginTop: 10, marginBottom: 6, color: "#4A4A4A" },
+  label: { marginTop: 10, marginBottom: 6, color: c.text },
   input: {
     borderWidth: 1,
-    borderColor: "#D9E3E1",
+    borderColor: c.border,
     borderRadius: 12,
     padding: 12,
   },
   selectBox: {
     borderWidth: 1,
-    borderColor: "#D9E3E1",
+    borderColor: c.border,
     borderRadius: 12,
     padding: 12,
   },
   disabledBox: {
     borderWidth: 1,
-    borderColor: "#D9E3E1",
+    borderColor: c.border,
     borderRadius: 12,
     padding: 12,
-    backgroundColor: "#F5FAF8",
+    backgroundColor: c.cardSecondary,
   },
   row: { flexDirection: "row", marginTop: 10 },
   dobBox: {
     borderWidth: 1,
-    borderColor: "#D9E3E1",
+    borderColor: c.border,
     borderRadius: 12,
     padding: 12,
     flexDirection: "row",
@@ -790,7 +810,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
   },
@@ -812,11 +832,11 @@ const styles = StyleSheet.create({
   sheetItem: {
     padding: 16,
     borderBottomWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: c.borderLight,
   },
   sheetItemText: {
     fontSize: 16,
-    color: "#111827",
+    color: c.text,
   },
 
   /* PICKER HEADER */
@@ -827,21 +847,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: c.border,
   },
   cancelText: {
     fontSize: 15,
-    color: "#6B7280",
+    color: c.textSecondary,
     fontWeight: "500",
   },
   pickerTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#111827",
+    color: c.text,
   },
   doneText: {
     fontSize: 15,
-    color: "#0FBBA1",
+    color: "#10B981",
     fontWeight: "700",
   },
   optionsList: {
@@ -854,17 +874,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: c.borderLight,
   },
   optionItemSelected: {
-    backgroundColor: "#F0FDF4",
+    backgroundColor: c.successBg,
   },
   optionText: {
     fontSize: 16,
-    color: "#4B5563",
+    color: c.textSecondary,
   },
   optionTextSelected: {
-    color: "#0FBBA1",
+    color: "#10B981",
     fontWeight: "600",
   },
 
@@ -888,12 +908,12 @@ const styles = StyleSheet.create({
   heightDisplayValue: {
     fontSize: 36,
     fontWeight: "800",
-    color: "#111827",
+    color: c.text,
   },
   heightDisplayUnit: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#6B7280",
+    color: c.textSecondary,
   },
   scaleSection: {
     height: 100,
@@ -906,7 +926,7 @@ const styles = StyleSheet.create({
     top: 10,
     bottom: 10,
     width: 2,
-    backgroundColor: "#0FBBA1",
+    backgroundColor: "#10B981",
     zIndex: 10,
     borderRadius: 1,
   },
@@ -933,7 +953,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 16,
     fontWeight: "700",
-    color: "#374151",
+    color: c.text,
   },
   scaleInchPadding: {
     paddingHorizontal: SCREEN_WIDTH / 2 - 22.5,
@@ -947,7 +967,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 12,
     fontWeight: "600",
-    color: "#6B7280",
+    color: c.textSecondary,
   },
 
   /* WEIGHT PICKER SPECIFIC */
@@ -959,7 +979,7 @@ const styles = StyleSheet.create({
   weightDisplay: {
     fontSize: 52,
     fontWeight: "900",
-    color: "#0FBBA1",
+    color: "#10B981",
     marginBottom: 30,
   },
   weightScaleContainer: {
@@ -973,7 +993,7 @@ const styles = StyleSheet.create({
     top: -10,
     width: 4,
     height: 60,
-    backgroundColor: "#0FBBA1",
+    backgroundColor: "#10B981",
     zIndex: 10,
     borderRadius: 2,
   },
@@ -999,6 +1019,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 14,
     fontWeight: "700",
-    color: "#374151",
+    color: c.text,
   }
 });

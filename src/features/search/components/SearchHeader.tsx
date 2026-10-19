@@ -1,5 +1,5 @@
 import AppIcon from '@/src/components/icons/AppIcon';
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useMemo } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 type Props = {
   value: string;
@@ -23,6 +26,9 @@ type Props = {
 
 const SearchHeader = forwardRef<TextInput, Props>(
   ({ value, loading, onChange, onBack, onSubmit, category = 'Medicines', showCategory = false, isPrescriptionOnly, onTogglePrescription }, ref) => {
+    const { theme } = useTheme();
+    const styles = useMemo(() => createStyles(theme), [theme]);
+    const { t } = useLanguage();
     
     const renderInput = (
       <View style={styles.inputWrapper}>
@@ -30,8 +36,8 @@ const SearchHeader = forwardRef<TextInput, Props>(
           ref={ref}
           value={value}
           onChangeText={onChange}
-          placeholder="Search for medicines..."
-          placeholderTextColor="#9CA3AF"
+          placeholder={t('search_for_medicines')}
+          placeholderTextColor={theme.textMuted}
           style={styles.input}
           returnKeyType="done"
           onSubmitEditing={onSubmit}
@@ -41,7 +47,7 @@ const SearchHeader = forwardRef<TextInput, Props>(
           <ActivityIndicator size="small" color="#EB6E25" style={styles.icon} />
         ) : value.length > 0 ? (
           <TouchableOpacity onPress={() => onChange('')} style={styles.icon}>
-            <AppIcon name="x" size={18} color="#6B7280" />
+            <AppIcon name="x" size={18} color={theme.textSecondary} />
           </TouchableOpacity>
         ) : null}
 
@@ -58,7 +64,7 @@ const SearchHeader = forwardRef<TextInput, Props>(
         <View style={styles.container}>
           <View style={styles.singleRow}>
             <TouchableOpacity onPress={onBack} style={styles.backButton}>
-              <AppIcon name="arrow-left" size={24} color="#374151" />
+              <AppIcon name="arrow-left" size={24} color={theme.text} />
             </TouchableOpacity>
             {renderInput}
           </View>
@@ -71,10 +77,10 @@ const SearchHeader = forwardRef<TextInput, Props>(
         {/* Top Info Row */}
         <View style={styles.topRow}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <AppIcon name="arrow-left" size={24} color="#374151" />
+            <AppIcon name="arrow-left" size={24} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.titleContainer}>
-            <Text style={styles.titlePrefix}>Showing results in</Text>
+            <Text style={styles.titlePrefix}>{t('showing_results_in')}</Text>
             <TouchableOpacity style={styles.categoryBadge}>
               <Text style={styles.categoryText}>{category}</Text>
               <AppIcon name="chevron-down" size={14} color="#EB6E25" />
@@ -104,9 +110,9 @@ const SearchHeader = forwardRef<TextInput, Props>(
 
 export default SearchHeader;
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.background,
     paddingBottom: 8,
   },
   topRow: {
@@ -129,7 +135,7 @@ const styles = StyleSheet.create({
   },
   titlePrefix: {
     fontSize: 12,
-    color: '#6B7280',
+    color: c.textSecondary,
     fontWeight: '500',
   },
   categoryBadge: {
@@ -140,7 +146,7 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1F2937',
+    color: c.text,
   },
   searchRow: {
     flexDirection: 'row',
@@ -161,7 +167,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
     flexDirection: 'row',
     alignItems: 'center',
     paddingLeft: 12,
@@ -171,7 +177,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 14,
-    color: '#111827',
+    color: c.text,
     fontWeight: '500',
     paddingVertical: 0,
   },
@@ -193,12 +199,12 @@ const styles = StyleSheet.create({
     width: 20,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: c.cardSecondary,
     padding: 1,
     justifyContent: 'center',
   },
   toggleBadgeActive: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: c.successBg,
     borderColor: '#10B981',
     borderWidth: 1,
   },
@@ -217,7 +223,7 @@ const styles = StyleSheet.create({
   toggleText: {
     fontSize: 8,
     fontWeight: '800',
-    color: '#6B7280',
+    color: c.textSecondary,
     textTransform: 'uppercase',
   },
 });

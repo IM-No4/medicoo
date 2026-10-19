@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 interface Bucket {
   label: string;
@@ -15,6 +17,8 @@ interface Props {
 const TRACK_HEIGHT = 100;
 
 export function StepsBarChart({ buckets, highlightIndex = null, height = TRACK_HEIGHT }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const maxValue = Math.max(...buckets.map((b) => b.value), 1);
 
   return (
@@ -42,7 +46,7 @@ export function StepsBarChart({ buckets, highlightIndex = null, height = TRACK_H
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -66,11 +70,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#6EE7B7',
   },
   barHighlighted: {
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
   },
   label: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: c.textMuted,
   },
 });

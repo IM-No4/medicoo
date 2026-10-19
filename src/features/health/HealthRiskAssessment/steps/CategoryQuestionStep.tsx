@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { AssessmentCategory } from '../questions';
-import { styles } from '../styles';
+import { createStyles } from '../styles';
+import { useTheme } from '../../../../theme/ThemeContext';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 interface Props {
     category: AssessmentCategory;
@@ -10,14 +12,17 @@ interface Props {
 }
 
 export default function CategoryQuestionStep({ category, answers, onAnswer }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     return (
         <View style={styles.container}>
-            <Text style={styles.heading}>{category.label}</Text>
-            <Text style={styles.subheading}>A couple of quick questions.</Text>
+            <Text style={styles.heading}>{t(category.label)}</Text>
+            <Text style={styles.subheading}>{t('a_couple_of_quick_questions')}</Text>
 
             {category.questions.map((question) => (
                 <View key={question.key} style={{ marginBottom: 8 }}>
-                    <Text style={styles.sectionLabel}>{question.text.toUpperCase()}</Text>
+                    <Text style={styles.sectionLabel}>{t(question.text).toUpperCase()}</Text>
                     <View style={styles.optionList}>
                         {question.options.map((option, index) => {
                             const isActive = answers[question.key] === index;
@@ -29,7 +34,7 @@ export default function CategoryQuestionStep({ category, answers, onAnswer }: Pr
                                     activeOpacity={0.7}
                                 >
                                     <Text style={[styles.optionLabel, isActive && styles.optionLabelActive]}>
-                                        {option}
+                                        {t(option)}
                                     </Text>
                                     <View style={[styles.radio, isActive && styles.radioActive]}>
                                         {isActive && <View style={styles.radioDot} />}

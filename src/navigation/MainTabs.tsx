@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AppIcon from '../components/icons/AppIcon';
 import { RootState } from '../redux/store';
+import { useTheme } from '../theme/ThemeContext';
 import CalendarStack from './CalendarStack';
 import HealthStack from './HealthStack';
 import HomeStack from './HomeStack';
@@ -15,8 +16,7 @@ import RecordsStack from './RecordsStack';
 
 const Tab = createBottomTabNavigator();
 
-const ACTIVE_COLOR = '#0FBBA1';
-const INACTIVE_COLOR = '#151517';
+const ACTIVE_COLOR = '#10B981';
 
 type Props = {
   onOpenCommandPalette: () => void;
@@ -34,6 +34,8 @@ const isNestedStackOnSubScreen = (route: RouteProp<any, any>) => {
 
 export default function MainTabs({ onOpenCommandPalette }: Props) {
   const insets = useSafeAreaInsets();
+  const { theme, isDark } = useTheme();
+  const inactiveColor = isDark ? '#E2E8F0' : '#151517';
 
   // Offline mode is a single self-contained hub (see HomeScreen's early
   // return + OfflineHomeContent) rather than a normal tabbed app - there's
@@ -43,9 +45,10 @@ export default function MainTabs({ onOpenCommandPalette }: Props) {
   // matter. Hiding the bar removes a set of destinations that would mostly
   // just show their own "couldn't load" states right now.
   const isOnline = useSelector((state: RootState) => state.connectivity.isOnline);
+  const friendInviteCount = useSelector((state: RootState) => state.friends.incomingRequests.length);
 
   const baseTabBarStyle = {
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.card,
     borderTopWidth: 0,
     height: 60 + insets.bottom,
     paddingBottom: insets.bottom,
@@ -73,9 +76,9 @@ export default function MainTabs({ onOpenCommandPalette }: Props) {
         // before applying the style), leaving a see-through strip under the
         // gesture bar. Rendering an explicit solid layer behind the bar's
         // own content is the documented, reliable fix.
-        tabBarBackground: () => <View style={{ flex: 1, backgroundColor: '#ffffff' }} />,
+        tabBarBackground: () => <View style={{ flex: 1, backgroundColor: theme.card }} />,
         tabBarIcon: ({ focused }) => {
-          const color = focused ? ACTIVE_COLOR : INACTIVE_COLOR;
+          const color = focused ? ACTIVE_COLOR : inactiveColor;
           const opacity = focused ? 1 : 0.45;
 
           let iconName: any;
@@ -120,7 +123,15 @@ export default function MainTabs({ onOpenCommandPalette }: Props) {
 
       <Tab.Screen name="Calendar" component={CalendarStack} />
       <Tab.Screen name="Records" component={RecordsStack} />
-      <Tab.Screen name="Health" component={HealthStack} />
+      <Tab.Screen
+        name="Health"
+        component={HealthStack}
+        // Friends waiting for an answer. A badge sits over the icon's corner, so nothing in the bar moves.
+        options={{
+          tabBarBadge: friendInviteCount > 0 ? friendInviteCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#EF4444', color: '#FFFFFF', fontSize: 10, minWidth: 16, height: 16, lineHeight: 15 },
+        }}
+      />
       <Tab.Screen
         name="Profile"
         component={ProfileStack}

@@ -6,7 +6,8 @@ export const registerDeviceToken = async (fcmToken: string, deviceId: string) =>
     fcmToken,
     deviceId,
     userType: 'customer',
-    deviceInfo: { platform: Platform.OS },
+    // 'ringing_calls': this install shows incoming consultation calls as a full-screen ringing screen (Android)
+    deviceInfo: { platform: Platform.OS, capabilities: Platform.OS === 'android' ? ['ringing_calls'] : [] },
   });
   return res.data;
 };

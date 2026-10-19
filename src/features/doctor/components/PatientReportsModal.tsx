@@ -1,19 +1,22 @@
 import { ChevronLeft, FileText, X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiClient } from '../../../services/api/client';
 import { getPatientDocumentsForDoctor, PatientDocumentSummary } from '../../../services/api/doctor.api';
 import { getToken } from '../../../utils/tokenManagement';
 import { getDocumentTypeMeta } from '../../records/documentTypes';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { Modal } from '../../../components/ThemedModal';
 
 interface Props {
     visible: boolean;
@@ -24,6 +27,9 @@ interface Props {
 const isImageDoc = (doc: PatientDocumentSummary) => doc.fileType === 'image' || doc.mimeType?.startsWith('image/');
 
 export default function PatientReportsModal({ visible, onClose, customerId }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -47,7 +53,7 @@ export default function PatientReportsModal({ visible, onClose, customerId }: Pr
         if (loading) {
             return (
                 <View style={styles.centerState}>
-                    <ActivityIndicator size="small" color="#0FBBA1" />
+                    <ActivityIndicator size="small" color="#10B981" />
                 </View>
             );
         }
@@ -61,20 +67,20 @@ export default function PatientReportsModal({ visible, onClose, customerId }: Pr
         if (documents.length === 0) {
             return (
                 <View style={styles.centerState}>
-                    <FileText size={32} color="#D1D5DB" />
-                    <Text style={styles.emptyText}>This patient hasn't uploaded any reports yet.</Text>
+                    <FileText size={32} color={theme.textMuted} />
+                    <Text style={styles.emptyText}>{t('this_patient_hasn_t_uploaded_any_repor')}</Text>
                 </View>
             );
         }
         return documents.map((doc) => (
             <TouchableOpacity key={doc._id} style={styles.docRow} onPress={() => setSelected(doc)}>
                 <View style={styles.docIconBox}>
-                    <FileText size={20} color="#0FBBA1" />
+                    <FileText size={20} color="#10B981" />
                 </View>
                 <View style={styles.docInfo}>
                     <Text style={styles.docTitle} numberOfLines={1}>{doc.name}</Text>
                     <Text style={styles.docSub}>
-                        {getDocumentTypeMeta(doc.documentType).label} · {new Date(doc.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {t(getDocumentTypeMeta(doc.documentType).label)} · {new Date(doc.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </Text>
                 </View>
             </TouchableOpacity>
@@ -87,8 +93,8 @@ export default function PatientReportsModal({ visible, onClose, customerId }: Pr
         return (
             <View>
                 <TouchableOpacity style={styles.backRow} onPress={() => setSelected(null)}>
-                    <ChevronLeft size={18} color="#0FBBA1" />
-                    <Text style={styles.backRowText}>All Reports</Text>
+                    <ChevronLeft size={18} color="#10B981" />
+                    <Text style={styles.backRowText}>{t('all_reports')}</Text>
                 </TouchableOpacity>
                 <Text style={styles.viewerTitle}>{selected.name}</Text>
                 {isImageDoc(selected) && token ? (
@@ -99,9 +105,9 @@ export default function PatientReportsModal({ visible, onClose, customerId }: Pr
                     />
                 ) : (
                     <View style={styles.fallbackCard}>
-                        <FileText size={40} color="#0FBBA1" />
+                        <FileText size={40} color="#10B981" />
                         <Text style={styles.fallbackText}>
-                            This file type can't be previewed here.
+                            {t('this_file_type_can_t_be_previewed_here')}
                         </Text>
                     </View>
                 )}
@@ -115,9 +121,9 @@ export default function PatientReportsModal({ visible, onClose, customerId }: Pr
                 <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
                 <View style={[styles.content, { paddingBottom: insets.bottom + 16 }]}>
                     <View style={styles.header}>
-                        <Text style={styles.title}>Patient Reports</Text>
+                        <Text style={styles.title}>{t('patient_reports')}</Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                            <X size={20} color="#6B7280" />
+                            <X size={20} color={theme.textSecondary} />
                         </TouchableOpacity>
                     </View>
                     <View style={styles.scroll}>
@@ -129,11 +135,11 @@ export default function PatientReportsModal({ visible, onClose, customerId }: Pr
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     overlay: { flex: 1, justifyContent: 'flex-end' },
     backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
     content: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 20,
@@ -141,17 +147,17 @@ const styles = StyleSheet.create({
         minHeight: 260,
     },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    title: { fontSize: 18, fontWeight: '700', color: '#111827' },
-    closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
+    title: { fontSize: 18, fontWeight: '700', color: c.text },
+    closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: c.cardSecondary, alignItems: 'center', justifyContent: 'center' },
     scroll: { marginTop: 16 },
     centerState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40, gap: 10 },
-    emptyText: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingHorizontal: 24 },
+    emptyText: { fontSize: 13, color: c.textMuted, textAlign: 'center', paddingHorizontal: 24 },
     docRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
         borderRadius: 12,
         padding: 12,
         marginBottom: 8,
@@ -160,25 +166,25 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 10,
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 12,
     },
     docInfo: { flex: 1 },
-    docTitle: { fontSize: 14, fontWeight: '600', color: '#111827' },
-    docSub: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
+    docTitle: { fontSize: 14, fontWeight: '600', color: c.text },
+    docSub: { fontSize: 12, color: c.textMuted, marginTop: 2 },
     backRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-    backRowText: { color: '#0FBBA1', fontSize: 14, fontWeight: '600', marginLeft: 2 },
-    viewerTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 12 },
-    previewImage: { width: '100%', height: 320, borderRadius: 12, backgroundColor: '#F3F4F6' },
+    backRowText: { color: '#10B981', fontSize: 14, fontWeight: '600', marginLeft: 2 },
+    viewerTitle: { fontSize: 15, fontWeight: '700', color: c.text, marginBottom: 12 },
+    previewImage: { width: '100%', height: 320, borderRadius: 12, backgroundColor: c.cardSecondary },
     fallbackCard: {
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderRadius: 12,
         paddingVertical: 40,
         gap: 10,
     },
-    fallbackText: { fontSize: 13, color: '#9CA3AF' },
+    fallbackText: { fontSize: 13, color: c.textMuted },
 });

@@ -1,10 +1,13 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { StatusBar } from "expo-status-bar";
+import { StatusBar } from '@/src/components/ThemedStatusBar';
 import {
   ChevronDown,
   ChevronRight,
   ChevronUp,
   Clock,
+  FileText,
+  HelpCircle,
+  MoreVertical,
   Compass,
   Home,
   MapPin,
@@ -22,6 +25,8 @@ import {
   ActivityIndicator,
   BackHandler,
   Dimensions,
+  Animated,
+  Easing,
   Image,
   Linking,
   ScrollView,
@@ -30,7 +35,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import { AdaptiveStatusBar } from "../../components/ThemedStatusBar";
+import { Modal } from "../../components/ThemedModal";
+import { LinearGradient } from "expo-linear-gradient";
+import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -40,6 +48,9 @@ import {
 import { RootState } from "../../redux/store";
 import { apiClient } from "../../services/api/client";
 import { onDeliveryLocationUpdate } from "../../services/socketService";
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 type DeliveryPartnerInfo = { partnerId: string; name: string; phone: string | null };
 
@@ -51,12 +62,15 @@ const formatPrice = (amount: number): string => {
   return parts.join(".");
 };
 
+// Within this distance of the drop point the rider counts as arriving.
+const ARRIVING_RADIUS_METERS = 50;
+
 const getHeaderMessages = (status: string, partnerName?: string) => {
   switch (status) {
     case "pending":
       return {
         title: "Awaiting Confirmation",
-        subtitle: "Store is accepting order",
+        subtitle: "Waiting for the store to confirm",
         alert: "We have asked the pharmacy to confirm your order.",
       };
     case "accepted":
@@ -156,10 +170,14 @@ const cleanMapStyle = [
 ];
 
 export default function LiveTrackingScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const navigation = useNavigation<any>();
   const [isDetailExpanded, setIsDetailExpanded] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const activeOrder = useSelector(
     (state: RootState) => state.order.activeOrder,
@@ -186,17 +204,20 @@ export default function LiveTrackingScreen() {
     }, [navigation]),
   );
 
-  // Fallback to active order address lat/long, or current location, or Delhi coordinates
-  const userLat =
-    activeOrder?.address?.latitude ?? currentLocation?.latitude ?? 28.6139;
-  const userLng =
-    activeOrder?.address?.longitude ?? currentLocation?.longitude ?? 77.209;
+  // The server is the source of truth for both ends of the trip: the store's real coordinates and the
+  // delivery address the order was actually placed with (the cart's selection may have changed since).
+  type GeoPoint = { latitude: number; longitude: number; address?: string };
+  const [serverGeo, setServerGeo] = useState<{ store?: GeoPoint; drop?: GeoPoint }>({});
+  const usable = (p?: { latitude?: any; longitude?: any } | null): p is GeoPoint =>
+    !!p && Number.isFinite(Number(p.latitude)) && Number.isFinite(Number(p.longitude)) && (Number(p.latitude) !== 0 || Number(p.longitude) !== 0);
+  const drop = usable(serverGeo.drop) ? serverGeo.drop : usable(activeOrder?.address) ? (activeOrder!.address as GeoPoint) : usable(currentLocation) ? (currentLocation as GeoPoint) : null;
+  const store = usable(serverGeo.store) ? serverGeo.store : usable(activeOrder?.deliveryLocation) ? (activeOrder!.deliveryLocation as GeoPoint) : null;
 
-  // Use actual store coordinates from backend if available, otherwise shift slightly
-  const pharmacyLat =
-    activeOrder?.deliveryLocation?.latitude ?? userLat + 0.005;
-  const pharmacyLng =
-    activeOrder?.deliveryLocation?.longitude ?? userLng + 0.005;
+  const userLat = Number(drop?.latitude ?? 28.6139);
+  const userLng = Number(drop?.longitude ?? 77.209);
+  // Only if the store's position is genuinely unknown is it drawn near the drop point.
+  const pharmacyLat = Number(store?.latitude ?? userLat + 0.005);
+  const pharmacyLng = Number(store?.longitude ?? userLng + 0.005);
 
   const latDiff = Math.abs(pharmacyLat - userLat);
   const lngDiff = Math.abs(pharmacyLng - userLng);
@@ -233,6 +254,13 @@ export default function LiveTrackingScreen() {
     longitude: pharmacyLng,
   });
   const [hasMapError, setHasMapError] = useState(false);
+  // Map markers made of React views are drawn to a bitmap; freezing them before that happens makes them vanish.
+  const [markersSettled, setMarkersSettled] = useState(false);
+  useEffect(() => {
+    setMarkersSettled(false);
+    const timer = setTimeout(() => setMarkersSettled(true), 1200);
+    return () => clearTimeout(timer);
+  }, [pharmacyLat, pharmacyLng, userLat, userLng]);
   const mapRef = useRef<MapView>(null);
 
   // Real assigned-partner identity and live GPS position - replaces the
@@ -240,6 +268,42 @@ export default function LiveTrackingScreen() {
   // animation. With no real ping yet, the rider marker stays put at the
   // pharmacy rather than fake-animating toward the destination.
   const [deliveryPartner, setDeliveryPartner] = useState<DeliveryPartnerInfo | null>(null);
+  // 'self': the pharmacy's own person delivers, so there is no separate rider - the pharmacy is the contact.
+  const [deliveryMode, setDeliveryMode] = useState<'self' | 'partner'>('partner');
+  const [storePhone, setStorePhone] = useState<string | null>(null);
+  // The code the delivery person will ask for at the door. The server shows it only once the order is on its way.
+  const [deliveryCode, setDeliveryCode] = useState<string | null>(null);
+
+  // Delivered: leave tracking for the "order delivered" screen (and stop tracking this order).
+  const deliveredHandled = useRef(false);
+  useEffect(() => {
+    if (!activeOrder || activeOrder.status !== "delivered" || deliveredHandled.current) return;
+    deliveredHandled.current = true;
+    const itemCount = Array.isArray(activeOrder.items)
+      ? activeOrder.items.reduce((n: number, i: any) => n + (Number(i?.quantity) || 1), 0)
+      : undefined;
+    navigation.replace("OrderDelivered", {
+      orderId: activeOrder.orderId,
+      orderNumber: activeOrder.orderNumber,
+      storeName: activeOrder.storeName,
+      itemCount,
+      deliveryMode,
+      partnerName: deliveryPartner?.name,
+    });
+    dispatch(clearActiveOrder());
+  }, [activeOrder, deliveryMode, deliveryPartner, navigation, dispatch]);
+
+  // Refresh button: always spins long enough to be seen, even when the answer comes back instantly.
+  const [syncing, setSyncing] = useState(false);
+  const spin = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!syncing) return;
+    spin.setValue(0);
+    const loop = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 800, easing: Easing.linear, useNativeDriver: true }));
+    loop.start();
+    return () => loop.stop();
+  }, [syncing, spin]);
+  const spinStyle = { transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }) }] };
   const [liveLocation, setLiveLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   useEffect(() => {
@@ -355,6 +419,15 @@ export default function LiveTrackingScreen() {
           if (res.data.deliveryPartner) {
             setDeliveryPartner(res.data.deliveryPartner);
           }
+          if (res.data.deliveryMode) setDeliveryMode(res.data.deliveryMode);
+          setDeliveryCode(res.data.deliveryCode || null);
+          if (res.data.storePhone) setStorePhone(res.data.storePhone);
+          if (res.data.storeLocation || res.data.dropLocation) {
+            setServerGeo((prev) => {
+              const next = { store: res.data.storeLocation || prev.store, drop: res.data.dropLocation || prev.drop };
+              return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
+            });
+          }
           if (res.data.lastKnownLocation) {
             const loc = res.data.lastKnownLocation;
             setLiveLocation((prev) => prev ?? { latitude: loc.latitude, longitude: loc.longitude });
@@ -370,37 +443,65 @@ export default function LiveTrackingScreen() {
     return () => clearInterval(interval);
   }, [activeOrder, dispatch]);
 
-  // Route path coordinates (smooth parabolic curve/arc between Pharmacy and User)
+  // A soft quadratic curve between store and drop point. The bend is a fixed fraction of the distance, drawn
+  // perpendicular to the trip, so it looks the same for 300 m and 5 km (a fixed offset made short trips
+  // loop wildly and long ones look flat).
   const routeCoordinates = useMemo(() => {
-    const points = [];
-    const numPoints = 35;
-    for (let i = 0; i <= numPoints; i++) {
-      const t = i / numPoints;
-      // Linear interpolation
-      const lat = pharmacyLat + (userLat - pharmacyLat) * t;
-      const lng = pharmacyLng + (userLng - pharmacyLng) * t;
-
-      // Calculate parabolic curve offset
-      const offsetFactor = 4 * t * (1 - t);
-      const arcHeight = 0.0012; // arc peak height offset
-
-      // Add orthogonal offset to create a clean curved parabola arc
-      const curvedLat = lat + arcHeight * offsetFactor;
-      const curvedLng = lng - arcHeight * offsetFactor;
-
-      points.push({ latitude: curvedLat, longitude: curvedLng });
+    const points: { latitude: number; longitude: number }[] = [];
+    const steps = 40;
+    const midLat = (pharmacyLat + userLat) / 2;
+    const midLng = (pharmacyLng + userLng) / 2;
+    const dLat = userLat - pharmacyLat;
+    const dLng = userLng - pharmacyLng;
+    const bend = 0.12;
+    const ctrlLat = midLat + -dLng * bend;
+    const ctrlLng = midLng + dLat * bend;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const a = (1 - t) * (1 - t);
+      const b = 2 * (1 - t) * t;
+      const c = t * t;
+      points.push({
+        latitude: a * pharmacyLat + b * ctrlLat + c * userLat,
+        longitude: a * pharmacyLng + b * ctrlLng + c * userLng,
+      });
     }
     return points;
   }, [userLat, userLng, pharmacyLat, pharmacyLng]);
 
-  const handleCallRider = () => {
-    if (!deliveryPartner?.phone) {
-      alert("Rider's phone number isn't available yet.");
+  const dial = (phone: string | null | undefined, missing: string) => {
+    if (!phone) {
+      alert(missing);
       return;
     }
-    Linking.openURL(`tel:${deliveryPartner.phone}`).catch(() => {
+    Linking.openURL(`tel:${phone}`).catch(() => {
       alert("Unable to make call on this device.");
     });
+  };
+  const handleCallRider = () => dial(deliveryPartner?.phone, "Rider's phone number isn't available yet.");
+  const handleCallStore = () => dial(storePhone, "The pharmacy's phone number isn't available.");
+
+  const syncStatus = async () => {
+    if (!activeOrder || syncing) return;
+    setSyncing(true);
+    const minSpin = new Promise((resolve) => setTimeout(resolve, 2500));
+    try {
+      const res = await apiClient.get(`/api/orders/get-order-status/${activeOrder.orderId}`);
+      if (res.data && res.data.success && res.data.status) {
+        dispatch(updateOrderStatus(res.data.status));
+        if (res.data.deliveryPartner) setDeliveryPartner(res.data.deliveryPartner);
+        if (res.data.deliveryMode) setDeliveryMode(res.data.deliveryMode);
+        setDeliveryCode(res.data.deliveryCode || null);
+        if (res.data.storePhone) setStorePhone(res.data.storePhone);
+        if (res.data.lastKnownLocation) setLiveLocation(res.data.lastKnownLocation);
+      }
+      await minSpin;
+    } catch {
+      await minSpin;
+      alert("Couldn't refresh right now. Please try again.");
+    } finally {
+      setSyncing(false);
+    }
   };
 
   // If there is no active order, show a premium empty state inviting the user to place an order
@@ -411,7 +512,7 @@ export default function LiveTrackingScreen() {
         <View style={styles.emptyIconContainer}>
           <ShoppingBag size={48} color="#089643" />
         </View>
-        <Text style={styles.emptyTitle}>No Active Orders</Text>
+        <Text style={styles.emptyTitle}>{t('no_active_orders')}</Text>
         <Text style={styles.emptySubtitle}>
           You don't have any active orders right now. Order medicines from a
           pharmacy to track your delivery live here!
@@ -421,11 +522,29 @@ export default function LiveTrackingScreen() {
           onPress={() => navigation.navigate("Tabs", { screen: "Home" })}
           activeOpacity={0.8}
         >
-          <Text style={styles.browseBtnText}>Order Medicines Now</Text>
+          <Text style={styles.browseBtnText}>{t('order_medicines_now')}</Text>
         </TouchableOpacity>
       </View>
     );
   }
+
+  // The rider's real GPS position vs the drop point (great-circle distance, metres).
+  const metersBetween = (aLat: number, aLng: number, bLat: number, bLng: number) => {
+    const rad = Math.PI / 180;
+    const h = Math.sin(((bLat - aLat) * rad) / 2) ** 2 + Math.cos(aLat * rad) * Math.cos(bLat * rad) * Math.sin(((bLng - aLng) * rad) / 2) ** 2;
+    return 2 * 6371000 * Math.asin(Math.min(1, Math.sqrt(h)));
+  };
+  const riderReaching =
+    (activeOrder.status === "dispatched" || activeOrder.status === "pickedUp") &&
+    !!liveLocation &&
+    metersBetween(liveLocation.latitude, liveLocation.longitude, userLat, userLng) <= ARRIVING_RADIUS_METERS;
+  const headerMsg = riderReaching
+    ? {
+        title: "Reaching your location 📍",
+        subtitle: "Your delivery partner is almost there",
+        alert: "Your delivery partner is within 50 metres of you.",
+      }
+    : getHeaderMessages(activeOrder.status, deliveryPartner?.name);
 
   const renderMarkerIcon = (
     markerId: string,
@@ -448,10 +567,11 @@ export default function LiveTrackingScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <AdaptiveStatusBar barStyle="light-content" />
 
-      {/* Zomato-style Green Header Card */}
+      {/* Header - same surface as the rest of the app */}
       <View style={[styles.headerOverlay, { paddingTop: insets.top + 10 }]}>
+        <LinearGradient colors={["#10B981", "#007C69"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
         <View style={styles.headerTopRow}>
           <TouchableOpacity
             style={styles.headerBackBtn}
@@ -463,46 +583,68 @@ export default function LiveTrackingScreen() {
           <Text style={styles.headerStoreName} numberOfLines={1}>
             {activeOrder.storeName}
           </Text>
-          <TouchableOpacity style={styles.headerShareBtn} activeOpacity={0.7}>
-            <Compass size={18} color="#FFFFFF" />
+          <TouchableOpacity style={styles.headerShareBtn} activeOpacity={0.7} onPress={() => setMenuVisible(true)}>
+            <MoreVertical size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
         <Text style={styles.headerStatusTitle}>
-          {getHeaderMessages(activeOrder.status, deliveryPartner?.name).title}
+          {headerMsg.title}
         </Text>
 
         <View style={styles.headerPillRow}>
           <View style={styles.headerTimePill}>
             <Clock size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
             <Text style={styles.headerTimePillText}>
-              {getHeaderMessages(activeOrder.status, deliveryPartner?.name).subtitle}
+              {headerMsg.subtitle}
             </Text>
           </View>
           <TouchableOpacity
             style={styles.headerSyncBtn}
-            onPress={async () => {
-              try {
-                const res = await apiClient.get(
-                  `/api/orders/get-order-status/${activeOrder.orderId}`,
-                );
-                if (res.data && res.data.success && res.data.status) {
-                  dispatch(updateOrderStatus(res.data.status));
-                  if (res.data.deliveryPartner) {
-                    setDeliveryPartner(res.data.deliveryPartner);
-                  }
-                  alert("Status synced successfully");
-                }
-              } catch {
-                alert("Failed to sync status");
-              }
-            }}
+            onPress={syncStatus}
+            disabled={syncing}
             activeOpacity={0.7}
           >
-            <RefreshCw size={11} color="#FFFFFF" />
+            <Animated.View style={syncing ? spinStyle : undefined}>
+              <RefreshCw size={11} color="#FFFFFF" />
+            </Animated.View>
           </TouchableOpacity>
         </View>
       </View>
+
+      <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+        <TouchableOpacity style={styles.menuBackdrop} activeOpacity={1} onPress={() => setMenuVisible(false)}>
+          <View style={[styles.menuCard, { top: insets.top + 52 }]}>
+            {[
+              {
+                key: "details",
+                label: "Order details",
+                Icon: FileText,
+                run: () => navigation.navigate("Tabs", { screen: "Profile", params: { screen: "MedicineOrderDetail", params: { orderId: activeOrder.orderId } } }),
+              },
+              {
+                key: "help",
+                label: "Need help?",
+                Icon: HelpCircle,
+                run: () => navigation.navigate("Tabs", { screen: "Profile", params: { screen: "OrderSupport", params: { orderId: activeOrder.orderId, orderStatus: activeOrder.status } } }),
+              },
+            ].map((action, index) => (
+              <TouchableOpacity
+                key={action.key}
+                style={[styles.menuItem, index > 0 && styles.menuItemDivider]}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setMenuVisible(false);
+                  setTimeout(action.run, 150);
+                }}
+              >
+                <action.Icon size={18} color={theme.text} />
+                <Text style={styles.menuItemText}>{action.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Map Segment / Visual Route Simulator */}
       <View style={styles.mapContainer}>
@@ -536,35 +678,30 @@ export default function LiveTrackingScreen() {
               }, 600);
             }}
           >
+            {/* The 50 m "arriving" zone around the delivery location */}
+            <Circle
+              center={{ latitude: userLat, longitude: userLng }}
+              radius={ARRIVING_RADIUS_METERS}
+              strokeColor="rgba(16, 185, 129, 0.6)"
+              strokeWidth={1.5}
+              fillColor="rgba(16, 185, 129, 0.15)"
+            />
+
             {/* Pharmacy Pin */}
             <Marker
               coordinate={{ latitude: pharmacyLat, longitude: pharmacyLng }}
               title={activeOrder.storeName}
+              image={require("../../assets/images/map-pharmacy.png")}
               anchor={{ x: 0.5, y: 0.5 }}
-            >
-              {renderMarkerIcon(
-                "pharmacy",
-                <View style={styles.zomatoMapPin}>
-                  <Pill size={14} color="#FFFFFF" />
-                </View>,
-                styles.dbPinContainer,
-              )}
-            </Marker>
+            />
 
             {/* Destination User Pin */}
             <Marker
               coordinate={{ latitude: userLat, longitude: userLng }}
-              title="Your Home"
-              anchor={{ x: 0.5, y: 0.5 }}
-            >
-              {renderMarkerIcon(
-                "home",
-                <View style={styles.zomatoMapPin}>
-                  <Home size={14} color="#FFFFFF" />
-                </View>,
-                styles.dbPinContainer,
-              )}
-            </Marker>
+              title={t('your_home')}
+              image={require("../../assets/images/map-customer.png")}
+              anchor={{ x: 0.5, y: 0.92 }}
+            />
 
             {/* Rider Pin */}
             {(activeOrder.status === "dispatched" ||
@@ -573,6 +710,7 @@ export default function LiveTrackingScreen() {
                 coordinate={riderCoords}
                 title={`Rider - ${deliveryPartner?.name || "Delivery Partner"}`}
                 anchor={{ x: 0.5, y: 0.5 }}
+                tracksViewChanges
               >
                 {renderMarkerIcon(
                   "rider",
@@ -601,12 +739,12 @@ export default function LiveTrackingScreen() {
           <View style={styles.fallbackRouteContainer}>
             <Compass size={40} color="#089643" style={styles.fallbackCompass} />
             <Text style={styles.fallbackTitle}>
-              Simulating Route Navigation
+              {t('simulating_route_navigation')}
             </Text>
             <View style={styles.fallbackProgressBarRow}>
               <View style={styles.fallbackIndicatorBox}>
                 <ShoppingBag size={18} color="#089643" />
-                <Text style={styles.fallbackIndicatorText}>Pharmacy</Text>
+                <Text style={styles.fallbackIndicatorText}>{t('pharmacy')}</Text>
               </View>
               <View style={styles.fallbackLineContainer}>
                 <View style={styles.fallbackLineLine} />
@@ -629,7 +767,7 @@ export default function LiveTrackingScreen() {
               </View>
               <View style={styles.fallbackIndicatorBox}>
                 <MapPin size={18} color="#1A73E8" />
-                <Text style={styles.fallbackIndicatorText}>Your Home</Text>
+                <Text style={styles.fallbackIndicatorText}>{t('your_home')}</Text>
               </View>
             </View>
           </View>
@@ -645,39 +783,63 @@ export default function LiveTrackingScreen() {
           <View style={styles.zomatoStoreDetails}>
             <Text style={styles.zomatoStoreName}>{activeOrder.storeName}</Text>
             <Text style={styles.zomatoStoreAddress}>
-              {activeOrder.deliveryLocation?.address || "Partner Store"}
+              {store?.address || activeOrder.deliveryLocation?.address || "Partner Store"}
             </Text>
           </View>
           <TouchableOpacity
-            style={styles.zomatoPhoneCallBtn}
-            onPress={handleCallRider}
-            activeOpacity={0.7}
+            style={styles.callBtn}
+            onPress={handleCallStore}
+            activeOpacity={0.8}
           >
-            <Phone
-              size={14}
-              color="#089643"
-              style={{ transform: [{ scaleX: -1 }] }}
-            />
+            <Phone size={17} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
         {/* Status Strip Alert */}
         {/* <View style={styles.zomatoAlertStrip}>
           <Text style={styles.zomatoAlertStripText}>
-            {getHeaderMessages(activeOrder.status, deliveryPartner?.name).alert}
+            {headerMsg.alert}
           </Text>
         </View> */}
 
-        {/* Hygiene Instruction Box */}
-        <View style={styles.zomatoInstructionBox}>
-          <ShieldCheck size={14} color="#475569" />
-          <Text style={styles.zomatoInstructionText}>
-            We've asked the pharmacy to seal your medicine package securely.
-          </Text>
-        </View>
+        {/* The delivery code: shared at the door, after the medicines have been received and checked */}
+        {deliveryCode ? (
+          <View style={styles.otpCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.otpTitle}>Your delivery code</Text>
+              <Text style={styles.otpHint}>Give this code to the delivery person only after you have received and checked your medicines.</Text>
+            </View>
+            <View style={styles.otpDigits}>
+              {deliveryCode.split("").map((digit, index) => (
+                <View key={index} style={styles.otpDigit}>
+                  <Text style={styles.otpDigitText}>{digit}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         {/* Dynamic Delivery Partner Status Card */}
-        {activeOrder.status === "dispatched" ||
+        {deliveryMode === "self" && !["delivered", "rejected", "cancelled"].includes(activeOrder.status) ? (
+          <View style={styles.partnerCard}>
+            <View style={styles.partnerInfo}>
+              <View style={styles.avatarBox}>
+                <ShoppingBag size={18} color="#089643" />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.partnerName}>Delivered by {activeOrder.storeName}</Text>
+                <Text style={styles.partnerRatingText}>
+                  {activeOrder.status === "dispatched" || activeOrder.status === "pickedUp"
+                    ? "Their delivery person is on the way to you"
+                    : "Their own delivery person will bring your order"}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.callBtn} onPress={handleCallStore} activeOpacity={0.8}>
+              <Phone size={17} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        ) : activeOrder.status === "dispatched" ||
         activeOrder.status === "pickedUp" ||
         activeOrder.status === "delivered" ? (
           <View style={styles.partnerCard}>
@@ -692,34 +854,18 @@ export default function LiveTrackingScreen() {
                     .toUpperCase()}
                 </Text>
               </View>
-              <View>
+              <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={styles.partnerName}>
                   {deliveryPartner?.name || "Delivery Partner"}
                 </Text>
-                <Text style={styles.partnerRatingText}>On the way to you</Text>
+                <Text style={styles.partnerRatingText}>{t('on_the_way_to_you')}</Text>
               </View>
             </View>
-            <View style={styles.partnerActions}>
-              {!!deliveryPartner?.phone && (
-                <TouchableOpacity
-                  style={styles.actionCircleBtn}
-                  onPress={handleCallRider}
-                  activeOpacity={0.7}
-                >
-                  <Phone
-                    size={16}
-                    color="#089643"
-                    style={{ transform: [{ scaleX: -1 }] }}
-                  />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                style={styles.actionCircleBtn}
-                activeOpacity={0.7}
-              >
-                <MessageSquare size={16} color="#089643" />
+            {!!deliveryPartner?.phone && (
+              <TouchableOpacity style={styles.callBtn} onPress={handleCallRider} activeOpacity={0.8}>
+                <Phone size={17} color="#FFFFFF" />
               </TouchableOpacity>
-            </View>
+            )}
           </View>
         ) : activeOrder.status === "readyForPickup" ? (
           <View style={styles.searchingRiderCard}>
@@ -728,22 +874,30 @@ export default function LiveTrackingScreen() {
             </View>
             <View style={styles.searchingInfo}>
               <Text style={styles.searchingTitle}>
-                Assigning Delivery Partner...
+                {t('assigning_delivery_partner')}
               </Text>
               <Text style={styles.searchingSubtitle}>
-                Searching closest delivery rider to accept your package
+                {t('searching_closest_delivery_rider_to_ac')}
               </Text>
             </View>
           </View>
         ) : (
           <View style={styles.waitingRiderCard}>
-            <Clock size={16} color="#64748B" />
+            <Clock size={16} color={theme.textSecondary} />
             <Text style={styles.waitingRiderText}>
               Delivery partner will be assigned once the pharmacy prepares your
               order.
             </Text>
           </View>
         )}
+
+        {/* Hygiene Instruction Box */}
+        <View style={styles.zomatoInstructionBox}>
+          <ShieldCheck size={14} color={theme.textSecondary} />
+          <Text style={styles.zomatoInstructionText}>
+            {t('we_ve_asked_the_pharmacy_to_seal_your')}
+          </Text>
+        </View>
 
         {/* Collapsible Order Receipt / Details Accordion */}
         <TouchableOpacity
@@ -752,15 +906,15 @@ export default function LiveTrackingScreen() {
           activeOpacity={0.8}
         >
           <View style={styles.zomatoAccordionHeaderLeft}>
-            <ShoppingBag size={14} color="#475569" style={{ marginRight: 6 }} />
+            <ShoppingBag size={14} color={theme.textSecondary} style={{ marginRight: 6 }} />
             <Text style={styles.zomatoAccordionTitle}>
-              Order details & receipt
+              {t('order_details_receipt')}
             </Text>
           </View>
           {isDetailExpanded ? (
-            <ChevronUp size={16} color="#64748B" />
+            <ChevronUp size={16} color={theme.textSecondary} />
           ) : (
-            <ChevronDown size={16} color="#64748B" />
+            <ChevronDown size={16} color={theme.textSecondary} />
           )}
         </TouchableOpacity>
 
@@ -809,7 +963,7 @@ export default function LiveTrackingScreen() {
                 <View style={styles.zomatoBillSummary}>
                   {itemsCost > 0 && (
                     <View style={styles.zomatoBillRow}>
-                      <Text style={styles.zomatoBillLabel}>Items Subtotal</Text>
+                      <Text style={styles.zomatoBillLabel}>{t('items_subtotal')}</Text>
                       <Text style={styles.zomatoBillVal}>
                         ₹{formatPrice(itemsCost)}
                       </Text>
@@ -818,7 +972,7 @@ export default function LiveTrackingScreen() {
                   {deliveryCost > 0 && (
                     <View style={styles.zomatoBillRow}>
                       <Text style={styles.zomatoBillLabel}>
-                        Delivery Partner Fee
+                        {t('delivery_partner_fee')}
                       </Text>
                       <Text style={styles.zomatoBillVal}>
                         ₹{formatPrice(deliveryCost)}
@@ -828,7 +982,7 @@ export default function LiveTrackingScreen() {
                   {packagingCharges > 0 && (
                     <View style={styles.zomatoBillRow}>
                       <Text style={styles.zomatoBillLabel}>
-                        Packaging Charges
+                        {t('packaging_charges')}
                       </Text>
                       <Text style={styles.zomatoBillVal}>
                         ₹{formatPrice(packagingCharges)}
@@ -837,7 +991,7 @@ export default function LiveTrackingScreen() {
                   )}
                   {taxes > 0 && (
                     <View style={styles.zomatoBillRow}>
-                      <Text style={styles.zomatoBillLabel}>Taxes & GST</Text>
+                      <Text style={styles.zomatoBillLabel}>{t('taxes_gst')}</Text>
                       <Text style={styles.zomatoBillVal}>
                         ₹{formatPrice(taxes)}
                       </Text>
@@ -854,7 +1008,7 @@ export default function LiveTrackingScreen() {
                       <Text
                         style={[styles.zomatoBillLabel, { color: "#089643" }]}
                       >
-                        Coupon Discount
+                        {t('coupon_discount')}
                       </Text>
                       <Text
                         style={[styles.zomatoBillVal, { color: "#089643" }]}
@@ -870,17 +1024,17 @@ export default function LiveTrackingScreen() {
                         marginTop: 6,
                         paddingTop: 6,
                         borderTopWidth: 1,
-                        borderColor: "#F1F5F9",
+                        borderColor: theme.borderLight,
                       },
                     ]}
                   >
                     <Text
                       style={[
                         styles.zomatoBillLabel,
-                        { fontWeight: "700", color: "#1E293B" },
+                        { fontWeight: "700", color: theme.text },
                       ]}
                     >
-                      Total Paid
+                      {t('total_paid')}
                     </Text>
                     <Text style={styles.zomatoBillValBold}>
                       ₹{formatPrice(finalTotal)}
@@ -897,10 +1051,10 @@ export default function LiveTrackingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: c.background,
   },
   headerOverlay: {
     position: "absolute",
@@ -908,7 +1062,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
-    backgroundColor: "#089643", // Green theme!
+    overflow: "hidden",
+    backgroundColor: "#10B981",
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomLeftRadius: 20,
@@ -989,6 +1144,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  otpCard: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, marginBottom: 12, borderRadius: 12, backgroundColor: "#ECFDF5", borderWidth: 1, borderColor: "#A7F3D0" },
+  otpTitle: { fontSize: 14, fontWeight: "800", color: "#065F46" },
+  otpHint: { fontSize: 11, color: "#047857", lineHeight: 15, marginTop: 2 },
+  otpDigits: { flexDirection: "row", gap: 6 },
+  otpDigit: { width: 30, height: 38, borderRadius: 8, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#10B981", alignItems: "center", justifyContent: "center" },
+  otpDigitText: { fontSize: 20, fontWeight: "900", color: "#065F46" },
+  menuBackdrop: { flex: 1 },
+  menuCard: {
+    position: "absolute",
+    right: 16,
+    minWidth: 200,
+    backgroundColor: c.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: c.border,
+    paddingVertical: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  menuItem: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
+  menuItemDivider: { borderTopWidth: 1, borderTopColor: c.borderLight },
+  menuItemText: { fontSize: 14, fontWeight: "600", color: c.text },
   mapContainer: {
     flex: 1,
   },
@@ -1002,7 +1182,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1043,7 +1223,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F1F5F9",
+    backgroundColor: c.cardSecondary,
     padding: 24,
   },
   fallbackCompass: {
@@ -1052,7 +1232,7 @@ const styles = StyleSheet.create({
   fallbackTitle: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#1F2937",
+    color: c.text,
     marginBottom: 24,
   },
   fallbackProgressBarRow: {
@@ -1069,12 +1249,12 @@ const styles = StyleSheet.create({
   fallbackIndicatorText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#4B5563",
+    color: c.textSecondary,
   },
   fallbackLineContainer: {
     flex: 1,
     height: 6,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: c.infoBg,
     borderRadius: 3,
     marginHorizontal: 12,
     position: "relative",
@@ -1089,7 +1269,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   detailsDrawer: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 20,
@@ -1102,7 +1282,7 @@ const styles = StyleSheet.create({
   statusBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F0FDF4",
+    backgroundColor: c.successBg,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 16,
@@ -1116,11 +1296,11 @@ const styles = StyleSheet.create({
   statusTitle: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#166534",
+    color: c.success,
   },
   statusSubtitle: {
     fontSize: 11,
-    color: "#15803d",
+    color: c.success,
     marginTop: 2,
   },
   trackerRow: {
@@ -1141,12 +1321,12 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: c.infoBg,
     alignItems: "center",
     justifyContent: "center",
   },
   trackerNodeActive: {
-    backgroundColor: "#FEF3C7",
+    backgroundColor: c.warningBg,
     borderWidth: 2,
     borderColor: "#D97706",
   },
@@ -1162,14 +1342,14 @@ const styles = StyleSheet.create({
   trackerText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#64748B",
+    color: c.textSecondary,
     marginTop: 8,
     textAlign: "center",
   },
   trackerLine: {
     flex: 1,
     height: 2,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: c.infoBg,
     marginBottom: 20,
   },
   partnerCard: {
@@ -1179,32 +1359,43 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: c.borderLight,
   },
   partnerInfo: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    marginRight: 12,
+  },
+  callBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#10B981",
   },
   avatarBox: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: c.cardSecondary,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: c.border,
   },
   avatarText: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#475569",
+    color: c.textSecondary,
   },
   partnerName: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#1E293B",
+    color: c.text,
   },
   partnerRatingRow: {
     flexDirection: "row",
@@ -1214,7 +1405,7 @@ const styles = StyleSheet.create({
   },
   partnerRatingText: {
     fontSize: 11,
-    color: "#64748B",
+    color: c.textSecondary,
     fontWeight: "600",
   },
   partnerActions: {
@@ -1225,7 +1416,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: c.successBg,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -1234,7 +1425,7 @@ const styles = StyleSheet.create({
   searchingRiderCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#EFF6FF",
+    backgroundColor: c.infoBg,
     borderColor: "#BFDBFE",
     borderWidth: 1,
     borderRadius: 12,
@@ -1263,7 +1454,7 @@ const styles = StyleSheet.create({
   waitingRiderCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: c.cardSecondary,
     borderRadius: 12,
     padding: 12,
     marginVertical: 12,
@@ -1272,7 +1463,7 @@ const styles = StyleSheet.create({
   waitingRiderText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#64748B",
+    color: c.textSecondary,
     flex: 1,
   },
   zomatoStoreInfoRow: {
@@ -1283,15 +1474,17 @@ const styles = StyleSheet.create({
   },
   zomatoStoreDetails: {
     flex: 1,
+    minWidth: 0,
+    marginRight: 12,
   },
   zomatoStoreName: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#1E293B",
+    color: c.text,
   },
   zomatoStoreAddress: {
     fontSize: 12,
-    color: "#64748B",
+    color: c.textSecondary,
     marginTop: 2,
   },
   zomatoPhoneCallBtn: {
@@ -1300,12 +1493,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "#DCFCE7",
-    backgroundColor: "#F0FDF4",
+    backgroundColor: c.successBg,
     alignItems: "center",
     justifyContent: "center",
   },
   zomatoAlertStrip: {
-    backgroundColor: "#F0FDF4",
+    backgroundColor: c.successBg,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 8,
@@ -1316,22 +1509,23 @@ const styles = StyleSheet.create({
   zomatoAlertStripText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#15803D",
+    color: c.success,
   },
   zomatoInstructionBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: c.cardSecondary,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
     gap: 8,
+    marginTop: 14,
     marginBottom: 14,
   },
   zomatoInstructionText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#475569",
+    color: c.textSecondary,
     flex: 1,
   },
   zomatoAccordionHeader: {
@@ -1341,7 +1535,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: c.borderLight,
     marginTop: 10,
   },
   zomatoAccordionHeaderLeft: {
@@ -1351,13 +1545,13 @@ const styles = StyleSheet.create({
   zomatoAccordionTitle: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#475569",
+    color: c.textSecondary,
   },
   zomatoAccordionContent: {
     maxHeight: 280,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: c.borderLight,
   },
   zomatoItemRow: {
     flexDirection: "row",
@@ -1380,13 +1574,13 @@ const styles = StyleSheet.create({
   zomatoItemPrice: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#1E293B",
+    color: c.text,
   },
   zomatoBillSummary: {
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: c.borderLight,
   },
   zomatoBillRow: {
     flexDirection: "row",
@@ -1395,7 +1589,7 @@ const styles = StyleSheet.create({
   },
   zomatoBillLabel: {
     fontSize: 12,
-    color: "#64748B",
+    color: c.textSecondary,
     fontWeight: "500",
   },
   zomatoBillVal: {
@@ -1417,7 +1611,7 @@ const styles = StyleSheet.create({
   billBriefLabel: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#64748B",
+    color: c.textSecondary,
   },
   sandboxResetBtn: {
     flexDirection: "row",
@@ -1425,7 +1619,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 4,
     paddingHorizontal: 8,
-    backgroundColor: "#FEF2F2",
+    backgroundColor: c.errorBg,
     borderWidth: 1,
     borderColor: "#FEE2E2",
     borderRadius: 6,
@@ -1439,14 +1633,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     padding: 24,
   },
   emptyIconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#E8F5E9",
+    backgroundColor: c.successBg,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 20,
@@ -1454,12 +1648,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#111827",
+    color: c.text,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: "#64748B",
+    color: c.textSecondary,
     textAlign: "center",
     lineHeight: 20,
     marginBottom: 28,

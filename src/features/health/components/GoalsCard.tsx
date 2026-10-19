@@ -1,14 +1,22 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Activity, Brain, Droplets, Footprints, Heart, Moon, Salad, Settings, Target } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { loadOnDeviceSteps, selectTodaySteps } from '../../../redux/slices/deviceSlice';
-import { updateGoalProgress } from '../../../redux/slices/goalsSlice';
+import { loadGoalsFromServer, updateGoalProgress } from '../../../redux/slices/goalsSlice';
 import { AppDispatch, RootState } from '../../../redux/store';
 import { HealthSection } from './HealthSection';
+import { requestStepsAccess } from '../stepsAccess';
+import { isHealthConnectSupported, isStepsTrackingEnabled } from '../../../services/health/healthConnectStepsService';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 export function GoalsCard() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const dispatch = useDispatch<AppDispatch>();
     const navigation = useNavigation<any>();
     const { goals } = useSelector((state: RootState) => state.goals);
@@ -19,12 +27,27 @@ export function GoalsCard() {
     // "no steps yet today" reading, or it'd stomp a previously-synced value.
     const hasStepsSource = !!connectedDevice || onDeviceSteps !== null;
 
+    // If step access was declined (or never given), the steps goal shows a way to allow it - this replaces the old Sync button.
+    const [trackingOn, setTrackingOn] = React.useState(true);
+    React.useEffect(() => {
+        isStepsTrackingEnabled().then(setTrackingOn);
+    }, [onDeviceSteps, connectedDevice]);
+    const allowStepAccess = async () => {
+        const result = await requestStepsAccess();
+        if (result === 'enabled') {
+            setTrackingOn(true);
+            dispatch(loadOnDeviceSteps());
+        }
+    };
+
     // Refresh on-device step count whenever this card comes into view -
     // steps accumulate through the day, so a boot-time read alone would go
     // stale while the app stays open.
     useFocusEffect(
         React.useCallback(() => {
             dispatch(loadOnDeviceSteps());
+            // Progress is per day: coming back after midnight must show a fresh day, not yesterday's numbers from when the app started.
+            dispatch(loadGoalsFromServer());
         }, [dispatch])
     );
 
@@ -95,7 +118,7 @@ export function GoalsCard() {
 
     return (
         <HealthSection 
-            title="Active Goals" 
+            title={t('active_goals')} 
             icon={
                 <TouchableOpacity
                     style={styles.manageHeaderBtn}
@@ -103,16 +126,16 @@ export function GoalsCard() {
                     activeOpacity={0.7}
                 >
                     <Settings size={12} color="#3B82F6" style={{ marginRight: 4 }} />
-                    <Text style={styles.manageHeaderBtnText}>Manage</Text>
+                    <Text style={styles.manageHeaderBtnText}>{t('manage')}</Text>
                 </TouchableOpacity>
             }
         >
             <View>
                 {processedGoals.length === 0 ? (
                     <View style={styles.emptyCard}>
-                        <Text style={styles.emptyTitle}>No Active Goals</Text>
+                        <Text style={styles.emptyTitle}>{t('no_active_goals')}</Text>
                         <Text style={styles.emptySubtitle}>
-                            Configure your custom daily steps, hydration, sleep, or activity targets.
+                            {t('configure_your_custom_daily_steps_hydr')}
                         </Text>
                     </View>
                 ) : (
@@ -145,6 +168,11 @@ export function GoalsCard() {
                                             ]}
                                         />
                                     </View>
+                                    {goal.type === 'steps' && isHealthConnectSupported && !trackingOn ? (
+                                        <TouchableOpacity onPress={allowStepAccess} activeOpacity={0.7} style={styles.allowAccess}>
+                                            <Text style={styles.allowAccessText}>Allow step access to track automatically</Text>
+                                        </TouchableOpacity>
+                                    ) : null}
                                 </View>
                             </TouchableOpacity>
                         );
@@ -155,13 +183,13 @@ export function GoalsCard() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     // Same card language as AppointmentCard/MedicineCard (border instead of
     // shadow, 48x48/radius-14 icon box) so a goal reads as the same kind of
     // row as a consultation or medicine reminder, instead of the old single
     // shared container with divided rows.
     goalCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 16,
         paddingVertical: 12,
@@ -188,24 +216,26 @@ const styles = StyleSheet.create({
         alignItems: 'baseline',
         marginBottom: 8
     },
-    goalTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
-    goalValue: { fontSize: 12, color: '#6B7280', fontWeight: '600' },
+    goalTitle: { fontSize: 14, fontWeight: '700', color: c.text },
+    goalValue: { fontSize: 12, color: c.textSecondary, fontWeight: '600' },
     goalBarBg: {
         height: 6,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         borderRadius: 3,
         overflow: 'hidden'
     },
+    allowAccess: { marginTop: 8, alignSelf: 'flex-start' },
+    allowAccessText: { fontSize: 11.5, fontWeight: '700', color: '#10B981' },
     goalBarFill: {
         height: '100%',
         borderRadius: 3
     },
     /* Empty State styles */
     emptyCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         paddingVertical: 24,
         alignItems: 'center',
         justifyContent: 'center',
@@ -214,12 +244,12 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#475569',
+        color: c.textSecondary,
         marginBottom: 4,
     },
     emptySubtitle: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         textAlign: 'center',
         lineHeight: 18,
         paddingHorizontal: 20,
@@ -231,7 +261,7 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         paddingHorizontal: 8,
         borderRadius: 6,
-        backgroundColor: '#EFF6FF',
+        backgroundColor: c.infoBg,
     },
     manageHeaderBtnText: {
         fontSize: 11,

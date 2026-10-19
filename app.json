@@ -11,7 +11,16 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "LSApplicationQueriesSchemes": ["tez", "phonepe", "paytmmp"]
+        "LSApplicationQueriesSchemes": [
+          "tez",
+          "phonepe",
+          "paytmmp",
+          "paytm",
+          "bhim",
+          "credpay",
+          "upi",
+          "amazonpay"
+        ]
       }
     },
     "android": {
@@ -32,6 +41,9 @@
         "ACCESS_NETWORK_STATE",
         "ACCESS_WIFI_STATE",
         "POST_NOTIFICATIONS",
+        "USE_FULL_SCREEN_INTENT",
+        "VIBRATE",
+        "WAKE_LOCK",
         "android.permission.health.READ_STEPS",
         "android.permission.health.WRITE_STEPS",
         "android.permission.health.READ_TOTAL_CALORIES_BURNED",
@@ -68,6 +80,7 @@
         }
       ],
       "expo-secure-store",
+      "expo-font",
       [
         "expo-image-picker",
         {
@@ -96,7 +109,15 @@
       ],
       "react-native-health-connect",
       "expo-background-task",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./src/assets/sounds/incoming_call.wav",
+            "./src/assets/sounds/new_notification.wav"
+          ]
+        }
+      ],
       [
         "expo-build-properties",
         {
@@ -107,16 +128,17 @@
           }
         }
       ],
-      "./plugins/withRazorpayCheckoutTheme.js",
       "./plugins/withLowMemoryGradleTuning.js",
       "./plugins/withAgoraScreenShareExclusion.js",
+      "./plugins/withNotifeeLocalMaven.js",
       [
         "expo-navigation-bar",
         {
           "backgroundColor": "#00000000"
         }
       ],
-      "./plugins/withTransparentNavigationBar.js"
+      "./plugins/withTransparentNavigationBar.js",
+      "./plugins/withUpiAppQueries.js"
     ],
     "experiments": {
       "typedRoutes": true,

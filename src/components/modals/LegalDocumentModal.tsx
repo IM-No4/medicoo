@@ -1,18 +1,20 @@
 import { ArrowLeft } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
-    ActivityIndicator,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ErrorState from '../layout/ErrorState';
 import { getLegalDocument, LegalDocumentType, LegalSectionDto } from '../../services/api/legal.api';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { Modal } from '../ThemedModal';
 
 interface Props {
     visible: boolean;
@@ -37,6 +39,8 @@ const FALLBACK_TITLES: Record<LegalDocumentType, string> = {
 // from. Same content source (getLegalDocument) and layout as those
 // screens, just without the navigation-screen coupling.
 export default function LegalDocumentModal({ visible, documentType, onClose }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
 
     const [loading, setLoading] = useState(true);
@@ -81,7 +85,7 @@ export default function LegalDocumentModal({ visible, documentType, onClose }: P
 
                 {loading ? (
                     <View style={styles.center}>
-                        <ActivityIndicator size="large" color="#0FBBA1" />
+                        <ActivityIndicator size="large" color="#10B981" />
                     </View>
                 ) : error ? (
                     <View style={styles.center}>
@@ -117,13 +121,13 @@ export default function LegalDocumentModal({ visible, documentType, onClose }: P
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.background,
     },
     header: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -149,7 +153,7 @@ const styles = StyleSheet.create({
     },
     lastUpdated: {
         fontSize: 12,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginBottom: 24,
         fontStyle: 'italic',
     },
@@ -159,14 +163,14 @@ const styles = StyleSheet.create({
     sectionHeading: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 8,
         letterSpacing: 0.5,
     },
     sectionBody: {
         fontSize: 14,
         lineHeight: 24,
-        color: '#4B5563',
+        color: c.textSecondary,
         textAlign: 'justify',
     },
 });

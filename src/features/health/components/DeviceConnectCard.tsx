@@ -2,12 +2,18 @@ import { disconnectDevice, updateDeviceData } from '@/src/redux/slices/deviceSli
 import { AppDispatch, RootState } from '@/src/redux/store';
 import { bluetoothService } from '@/src/services/health/BluetoothService';
 import { Battery, Link as LinkIcon, RefreshCw, Smartphone, Watch, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import BluetoothDeviceModal from './BluetoothDeviceModal';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 export function DeviceConnectCard() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const dispatch = useDispatch<AppDispatch>();
     const { connectedDevice } = useSelector((state: RootState) => state.device);
     const [modalVisible, setModalVisible] = useState(false);
@@ -41,7 +47,7 @@ export function DeviceConnectCard() {
                 <View style={styles.cardHeader}>
                     <View style={styles.connectedBadge}>
                         <View style={styles.pulseDot} />
-                        <Text style={styles.badgeText}>Connected</Text>
+                        <Text style={styles.badgeText}>{t('connected')}</Text>
                     </View>
                     <TouchableOpacity
                         onPress={() => dispatch(disconnectDevice())}
@@ -66,7 +72,7 @@ export function DeviceConnectCard() {
                             <View style={styles.batteryRow}>
                                 <Battery
                                     size={12}
-                                    color={isLowBattery ? '#EF4444' : '#0FBBA1'}
+                                    color={isLowBattery ? '#EF4444' : '#10B981'}
                                     style={{ transform: [{ rotate: '-90deg' }] }}
                                 />
                                 <Text style={[styles.statusText, isLowBattery && { color: '#EF4444' }]}>
@@ -94,8 +100,8 @@ export function DeviceConnectCard() {
                 </View>
 
                 <View style={styles.statsPreview}>
-                    <StatItem value={connectedDevice.data?.steps?.toLocaleString()} label="Steps" />
-                    <StatItem value={connectedDevice.data?.heartRate?.toString()} label="BPM" />
+                    <StatItem value={connectedDevice.data?.steps?.toLocaleString()} label={t('steps')} />
+                    <StatItem value={connectedDevice.data?.heartRate?.toString()} label={t('bpm')} />
                     <StatItem value={connectedDevice.data?.calories?.toString()} label="kcal" />
                 </View>
 
@@ -115,9 +121,9 @@ export function DeviceConnectCard() {
                 </View>
 
                 <View style={{ flex: 1 }}>
-                    <Text style={styles.deviceTitle}>External Devices</Text>
+                    <Text style={styles.deviceTitle}>{t('external_devices')}</Text>
                     <Text style={styles.deviceSubtitle}>
-                        Track heart rate, steps and sleep automatically
+                        {t('track_heart_rate_steps_and_sleep_autom')}
                     </Text>
                 </View>
 
@@ -126,8 +132,8 @@ export function DeviceConnectCard() {
                     activeOpacity={0.8}
                     onPress={() => setModalVisible(true)}
                 >
-                    <LinkIcon size={14} color="#111827" style={{ marginRight: 4 }} />
-                    <Text style={styles.pairText}>Pair</Text>
+                    <LinkIcon size={14} color={theme.text} style={{ marginRight: 4 }} />
+                    <Text style={styles.pairText}>{t('pair')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -140,6 +146,8 @@ export function DeviceConnectCard() {
 }
 
 function StatItem({ value, label }: { value: string | undefined, label: string }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     return (
         <View style={styles.statItem}>
             <Text style={styles.statValue}>{value || '--'}</Text>
@@ -148,7 +156,7 @@ function StatItem({ value, label }: { value: string | undefined, label: string }
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     deviceCard: {
         marginHorizontal: 20,
         backgroundColor: '#111827',
@@ -187,12 +195,12 @@ const styles = StyleSheet.create({
         width: 6,
         height: 6,
         borderRadius: 3,
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
     },
     badgeText: {
         fontSize: 10,
         fontWeight: '700',
-        color: '#0FBBA1',
+        color: '#10B981',
         textTransform: 'uppercase',
     },
     disconnectBtn: {
@@ -284,12 +292,12 @@ const styles = StyleSheet.create({
     deviceTitle: { fontSize: 16, fontWeight: '700', color: '#fff' },
     deviceSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 2, lineHeight: 18 },
     pairBtn: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 12,
         flexDirection: 'row',
         alignItems: 'center'
     },
-    pairText: { fontSize: 13, fontWeight: '700', color: '#111827' }
+    pairText: { fontSize: 13, fontWeight: '700', color: c.text }
 });

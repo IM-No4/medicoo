@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../../components/ThemedStatusBar';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
@@ -9,8 +9,14 @@ import { executeAction } from '../../../actions/ActionExecutor';
 import AppIcon from '../../../components/icons/AppIcon';
 import { fetchDonorProfile } from '../../../redux/slices/bloodDonationSlice';
 import { AppDispatch, RootState } from '../../../redux/store';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 export default function BloodDonationDashboardScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const dispatch = useDispatch<AppDispatch>();
     const insets = useSafeAreaInsets();
     const { profile } = useSelector((state: RootState) => state.bloodDonation);
@@ -31,7 +37,7 @@ export default function BloodDonationDashboardScreen() {
         // an informational stop rather than a browsable list for now.
         Alert.alert(
             'Nearby Requests',
-            "You'll get a notification here the moment a matching blood request comes in near you."
+            t('you_ll_get_a_notification_here_the_mom')
         );
     };
 
@@ -41,8 +47,8 @@ export default function BloodDonationDashboardScreen() {
                 <AppIcon name="droplet" size={20} color="#FFFFFF" />
             </View>
             <View style={{ flex: 1 }}>
-                <Text style={styles.urgentTitle}>Need blood urgently?</Text>
-                <Text style={styles.urgentDesc}>Notify nearby donors instantly</Text>
+                <Text style={styles.urgentTitle}>{t('need_blood_urgently')}</Text>
+                <Text style={styles.urgentDesc}>{t('notify_nearby_donors_instantly')}</Text>
             </View>
             <AppIcon name="chevron-right" size={18} color="#FFFFFF" />
         </TouchableOpacity>
@@ -54,39 +60,39 @@ export default function BloodDonationDashboardScreen() {
                 <View style={styles.heroIconChip}>
                     <AppIcon name="droplet" size={22} color="#FFFFFF" />
                 </View>
-                <Text style={styles.heroTitle}>Become a Life Saver</Text>
+                <Text style={styles.heroTitle}>{t('become_a_life_saver')}</Text>
                 <Text style={styles.heroSubtitle}>
-                    Your single donation can save up to 3 lives. Join our community of heroes today.
+                    {t('your_single_donation_can_save_up_to_3')}
                 </Text>
                 <TouchableOpacity style={styles.heroButton} onPress={handleCheckEligibility} activeOpacity={0.85}>
-                    <Text style={styles.heroButtonText}>Check Eligibility</Text>
-                    <AppIcon name="arrow-right" size={16} color="#B91C1C" />
+                    <Text style={styles.heroButtonText}>{t('check_eligibility')}</Text>
+                    <AppIcon name="arrow-right" size={16} color={theme.error} />
                 </TouchableOpacity>
             </View>
 
-            <Text style={styles.sectionTitle}>How it works</Text>
+            <Text style={styles.sectionTitle}>{t('how_it_works')}</Text>
             <View style={styles.stepsCard}>
                 <View style={styles.stepItem}>
                     <View style={styles.stepNumber}><Text style={styles.stepNumberText}>1</Text></View>
                     <View style={styles.stepContent}>
-                        <Text style={styles.stepTitle}>Check Eligibility</Text>
-                        <Text style={styles.stepDesc}>Answer a few health questions to ensure it's safe for you to donate.</Text>
+                        <Text style={styles.stepTitle}>{t('check_eligibility')}</Text>
+                        <Text style={styles.stepDesc}>{t('answer_a_few_health_questions_to_ensur')}</Text>
                     </View>
                 </View>
                 <View style={styles.stepLine} />
                 <View style={styles.stepItem}>
                     <View style={styles.stepNumber}><Text style={styles.stepNumberText}>2</Text></View>
                     <View style={styles.stepContent}>
-                        <Text style={styles.stepTitle}>Register</Text>
-                        <Text style={styles.stepDesc}>Create your donor profile to track your donations and rewards.</Text>
+                        <Text style={styles.stepTitle}>{t('register')}</Text>
+                        <Text style={styles.stepDesc}>{t('create_your_donor_profile_to_track_you')}</Text>
                     </View>
                 </View>
                 <View style={styles.stepLine} />
                 <View style={styles.stepItem}>
                     <View style={styles.stepNumber}><Text style={styles.stepNumberText}>3</Text></View>
                     <View style={styles.stepContent}>
-                        <Text style={styles.stepTitle}>Donate & Earn</Text>
-                        <Text style={styles.stepDesc}>Visit a nearby center, save lives, and earn badges.</Text>
+                        <Text style={styles.stepTitle}>{t('donate_earn')}</Text>
+                        <Text style={styles.stepDesc}>{t('visit_a_nearby_center_save_lives_and_e')}</Text>
                     </View>
                 </View>
             </View>
@@ -104,39 +110,39 @@ export default function BloodDonationDashboardScreen() {
                     </View>
                     <View style={styles.activePill}>
                         <View style={styles.activeDot} />
-                        <Text style={styles.activePillText}>ACTIVE DONOR</Text>
+                        <Text style={styles.activePillText}>{t('active_donor')}</Text>
                     </View>
                 </View>
                 <Text style={styles.heroPoints}>{profile?.points || 0}</Text>
-                <Text style={styles.heroPointsLabel}>Points Earned</Text>
+                <Text style={styles.heroPointsLabel}>{t('points_earned')}</Text>
 
                 <View style={styles.heroStatsRow}>
                     <View style={styles.heroStatItem}>
                         <Text style={styles.heroStatValue}>{profile?.totalDonations || 0}</Text>
-                        <Text style={styles.heroStatLabel}>Donations</Text>
+                        <Text style={styles.heroStatLabel}>{t('donations')}</Text>
                     </View>
                     <View style={styles.heroStatDivider} />
                     <View style={styles.heroStatItem}>
                         <Text style={styles.heroStatValue}>{profile?.bloodGroup || '-'}</Text>
-                        <Text style={styles.heroStatLabel}>Blood Group</Text>
+                        <Text style={styles.heroStatLabel}>{t('blood_group_2')}</Text>
                     </View>
                 </View>
             </View>
 
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <Text style={styles.sectionTitle}>{t('quick_actions')}</Text>
             <View style={styles.actionGrid}>
                 <TouchableOpacity style={styles.actionCard} onPress={handleHistory} activeOpacity={0.7}>
-                    <View style={[styles.actionIconWrap, { backgroundColor: '#EFF6FF' }]}>
+                    <View style={[styles.actionIconWrap, { backgroundColor: theme.infoBg }]}>
                         <AppIcon name="history" size={22} color="#3B82F6" />
                     </View>
-                    <Text style={styles.actionLabel}>Donation History</Text>
+                    <Text style={styles.actionLabel}>{t('donation_history')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.actionCard} onPress={handleNearbyRequests} activeOpacity={0.7}>
-                    <View style={[styles.actionIconWrap, { backgroundColor: '#FEF2F2' }]}>
+                    <View style={[styles.actionIconWrap, { backgroundColor: theme.errorBg }]}>
                         <AppIcon name="map-pin" size={22} color="#EF4444" />
                     </View>
-                    <Text style={styles.actionLabel}>Nearby Requests</Text>
+                    <Text style={styles.actionLabel}>{t('nearby_requests')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -147,15 +153,15 @@ export default function BloodDonationDashboardScreen() {
                     <AppIcon name="award" size={20} color="#F59E0B" />
                 </View>
                 <View style={{ flex: 1 }}>
-                    <Text style={styles.impactTitle}>Impact Tracker</Text>
+                    <Text style={styles.impactTitle}>{t('impact_tracker')}</Text>
                     <Text style={styles.impactDesc}>You've earned {profile?.points || 0} points making a difference.</Text>
                 </View>
             </View>
 
             <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>Your Badges</Text>
+                <Text style={styles.sectionTitle}>{t('your_badges')}</Text>
                 <TouchableOpacity>
-                    <Text style={styles.seeAllText}>See All</Text>
+                    <Text style={styles.seeAllText}>{t('see_all_2')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -166,10 +172,10 @@ export default function BloodDonationDashboardScreen() {
             >
                 {/* Always show the first badge for active profiles */}
                 <View style={styles.badgeItem}>
-                    <View style={[styles.badgeIconWrap, { borderColor: '#F59E0B', backgroundColor: '#FFFBEB' }]}>
+                    <View style={[styles.badgeIconWrap, { borderColor: '#F59E0B', backgroundColor: theme.warningBg }]}>
                         <AppIcon name="award" size={28} color="#F59E0B" />
                     </View>
-                    <Text style={styles.badgeName}>New Donor</Text>
+                    <Text style={styles.badgeName}>{t('new_donor')}</Text>
                     <View style={styles.badgePointsPill}>
                         <Text style={styles.badgePointsText}>500 pts</Text>
                     </View>
@@ -179,10 +185,10 @@ export default function BloodDonationDashboardScreen() {
                 <View style={styles.progressCard}>
                     <View style={styles.progressHeader}>
                         <View style={styles.lockedBadgeIcon}>
-                            <AppIcon name="shield-check" size={20} color="#9CA3AF" />
+                            <AppIcon name="shield-check" size={20} color={theme.textMuted} />
                         </View>
                         <View>
-                            <Text style={styles.nextBadgeTitle}>Life Saver</Text>
+                            <Text style={styles.nextBadgeTitle}>{t('life_saver')}</Text>
                             <Text style={styles.nextBadgeSubtitle}>1500 pts to unlock</Text>
                         </View>
                     </View>
@@ -211,9 +217,9 @@ export default function BloodDonationDashboardScreen() {
             <StatusBar style="dark" />
             <View style={[styles.topHeader, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={handleBack} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.topHeaderTitle}>Blood Donation</Text>
+                <Text style={styles.topHeaderTitle}>{t('blood_donation')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -224,10 +230,10 @@ export default function BloodDonationDashboardScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.background,
     },
     topHeader: {
         flexDirection: 'row',
@@ -235,7 +241,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -251,7 +257,7 @@ const styles = StyleSheet.create({
     topHeaderTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     scrollContent: {
         paddingBottom: 40,
@@ -360,20 +366,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 12,
         paddingVertical: 14,
     },
     heroButtonText: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#B91C1C',
+        color: c.error,
     },
 
     sectionTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 12,
     },
     sectionHeaderRow: {
@@ -389,12 +395,12 @@ const styles = StyleSheet.create({
     },
 
     stepsCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 16,
         padding: 20,
         marginBottom: 24,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
     },
     stepItem: {
         flexDirection: 'row',
@@ -419,18 +425,18 @@ const styles = StyleSheet.create({
     stepTitle: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 3,
     },
     stepDesc: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         lineHeight: 18,
     },
     stepLine: {
         width: 2,
         height: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         marginLeft: 13,
         marginVertical: 4,
     },
@@ -442,12 +448,12 @@ const styles = StyleSheet.create({
     },
     actionCard: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 16,
         padding: 16,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
     },
     actionIconWrap: {
         width: 44,
@@ -460,7 +466,7 @@ const styles = StyleSheet.create({
     actionLabel: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#374151',
+        color: c.text,
         textAlign: 'center',
     },
 
@@ -496,30 +502,30 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 14,
-        backgroundColor: '#FFFBEB',
+        backgroundColor: c.warningBg,
         borderRadius: 16,
         padding: 16,
         marginBottom: 24,
         borderWidth: 1,
-        borderColor: '#FEF3C7',
+        borderColor: c.border,
     },
     impactIconWrap: {
         width: 40,
         height: 40,
         borderRadius: 12,
-        backgroundColor: '#FEF3C7',
+        backgroundColor: c.warningBg,
         alignItems: 'center',
         justifyContent: 'center',
     },
     impactTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#92400E',
+        color: c.warning,
         marginBottom: 2,
     },
     impactDesc: {
         fontSize: 12,
-        color: '#B45309',
+        color: c.warning,
         lineHeight: 16,
     },
 
@@ -535,17 +541,17 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: '#FFFBEB',
+        backgroundColor: c.warningBg,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 8,
         borderWidth: 2,
-        borderColor: '#FEF3C7',
+        borderColor: c.border,
     },
     badgeName: {
         fontSize: 12,
         fontWeight: '500',
-        color: '#4B5563',
+        color: c.textSecondary,
         textAlign: 'center',
     },
     badgePointsPill: {
@@ -565,10 +571,10 @@ const styles = StyleSheet.create({
         width: 180,
         height: 110,
         padding: 12,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
         justifyContent: 'space-between',
     },
     progressHeader: {
@@ -580,22 +586,22 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         alignItems: 'center',
         justifyContent: 'center',
     },
     nextBadgeTitle: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#374151',
+        color: c.text,
     },
     nextBadgeSubtitle: {
         fontSize: 10,
-        color: '#6B7280',
+        color: c.textSecondary,
     },
     progressBarBg: {
         height: 6,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         borderRadius: 3,
         overflow: 'hidden',
     },
@@ -606,7 +612,7 @@ const styles = StyleSheet.create({
     },
     progressText: {
         fontSize: 10,
-        color: '#6B7280',
+        color: c.textSecondary,
         alignSelf: 'flex-end',
         fontWeight: '600',
     },

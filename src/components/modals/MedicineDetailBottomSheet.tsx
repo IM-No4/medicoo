@@ -14,7 +14,6 @@ import {
   Dimensions,
   FlatList,
   Image,
-  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Platform,
@@ -27,6 +26,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../ThemedModal';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -67,11 +70,9 @@ interface Props {
   storeName: string;
   isStoreOpen?: boolean;
   // Rest of the store's catalog, used to populate "Similar products" below
-  // the main details. Tapping one swaps the sheet to show that item
-  // instead of closing, so browsing related products doesn't interrupt
-  // the flow.
+  // the main details. Tapping one opens that product's own detail screen on
+  // top of this one (back returns here).
   allMedicines?: any[];
-  onSelectMedicine?: (medicine: any) => void;
   onClose: () => void;
 }
 
@@ -82,9 +83,11 @@ export default function MedicineDetailBottomSheet({
   storeName,
   isStoreOpen = true,
   allMedicines = [],
-  onSelectMedicine,
   onClose,
 }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   const carts = useSelector((state: RootState) => state.cart);
@@ -93,6 +96,9 @@ export default function MedicineDetailBottomSheet({
   const [imageIndex, setImageIndex] = useState(0);
   const [likedSimilar, setLikedSimilar] = useState<Record<string, boolean>>({});
   const [notifyEnabled, setNotifyEnabled] = useState(false);
+  // A tapped similar product opens as its own detail screen stacked on this one.
+  const [openedSimilar, setOpenedSimilar] = useState<any>(null);
+  const [seeAllVisible, setSeeAllVisible] = useState(false);
 
   React.useEffect(() => {
     setIsDescriptionExpanded(false);
@@ -159,7 +165,7 @@ export default function MedicineDetailBottomSheet({
     } catch (e) {
       console.error("Failed to update stock alert subscription", e);
       setNotifyEnabled(!next);
-      Alert.alert("Something went wrong", "Please try again.");
+      Alert.alert(t('something_went_wrong'), t('please_try_again'));
     }
   };
 
@@ -193,7 +199,7 @@ export default function MedicineDetailBottomSheet({
   // "Similar" means a genuine substitute - same composition, same store -
   // not just anything else in the catalog. No match -> no section, rather
   // than falling back to unrelated items.
-  const similarMedicines = useMemo(() => {
+  const allSimilar = useMemo(() => {
     if (!medicine || !medicine.composition) return [];
     const currentId = String(getMedicineId(medicine));
     const currentComposition = String(medicine.composition).trim().toLowerCase();
@@ -204,9 +210,15 @@ export default function MedicineDetailBottomSheet({
         if (String(getMedicineId(m)) === currentId) return false;
         const composition = String(m.composition || "").trim().toLowerCase();
         return composition === currentComposition;
-      })
-      .slice(0, 10);
+      });
   }, [allMedicines, medicine]);
+  const similarMedicines = useMemo(() => allSimilar.slice(0, 10), [allSimilar]);
+
+  const getItemPrice = (item: any) => {
+    const original = item.price ?? 0;
+    const off = item.discountPrice ?? 0;
+    return off > 0 ? original - off : original;
+  };
 
   const handleImageScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
@@ -272,7 +284,7 @@ export default function MedicineDetailBottomSheet({
               they're functional actions, not navigation. */}
           <View style={[styles.topBar, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
             <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
-              <AppIcon name="chevron-left" size={22} color="#111827" />
+              <AppIcon name="chevron-left" size={22} color={theme.text} />
             </TouchableOpacity>
             <View style={styles.topBarRight}>
               <TouchableOpacity style={styles.iconCircle} onPress={handleShare}>
@@ -354,7 +366,7 @@ export default function MedicineDetailBottomSheet({
                         style={styles.readMoreText}
                         onPress={() => setIsDescriptionExpanded(true)}
                       >
-                        Read More
+                        {t('read_more')}
                       </Text>
                     </>
                   )}
@@ -366,7 +378,7 @@ export default function MedicineDetailBottomSheet({
                           style={styles.readMoreText}
                           onPress={() => setIsDescriptionExpanded(false)}
                         >
-                          Read Less
+                          {t('read_less')}
                         </Text>
                       </>
                     )}
@@ -420,7 +432,7 @@ export default function MedicineDetailBottomSheet({
                         !isStoreOpen && styles.addButtonTextDisabled,
                       ]}
                     >
-                      Add to cart
+                      {t('add_to_cart')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -428,7 +440,7 @@ export default function MedicineDetailBottomSheet({
 
               {medicine.composition && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Composition</Text>
+                  <Text style={styles.sectionTitle}>{t('composition')}</Text>
                   <Text style={styles.sectionContent}>
                     {medicine.composition}
                   </Text>
@@ -437,14 +449,14 @@ export default function MedicineDetailBottomSheet({
 
               {medicine.packSize && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Pack Size</Text>
+                  <Text style={styles.sectionTitle}>{t('pack_size')}</Text>
                   <Text style={styles.sectionContent}>{medicine.packSize}</Text>
                 </View>
               )}
 
               {medicine.expiryDate && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Expiry Date</Text>
+                  <Text style={styles.sectionTitle}>{t('expiry_date')}</Text>
                   <Text style={styles.sectionContent}>
                     {formatExpiryDate(medicine.expiryDate)}
                   </Text>
@@ -453,7 +465,7 @@ export default function MedicineDetailBottomSheet({
 
               {medicine.storage && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Storage Instructions</Text>
+                  <Text style={styles.sectionTitle}>{t('storage_instructions')}</Text>
                   <Text style={styles.sectionContent}>{medicine.storage}</Text>
                 </View>
               )}
@@ -463,7 +475,7 @@ export default function MedicineDetailBottomSheet({
                 <View style={styles.prescriptionWarning}>
                   <AppIcon name="file-text" size={20} color="#EF4444" />
                   <Text style={styles.prescriptionText}>
-                    Prescription Required
+                    {t('prescription_required')}
                   </Text>
                 </View>
               )}
@@ -473,8 +485,10 @@ export default function MedicineDetailBottomSheet({
             {similarMedicines.length > 0 && (
               <View style={styles.similarSection}>
                 <View style={styles.similarHeaderRow}>
-                  <Text style={styles.similarHeaderTitle}>Similar products</Text>
-                  <Text style={styles.similarSeeAll}>See all</Text>
+                  <Text style={styles.similarHeaderTitle}>{t('similar_products')}</Text>
+                  <TouchableOpacity onPress={() => setSeeAllVisible(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Text style={styles.similarSeeAll}>{t('see_all')}</Text>
+                  </TouchableOpacity>
                 </View>
 
                 <ScrollView
@@ -498,7 +512,7 @@ export default function MedicineDetailBottomSheet({
                         key={itemId || index}
                         style={styles.similarCard}
                         activeOpacity={0.8}
-                        onPress={() => onSelectMedicine?.(item)}
+                        onPress={() => setOpenedSimilar(item)}
                       >
                         <View style={styles.similarImageWrapper}>
                           {itemImages[0] ? (
@@ -541,14 +555,77 @@ export default function MedicineDetailBottomSheet({
             <View style={{ height: insets.bottom + 24 }} />
           </ScrollView>
         </View>
+
+      {/* All similar products */}
+      <Modal visible={seeAllVisible} animationType="slide" onRequestClose={() => setSeeAllVisible(false)}>
+        <View style={styles.container}>
+          <View style={[styles.topBar, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
+            <TouchableOpacity style={styles.backButton} onPress={() => setSeeAllVisible(false)} activeOpacity={0.7}>
+              <AppIcon name="chevron-left" size={22} color={theme.text} />
+            </TouchableOpacity>
+            <Text style={styles.seeAllTitle}>{t('similar_products')}</Text>
+            <View style={{ width: 40 }} />
+          </View>
+          <FlatList
+            data={allSimilar}
+            keyExtractor={(item, i) => `${String(getMedicineId(item))}-${i}`}
+            numColumns={2}
+            columnWrapperStyle={styles.gridRow}
+            contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 24 }}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => {
+              const img = getMedicineImages(item)[0];
+              return (
+                <TouchableOpacity style={styles.gridCard} activeOpacity={0.8} onPress={() => setOpenedSimilar(item)}>
+                  <View style={styles.gridImageWrapper}>
+                    {img ? (
+                      <Image source={{ uri: img }} style={styles.similarImage} resizeMode="contain" />
+                    ) : (
+                      <AppIcon name="pill" size={32} color={theme.textMuted} />
+                    )}
+                  </View>
+                  <Text style={styles.similarName} numberOfLines={2}>{item.name}</Text>
+                  <Text style={styles.similarPrice}>₹{getItemPrice(item)}</Text>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
+
+        {/* Product opened from the grid sits above it; back returns to the grid */}
+        {openedSimilar && (
+          <MedicineDetailBottomSheet
+            visible={!!openedSimilar && seeAllVisible}
+            medicine={openedSimilar}
+            storeId={storeId}
+            storeName={storeName}
+            isStoreOpen={isStoreOpen}
+            allMedicines={allMedicines}
+            onClose={() => setOpenedSimilar(null)}
+          />
+        )}
+      </Modal>
+
+      {/* Product opened from the carousel */}
+      {openedSimilar && (
+        <MedicineDetailBottomSheet
+          visible={!!openedSimilar && !seeAllVisible}
+          medicine={openedSimilar}
+          storeId={storeId}
+          storeName={storeName}
+          isStoreOpen={isStoreOpen}
+          allMedicines={allMedicines}
+          onClose={() => setOpenedSimilar(null)}
+        />
+      )}
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.background,
   },
   topBar: {
     flexDirection: "row",
@@ -556,7 +633,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -577,7 +654,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: c.cardSecondary,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -590,7 +667,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: "#EF4444",
     borderWidth: 1.5,
-    borderColor: "#F3F4F6",
+    borderColor: c.borderLight,
   },
   scrollView: {
     flex: 1,
@@ -601,9 +678,8 @@ const styles = StyleSheet.create({
   imageCard: {
     width: "100%",
     height: SCREEN_HEIGHT * 0.35,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     overflow: "hidden",
-    marginTop: 8,
   },
   image: {
     width: SCREEN_WIDTH,
@@ -641,19 +717,19 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1C1C1E",
+    color: c.text,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#6B7280",
+    color: c.textSecondary,
     marginBottom: 12,
   },
   description: {
     fontSize: 13,
     fontWeight: "400",
-    color: "#6B7280",
+    color: c.textSecondary,
     lineHeight: 20,
     marginBottom: 16,
   },
@@ -667,21 +743,21 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#1C1C1E",
+    color: c.text,
   },
   priceUnit: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#9CA3AF",
+    color: c.textMuted,
     marginRight: 4,
   },
   originalPrice: {
     fontSize: 13,
-    color: "#9CA3AF",
+    color: c.textMuted,
     textDecorationLine: "line-through",
   },
   discountBadge: {
-    backgroundColor: "#FEE2E2",
+    backgroundColor: c.errorBg,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -707,7 +783,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   addButtonDisabled: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: c.cardSecondary,
   },
   addButtonText: {
     fontSize: 15,
@@ -715,7 +791,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   addButtonTextDisabled: {
-    color: "#9CA3AF",
+    color: c.textMuted,
   },
   section: {
     marginBottom: 16,
@@ -723,20 +799,20 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1C1C1E",
+    color: c.text,
     marginBottom: 2,
   },
   sectionContent: {
     fontSize: 12,
     fontWeight: "400",
-    color: "#6B7280",
+    color: c.textSecondary,
     lineHeight: 20,
   },
   prescriptionWarning: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: c.errorBg,
     padding: 12,
     borderRadius: 8,
     marginTop: 8,
@@ -754,7 +830,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
+    borderTopColor: c.borderLight,
   },
   similarHeaderRow: {
     flexDirection: "row",
@@ -766,12 +842,36 @@ const styles = StyleSheet.create({
   similarHeaderTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#1C1C1E",
+    color: c.text,
   },
   similarSeeAll: {
     fontSize: 13,
     fontWeight: "600",
     color: "#16A34A",
+  },
+  seeAllTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: c.text,
+  },
+  gridRow: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  gridCard: {
+    flex: 1,
+    maxWidth: "50%",
+  },
+  gridImageWrapper: {
+    width: "100%",
+    height: 140,
+    borderRadius: 12,
+    backgroundColor: c.cardSecondary,
+    borderWidth: 1,
+    borderColor: c.borderLight,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
   },
   similarList: {
     paddingHorizontal: 20,
@@ -784,9 +884,9 @@ const styles = StyleSheet.create({
     width: 110,
     height: 100,
     borderRadius: 12,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: c.cardSecondary,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: c.borderLight,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
@@ -803,14 +903,14 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     justifyContent: "center",
     alignItems: "center",
   },
   similarName: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#1C1C1E",
+    color: c.text,
   },
   similarPrice: {
     fontSize: 12,

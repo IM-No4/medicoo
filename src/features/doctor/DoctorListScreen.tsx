@@ -1,25 +1,29 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Modal,
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '../../components/icons/AppIcon';
 import { addFavoriteDoctor, getFavoriteDoctors, getNearbyDoctors, removeFavoriteDoctor } from '../../services/api/user.api';
 import DoctorCard from './components/DoctorCard';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { AdaptiveStatusBar } from '../../components/ThemedStatusBar';
+import { Modal } from '../../components/ThemedModal';
 
 type Doctor = {
     id: string;
@@ -63,6 +67,9 @@ const majorSpecializations = [
 ];
 
 export default function DoctorListScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
 
@@ -271,7 +278,7 @@ export default function DoctorListScreen() {
                                 style={styles.resetFilterGradient}
                             >
                                 <AppIcon name="rotate-ccw" size={16} color="#FFFFFF" />
-                                <Text style={styles.resetFilterText}>Reset All Filters</Text>
+                                <Text style={styles.resetFilterText}>{t('reset_all_filters')}</Text>
                             </LinearGradient>
                         </TouchableOpacity>
 
@@ -281,7 +288,7 @@ export default function DoctorListScreen() {
                                 onPress={() => setSearchQuery('')}
                                 activeOpacity={0.7}
                             >
-                                <Text style={styles.clearSearchText}>Clear Search</Text>
+                                <Text style={styles.clearSearchText}>{t('clear_search')}</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -292,17 +299,17 @@ export default function DoctorListScreen() {
 
     return (
         <View style={styles.screen}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <AdaptiveStatusBar barStyle="dark-content" backgroundColor="#fff" />
 
             {/* ---------- Header ---------- */}
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <View style={styles.topRow}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                        <ChevronLeft size={22} color="#111827" />
+                        <ChevronLeft size={22} color={theme.text} />
                     </TouchableOpacity>
 
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.headerTitle}>Find a Doctor</Text>
+                        <Text style={styles.headerTitle}>{t('find_a_doctor')}</Text>
                         {!loading && (
                             <Text style={styles.subtitle}>
                                 {filteredDoctors.length > 0
@@ -317,7 +324,7 @@ export default function DoctorListScreen() {
                 <View style={styles.searchBox}>
                     <AppIcon name="search" size={19} color="#8e8e93" />
                     <TextInput
-                        placeholder="Search doctors, specialties..."
+                        placeholder={t('search_doctors_specialties')}
                         placeholderTextColor="#8e8e93"
                         style={styles.input}
                         value={searchQuery}
@@ -333,7 +340,7 @@ export default function DoctorListScreen() {
 
             {/* ---------- Filter Chips ---------- */}
             <View style={styles.filterBar}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.filterRow}>
                     {selectedSpecialty !== 'All' && (
                         <TouchableOpacity
                             style={styles.activeFilterChip}
@@ -348,7 +355,7 @@ export default function DoctorListScreen() {
                             style={styles.activeFilterChip}
                             onPress={() => setShowFavoritesOnly(false)}
                         >
-                            <Text style={styles.activeFilterChipText}>Favorites</Text>
+                            <Text style={styles.activeFilterChipText}>{t('favorites')}</Text>
                             <AppIcon name="x" size={13} color="#fff" />
                         </TouchableOpacity>
                     )}
@@ -380,7 +387,7 @@ export default function DoctorListScreen() {
                     >
                         <AppIcon name="heart" size={13} color={showFavoritesOnly ? '#fff' : '#8e8e93'} />
                         <Text style={[styles.chipText, showFavoritesOnly && styles.chipTextSelected]}>
-                            Favorites
+                            {t('favorites')}
                         </Text>
                     </TouchableOpacity>
 
@@ -389,7 +396,7 @@ export default function DoctorListScreen() {
                         onPress={() => setSelectedSpecialty('All')}
                     >
                         <Text style={[styles.chipText, selectedSpecialty === 'All' && styles.chipTextSelected]}>
-                            All
+                            {t('all')}
                         </Text>
                     </TouchableOpacity>
 
@@ -400,7 +407,7 @@ export default function DoctorListScreen() {
                             onPress={() => setSelectedSpecialty(spec.id)}
                         >
                             <Text style={[styles.chipText, selectedSpecialty === spec.id && styles.chipTextSelected]}>
-                                {spec.label}
+                                {t(spec.label)}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -465,7 +472,7 @@ export default function DoctorListScreen() {
                     </TouchableWithoutFeedback>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Filter by Specialty</Text>
+                            <Text style={styles.modalTitle}>{t('filter_by_specialty')}</Text>
                             <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
                                 <AppIcon name="x" size={24} color="#1c1c1e" />
                             </TouchableOpacity>
@@ -475,7 +482,7 @@ export default function DoctorListScreen() {
                             showsVerticalScrollIndicator={false}
                             contentContainerStyle={{ paddingBottom: 0 }}
                         >
-                            <Text style={styles.sectionHeader}>Specialty</Text>
+                            <Text style={styles.sectionHeader}>{t('specialty')}</Text>
 
                             <View style={styles.specialtyGrid}>
                                 {majorSpecializations.map((spec) => (
@@ -498,7 +505,7 @@ export default function DoctorListScreen() {
                                                 stagedSpecialty === spec.id && styles.gridLabelSelected,
                                             ]}
                                         >
-                                            {spec.label}
+                                            {t(spec.label)}
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
@@ -511,7 +518,7 @@ export default function DoctorListScreen() {
                                 style={styles.applyButton}
                                 onPress={applyFilterModal}
                             >
-                                <Text style={styles.applyButtonText}>Apply Filters</Text>
+                                <Text style={styles.applyButtonText}>{t('apply_filters')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -527,7 +534,7 @@ export default function DoctorListScreen() {
                     </TouchableWithoutFeedback>
 
                     <View style={[styles.modalContent, { paddingBottom: insets.bottom }]}>
-                        <Text style={styles.modalTitle}>Sort By</Text>
+                        <Text style={styles.modalTitle}>{t('sort_by_2')}</Text>
 
                         {[
                             { id: 'rating_high_to_low', label: 'Rating: High to Low' },
@@ -545,7 +552,7 @@ export default function DoctorListScreen() {
                                 }}
                             >
                                 <Text style={[styles.sortOptionText, sortBy === opt.id && styles.sortOptionTextSelected]}>
-                                    {opt.label}
+                                    {t(opt.label)}
                                 </Text>
                                 {sortBy === opt.id && <AppIcon name="check" size={20} color="#1C6ED5" />}
                             </TouchableOpacity>
@@ -559,14 +566,14 @@ export default function DoctorListScreen() {
 
 // ---------------- STYLES SYSTEM ----------------
 
-const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: '#F2F2F7' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+    screen: { flex: 1, backgroundColor: c.background },
 
     loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     listLoadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 40 },
 
     header: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         paddingBottom: 16,
         paddingHorizontal: 24,
         ...Platform.select({
@@ -579,49 +586,52 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        marginBottom: 16,
+        marginBottom: 14,
     },
 
     backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
 
-    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
-    subtitle: { fontSize: 12.5, color: '#8e8e93', marginTop: 2, fontWeight: '500' },
+    // includeFontPadding off + explicit line heights: the custom font's built-in
+    // vertical padding was what opened the big gap between these two lines.
+    headerTitle: { fontSize: 18, fontWeight: '600', color: c.text, lineHeight: 22, includeFontPadding: false },
+    subtitle: { fontSize: 12.5, color: c.textSecondary, marginTop: 0, lineHeight: 16, fontWeight: '500', includeFontPadding: false },
 
     searchBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F2F2F7',
+        backgroundColor: c.cardSecondary,
         borderRadius: 14,
         paddingHorizontal: 14,
         height: 46,
         gap: 8,
     },
 
-    input: { flex: 1, fontSize: 15, color: '#1c1c1e' },
+    input: { flex: 1, fontSize: 15, color: c.text },
 
     filterBar: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderBottomWidth: 1,
-        borderBottomColor: '#E5E5EA',
-        paddingBottom: 22,
+        borderBottomColor: c.border,
+        paddingTop: 12,
+        paddingBottom: 14,
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
     },
 
-    filterRow: { paddingHorizontal: 16, alignItems: 'center' },
+    filterRow: { paddingHorizontal: 16, alignItems: 'center', paddingVertical: 2 },
 
     filterButton: {
         padding: 8,
-        backgroundColor: '#F2F2F7',
+        backgroundColor: c.cardSecondary,
         borderRadius: 10,
         marginRight: 12,
     },
     sortButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderWidth: 1,
-        borderColor: '#E5E5EA',
+        borderColor: c.border,
         borderRadius: 20,
         paddingHorizontal: 12,
         paddingVertical: 8,
@@ -629,14 +639,14 @@ const styles = StyleSheet.create({
     },
     sortButtonText: {
         fontSize: 13,
-        color: '#1c1c1e',
+        color: c.text,
         fontWeight: '500',
         marginRight: 4,
     },
     verticalDivider: {
         width: 1,
         height: 24,
-        backgroundColor: '#E5E5EA',
+        backgroundColor: c.cardSecondary,
         marginRight: 12,
     },
     chip: {
@@ -647,14 +657,14 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: '#E5E5EA',
-        backgroundColor: '#fff',
+        borderColor: c.border,
+        backgroundColor: c.card,
         marginRight: 8,
     },
 
     chipSelected: { backgroundColor: '#1C6ED5', borderColor: '#1C6ED5' },
 
-    chipText: { fontSize: 13, color: '#1c1c1e', fontWeight: '500' },
+    chipText: { fontSize: 13, color: c.text, fontWeight: '500' },
 
     chipTextSelected: { color: '#fff' },
 
@@ -676,26 +686,26 @@ const styles = StyleSheet.create({
         flexShrink: 1,
     },
 
-    listContent: { padding: 20, paddingBottom: 40, flexGrow: 1 , backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: 16 },
+    listContent: { padding: 20, paddingBottom: 40, flexGrow: 1 , backgroundColor: c.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: 12 },
 
     emptyContainer: {
         paddingVertical: 32,
         paddingHorizontal: 20,
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         marginTop: 8,
     },
     emptyIconCircle: {
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: '#EFF6FF',
+        backgroundColor: c.infoBg,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
     },
     emptyIconCircleFavorite: {
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.errorBg,
     },
     emptyTitle: {
         fontSize: 18,
@@ -739,9 +749,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 18,
         paddingVertical: 12,
         borderRadius: 14,
-        backgroundColor: '#F2F4F7',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E4E7EC',
+        borderColor: c.border,
     },
     clearSearchText: {
         color: '#344054',
@@ -754,7 +764,7 @@ const styles = StyleSheet.create({
     modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
 
     modalContent: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 18,
@@ -765,14 +775,14 @@ const styles = StyleSheet.create({
     sortOption: {
         paddingVertical: 14,
         borderBottomWidth: 1,
-        borderBottomColor: '#F2F2F7',
+        borderBottomColor: c.borderLight,
         flexDirection: 'row',
         justifyContent: 'space-between',
     },
 
-    sortOptionSelected: { backgroundColor: '#F2F8FF' },
+    sortOptionSelected: { backgroundColor: c.infoBg },
 
-    sortOptionText: { fontSize: 16, color: '#1c1c1e' },
+    sortOptionText: { fontSize: 16, color: c.text },
 
     sortOptionTextSelected: { color: '#1C6ED5', fontWeight: '600' },
     modalHeader: {
@@ -781,15 +791,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 24,
     },
-    sectionHeader: { fontSize: 16, fontWeight: '600', color: '#1c1c1e', marginBottom: 12, marginTop: 8 },
+    sectionHeader: { fontSize: 16, fontWeight: '600', color: c.text, marginBottom: 12, marginTop: 8 },
     specialtyGrid: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 0 },
     gridItem: {
-        width: '32%', aspectRatio: 1, backgroundColor: '#F2F2F7', borderRadius: 16,
+        width: '32%', aspectRatio: 1, backgroundColor: c.cardSecondary, borderRadius: 16,
         justifyContent: 'center', alignItems: 'center', marginBottom: 12,
     },
     gridItemSelected: { backgroundColor: '#1C6ED5' },
     gridLabel: {
-        fontSize: 11, color: '#1c1c1e', marginTop: 8, textAlign: 'center', fontWeight: '500',
+        fontSize: 11, color: c.text, marginTop: 8, textAlign: 'center', fontWeight: '500',
     },
     gridLabelSelected: { color: '#fff' },
     applyButton: {
@@ -802,8 +812,8 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         padding: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderTopWidth: 1,
-        borderTopColor: '#E5E5EA',
+        borderTopColor: c.border,
     },
 });

@@ -1,5 +1,5 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   FlatList,
@@ -21,6 +21,9 @@ import {
   markAllCustomerNotificationsAsRead,
 } from '../../services/api/notification.api';
 import NotificationsSkeleton from './NotificationsSkeleton';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 type NotificationItem = {
   id: string;
@@ -52,6 +55,9 @@ const formatRelativeTime = (dateValue?: string) => {
 };
 
 export default function NotificationsScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -120,7 +126,7 @@ export default function NotificationsScreen() {
       case 'blood_request':
         return { name: 'droplet', color: '#EF4444', bgColor: '#FEF2F2' };
       default:
-        return { name: 'bell', color: '#64748B', bgColor: '#F1F5F9' };
+        return { name: 'bell', color: theme.textSecondary, bgColor: '#F1F5F9' };
     }
   }, []);
 
@@ -162,10 +168,10 @@ export default function NotificationsScreen() {
   const emptyState = useMemo(() => (
     <View style={styles.emptyState}>
       <View style={styles.emptyIcon}>
-        <AppIcon name="bell" size={28} color="#0FBBA1" />
+        <AppIcon name="bell" size={28} color="#10B981" />
       </View>
-      <Text style={styles.emptyTitle}>No notifications yet</Text>
-      <Text style={styles.emptyText}>We’ll show appointment updates, reminders, and important account alerts here.</Text>
+      <Text style={styles.emptyTitle}>{t('no_notifications_yet')}</Text>
+      <Text style={styles.emptyText}>{t('we_ll_show_appointment_updates_reminde')}</Text>
     </View>
   ), []);
 
@@ -177,9 +183,9 @@ export default function NotificationsScreen() {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <AppIcon name="chevron-left" size={24} color="#1F2937" />
+          <AppIcon name="chevron-left" size={24} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={styles.headerTitle}>{t('notifications')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -197,7 +203,7 @@ export default function NotificationsScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#0FBBA1"
+              tintColor="#10B981"
             />
           }
         />
@@ -206,10 +212,10 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.background,
   },
   header: {
     flexDirection: 'row',
@@ -218,7 +224,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingBottom: 16,
     paddingTop: 8,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
   },
   backButton: {
     padding: 8,
@@ -230,13 +236,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#1F2937',
+    color: c.text,
   },
   listContent: {
     padding: 0,
     paddingBottom: 84,
     gap: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
   },
   emptyListContent: {
     flexGrow: 1,
@@ -245,10 +251,10 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: 16,
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     padding: 16,
     borderBottomWidth: 1,
-    borderColor: '#F1F5F9', // Subtle, premium light border
+    borderColor: c.borderLight, // Subtle, premium light border
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.02,
@@ -258,7 +264,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   unreadCard: {
-    backgroundColor: '#F0FDF4', // Premium light green background for unread notifications
+    backgroundColor: c.successBg, // Premium light green background for unread notifications
     borderWidth: 1,
     borderColor: '#DCFCE7', // Soft matching border
   },
@@ -275,22 +281,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#374151',
+    color: c.text,
     marginBottom: 2,
   },
   unreadTitle: {
-    color: '#111827',
+    color: c.text,
   },
   subtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: c.textSecondary,
     lineHeight: 18,
     marginBottom: 4,
   },
   timeTag: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: c.textMuted,
   },
   actionButton: {
     marginTop: 10,
@@ -298,18 +304,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: c.successBg,
   },
   actionButtonText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0FBBA1',
+    color: '#10B981',
   },
   unreadDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
     marginTop: 6,
   },
   emptyState: {
@@ -324,18 +330,18 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: c.successBg,
     marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: c.text,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: c.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },

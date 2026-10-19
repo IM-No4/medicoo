@@ -1,7 +1,7 @@
 import AppIcon from '@/src/components/icons/AppIcon';
 import QuantityControl from './QuantityControl';
 import { RootState } from '@/src/redux/store';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Image,
   ScrollView,
@@ -13,6 +13,9 @@ import {
 import { useSelector } from 'react-redux';
 import { CartItem } from '@/src/redux/slices/cart.types';
 import { executeAction } from '@/src/actions/ActionExecutor';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface Props {
   storeId: string;
@@ -21,6 +24,9 @@ interface Props {
 }
 
 export default function CartItemsHorizontalScroll({ storeId, isStoreOpen = true, onItemPress }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const carts = useSelector((state: RootState) => state.cart);
   const storeCart = carts[storeId];
 
@@ -42,7 +48,7 @@ export default function CartItemsHorizontalScroll({ storeId, isStoreOpen = true,
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Items in Cart</Text>
+        <Text style={styles.title}>{t('items_in_cart')}</Text>
         <Text style={styles.count}>{cartItems.length} item{cartItems.length !== 1 ? 's' : ''}</Text>
       </View>
       <ScrollView
@@ -89,14 +95,14 @@ export default function CartItemsHorizontalScroll({ storeId, isStoreOpen = true,
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.background,
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: c.border,
   },
   header: {
     flexDirection: 'row',
@@ -107,12 +113,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1C1C1E',
+    color: c.text,
   },
   count: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#6B7280',
+    color: c.textSecondary,
   },
   scrollContent: {
     paddingRight: 16,
@@ -120,25 +126,25 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     width: 140,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
     borderRadius: 12,
     padding: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
     gap: 8,
   },
   itemImage: {
     width: '100%',
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
     marginBottom: 8,
   },
   placeholderImage: {
     width: '100%',
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
     marginBottom: 8,
     justifyContent: 'center',
     alignItems: 'center',
@@ -150,7 +156,7 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: c.text,
   },
   itemPrice: {
     fontSize: 14,

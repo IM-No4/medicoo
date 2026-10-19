@@ -87,6 +87,10 @@ export const ActionRegistry: Record<ActionKey, any> = {
     tab: 'Profile',
     screen: 'ProfileDetails',
   },
+  OPEN_NOTIFICATION_SETTINGS: {
+    tab: 'Profile',
+    screen: 'NotificationSettings',
+  },
   OPEN_EDIT_PROFILE: {
     tab: 'Profile',
     screen: 'EditProfile',
@@ -191,6 +195,10 @@ export const ActionRegistry: Record<ActionKey, any> = {
   OPEN_CHECKOUT: {
     stack: 'CartStack',
     screen: 'PaymentScreen',
+  },
+  OPEN_PAYMENT_PROCESSING: {
+    stack: 'CartStack',
+    screen: 'PaymentProcessing',
   },
   GO_BACK: {},
 };

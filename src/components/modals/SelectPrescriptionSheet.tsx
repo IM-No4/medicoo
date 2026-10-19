@@ -4,11 +4,10 @@ import { RootState } from '@/src/redux/store';
 import { AttachedPrescription } from '@/src/redux/slices/cart.types';
 import { Document, fetchDocuments, getDocumentViewUrl } from '@/src/services/api/document.api';
 import { getMedicinePrescriptions } from '@/src/services/api/prescription.api';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +16,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../ThemedModal';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -26,12 +29,22 @@ interface Props {
   onSelect: (prescription: AttachedPrescription) => void;
 }
 
+// Prescriptions older than 3 months can't be used to order medicines (the
+// backend rejects them), so don't offer them. An uploaded document has no
+// prescription date of its own in the app, so its upload date is the cutoff.
+const MAX_PRESCRIPTION_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+const isRecentEnough = (dateString: string) =>
+  Date.now() - new Date(dateString).getTime() <= MAX_PRESCRIPTION_AGE_MS;
+
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
 export default function SelectPrescriptionSheet({ visible, onClose, onSelect }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const doctorPrescriptionsEnabled = useSelector(
     (state: RootState) => state.appConfig.enabledServices.doctorPrescriptions
@@ -47,14 +60,14 @@ export default function SelectPrescriptionSheet({ visible, onClose, onSelect }: 
 
     setLoadingDocuments(true);
     fetchDocuments()
-      .then((docs) => setDocuments(docs.filter((d) => d.documentType === 'prescription')))
+      .then((docs) => setDocuments(docs.filter((d) => d.documentType === 'prescription' && isRecentEnough(d.createdAt))))
       .catch((e) => console.warn('Failed to fetch prescription documents', e))
       .finally(() => setLoadingDocuments(false));
 
     if (doctorPrescriptionsEnabled) {
       setLoadingDoctorPrescriptions(true);
       getMedicinePrescriptions()
-        .then(setDoctorPrescriptions)
+        .then((list) => setDoctorPrescriptions(list.filter((rx) => isRecentEnough(rx.createdAt))))
         .catch((e) => console.warn('Failed to fetch doctor prescriptions', e))
         .finally(() => setLoadingDoctorPrescriptions(false));
     }
@@ -83,7 +96,7 @@ export default function SelectPrescriptionSheet({ visible, onClose, onSelect }: 
         <TouchableOpacity style={styles.backdropTouchable} activeOpacity={1} onPress={onClose} />
         <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
           <View style={styles.handleBar} />
-          <Text style={styles.title}>Select a prescription</Text>
+          <Text style={styles.title}>{t('select_a_prescription')}</Text>
           <MedicalDisclaimerNote variant="medication" style={{ paddingHorizontal: 0, marginBottom: 4 }} />
 
           <ScrollView
@@ -91,11 +104,11 @@ export default function SelectPrescriptionSheet({ visible, onClose, onSelect }: 
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.sectionTitle}>My Documents</Text>
+            <Text style={styles.sectionTitle}>{t('my_documents')}</Text>
             {loadingDocuments ? (
-              <ActivityIndicator size="small" color="#0FBBA1" style={{ marginVertical: 20 }} />
+              <ActivityIndicator size="small" color="#10B981" style={{ marginVertical: 20 }} />
             ) : documents.length === 0 ? (
-              <Text style={styles.emptyText}>No uploaded prescriptions yet.</Text>
+              <Text style={styles.emptyText}>{t('No uploaded prescriptions from the last 3 months')}</Text>
             ) : (
               documents.map((doc) => (
                 <TouchableOpacity
@@ -105,7 +118,7 @@ export default function SelectPrescriptionSheet({ visible, onClose, onSelect }: 
                   activeOpacity={0.7}
                 >
                   <View style={styles.iconContainer}>
-                    <AppIcon name="file-text" size={20} color="#0FBBA1" />
+                    <AppIcon name="file-text" size={20} color="#10B981" />
                   </View>
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle} numberOfLines={1}>{doc.name}</Text>
@@ -118,16 +131,16 @@ export default function SelectPrescriptionSheet({ visible, onClose, onSelect }: 
 
             <View style={styles.divider} />
 
-            <Text style={styles.sectionTitle}>From Your Doctor</Text>
+            <Text style={styles.sectionTitle}>{t('from_your_doctor')}</Text>
             {!doctorPrescriptionsEnabled ? (
               <View style={styles.comingSoonCard}>
-                <AppIcon name="clock" size={18} color="#9CA3AF" />
+                <AppIcon name="clock" size={18} color={theme.textMuted} />
                 <Text style={styles.comingSoonText}>Coming soon</Text>
               </View>
             ) : loadingDoctorPrescriptions ? (
-              <ActivityIndicator size="small" color="#0FBBA1" style={{ marginVertical: 20 }} />
+              <ActivityIndicator size="small" color="#10B981" style={{ marginVertical: 20 }} />
             ) : doctorPrescriptions.length === 0 ? (
-              <Text style={styles.emptyText}>No prescriptions from your doctor yet.</Text>
+              <Text style={styles.emptyText}>{t('no_prescriptions_from_your_doctor_yet')}</Text>
             ) : (
               doctorPrescriptions.map((rx) => (
                 <TouchableOpacity
@@ -137,7 +150,7 @@ export default function SelectPrescriptionSheet({ visible, onClose, onSelect }: 
                   activeOpacity={0.7}
                 >
                   <View style={styles.iconContainer}>
-                    <AppIcon name="stethoscope" size={20} color="#0FBBA1" />
+                    <AppIcon name="stethoscope" size={20} color="#10B981" />
                   </View>
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle} numberOfLines={1}>
@@ -158,7 +171,7 @@ export default function SelectPrescriptionSheet({ visible, onClose, onSelect }: 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -168,7 +181,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: SCREEN_HEIGHT * 0.85,
@@ -185,7 +198,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: c.text,
     paddingHorizontal: 20,
     marginBottom: 16,
   },
@@ -199,14 +212,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: c.textSecondary,
     marginBottom: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   emptyText: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: c.textMuted,
     marginBottom: 8,
   },
   card: {
@@ -214,16 +227,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     borderRadius: 14,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
   },
   iconContainer: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -235,16 +248,16 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: c.text,
     marginBottom: 2,
   },
   cardSubtitle: {
     fontSize: 12,
-    color: '#6B7280',
+    color: c.textSecondary,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: c.cardSecondary,
     marginVertical: 16,
   },
   comingSoonCard: {
@@ -253,13 +266,13 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 14,
     borderRadius: 14,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
   },
   comingSoonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: c.textMuted,
   },
 });

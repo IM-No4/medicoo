@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { executeAction } from "@/src/actions/ActionExecutor";
 import AppIcon from "@/src/components/icons/AppIcon";
 import AddressSelectorBottomSheet from "@/src/components/modals/AddressSelectorBottomSheet";
@@ -28,6 +29,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { DynamicHeaderFeedItem } from "../feed/feed.types";
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 type Props = {
   scrollY: Animated.Value;
@@ -73,6 +77,9 @@ const getDistance = (
   return R * c;
 };
 
+// How close (metres) the user must be to a saved address for it to be auto-selected.
+const SAVED_ADDRESS_MATCH_METERS = 100;
+
 let hasInitializedSession = false;
 
 // Extra breathing room above the address row on Android. Exported (rather
@@ -87,6 +94,9 @@ export default function HomeHeader({
   onOpenCommandPalette,
   dynamicConfig,
 }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
 
@@ -135,6 +145,8 @@ export default function HomeHeader({
   const selectedAddress = useSelector(
     (state: RootState) => state.address.selectedAddress,
   );
+  const hasSelectedRef = React.useRef(false);
+  hasSelectedRef.current = !!selectedAddress;
   const carts = useSelector((state: RootState) => state.cart);
   // Distinct items across every store's cart - same count CartScreen.tsx
   // itself uses ("Medicine Order (N items)"), so the badge always agrees
@@ -145,78 +157,104 @@ export default function HomeHeader({
   );
 
   React.useEffect(() => {
+    const coordsOf = (addr: any) => ({
+      latitude: addr.location?.coordinates?.[1] ?? addr.latitude,
+      longitude: addr.location?.coordinates?.[0] ?? addr.longitude,
+    });
+
+    const selectSaved = (addr: any) => {
+      const { latitude, longitude } = coordsOf(addr);
+      dispatch(
+        setSelectedAddress({
+          id: addr._id || addr.id,
+          label: addr.label,
+          fullAddress: addr.fullAddress,
+          latitude,
+          longitude,
+        }),
+      );
+    };
+
     const initLocation = async () => {
-      // Only run auto-selection logic once per app session (cold start)
+      // Only run auto-selection once per app session (cold start) - but see the
+      // reset at the bottom: a run that selected nothing may be retried.
       if (hasInitializedSession) return;
       hasInitializedSession = true;
 
+      let selected = false;
       setIsFetchingLocation(true);
       try {
-        // First, fetch all saved addresses
+        // Saved addresses are the primary source and also the fallback below.
         let savedAddresses: any[] = [];
         try {
-          savedAddresses = await getUserAddresses();
+          savedAddresses = (await getUserAddresses()) || [];
         } catch (err) {
           console.warn("Failed to fetch addresses for proximity check", err);
         }
 
-        // If no saved addresses exist, do not prompt for location yet
-        if (!savedAddresses || savedAddresses.length === 0) {
-          return;
+        // Where is the user right now? (null when permission is denied / no fix)
+        let position: { latitude: number; longitude: number } | null = null;
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status === "granted") {
+            // A last-known fix is instant, but only trust it while it is fresh -
+            // a stale one can put the user streets away from where they are.
+            const last = await Location.getLastKnownPositionAsync({
+              maxAge: 2 * 60 * 1000,
+              requiredAccuracy: 150,
+            }).catch(() => null);
+            const loc =
+              last ||
+              (await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+              }));
+            position = {
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+            };
+            dispatch(setCurrentLocation(position));
+          } else {
+            console.warn("Location permission denied");
+          }
+        } catch (err) {
+          console.warn("Could not read current location", err);
         }
 
-        // Saved addresses exist, so check user's current location
-        const { status } = await Location.requestForegroundPermissionsAsync();
+        // The saved address to use when the live location can't produce one:
+        // the default one, else the first (the list is newest/default first).
+        const fallbackSaved =
+          savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
 
-        if (status !== "granted") {
-          console.warn("Location permission denied");
-          return;
-        }
+        if (position) {
+          const { latitude, longitude } = position;
 
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
+          // 1. At (or right next to) a saved address? Use the closest one. GPS
+          // is only good to a few tens of metres, and the address list already
+          // shows "0.0 km" for anything under ~50 m, so a 25 m cut-off was
+          // skipping addresses the user is standing at.
+          const nearbyAddress = savedAddresses
+            .map((addr) => {
+              const c = coordsOf(addr);
+              const dist =
+                c.latitude && c.longitude
+                  ? getDistance(latitude, longitude, c.latitude, c.longitude)
+                  : Infinity;
+              return { addr, dist };
+            })
+            .filter((x) => x.dist <= SAVED_ADDRESS_MATCH_METERS)
+            .sort((a, b) => a.dist - b.dist)[0]?.addr;
+          if (nearbyAddress) {
+            selectSaved(nearbyAddress);
+            selected = true;
+            return;
+          }
 
-        const { latitude, longitude } = loc.coords;
-
-        dispatch(
-          setCurrentLocation({
-            latitude,
-            longitude,
-          }),
-        );
-
-        // Check for any existing location within 25 meters
-        const nearbyAddress = savedAddresses.find((addr) => {
-          const addrLat = addr.location?.coordinates?.[1] || addr.latitude;
-          const addrLng = addr.location?.coordinates?.[0] || addr.longitude;
-          if (!addrLat || !addrLng) return false;
-          return getDistance(latitude, longitude, addrLat, addrLng) <= 25;
-        });
-
-        if (nearbyAddress) {
-          dispatch(
-            setSelectedAddress({
-              id: nearbyAddress._id || nearbyAddress.id,
-              label: nearbyAddress.label,
-              fullAddress: nearbyAddress.fullAddress,
-              latitude:
-                nearbyAddress.location?.coordinates?.[1] ||
-                nearbyAddress.latitude,
-              longitude:
-                nearbyAddress.location?.coordinates?.[0] ||
-                nearbyAddress.longitude,
-            }),
-          );
-        } else {
-          // 1. Check local storage for cached address within 25m
+          // 2. Cached reverse-geocode for this spot (within 25 m)
           try {
-            const cachedData = await AsyncStorage.getItem(
-              "@cached_current_location",
-            );
+            const cachedData = await AsyncStorage.getItem("@cached_current_location");
             if (cachedData) {
               const parsedCache = JSON.parse(cachedData);
-              if (parsedCache.latitude && parsedCache.longitude) {
+              if (parsedCache.latitude && parsedCache.longitude && parsedCache.addressStr) {
                 const dist = getDistance(
                   latitude,
                   longitude,
@@ -232,24 +270,21 @@ export default function HomeHeader({
                       longitude,
                     }),
                   );
-                  return; // Skip the API call completely
-                } else {
-                  // Not valid anymore, clear it
-                  await AsyncStorage.removeItem("@cached_current_location");
+                  selected = true;
+                  return;
                 }
+                await AsyncStorage.removeItem("@cached_current_location");
               }
             }
           } catch (err) {
             console.warn("Failed to read cached location", err);
           }
 
-          // 2. Reverse geocoding via backend proxy (key stays server-side)
+          // 3. Reverse geocoding via backend proxy (key stays server-side)
           try {
             const data = await reverseGeocode(latitude, longitude);
-
-            if (data.results && data.results.length > 0) {
-              const addressStr = data.results[0].formatted_address;
-
+            const addressStr = data?.results?.[0]?.formatted_address;
+            if (addressStr) {
               dispatch(
                 setSelectedAddress({
                   label: "Current Location",
@@ -258,31 +293,57 @@ export default function HomeHeader({
                   longitude,
                 }),
               );
-
-              // 3. Update the local storage with the new fetched location
+              selected = true;
               try {
                 await AsyncStorage.setItem(
                   "@cached_current_location",
-                  JSON.stringify({
-                    latitude,
-                    longitude,
-                    addressStr,
-                  }),
+                  JSON.stringify({ latitude, longitude, addressStr }),
                 );
               } catch (err) {
                 console.warn("Failed to save cached location", err);
               }
+              return;
             }
           } catch (error) {
-            console.warn("Google Maps reverse geocode failed:", error);
+            console.warn("Reverse geocode failed:", error);
           }
+
+          // Geocoding gave nothing: a saved address beats an empty header.
+          if (fallbackSaved) {
+            selectSaved(fallbackSaved);
+            selected = true;
+            return;
+          }
+
+          // No saved address and no street address - still show where we are
+          // (and keep feed/serviceability working) rather than the generic text.
+          dispatch(
+            setSelectedAddress({
+              label: "Current Location",
+              fullAddress: t("delivering_current_location"),
+              latitude,
+              longitude,
+            }),
+          );
+          selected = true;
+          return;
+        }
+
+        // No live location (permission denied / no fix): use a saved address.
+        if (fallbackSaved) {
+          selectSaved(fallbackSaved);
+          selected = true;
         }
       } finally {
         setIsFetchingLocation(false);
+        // Nothing resolved (e.g. network was down on launch): let the next
+        // mount try again instead of staying on the generic text all session.
+        if (!selected) hasInitializedSession = false;
       }
     };
 
-    initLocation();
+    // Don't override an address the user (or a previous mount) already chose.
+    if (!hasSelectedRef.current) void initLocation();
   }, [dispatch]); // Run strictly on mount
 
   React.useEffect(() => {
@@ -298,7 +359,7 @@ export default function HomeHeader({
     void loadUnreadCount();
   }, [dispatch]);
 
-  const headerColors = dynamicConfig?.colors || ["#0FBBA1", "#007C69"];
+  const headerColors = dynamicConfig?.colors || ["#10B981", "#007C69"];
 
   return (
     <>
@@ -334,7 +395,7 @@ export default function HomeHeader({
           pointerEvents="none"
           style={[
             StyleSheet.absoluteFill,
-            { backgroundColor: "#ffffff", opacity: gradientOverlayOpacity },
+            { backgroundColor: theme.card, opacity: gradientOverlayOpacity },
           ]}
         />
 
@@ -360,10 +421,10 @@ export default function HomeHeader({
                 <Text style={styles.addressText} numberOfLines={1}>
                   {truncateAddressLabel(
                     isFetchingLocation
-                      ? "Fetching location..."
+                      ? t('fetching_location')
                       : selectedAddress?.label ||
                           selectedAddress?.fullAddress ||
-                          "Delivering to current location",
+                          t('delivering_current_location'),
                   )}
                 </Text>
 
@@ -402,33 +463,35 @@ export default function HomeHeader({
           >
             <Text style={styles.addressSub} numberOfLines={1}>
               {isFetchingLocation
-                ? "Please wait..."
+                ? t('please_wait')
                 : selectedAddress?.fullAddress &&
                     selectedAddress?.label !== selectedAddress?.fullAddress
                   ? selectedAddress.fullAddress.length > 25
                     ? selectedAddress.fullAddress.substring(0, 25) + "..."
                     : selectedAddress.fullAddress
-                  : "Tap to change delivery address"}
+                  : t('tap_change_address')}
             </Text>
           </TouchableOpacity>
 
           {/* 🔍 SEARCH BAR CONTAINER */}
           <View style={styles.searchBar}>
             <TouchableOpacity
-              activeOpacity={0.9}
+              activeOpacity={0.7}
               style={styles.searchLeft}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 0 }}
               onPress={() => executeAction("OPEN_GLOBAL_SEARCH")}
             >
-              <AppIcon name="search" size={18} color="#6B7280" />
+              <AppIcon name="search" size={18} color={theme.textSecondary} />
               <Text style={styles.searchPlaceholder}>
-                Search medicines, doctors, labs
+                {t('search_medicines_doctors_labs')}
               </Text>
             </TouchableOpacity>
 
             {/* 📄 SCAN / UPLOAD RX */}
             <TouchableOpacity
               style={styles.scannerButton}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               onPress={() => dispatch(setPrescriptionModalVisible(true))}
             >
               <AppIcon name="scan" size={18} color="#1a998e" />
@@ -445,7 +508,7 @@ export default function HomeHeader({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   headerContainer: {
     position: "absolute",
     top: 0,
@@ -476,7 +539,7 @@ const styles = StyleSheet.create({
   searchBar: {
     height: 54,
     borderRadius: 16,
-    backgroundColor: "#ffffff",
+    backgroundColor: c.card,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
@@ -490,14 +553,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchPlaceholder: {
-    color: "#6B7280",
+    color: c.textSecondary,
     fontSize: 14,
   },
   scannerButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "#E6F4F1",
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: c.successBg,
     alignItems: "center",
     justifyContent: "center",
   },

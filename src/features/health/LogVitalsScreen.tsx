@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,6 +20,9 @@ import { useDispatch } from 'react-redux';
 import { Activity, Check, ChevronLeft, Heart, Minus, Plus, Thermometer, Weight } from 'lucide-react-native';
 import { addVitalRecord } from '../../redux/slices/vitalsSlice';
 import { AppDispatch } from '../../redux/store';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 type FieldErrors = {
   heartRate?: string;
@@ -52,6 +55,11 @@ const TEMP_DEFAULT = 98.6;
 type FocusMetric = 'heart_rate' | 'blood_pressure' | 'weight' | 'temperature';
 
 export default function LogVitalsScreen() {
+  const { t } = useLanguage();
+  const { theme, isDark } = useTheme();
+  // Pastel icon backgrounds glare on a dark screen: there they become a soft tint of the icon's own colour.
+  const tint = (accent: string, pastel: string) => (isDark ? accent + '26' : pastel);
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation();
   const route = useRoute<any>();
   const dispatch = useDispatch<AppDispatch>();
@@ -215,9 +223,9 @@ export default function LogVitalsScreen() {
           plain icon back button, fontSize 20/600/#111827 title. */}
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity onPress={handleClose} style={styles.backButton} activeOpacity={0.7} disabled={loading}>
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Log Vitals</Text>
+        <Text style={styles.headerTitle}>{t('log_vitals')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -227,7 +235,7 @@ export default function LogVitalsScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.introSubtitle}>Track today's health readings</Text>
+          <Text style={styles.introSubtitle}>{t('track_readings')}</Text>
 
           {formError ? (
             <View style={styles.formErrorBanner}>
@@ -241,18 +249,18 @@ export default function LogVitalsScreen() {
             onLayout={(e) => { sectionOffsets.current.heart_rate = e.nativeEvent.layout.y; }}
           >
             <View style={styles.fieldHeader}>
-              <View style={[styles.fieldIconBox, { backgroundColor: '#FEF2F2' }]}>
+              <View style={[styles.fieldIconBox, { backgroundColor: theme.errorBg }]}>
                 <Heart size={20} color="#EF4444" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.fieldLabel}>Heart Rate</Text>
+                <Text style={styles.fieldLabel}>{t('heart_rate')}</Text>
                 <Text style={styles.fieldHint}>
                   {hrTouched ? 'Resting pulse, in beats per minute' : 'Tap + to log a reading'}
                 </Text>
               </View>
               {hrTouched && (
                 <TouchableOpacity onPress={() => { setHrTouched(false); setHrVal(HR_DEFAULT); }}>
-                  <Text style={styles.skipText}>Clear</Text>
+                  <Text style={styles.skipText}>{t('clear')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -283,7 +291,7 @@ export default function LogVitalsScreen() {
                   selectTextOnFocus
                   editable={!loading}
                 />
-                <Text style={styles.unitLabel}>BPM</Text>
+                <Text style={styles.unitLabel}>{t('bpm')}</Text>
               </View>
 
               <TouchableOpacity
@@ -304,18 +312,18 @@ export default function LogVitalsScreen() {
             onLayout={(e) => { sectionOffsets.current.blood_pressure = e.nativeEvent.layout.y; }}
           >
             <View style={styles.fieldHeader}>
-              <View style={[styles.fieldIconBox, { backgroundColor: '#EFF6FF' }]}>
+              <View style={[styles.fieldIconBox, { backgroundColor: tint('#3B82F6', '#EFF6FF') }]}>
                 <Activity size={20} color="#3B82F6" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.fieldLabel}>Blood Pressure</Text>
+                <Text style={styles.fieldLabel}>{t('blood_pressure')}</Text>
                 <Text style={styles.fieldHint}>
                   {bpTouched ? 'Systolic over diastolic, in mmHg' : 'Tap + to log a reading'}
                 </Text>
               </View>
               {bpTouched && (
                 <TouchableOpacity onPress={() => { setBpTouched(false); setSystolicVal(SYSTOLIC_DEFAULT); setDiastolicVal(DIASTOLIC_DEFAULT); }}>
-                  <Text style={styles.skipText}>Clear</Text>
+                  <Text style={styles.skipText}>{t('clear')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -340,7 +348,7 @@ export default function LogVitalsScreen() {
                     selectTextOnFocus
                     editable={!loading}
                   />
-                  <Text style={styles.miniLabel}>Systolic</Text>
+                  <Text style={styles.miniLabel}>{t('systolic')}</Text>
                 </View>
                 <TouchableOpacity onPress={() => bpStep('systolic', 1)} activeOpacity={0.7} disabled={loading}>
                   <Plus size={15} color="#3B82F6" />
@@ -368,7 +376,7 @@ export default function LogVitalsScreen() {
                     selectTextOnFocus
                     editable={!loading}
                   />
-                  <Text style={styles.miniLabel}>Diastolic</Text>
+                  <Text style={styles.miniLabel}>{t('diastolic')}</Text>
                 </View>
                 <TouchableOpacity onPress={() => bpStep('diastolic', 1)} activeOpacity={0.7} disabled={loading}>
                   <Plus size={15} color="#3B82F6" />
@@ -384,25 +392,25 @@ export default function LogVitalsScreen() {
             onLayout={(e) => { sectionOffsets.current.temperature = e.nativeEvent.layout.y; }}
           >
             <View style={styles.fieldHeader}>
-              <View style={[styles.fieldIconBox, { backgroundColor: '#F0F9FF' }]}>
+              <View style={[styles.fieldIconBox, { backgroundColor: tint('#0EA5E9', '#F0F9FF') }]}>
                 <Thermometer size={20} color="#0EA5E9" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.fieldLabel}>Temperature</Text>
+                <Text style={styles.fieldLabel}>{t('temperature')}</Text>
                 <Text style={styles.fieldHint}>
                   {tempTouched ? 'Body temperature, in °F' : 'Tap + to log a reading'}
                 </Text>
               </View>
               {tempTouched && (
                 <TouchableOpacity onPress={() => { setTempTouched(false); setTempVal(TEMP_DEFAULT); }}>
-                  <Text style={styles.skipText}>Clear</Text>
+                  <Text style={styles.skipText}>{t('clear')}</Text>
                 </TouchableOpacity>
               )}
             </View>
 
             <View style={[styles.stepperRow, fieldErrors.temperature && styles.cardError]}>
               <TouchableOpacity
-                style={[styles.stepperBtn, { backgroundColor: '#E0F2FE' }]}
+                style={[styles.stepperBtn, { backgroundColor: tint('#0EA5E9', '#E0F2FE') }]}
                 onPress={() => tempStep(-0.1)}
                 activeOpacity={0.7}
                 disabled={loading}
@@ -430,7 +438,7 @@ export default function LogVitalsScreen() {
               </View>
 
               <TouchableOpacity
-                style={[styles.stepperBtn, { backgroundColor: '#E0F2FE' }]}
+                style={[styles.stepperBtn, { backgroundColor: tint('#0EA5E9', '#E0F2FE') }]}
                 onPress={() => tempStep(0.1)}
                 activeOpacity={0.7}
                 disabled={loading}
@@ -447,18 +455,18 @@ export default function LogVitalsScreen() {
             onLayout={(e) => { sectionOffsets.current.weight = e.nativeEvent.layout.y; }}
           >
             <View style={styles.fieldHeader}>
-              <View style={[styles.fieldIconBox, { backgroundColor: '#F5F3FF' }]}>
+              <View style={[styles.fieldIconBox, { backgroundColor: tint('#8B5CF6', '#F5F3FF') }]}>
                 <Weight size={20} color="#8B5CF6" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.fieldLabel}>Weight</Text>
+                <Text style={styles.fieldLabel}>{t('weight')}</Text>
                 <Text style={styles.fieldHint}>
-                  Type an exact value or drag the ruler below
+                  {t('type_an_exact_value_or_drag_the_ruler')}
                 </Text>
               </View>
               {weightTouched && (
                 <TouchableOpacity onPress={() => { setWeightTouched(false); setWeightVal(WEIGHT_DEFAULT); setWeightSyncToken(t => t + 1); }}>
-                  <Text style={styles.skipText}>Clear</Text>
+                  <Text style={styles.skipText}>{t('clear')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -516,7 +524,7 @@ export default function LogVitalsScreen() {
               ) : (
                 <>
                   <Check size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-                  <Text style={styles.saveText}>Save Vitals</Text>
+                  <Text style={styles.saveText}>{t('save_vitals')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -558,6 +566,8 @@ const TICK_LABEL_WIDTH = 34;
 // state driving both rendering and the reported value - there is no second,
 // native copy of the position that can drift out of step with it.
 function WeightRuler({ value, syncToken, min, max, step, active, disabled, onChange }: WeightRulerProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [containerWidth, setContainerWidth] = useState(0);
 
   // Horizontal position lives in a plain Animated.Value, not React state.
@@ -704,10 +714,10 @@ function WeightRuler({ value, syncToken, min, max, step, active, disabled, onCha
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.background,
   },
   // Same header recipe as the rest of the app - white bar + shadow, plain
   // icon back button, fontSize 20/600/#111827 title.
@@ -717,7 +727,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -733,11 +743,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
   },
   introSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: c.textSecondary,
     marginBottom: 4,
   },
   scrollView: {
@@ -748,9 +758,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   formErrorBanner: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: c.errorBg,
     borderWidth: 1,
-    borderColor: '#FEE2E2',
+    borderColor: c.isDark ? 'rgba(239,68,68,0.3)' : '#FEE2E2',
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -762,10 +772,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   fieldCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: c.borderLight,
     padding: 16,
     gap: 14,
   },
@@ -784,17 +794,17 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0F172A',
+    color: c.text,
   },
   fieldHint: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: c.textMuted,
     marginTop: 2,
   },
   skipText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: c.textMuted,
   },
   fieldErrorText: {
     fontSize: 12,
@@ -802,16 +812,16 @@ const styles = StyleSheet.create({
     color: '#EF4444',
   },
   cardError: {
-    borderColor: '#FCA5A5',
+    borderColor: c.isDark ? 'rgba(239,68,68,0.55)' : '#FCA5A5',
   },
 
   /* Heart rate big stepper */
   stepperRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: c.cardSecondary,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: c.border,
     borderRadius: 16,
     padding: 10,
   },
@@ -819,7 +829,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: c.errorBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -830,7 +840,7 @@ const styles = StyleSheet.create({
   bigNumber: {
     fontSize: 36,
     fontWeight: '900',
-    color: '#0F172A',
+    color: c.text,
     minWidth: 90,
     padding: 0,
     textAlign: 'center',
@@ -838,7 +848,7 @@ const styles = StyleSheet.create({
   unitLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: c.textMuted,
     marginTop: -2,
   },
 
@@ -853,9 +863,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: c.cardSecondary,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: c.border,
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -866,7 +876,7 @@ const styles = StyleSheet.create({
   miniNumberInput: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#0F172A',
+    color: c.text,
     padding: 0,
     minWidth: 34,
     textAlign: 'center',
@@ -874,12 +884,12 @@ const styles = StyleSheet.create({
   miniLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: c.textMuted,
     marginTop: 1,
   },
   bpSeparator: {
     fontSize: 18,
-    color: '#94A3B8',
+    color: c.textMuted,
     fontWeight: '300',
   },
 
@@ -893,7 +903,7 @@ const styles = StyleSheet.create({
   weightNumber: {
     fontSize: 40,
     fontWeight: '900',
-    color: '#0F172A',
+    color: c.text,
     padding: 0,
     textAlign: 'center',
     minWidth: 60,
@@ -938,22 +948,22 @@ const styles = StyleSheet.create({
   tickMark: {
     width: 2,
     borderRadius: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: c.infoBg,
   },
   tickMinor: {
     height: 9,
   },
   tickMajor: {
     height: 20,
-    backgroundColor: '#CBD5E1',
+    backgroundColor: c.isDark ? '#475569' : '#CBD5E1',
   },
   tickInactive: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: c.cardSecondary,
   },
   tickLabelMajor: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#64748B',
+    color: c.textSecondary,
     textAlign: 'center',
   },
 
@@ -961,17 +971,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    backgroundColor: '#FFFFFF',
+    borderTopColor: c.borderLight,
+    backgroundColor: c.card,
   },
   saveBtn: {
     flexDirection: 'row',
     height: 52,
     borderRadius: 14,
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0FBBA1',
+    shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,

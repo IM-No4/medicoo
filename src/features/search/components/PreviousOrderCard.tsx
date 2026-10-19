@@ -1,6 +1,6 @@
 import { executeAction } from '@/src/actions/ActionExecutor';
 import AppIcon from '@/src/components/icons/AppIcon';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     Image,
     StyleSheet,
@@ -8,6 +8,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 type Props = {
     order: {
@@ -23,6 +25,8 @@ type Props = {
 };
 
 export default function PreviousOrderCard({ order, onPress }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     return (
         <TouchableOpacity
             activeOpacity={0.8}
@@ -36,7 +40,7 @@ export default function PreviousOrderCard({ order, onPress }: Props) {
                             <Image source={{ uri: order.pharmacyLogo }} style={styles.logo} />
                         ) : (
                             <View style={styles.logoPlaceholder}>
-                                <AppIcon name="store" size={20} color="#6B7280" />
+                                <AppIcon name="store" size={20} color={theme.textSecondary} />
                             </View>
                         )}
                     </View>
@@ -72,14 +76,14 @@ export default function PreviousOrderCard({ order, onPress }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     card: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 20,
         marginHorizontal: 16,
         padding: 12,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -101,7 +105,7 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 8,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         overflow: 'hidden',
     },
     logo: {
@@ -117,7 +121,7 @@ const styles = StyleSheet.create({
     pharmacyName: {
         fontSize: 16,
         fontWeight: '800',
-        color: '#1F2937',
+        color: c.text,
     },
     benefitRow: {
         flexDirection: 'row',
@@ -127,12 +131,12 @@ const styles = StyleSheet.create({
     },
     benefitText: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         fontWeight: '500',
     },
     divider: {
         height: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         marginVertical: 4,
     },
     footer: {
@@ -164,13 +168,13 @@ const styles = StyleSheet.create({
     itemName: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#374151',
+        color: c.text,
         flex: 1,
     },
     price: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#374151',
+        color: c.text,
         marginRight: 60,
     },
     addButton: {
@@ -180,8 +184,8 @@ const styles = StyleSheet.create({
         height: 36,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
-        backgroundColor: '#FFFFFF',
+        borderColor: c.border,
+        backgroundColor: c.card,
         alignItems: 'center',
         justifyContent: 'center',
     },

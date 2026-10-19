@@ -1,6 +1,9 @@
 import AppIcon from '@/src/components/icons/AppIcon';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 type Props = {
   message?: string;
@@ -11,12 +14,15 @@ export default function SearchErrorState({
   message,
   onRetry,
 }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.container}>
       <AppIcon name="alert-triangle" size={36} color="#F59E0B" />
 
       <Text style={styles.title}>
-        Something went wrong
+        {t('something_went_wrong')}
       </Text>
 
       <Text style={styles.subtitle}>
@@ -28,13 +34,13 @@ export default function SearchErrorState({
         onPress={onRetry}
         activeOpacity={0.85}
       >
-        <Text style={styles.retryText}>Retry</Text>
+        <Text style={styles.retryText}>{t('retry')}</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
@@ -45,11 +51,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: c.text,
   },
   subtitle: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: c.textMuted,
     textAlign: 'center',
   },
   retryButton: {
@@ -57,11 +63,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
   },
   retryText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#111827',
+    color: c.text,
   },
 });

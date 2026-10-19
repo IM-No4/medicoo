@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { Award, CheckCircle2, ChevronLeft, ChevronRight, Footprints, TrendingUp } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StepsBarChart } from './components/StepsBarChart';
@@ -16,6 +16,9 @@ import {
   StepsRangeType,
 } from '../../services/health/healthConnectStepsService';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const TABS: { type: StepsRangeType; label: string }[] = [
   { type: 'day', label: 'Daily' },
@@ -35,6 +38,9 @@ const BUCKET_UNIT: Record<StepsRangeType, { singular: string; plural: string }> 
 };
 
 export default function ActivityHistoryScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
@@ -90,7 +96,7 @@ export default function ActivityHistoryScreen() {
         return;
       }
 
-      showStatus('error', 'Could Not Enable Tracking', 'Permission wasn\'t granted in Health Connect. Open Health Connect\'s app settings and allow Medicoo to read Steps, then try again here.');
+      showStatus('error', t('could_not_enable_tracking'), t('permission_wasn_t_granted_in_health_co'));
     } finally {
       setEnabling(false);
     }
@@ -127,9 +133,9 @@ export default function ActivityHistoryScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Activity History</Text>
+        <Text style={styles.headerTitle}>{t('activity_history_title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -150,14 +156,14 @@ export default function ActivityHistoryScreen() {
             hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
             pressRetentionOffset={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Text style={[styles.tabText, rangeType === tab.type && styles.tabTextActive]}>{tab.label}</Text>
+            <Text style={[styles.tabText, rangeType === tab.type && styles.tabTextActive]}>{t(tab.label)}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
       {trackingEnabled === false ? (
         <View style={styles.emptyState}>
-          <Footprints size={36} color="#0FBBA1" />
+          <Footprints size={36} color="#10B981" />
           <Text style={styles.emptyTitle}>Step tracking isn&apos;t enabled</Text>
           <Text style={styles.emptySubtitle}>
             {isHealthConnectSupported
@@ -169,7 +175,7 @@ export default function ActivityHistoryScreen() {
               {enabling ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <Text style={styles.enableButtonText}>Enable Step Tracking</Text>
+                <Text style={styles.enableButtonText}>{t('enable_step_tracking')}</Text>
               )}
             </TouchableOpacity>
           )}
@@ -178,7 +184,7 @@ export default function ActivityHistoryScreen() {
         <View style={styles.content}>
           <View style={styles.periodNav}>
             <TouchableOpacity style={styles.navBtn} onPress={handlePrev} activeOpacity={0.7}>
-              <ChevronLeft size={18} color="#374151" />
+              <ChevronLeft size={18} color={theme.text} />
             </TouchableOpacity>
             <Text style={styles.periodLabel}>{data?.periodLabel ?? ' '}</Text>
             <TouchableOpacity
@@ -193,7 +199,7 @@ export default function ActivityHistoryScreen() {
 
           {loading || !data ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator color="#0FBBA1" />
+              <ActivityIndicator color="#10B981" />
             </View>
           ) : (
             <>
@@ -201,12 +207,12 @@ export default function ActivityHistoryScreen() {
                 {rangeType === 'day' ? (
                   <>
                     <Text style={styles.totalValue}>{data.total.toLocaleString()}</Text>
-                    <Text style={styles.totalLabel}>total steps</Text>
+                    <Text style={styles.totalLabel}>{t('total_steps')}</Text>
                   </>
                 ) : (
                   <>
                     <Text style={styles.totalValue}>{data.average.toLocaleString()}</Text>
-                    <Text style={styles.totalLabel}>avg steps</Text>
+                    <Text style={styles.totalLabel}>{t('avg_steps')}</Text>
                   </>
                 )}
                 <View style={styles.chartWrap}>
@@ -219,7 +225,7 @@ export default function ActivityHistoryScreen() {
                   <InfoRow
                     icon={<TrendingUp size={16} color="#3B82F6" />}
                     iconBg="#EFF6FF"
-                    label="Total steps"
+                    label={t('total_steps_2')}
                     value={data.total.toLocaleString()}
                   />
                 )}
@@ -230,7 +236,7 @@ export default function ActivityHistoryScreen() {
                   value={data.bestBucket ? `${data.bestBucket.value.toLocaleString()} · ${data.bestBucket.label}` : '--'}
                 />
                 <InfoRow
-                  icon={<CheckCircle2 size={16} color="#0FBBA1" />}
+                  icon={<CheckCircle2 size={16} color="#10B981" />}
                   iconBg="#F0FDF4"
                   label={`Active ${BUCKET_UNIT[rangeType].plural}`}
                   value={`${data.activeCount}/${data.elapsedCount}`}
@@ -264,6 +270,8 @@ interface InfoRowProps {
 }
 
 function InfoRow({ icon, iconBg, label, value, isLast }: InfoRowProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={[styles.listRow, !isLast && styles.listRowDivider]}>
       <View style={[styles.listIconBox, { backgroundColor: iconBg }]}>{icon}</View>
@@ -273,8 +281,8 @@ function InfoRow({ icon, iconBg, label, value, isLast }: InfoRowProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FE' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
 
   // Same header recipe as the rest of the app - white bar + shadow, plain
   // icon back button, fontSize 20/600/#111827 title.
@@ -284,7 +292,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -297,13 +305,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: -8,
   },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
 
   tabRow: {
     flexDirection: 'row',
     marginHorizontal: 20,
     marginTop: 20,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: c.cardSecondary,
     borderRadius: 14,
     padding: 4,
     gap: 4,
@@ -315,10 +323,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
   },
-  tabText: { fontSize: 12, fontWeight: '700', color: '#6B7280' },
-  tabTextActive: { color: '#111827' },
+  tabText: { fontSize: 12, fontWeight: '700', color: c.textSecondary },
+  tabTextActive: { color: c.text },
 
   content: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
 
@@ -332,14 +340,14 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderWidth: 1,
     borderColor: '#e5e7eb76',
     alignItems: 'center',
     justifyContent: 'center',
   },
   navBtnDisabled: { opacity: 0.5 },
-  periodLabel: { fontSize: 14, fontWeight: '700', color: '#111827' },
+  periodLabel: { fontSize: 14, fontWeight: '700', color: c.text },
 
   loadingBox: {
     height: 260,
@@ -348,18 +356,18 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#e5e7eb76',
     padding: 20,
   },
-  totalValue: { fontSize: 28, fontWeight: '800', color: '#111827' },
-  totalLabel: { fontSize: 12, color: '#6B7280', fontWeight: '500', marginTop: 2 },
+  totalValue: { fontSize: 28, fontWeight: '800', color: c.text },
+  totalLabel: { fontSize: 12, color: c.textSecondary, fontWeight: '500', marginTop: 2 },
   chartWrap: { marginTop: 24 },
 
   listCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#e5e7eb76',
@@ -383,8 +391,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  listLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: '#374151' },
-  listValue: { fontSize: 14, fontWeight: '800', color: '#111827' },
+  listLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: c.text },
+  listValue: { fontSize: 14, fontWeight: '800', color: c.text },
 
   emptyState: {
     flex: 1,
@@ -393,11 +401,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     gap: 8,
   },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginTop: 8 },
-  emptySubtitle: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 19 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: c.text, marginTop: 8 },
+  emptySubtitle: { fontSize: 13, color: c.textSecondary, textAlign: 'center', lineHeight: 19 },
   enableButton: {
     marginTop: 12,
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
     borderRadius: 14,
     paddingVertical: 13,
     paddingHorizontal: 28,

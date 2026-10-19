@@ -1,8 +1,11 @@
 import { Stethoscope, Truck } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { executeAction } from '../../../../actions/ActionExecutor';
 import { NotServiceableBannerFeedItem } from '../feed.types';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 type Props = {
     data: NotServiceableBannerFeedItem;
@@ -17,10 +20,13 @@ type Props = {
 // for in this same response - this card just gives it top billing instead
 // of making the user scroll to find it.
 function NotServiceableCard({ data }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     return (
         <View style={styles.container}>
             <View style={styles.iconCircle}>
-                <Truck size={28} color="#0FBBA1" />
+                <Truck size={28} color="#10B981" />
             </View>
 
             <Text style={styles.title}>{data.title}</Text>
@@ -32,7 +38,7 @@ function NotServiceableCard({ data }: Props) {
                 onPress={() => executeAction('OPEN_DOCTOR_LIST')}
             >
                 <Stethoscope size={16} color="#FFFFFF" />
-                <Text style={styles.ctaText}>Book a Consultation Instead</Text>
+                <Text style={styles.ctaText}>{t('book_consultation_instead')}</Text>
             </TouchableOpacity>
         </View>
     );
@@ -40,14 +46,14 @@ function NotServiceableCard({ data }: Props) {
 
 export default React.memo(NotServiceableCard);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         marginHorizontal: 20,
         // Matches every other feed card's marginBottom:28 - this was 20,
         // making the gap after this card noticeably tighter than the rest
         // of the feed's otherwise-uniform rhythm.
         marginBottom: 30,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 16,
         padding: 24,
         alignItems: 'center',
@@ -57,7 +63,7 @@ const styles = StyleSheet.create({
         // this card's old shadow-only look, and its shadow is toned down
         // to match rather than stack on top of it.
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: c.borderLight,
         ...Platform.select({
             ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 4 },
             android: { elevation: 0 },
@@ -67,7 +73,7 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: '#E6FBF7',
+        backgroundColor: c.successBg,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 16,
@@ -75,14 +81,14 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 17,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         textAlign: 'center',
         marginBottom: 8,
     },
     subtitle: {
         fontSize: 13,
         lineHeight: 20,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         marginBottom: 20,
     },
@@ -90,7 +96,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         borderRadius: 14,
         paddingVertical: 12,
         paddingHorizontal: 20,

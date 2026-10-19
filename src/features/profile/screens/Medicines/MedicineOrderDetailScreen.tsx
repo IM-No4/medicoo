@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useNavigation, useRoute } from "@react-navigation/native";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -8,6 +9,7 @@ import {
     Download,
     HelpCircle,
     Pill,
+    Star,
     XCircle,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
@@ -26,6 +28,12 @@ import StatusModal, {
     StatusType,
 } from "../../../../components/modals/StatusModal";
 import { cancelOrder, getOrderDetail } from "../../../../services/api";
+import { apiClient } from "../../../../services/api/client";
+import OrderRatingModal from "../../../../components/modals/OrderRatingModal";
+import { useTheme } from '../../../../theme/ThemeContext';
+import { AdaptiveStatusBar } from '../../../../components/ThemedStatusBar';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 const formatAmount = (value: any) => {
   const num = Number(value);
@@ -37,6 +45,9 @@ const formatAmount = (value: any) => {
 };
 
 export default function MedicineOrderDetailScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
@@ -86,8 +97,8 @@ export default function MedicineOrderDetailScreen() {
     } catch (error) {
       showStatus(
         "error",
-        "Error",
-        "Could not load order details. Please try again.",
+        t('error'),
+        t('could_not_load_order_details_please_tr'),
         () => {
           hideStatus();
           navigation.goBack();
@@ -106,8 +117,8 @@ export default function MedicineOrderDetailScreen() {
   const handleCancel = () => {
     showStatus(
       "warning",
-      "Cancel Order?",
-      "Are you sure you want to cancel this order? This action can only be performed before shipping.",
+      t('cancel_order_2'),
+      t('are_you_sure_you_want_to_cancel_this_o'),
       async () => {
         hideStatus();
         try {
@@ -115,13 +126,13 @@ export default function MedicineOrderDetailScreen() {
           await fetchDetail();
           showStatus(
             "success",
-            "Order Cancelled",
-            "Your order has been cancelled successfully.",
+            t('order_cancelled'),
+            t('your_order_has_been_cancelled_successf'),
           );
         } catch (e: any) {
           showStatus(
             "error",
-            "Could Not Cancel",
+            t('could_not_cancel'),
             e?.response?.data?.message || "This order can no longer be cancelled. Please check its current status.",
           );
         }
@@ -130,120 +141,32 @@ export default function MedicineOrderDetailScreen() {
     );
   };
 
+  // The invoice is built by the server (batch + expiry of what was actually supplied, seller and company
+  // registration details, legal notes) so there is one source of truth; the app only turns it into a PDF.
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
   const handleDownloadInvoice = async () => {
-    if (!order) return;
-
-    const htmlContent = `
-            <html>
-                <head>
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
-                    <style>
-                        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 24px; color: #1F2937; }
-                        .header { border-bottom: 2px solid #0FBBA1; padding-bottom: 12px; margin-bottom: 20px; }
-                        .title { font-size: 24px; font-weight: bold; color: #0FBBA1; }
-                        .order-details { margin-bottom: 20px; font-size: 14px; color: #4B5563; line-height: 1.5; }
-                        .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                        .th { border-bottom: 1px solid #D1D5DB; padding: 8px; text-align: left; font-weight: bold; color: #374151; }
-                        .td { border-bottom: 1px solid #E5E7EB; padding: 8px; color: #4B5563; }
-                        .total-section { margin-top: 20px; text-align: right; font-size: 14px; }
-                        .total-row { display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 8px; }
-                        .total-label { color: #6B7280; width: 150px; text-align: right; }
-                        .total-val { font-weight: bold; color: #1F2937; width: 100px; text-align: right; }
-                        .grand-total { font-size: 18px; font-weight: bold; color: #0FBBA1; margin-top: 12px; }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <div class="title">MEDICOO INVOICE</div>
-                        <div style="margin-top: 4px; color: #6B7280; font-size: 12px;">Thank you for ordering with Medicoo!</div>
-                    </div>
-                    <div class="order-details">
-                        <strong>Order Number:</strong> #${order.orderId.replace("ORD-", "")}<br/>
-                        <strong>Date:</strong> ${new Date(order.createdAt).toLocaleDateString("en-IN", { dateStyle: "long" })}<br/>
-                        <strong>Pharmacy:</strong> ${order.pharmacyName}<br/>
-                        <strong>Deliver to:</strong><br/>
-                        ${order.address?.fullAddress}
-                    </div>
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th class="th">Item Name</th>
-                                <th class="th">Brand</th>
-                                <th class="th" style="text-align: center;">Qty</th>
-                                <th class="th" style="text-align: right;">Price</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${order.items
-                              .map(
-                                (item: any) => `
-                                <tr>
-                                    <td class="td">${item.name}</td>
-                                    <td class="td">${item.brand}</td>
-                                    <td class="td" style="text-align: center;">${item.quantity}</td>
-                                    <td class="td" style="text-align: right;">₹${formatAmount(item.price * item.quantity)}</td>
-                                </tr>
-                            `,
-                              )
-                              .join("")}
-                        </tbody>
-                    </table>
-                    <div class="total-section">
-                        <div class="total-row">
-                            <span class="total-label">Subtotal:</span>
-                            <span class="total-val">₹${formatAmount(order.billData?.itemsCost ?? order.subtotal)}</span>
-                        </div>
-                        ${order.billData?.packagingCharges > 0 ? `
-                        <div class="total-row">
-                            <span class="total-label">Packaging Charges:</span>
-                            <span class="total-val">₹${formatAmount(order.billData.packagingCharges)}</span>
-                        </div>
-                        ` : ""}
-                        <div class="total-row">
-                            <span class="total-label">Delivery Charges:</span>
-                            <span class="total-val">${order.billData ? (order.billData.deliveryCost === 0 ? "FREE" : `₹${formatAmount(order.billData.deliveryCost)}`) : (order.deliveryFee === 0 ? "FREE" : `₹${formatAmount(order.deliveryFee)}`)}</span>
-                        </div>
-                        ${order.billData?.platformFee > 0 ? `
-                        <div class="total-row">
-                            <span class="total-label">Platform Fee:</span>
-                            <span class="total-val">₹${formatAmount(order.billData.platformFee)}</span>
-                        </div>
-                        ` : ""}
-                        ${order.billData?.couponDiscount > 0 ? `
-                        <div class="total-row" style="color: #16A34A;">
-                            <span class="total-label">Discount Applied:</span>
-                            <span class="total-val">-₹${formatAmount(order.billData.couponDiscount)}</span>
-                        </div>
-                        ` : ""}
-                        ${order.billData?.taxes > 0 ? `
-                        <div class="total-row">
-                            <span class="total-label">Taxes & Charges:</span>
-                            <span class="total-val">₹${formatAmount(order.billData.taxes)}</span>
-                        </div>
-                        ` : ""}
-                        <div class="total-row grand-total">
-                            <span class="total-label" style="color: #1F2937;">Total Paid:</span>
-                            <span class="total-val">₹${formatAmount(order.total)}</span>
-                        </div>
-                    </div>
-                </body>
-            </html>
-        `;
-
+    if (!order || downloadingInvoice) return;
+    setDownloadingInvoice(true);
     try {
-      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      const res = await apiClient.get(`/api/user/orders/${order._id}/invoice`);
+      const { uri } = await Print.printToFileAsync({ html: res.data.html });
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri);
+        await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle: `Invoice ${res.data.invoiceNumber || ""}`.trim() });
       }
-    } catch (error) {
-      console.error("Failed to print PDF:", error);
+    } catch (error: any) {
+      console.error("Failed to build invoice:", error);
       showStatus(
         "error",
-        "Download Failed",
-        "Could not generate invoice PDF. Please try again.",
+        t('download_failed'),
+        error?.response?.data?.message || t('could_not_generate_invoice_pdf_please'),
       );
+    } finally {
+      setDownloadingInvoice(false);
     }
   };
+
+  const [ratingVisible, setRatingVisible] = useState(false);
+
 
   const getStatusLabel = (statusName: string) => {
     switch (statusName) {
@@ -265,7 +188,8 @@ export default function MedicineOrderDetailScreen() {
   if (loading || !order) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0FBBA1" />
+        <AdaptiveStatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <ActivityIndicator size="large" color="#10B981" />
       </View>
     );
   }
@@ -276,6 +200,7 @@ export default function MedicineOrderDetailScreen() {
 
   return (
     <View style={styles.container}>
+      <AdaptiveStatusBar barStyle="dark-content" backgroundColor="#fff" />
       {/* Custom Nav Header */}
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <View style={styles.headerLeftRow}>
@@ -284,7 +209,7 @@ export default function MedicineOrderDetailScreen() {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <ChevronLeft size={22} color="#111827" />
+            <ChevronLeft size={22} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>
@@ -299,8 +224,8 @@ export default function MedicineOrderDetailScreen() {
           onPress={() => navigation.navigate("OrderSupport", { orderId: order.orderId, orderStatus: order.status })}
           style={styles.supportBadge}
         >
-          <HelpCircle size={14} color="#4B5563" />
-          <Text style={styles.supportBadgeText}>Support</Text>
+          <HelpCircle size={14} color={theme.textSecondary} />
+          <Text style={styles.supportBadgeText}>Need help?</Text>
         </TouchableOpacity>
       </View>
 
@@ -337,13 +262,10 @@ export default function MedicineOrderDetailScreen() {
                   <Text style={styles.storeNameText}>{order.pharmacyName}</Text>
                   <ChevronRight
                     size={14}
-                    color="#0FBBA1"
+                    color="#10B981"
                     style={{ marginLeft: 4 }}
                   />
                 </View>
-                <Text style={styles.addressSubtext} numberOfLines={1}>
-                  {order.deliveryLocation?.address || "Pharmacy Branch"}
-                </Text>
               </TouchableOpacity>
 
               <View style={styles.addressInfoBlock}>
@@ -383,7 +305,7 @@ export default function MedicineOrderDetailScreen() {
 
         {/* Bill Details Section */}
         <View style={styles.billDetailsSection}>
-          <Text style={styles.billDetailsHeading}>BILL DETAILS</Text>
+          <Text style={styles.billDetailsHeading}>{t('bill_details')}</Text>
 
           {/* Items List */}
           <View style={styles.itemsListContainer}>
@@ -391,7 +313,7 @@ export default function MedicineOrderDetailScreen() {
               <View key={index} style={styles.billItemRow}>
                 <View style={styles.billItemLeft}>
                   <View style={styles.pillIconCircle}>
-                    <Pill size={12} color="#0FBBA1" />
+                    <Pill size={12} color="#10B981" />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.billItemName}>
@@ -404,7 +326,7 @@ export default function MedicineOrderDetailScreen() {
                       <Text style={styles.billItemBrand}>{item.brand}</Text>
                       <Text style={styles.bulletSeparator}>•</Text>
                       <Text style={styles.itemMetaSubText}>
-                        Expiry: {item.expiry || "12/29"}  •  HSN: {item.hsnCode || "3004"}
+                        Expiry: {item.expiry || "Assigned at dispatch"}  •  HSN: {item.hsnCode || "3004"}
                       </Text>
                     </View>
                     {item.discountAmount > 0 && (
@@ -441,7 +363,7 @@ export default function MedicineOrderDetailScreen() {
 
             {order.billData?.packagingCharges > 0 && (
               <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Packaging charges</Text>
+                <Text style={styles.breakdownLabel}>{t('packaging_charges_2')}</Text>
                 <Text style={styles.breakdownValue}>
                   ₹{formatAmount(order.billData.packagingCharges)}
                 </Text>
@@ -449,7 +371,7 @@ export default function MedicineOrderDetailScreen() {
             )}
 
             <View style={styles.breakdownRow}>
-              <Text style={styles.breakdownLabel}>Delivery partner fee</Text>
+              <Text style={styles.breakdownLabel}>{t('delivery_partner_fee_2')}</Text>
               <Text style={styles.breakdownValue}>
                 {order.billData
                   ? order.billData.deliveryCost === 0
@@ -463,7 +385,7 @@ export default function MedicineOrderDetailScreen() {
 
             {order.billData?.platformFee > 0 && (
               <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Platform fee</Text>
+                <Text style={styles.breakdownLabel}>{t('platform_fee_2')}</Text>
                 <Text style={styles.breakdownValue}>
                   ₹{formatAmount(order.billData.platformFee)}
                 </Text>
@@ -472,7 +394,7 @@ export default function MedicineOrderDetailScreen() {
 
             {order.billData?.couponDiscount > 0 && (
               <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Discount Applied</Text>
+                <Text style={styles.breakdownLabel}>{t('discount_applied')}</Text>
                 <Text style={[styles.breakdownValue, { color: "#16A34A" }]}>
                   -₹{formatAmount(order.billData.couponDiscount)}
                 </Text>
@@ -481,7 +403,7 @@ export default function MedicineOrderDetailScreen() {
 
             {order.billData?.taxes > 0 && (
               <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Taxes & Charges</Text>
+                <Text style={styles.breakdownLabel}>{t('taxes_charges')}</Text>
                 <Text style={styles.breakdownValue}>
                   ₹{formatAmount(order.billData.taxes)}
                 </Text>
@@ -493,10 +415,30 @@ export default function MedicineOrderDetailScreen() {
 
           {/* Total Row */}
           <View style={styles.billTotalRow}>
-            <Text style={styles.billTotalLabel}>Bill Total</Text>
+            <Text style={styles.billTotalLabel}>{t('bill_total')}</Text>
             <Text style={styles.billTotalValue}>₹{formatAmount(order.total)}</Text>
           </View>
         </View>
+
+        {/* Rate: only for a delivered order that still has something unrated */}
+        {order.status === "Delivered" && (!order.review?.storeRating || !order.review?.deliveryRating) ? (
+          <TouchableOpacity style={styles.rateCard} activeOpacity={0.85} onPress={() => setRatingVisible(true)}>
+            <View style={styles.rateCardIcon}>
+              <Star size={18} color="#F59E0B" fill="#F59E0B" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rateCardTitle}>How was your order?</Text>
+              <Text style={styles.rateCardSub}>
+                {!order.review?.storeRating && !order.review?.deliveryRating
+                  ? "Rate the pharmacy and the delivery"
+                  : !order.review?.storeRating
+                    ? "Rate the pharmacy"
+                    : "Rate the delivery"}
+              </Text>
+            </View>
+            <ChevronRight size={18} color={theme.textMuted} />
+          </TouchableOpacity>
+        ) : null}
 
         {/* Footer/Actions */}
         <View style={styles.footerActionsContainer}>
@@ -505,7 +447,7 @@ export default function MedicineOrderDetailScreen() {
               style={styles.cancelButtonSwiggy}
               onPress={handleCancel}
             >
-              <Text style={styles.cancelButtonTextSwiggy}>Cancel Order</Text>
+              <Text style={styles.cancelButtonTextSwiggy}>{t('cancel_order')}</Text>
             </TouchableOpacity>
           ) : null}
 
@@ -513,15 +455,26 @@ export default function MedicineOrderDetailScreen() {
             <TouchableOpacity
               style={styles.downloadInvoiceBtn}
               onPress={handleDownloadInvoice}
+              disabled={downloadingInvoice}
             >
-              <Download size={14} color="#6B7280" />
+              {downloadingInvoice ? <ActivityIndicator size="small" color={theme.textSecondary} /> : <Download size={14} color={theme.textSecondary} />}
               <Text style={styles.downloadInvoiceBtnText}>
-                Download Invoice
+                {t('download_invoice')}
               </Text>
             </TouchableOpacity>
           ) : null}
         </View>
       </ScrollView>
+
+      <OrderRatingModal
+        visible={ratingVisible}
+        onClose={() => setRatingVisible(false)}
+        orderId={order._id}
+        storeName={order.pharmacyName}
+        deliveryMode={order.deliveryMode}
+        review={order.review}
+        onSaved={(review) => setOrder((prev: any) => (prev ? { ...prev, review } : prev))}
+      />
 
       <StatusModal
         visible={status.visible}
@@ -542,16 +495,16 @@ export default function MedicineOrderDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FE",
+    backgroundColor: c.background,
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
   },
   // Same header bar recipe as the Medicine Orders list / Family Members /
   // Address Book screens - white bar + shadow instead of a hard border.
@@ -563,7 +516,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -588,12 +541,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#1F2937",
+    color: c.text,
     letterSpacing: 0.2,
   },
   headerSubtitle: {
     fontSize: 11,
-    color: "#6B7280",
+    color: c.textSecondary,
     marginTop: 1,
   },
   supportBadge: {
@@ -601,7 +554,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderWidth: 1,
-    borderColor: "#D1D5DB",
+    borderColor: c.border,
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 20,
@@ -609,13 +562,13 @@ const styles = StyleSheet.create({
   supportBadgeText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#4B5563",
+    color: c.textSecondary,
   },
   content: {
     paddingBottom: 96,
   },
   deliveryPathSection: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     padding: 16,
   },
   pathRow: {
@@ -632,15 +585,15 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     borderWidth: 2,
-    borderColor: "#0FBBA1",
-    backgroundColor: "#FFFFFF",
+    borderColor: "#10B981",
+    backgroundColor: c.card,
     marginTop: 6,
   },
   lineConnector: {
     width: 1,
     height: 48,
     borderWidth: 1,
-    borderColor: "#D1D5DB",
+    borderColor: c.border,
     borderStyle: "dashed",
     marginVertical: 4,
   },
@@ -665,22 +618,22 @@ const styles = StyleSheet.create({
   storeNameText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#0FBBA1",
+    color: "#10B981",
   },
   homeNameText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1F2937",
+    color: c.text,
   },
   addressSubtext: {
     fontSize: 12,
-    color: "#6B7280",
+    color: c.textSecondary,
     marginTop: 2,
     lineHeight: 16,
   },
   horizontalDivider: {
     height: 1,
-    backgroundColor: "#EEEEEE",
+    backgroundColor: c.cardSecondary,
     marginVertical: 16,
   },
   statusRow: {
@@ -690,7 +643,7 @@ const styles = StyleSheet.create({
   },
   statusDescriptionText: {
     fontSize: 13,
-    color: "#4B5563",
+    color: c.textSecondary,
     fontWeight: "500",
   },
   loaderSpinner: {
@@ -698,21 +651,21 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     borderWidth: 2,
-    borderColor: "#0FBBA1",
+    borderColor: "#10B981",
     borderTopColor: "transparent",
   },
   greyDividerBlock: {
     height: 10,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: c.cardSecondary,
   },
   billDetailsSection: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     padding: 16,
   },
   billDetailsHeading: {
     fontSize: 11,
     fontWeight: "800",
-    color: "#9CA3AF",
+    color: c.textMuted,
     letterSpacing: 0.8,
     marginBottom: 16,
   },
@@ -734,7 +687,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: c.successBg,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 10,
@@ -743,15 +696,15 @@ const styles = StyleSheet.create({
   billItemName: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#1F2937",
+    color: c.text,
   },
   itemQtyMultiplier: {
-    color: "#4B5563",
+    color: c.textSecondary,
     fontWeight: "600",
   },
   billItemBrand: {
     fontSize: 11,
-    color: "#6B7280",
+    color: c.textSecondary,
     fontWeight: "600",
   },
   brandAndMetaRow: {
@@ -762,12 +715,12 @@ const styles = StyleSheet.create({
   },
   bulletSeparator: {
     marginHorizontal: 4,
-    color: "#D1D5DB",
+    color: c.textMuted,
     fontSize: 10,
   },
   itemMetaSubText: {
     fontSize: 11,
-    color: "#9CA3AF",
+    color: c.textMuted,
   },
   itemDiscountText: {
     fontSize: 11,
@@ -778,20 +731,20 @@ const styles = StyleSheet.create({
   billItemPrice: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#1F2937",
+    color: c.text,
   },
   priceContainer: {
     alignItems: "flex-end",
   },
   itemOriginalPriceText: {
     fontSize: 11,
-    color: "#9CA3AF",
+    color: c.textMuted,
     textDecorationLine: "line-through",
     marginBottom: 2,
   },
   billDividerLine: {
     height: 1,
-    backgroundColor: "#EEEEEE",
+    backgroundColor: c.cardSecondary,
     marginVertical: 14,
   },
   breakdownContainer: {
@@ -803,11 +756,11 @@ const styles = StyleSheet.create({
   },
   breakdownLabel: {
     fontSize: 12,
-    color: "#6B7280",
+    color: c.textSecondary,
   },
   breakdownValue: {
     fontSize: 12,
-    color: "#1F2937",
+    color: c.text,
     fontWeight: "600",
   },
   billTotalRow: {
@@ -819,22 +772,22 @@ const styles = StyleSheet.create({
   billTotalLabel: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#1F2937",
+    color: c.text,
   },
   billTotalValue: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#1F2937",
+    color: c.text,
   },
   footerActionsContainer: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     padding: 16,
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: "#EEEEEE",
+    borderTopColor: c.border,
   },
   reorderButton: {
-    backgroundColor: "#0FBBA1",
+    backgroundColor: "#10B981",
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: "center",
@@ -859,20 +812,49 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
+  claimCard: { marginHorizontal: 16, marginTop: 14, padding: 14, borderRadius: 16, backgroundColor: c.card, borderWidth: 1, borderColor: c.borderLight },
+  claimTitle: { fontSize: 15, fontWeight: "800", color: c.text },
+  claimText: { fontSize: 12, color: c.textSecondary, lineHeight: 17, marginTop: 4 },
+  claimItemRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 8 },
+  claimItemName: { flex: 1, fontSize: 13, fontWeight: "700", color: c.text },
+  claimItemState: { fontSize: 12, fontWeight: "700" },
+  claimButton: { marginTop: 12, height: 44, borderRadius: 10, backgroundColor: "#10B981", alignItems: "center", justifyContent: "center" },
+  claimButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
+  claimRequest: { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: c.borderLight },
+  claimRequestHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  claimRequestNumber: { fontSize: 13, fontWeight: "800", color: c.text },
+  claimRequestStatus: { fontSize: 12, fontWeight: "800" },
+  claimRefund: { fontSize: 13, fontWeight: "800", color: c.text, marginTop: 6 },
+  rateCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 14,
+    marginBottom: 16,
+    borderRadius: 16,
+    backgroundColor: c.card,
+    borderWidth: 1,
+    borderColor: c.borderLight,
+  },
+  rateCardIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: "#FEF3C7", alignItems: "center", justifyContent: "center" },
+  rateCardTitle: { fontSize: 14, fontWeight: "800", color: c.text },
+  rateCardSub: { fontSize: 12, fontWeight: "500", color: c.textSecondary, marginTop: 2 },
   downloadInvoiceBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#FFFFFF",
+    borderColor: c.border,
+    backgroundColor: c.card,
     paddingVertical: 12,
     borderRadius: 8,
   },
   downloadInvoiceBtnText: {
     fontSize: 14,
-    color: "#374151",
+    color: c.text,
     fontWeight: "700",
   },
 });

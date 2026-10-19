@@ -195,12 +195,9 @@ export const runBootSequence = async (dispatch: any, { showLoadingState = true }
       // request; this boot-time check was bypassing it with its own,
       // cruder "any error = log out" logic.
       if (error?.response?.status !== 401) {
-        // Reaching here means the upfront reachability probe above passed
-        // but this actual API call still failed outright - a flakier
-        // connection than the probe caught, or it dropped in between the
-        // two. Either way, this session is not actually online.
-        dispatch(setOnlineStatus(false));
-
+        // The internet probe above already passed, so a failure here means
+        // our backend is unreachable (down, 5xx, timeout) - not that the
+        // device is offline. Connectivity state is deliberately left alone.
         const elapsed = Date.now() - startTime;
         const remaining = MIN_SPLASH_DURATION - elapsed;
         if (remaining > 0) {

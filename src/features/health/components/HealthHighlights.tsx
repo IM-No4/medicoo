@@ -1,9 +1,12 @@
 import { AlertCircle, CheckCircle2, Sparkles, TrendingDown, TrendingUp } from 'lucide-react-native';
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../redux/store';
 import { HealthSection } from './HealthSection';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface Highlight {
     text: string;
@@ -18,6 +21,9 @@ const BP_THRESHOLD_MMHG = 3;
 const WEIGHT_THRESHOLD_KG = 0.3;
 
 export function HealthHighlights() {
+  const { t } = useLanguage();
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const { records } = useSelector((state: RootState) => state.vitals);
     const { data: calendarData } = useSelector((state: RootState) => state.calendar);
 
@@ -29,9 +35,9 @@ export function HealthHighlights() {
         if (takenDoses >= totalDoses) {
             highlights.push({
                 text: 'All doses taken today',
-                color: '#0FBBA1',
+                color: '#10B981',
                 bgColor: '#F0FDF4',
-                icon: <CheckCircle2 size={18} color="#0FBBA1" />,
+                icon: <CheckCircle2 size={18} color="#10B981" />,
             });
         } else {
             const missed = totalDoses - takenDoses;
@@ -78,17 +84,17 @@ export function HealthHighlights() {
     }
 
     return (
-        <HealthSection title="Recent Highlights" icon={<Sparkles size={14} color="#8B5CF6" fill="#8B5CF6" />}>
+        <HealthSection title={t('recent_highlights')} icon={<Sparkles size={14} color="#8B5CF6" fill="#8B5CF6" />}>
             <View style={styles.container}>
                 {highlights.length === 0 ? (
                     <View style={styles.emptyState}>
                         <Text style={styles.emptyText}>
-                            Log your vitals and medications to see personalized highlights here.
+                            {t('log_your_vitals_and_medications_to_see')}
                         </Text>
                     </View>
                 ) : (
                     highlights.map((item, i) => (
-                        <View key={i} style={[styles.highlight, { backgroundColor: item.bgColor }]}>
+                        <View key={i} style={[styles.highlight, { backgroundColor: isDark ? item.color + '26' : item.bgColor }]}>
                             {item.icon}
                             <Text style={[styles.highlightText, { color: item.color }]}>{item.text}</Text>
                         </View>
@@ -99,7 +105,7 @@ export function HealthHighlights() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: { gap: 12 },
     highlight: {
         flexDirection: 'row',
@@ -114,13 +120,13 @@ const styles = StyleSheet.create({
     emptyState: {
         borderRadius: 16,
         padding: 20,
-        backgroundColor: '#FFF',
+        backgroundColor: c.card,
         borderWidth: 1,
         borderColor: '#e5e7eb76',
     },
     emptyText: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         lineHeight: 18,
     },

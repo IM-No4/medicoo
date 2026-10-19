@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { BloodRequestAlertFeedItem } from '../feed.types';
 
 import { FeedAction } from '../feed.actions';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 interface Props {
     item: BloodRequestAlertFeedItem;
@@ -11,6 +14,9 @@ interface Props {
 }
 
 export default function BloodRequestAlertCard({ item, onAction }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const handleAccept = () => {
         if (item.acceptAction && onAction) {
             onAction(item.acceptAction);
@@ -28,7 +34,7 @@ export default function BloodRequestAlertCard({ item, onAction }: Props) {
             <View style={styles.header}>
                 <View style={styles.urgentBadge}>
                     <AppIcon name="alert-triangle" size={14} color="#FFFFFF" />
-                    <Text style={styles.urgentText}>URGENT REQUEST</Text>
+                    <Text style={styles.urgentText}>{t('urgent_request')}</Text>
                 </View>
                 <Text style={styles.timeText}>{item.timePosted}</Text>
             </View>
@@ -41,7 +47,7 @@ export default function BloodRequestAlertCard({ item, onAction }: Props) {
                 <View style={styles.detailsContainer}>
                     <Text style={styles.hospitalName}>{item.hospital}</Text>
                     <View style={styles.locationRow}>
-                        <AppIcon name="map-pin" size={14} color="#6B7280" />
+                        <AppIcon name="map-pin" size={14} color={theme.textSecondary} />
                         <Text style={styles.locationText}>{item.location} • {item.distance}</Text>
                     </View>
                 </View>
@@ -49,10 +55,10 @@ export default function BloodRequestAlertCard({ item, onAction }: Props) {
 
             <View style={styles.actions}>
                 <TouchableOpacity style={styles.declineButton} onPress={handleDecline}>
-                    <Text style={styles.declineText}>Can't Donate</Text>
+                    <Text style={styles.declineText}>{t('cant_donate')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.acceptButton} onPress={handleAccept}>
-                    <Text style={styles.acceptText}>I Can Donate</Text>
+                    <Text style={styles.acceptText}>{t('can_donate')}</Text>
                     <AppIcon name="arrow-right" size={16} color="#FFFFFF" />
                 </TouchableOpacity>
             </View>
@@ -60,9 +66,9 @@ export default function BloodRequestAlertCard({ item, onAction }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 16,
         marginBottom: 30,
         marginHorizontal: 24,
@@ -81,7 +87,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.errorBg,
         borderBottomWidth: 1,
         borderBottomColor: '#FECACA'
     },
@@ -115,7 +121,7 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 12,
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.errorBg,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
@@ -132,7 +138,7 @@ const styles = StyleSheet.create({
     hospitalName: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 4
     },
     locationRow: {
@@ -142,7 +148,7 @@ const styles = StyleSheet.create({
     },
     locationText: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         flex: 1
     },
     actions: {
@@ -156,13 +162,13 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         borderRadius: 12
     },
     declineText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#4B5563'
+        color: c.textSecondary
     },
     acceptButton: {
         flex: 2, // Bigger target

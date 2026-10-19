@@ -1,10 +1,13 @@
 import { AlertTriangle } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 
 import { RootState } from '../../redux/store';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 // Persistent (not dismissible) top banner shown whenever
 // appConfig.restricted is true - i.e. maintenance is on, but this user has
@@ -13,6 +16,9 @@ import { RootState } from '../../redux/store';
 // "new bookings are blocked" enforcement is the backend's maintenanceGate,
 // not this banner.
 export default function MaintenanceRestrictedBanner() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const insets = useSafeAreaInsets();
     const restricted = useSelector((state: RootState) => state.appConfig.restricted);
 
@@ -21,14 +27,14 @@ export default function MaintenanceRestrictedBanner() {
     return (
         <View style={[styles.container, { paddingTop: insets.top + 8 }]} pointerEvents="none">
             <View style={styles.pill}>
-                <AlertTriangle size={14} color="#92400E" />
-                <Text style={styles.text}>Limited availability - new bookings are paused</Text>
+                <AlertTriangle size={14} color={theme.warning} />
+                <Text style={styles.text}>{t('limited_availability_new_bookings_are')}</Text>
             </View>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         position: 'absolute',
         top: 0,
@@ -41,9 +47,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: '#FEF3C7',
+        backgroundColor: c.warningBg,
         borderWidth: 1,
-        borderColor: '#FDE68A',
+        borderColor: c.border,
         borderRadius: 20,
         paddingHorizontal: 14,
         paddingVertical: 8,
@@ -56,6 +62,6 @@ const styles = StyleSheet.create({
     text: {
         fontSize: 12.5,
         fontWeight: '600',
-        color: '#92400E',
+        color: c.warning,
     },
 });

@@ -1,7 +1,7 @@
 import { useFocusEffect, useRoute } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft, MoreVertical, Send } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { ActivityIndicator, FlatList, Image, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { executeAction } from '../../actions/ActionExecutor';
@@ -13,10 +13,16 @@ import { onConsultationChatMessage } from '../../services/socketService';
 import ConsultationDetailsModal, { ConsultationDraft } from './components/ConsultationDetailsModal';
 import InCallToolsSheet from './components/InCallToolsSheet';
 import PatientReportsModal from './components/PatientReportsModal';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const EMPTY_DRAFT: ConsultationDraft = { notes: '', prescribedMedicines: [], prescribedLabTests: [] };
 
 export default function DoctorChatScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
     const route = useRoute<any>();
     const { requestId, title, image } = route.params || {};
@@ -117,12 +123,12 @@ export default function DoctorChatScreen() {
         if (!requestId) return;
         try {
             await completeAppointmentRequest(requestId, details);
-            showStatus('success', 'Consultation Completed', 'This consultation has been marked as completed.', () => {
+            showStatus('success', t('consultation_completed'), t('this_consultation_has_been_marked_as_c'), () => {
                 hideStatus();
                 executeAction('GO_BACK');
             }, 'Done');
         } catch (error: any) {
-            showStatus('error', 'Could Not Complete', error?.response?.data?.message || 'Please try again.');
+            showStatus('error', t('could_not_complete'), error?.response?.data?.message || 'Please try again.');
         }
     };
 
@@ -167,7 +173,7 @@ export default function DoctorChatScreen() {
             {/* Header */}
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => executeAction('GO_BACK')} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
 
                 <View style={styles.headerInfo}>
@@ -186,7 +192,7 @@ export default function DoctorChatScreen() {
 
                 {viewerRole === 'doctor' ? (
                     <TouchableOpacity style={styles.iconButton} onPress={() => setShowToolsSheet(true)}>
-                        <MoreVertical size={20} color="#4B5563" />
+                        <MoreVertical size={20} color={theme.textSecondary} />
                     </TouchableOpacity>
                 ) : (
                     <View style={styles.iconButton} />
@@ -207,11 +213,11 @@ export default function DoctorChatScreen() {
             >
                 {loading ? (
                     <View style={styles.center}>
-                        <ActivityIndicator size="large" color="#0FBBA1" />
+                        <ActivityIndicator size="large" color="#10B981" />
                     </View>
                 ) : loadError ? (
                     <View style={styles.center}>
-                        <Text style={styles.errorText}>Couldn't load this conversation.</Text>
+                        <Text style={styles.errorText}>{t('couldn_t_load_this_conversation')}</Text>
                     </View>
                 ) : (
                     <FlatList
@@ -223,7 +229,7 @@ export default function DoctorChatScreen() {
                         contentContainerStyle={styles.chatContent}
                         ListEmptyComponent={
                             <View style={styles.center}>
-                                <Text style={styles.errorText}>No messages yet. Say hello!</Text>
+                                <Text style={styles.errorText}>{t('no_messages_yet_say_hello')}</Text>
                             </View>
                         }
                     />
@@ -232,8 +238,8 @@ export default function DoctorChatScreen() {
                 <View style={[styles.inputContainer, { paddingBottom: (keyboardVisible ? 0 : insets.bottom) + 12 }]}>
                     <TextInput
                         style={styles.input}
-                        placeholder="Type a message..."
-                        placeholderTextColor="#9CA3AF"
+                        placeholder={t('type_a_message')}
+                        placeholderTextColor={theme.textMuted}
                         value={message}
                         onChangeText={setMessage}
                         multiline
@@ -292,17 +298,17 @@ export default function DoctorChatScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F3F4F6' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
     flexOne: { flex: 1 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-    errorText: { fontSize: 14, color: '#6B7280', textAlign: 'center' },
+    errorText: { fontSize: 14, color: c.textSecondary, textAlign: 'center' },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         gap: 12,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
@@ -312,11 +318,11 @@ const styles = StyleSheet.create({
     backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
     headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
     avatarHeader: {
-        width: 36, height: 36, borderRadius: 18, backgroundColor: '#E0E7FF',
+        width: 36, height: 36, borderRadius: 18, backgroundColor: c.infoBg,
         alignItems: 'center', justifyContent: 'center'
     },
-    avatarTextHeader: { fontSize: 14, fontWeight: '700', color: '#4F46E5' },
-    headerTitle: { fontSize: 16, fontWeight: '600', color: '#111827' },
+    avatarTextHeader: { fontSize: 14, fontWeight: '700', color: c.info },
+    headerTitle: { fontSize: 16, fontWeight: '600', color: c.text },
     iconButton: { padding: 4 },
 
     chatContent: { padding: 16, paddingBottom: 24, gap: 16, flexGrow: 1 },
@@ -337,21 +343,21 @@ const styles = StyleSheet.create({
         }),
     },
     bubbleLeft: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderBottomLeftRadius: 4,
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: c.borderLight,
     },
     bubbleRight: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         borderBottomRightRadius: 4
     },
     messageText: { fontSize: 15, lineHeight: 22 },
-    textLeft: { color: '#1F2937' },
+    textLeft: { color: c.text },
     textRight: { color: '#fff' },
 
     timeText: { fontSize: 10, marginTop: 4, alignSelf: 'flex-end' },
-    timeLeft: { color: '#9CA3AF' },
+    timeLeft: { color: c.textMuted },
     timeRight: { color: 'rgba(255,255,255,0.7)' },
 
     // Input
@@ -360,7 +366,7 @@ const styles = StyleSheet.create({
         alignItems: 'flex-end',
         paddingHorizontal: 16,
         paddingTop: 12,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         gap: 10,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -1 }, shadowOpacity: 0.03, shadowRadius: 4 },
@@ -369,22 +375,22 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         paddingHorizontal: 16,
         paddingVertical: 10,
         paddingTop: 10,
         fontSize: 15,
-        color: '#1F2937',
+        color: c.text,
         maxHeight: 100
     },
     sendButton: {
         width: 36, height: 36, borderRadius: 18,
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         alignItems: 'center', justifyContent: 'center',
         marginBottom: 4
     },
-    sendButtonDisabled: { backgroundColor: '#D1D5DB' }
+    sendButtonDisabled: { backgroundColor: c.border }
 });

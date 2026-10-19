@@ -1,9 +1,11 @@
 import { Check, Clock, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { RenderMedicationIcon } from '../../../components/modals/AddMedicationModal/config/shapes';
 import StatusModal from '../../../components/modals/StatusModal';
-import { COLORS } from '../styles';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface Props {
   scheduleId: string;
@@ -45,6 +47,9 @@ export default function MedicineCard({
   onMarkIntake,
   style
 }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const isTaken = status === 'taken';
   const isSkipped = status === 'skipped';
 
@@ -83,7 +88,7 @@ export default function MedicineCard({
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
           {!!dosage && <Text style={styles.dosage} numberOfLines={1}>{dosage}</Text>}
           <View style={styles.metaRow}>
-            <Clock size={12} color={COLORS.textSecondary} />
+            <Clock size={12} color={theme.textSecondary} />
             <Text style={styles.timeText}>{time}</Text>
           </View>
         </View>
@@ -123,7 +128,7 @@ export default function MedicineCard({
       <StatusModal
         visible={modalVisible}
         status="warning"
-        title="Medication Check"
+        title={t('medication_check')}
         message={`Have you taken ${name}${dosage ? ` (${dosage})` : ''} scheduled for ${time}?`}
         onClose={() => setModalVisible(false)}
         primaryAction={() => {
@@ -136,9 +141,9 @@ export default function MedicineCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 20,
     padding: 16,
     paddingVertical: 12,
@@ -146,7 +151,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
   },
   iconBox: {
     width: 48,
@@ -163,11 +168,11 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLORS.text,
+    color: c.text,
   },
   dosage: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: c.textSecondary,
     marginTop: 1,
   },
   metaRow: {
@@ -179,7 +184,7 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.textSecondary,
+    color: c.textSecondary,
   },
   rightCol: {
     alignItems: 'flex-end',
@@ -192,10 +197,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   skipBtn: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: c.errorBg,
   },
   takeBtn: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: c.successBg,
   },
   statusBadge: {
     paddingHorizontal: 10,
@@ -203,10 +208,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   badgeTaken: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: c.successBg,
   },
   badgeSkipped: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: c.errorBg,
   },
   statusText: {
     fontSize: 12,

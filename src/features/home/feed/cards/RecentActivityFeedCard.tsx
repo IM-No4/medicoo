@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { RecentActivityFeedItem } from '../feed.types';
 import { FeedAction } from '../feed.actions';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 type Props = {
     data: RecentActivityFeedItem;
@@ -10,6 +13,9 @@ type Props = {
 };
 
 function RecentActivityFeedCard({ data, onAction }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const handleViewHistory = () => {
         if (onAction) {
             onAction({
@@ -56,7 +62,7 @@ function RecentActivityFeedCard({ data, onAction }: Props) {
             <View style={styles.header}>
                 <Text style={styles.title}>{data.title}</Text>
                 <TouchableOpacity onPress={handleViewHistory}>
-                    <Text style={styles.viewAll}>View History</Text>
+                    <Text style={styles.viewAll}>{t('view_history')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -84,7 +90,7 @@ function RecentActivityFeedCard({ data, onAction }: Props) {
                             <Text style={[styles.status, { color: activity.statusColor || '#6B7280' }]}>
                                 {activity.status}
                             </Text>
-                            <AppIcon name="chevron-right" size={14} color="#D1D5DB" />
+                            <AppIcon name="chevron-right" size={14} color={theme.textMuted} />
                         </View>
                     </TouchableOpacity>
                 ))}
@@ -113,7 +119,7 @@ function getActivityColor(type: string) {
 
 export default React.memo(RecentActivityFeedCard);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         marginHorizontal: 20,
         marginBottom: 30,
@@ -127,7 +133,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#6B7280',
+        color: c.textSecondary,
         textTransform: 'uppercase',
         letterSpacing: 0.5
     },
@@ -137,10 +143,10 @@ const styles = StyleSheet.create({
         color: '#2563EB',
     },
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
         // Shadow
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
@@ -155,7 +161,7 @@ const styles = StyleSheet.create({
     },
     borderBottom: {
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6'
+        borderBottomColor: c.borderLight
     },
     iconBox: {
         width: 40,
@@ -171,12 +177,12 @@ const styles = StyleSheet.create({
     itemTitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
         marginBottom: 2
     },
     date: {
         fontSize: 12,
-        color: '#9CA3AF'
+        color: c.textMuted
     },
     statusContainer: {
         flexDirection: 'row',

@@ -1,8 +1,11 @@
 import messaging from '@react-native-firebase/messaging';
 import * as Notifications from 'expo-notifications';
+import notifee from '@notifee/react-native';
+import { cancelIncomingCall, getAnsweredCallThatOpenedApp, handleCallEvent, showIncomingCall, takePendingAnsweredCall } from '../services/incomingCall';
 import { Linking } from 'react-native';
 import { navigationRef } from '../navigation/navigationRef';
 import { setUnreadCount } from '../redux/slices/notificationSlice';
+import { loadIncomingFriendRequests } from '../redux/slices/friendsSlice';
 import { store } from '../redux/store';
 import { getUnreadCustomerNotificationCount } from '../services/api/notification.api';
 import { registerDeviceToken } from '../services/api/pushNotification.api';
@@ -154,7 +157,10 @@ function routeNotificationTap(data?: { [key: string]: string | object } | undefi
   }
 
   if (
-    (type === 'appointment_approved' || type === 'appointment_rejected' || type === 'appointment_reminder' || type === 'appointment_completed') &&
+    (type === 'appointment_approved' || type === 'appointment_rejected' || type === 'appointment_reminder' || type === 'appointment_completed' ||
+      // someone booked a consultation for me / it moved forward / my prescription is ready
+      type === 'family_booking' || type === 'family_booking_approved' || type === 'family_booking_declined' ||
+      type === 'family_booking_confirmed' || type === 'family_booking_completed' || type === 'family_prescription') &&
     typeof data?.requestId === 'string' &&
     data.requestId
   ) {
@@ -186,7 +192,8 @@ function routeNotificationTap(data?: { [key: string]: string | object } | undefi
   // family_link_accepted has no pending action left to take (the requester
   // is just being told the other side said yes) - still lands on
   // FamilyMembersScreen so they can see the new member right away.
-  if (type === 'family_link_request' || type === 'family_link_accepted') {
+  // A family member missed or skipped a dose, or a medicine was added for me: the family page shows it.
+  if (type === 'family_link_request' || type === 'family_link_accepted' || type === 'family_missed_dose' || type === 'family_medicine_added') {
     goToFamilyMembers();
     return;
   }
@@ -205,8 +212,47 @@ function routeNotificationTap(data?: { [key: string]: string | object } | undefi
 
 /** Foreground message + token-refresh listeners. Call once for the app's lifetime. */
 export function initPushNotifications() {
-  messaging().onMessage(async () => {
+  // Firebase delivers a "notification + data" remote message straight to
+  // this JS handler when the app is foregrounded - the OS never auto-shows
+  // it the way it does when backgrounded/killed. This used to only refresh
+  // the unread badge silently; re-displaying it as a local notification
+  // reuses the exact same sound/banner handler configured below, giving
+  // foreground the same behavior as background.
+  messaging().onMessage(async (remoteMessage) => {
+    // A consultation call while the app is open rings the same way (heads-up with Answer / Decline) - not as a plain banner.
+    if (remoteMessage.data?.type === 'call_incoming') {
+      showIncomingCall(remoteMessage.data as any).catch((error) => console.warn('Failed to show incoming call:', error));
+      return;
+    }
+    if (remoteMessage.data?.type === 'friend_request' || remoteMessage.data?.type === 'friend_request_accepted') {
+      store.dispatch(loadIncomingFriendRequests());
+    }
+    if (remoteMessage.data?.type === 'call_cancelled') {
+      cancelIncomingCall(String(remoteMessage.data.requestId || ''));
+      return;
+    }
     refreshUnreadCount();
+
+    const notification = remoteMessage.notification;
+    if (!notification) return;
+    try {
+      const isIncomingCall = remoteMessage.data?.type === 'call_incoming';
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: notification.title || 'Medicoo',
+          body: notification.body || '',
+          // Matches the sound names bundled via app.json's expo-notifications
+          // plugin - the same distinction the backend makes server-side
+          // (services/pushNotificationService.js's SOUND_BY_TEMPLATE_FOR_ROLE)
+          // for when the OS itself displays this (backgrounded/killed).
+          sound: isIncomingCall ? 'incoming_call.wav' : 'new_notification.wav',
+          data: (remoteMessage.data as Record<string, unknown>) || {},
+        },
+        trigger: null,
+      });
+    } catch (error) {
+      console.warn('Failed to display foreground notification:', error);
+    }
   });
 
   messaging().onTokenRefresh(async () => {
@@ -230,6 +276,21 @@ export function initPushNotifications() {
 
 /** Notification-tap navigation. Call once boot/navigation is ready. */
 export function setupNotificationTapHandling() {
+  // Answer pressed on a ringing call while the app is open -> go straight to the call.
+  notifee.onForegroundEvent((event) => {
+    handleCallEvent(event, (call) => {
+      goToIncomingCall(call.requestId, call.consultationType, call.callerName);
+      takePendingAnsweredCall();
+    }).catch(() => {});
+  });
+
+  // Answered from the lock screen / closed app: the app was launched by that press.
+  getAnsweredCallThatOpenedApp().then((call) => {
+    if (call) goToIncomingCall(call.requestId, call.consultationType, call.callerName);
+  });
+  const answeredEarly = takePendingAnsweredCall();
+  if (answeredEarly) goToIncomingCall(answeredEarly.requestId, answeredEarly.consultationType, answeredEarly.callerName);
+
   messaging().onNotificationOpenedApp((remoteMessage) => {
     routeNotificationTap(remoteMessage?.data);
   });

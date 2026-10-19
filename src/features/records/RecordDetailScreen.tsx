@@ -1,6 +1,6 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system/legacy';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import {
   ChevronLeft,
   Clock,
@@ -8,7 +8,7 @@ import {
   FileText,
   Trash2
 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -27,10 +27,16 @@ import { deleteDocument, getDocumentViewUrl } from '@/src/services/api/document.
 import { getToken } from '@/src/utils/tokenManagement';
 import { getDocumentTypeMeta } from './documentTypes';
 import { RecordItem } from './types';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
 export default function RecordDetailScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
@@ -81,8 +87,8 @@ export default function RecordDetailScreen() {
   const handleDelete = () => {
     showStatus(
       'warning',
-      'Delete Document?',
-      'Are you sure you want to permanently remove this document? This action cannot be reversed.',
+      t('delete_document'),
+      t('are_you_sure_you_want_to_permanently_r'),
       async () => {
         try {
           setIsDeleting(true);
@@ -91,7 +97,7 @@ export default function RecordDetailScreen() {
           navigation.goBack();
         } catch (error) {
           setIsDeleting(false);
-          showStatus('error', 'Deletion Failed', 'We couldn\'t delete the document. Please check your connection and try again.');
+          showStatus('error', t('deletion_failed'), t('we_couldn_t_delete_the_document_please'));
         }
       },
       'Delete'
@@ -102,7 +108,7 @@ export default function RecordDetailScreen() {
     if (!token) return;
 
     try {
-      showStatus('loading', 'Downloading...', 'Please wait while we prepare your file.');
+      showStatus('loading', t('downloading'), t('please_wait_while_we_prepare_your_file'));
 
       const viewUrl = getDocumentViewUrl(record.id);
       // Determine extension
@@ -128,19 +134,19 @@ export default function RecordDetailScreen() {
           await FileSystem.writeAsStringAsync(createdUri, base64, { encoding: FileSystem.EncodingType.Base64 });
 
           hideStatus();
-          showStatus('success', 'Success', 'File saved successfully to ' + permissions.directoryUri);
+          showStatus('success', t('success'), 'File saved successfully to ' + permissions.directoryUri);
         } else {
           hideStatus();
-          showStatus('error', 'Permission Denied', 'Cannot save file without storage permissions.');
+          showStatus('error', t('permission_denied'), t('cannot_save_file_without_storage_permi'));
         }
       } else {
         hideStatus();
-        showStatus('success', 'Downloaded', 'File downloaded to app documents: ' + fileUri);
+        showStatus('success', t('downloaded'), 'File downloaded to app documents: ' + fileUri);
       }
     } catch (error) {
       console.error('Download failed:', error);
       hideStatus();
-      showStatus('error', 'Error', 'Failed to download file.');
+      showStatus('error', t('error'), t('failed_to_download_file'));
     }
   };
 
@@ -157,7 +163,7 @@ export default function RecordDetailScreen() {
     if (!token) {
       return (
         <View style={styles.loadingPreview}>
-          <ActivityIndicator size="small" color="#0FBBA1" />
+          <ActivityIndicator size="small" color="#10B981" />
         </View>
       );
     }
@@ -183,15 +189,15 @@ export default function RecordDetailScreen() {
     return (
       <View style={styles.fallbackCard}>
         <View style={styles.fallbackIconBg}>
-          <FileText size={48} color="#0FBBA1" />
+          <FileText size={48} color="#10B981" />
         </View>
-        <Text style={styles.fallbackTitle}>Preview Unavailable</Text>
+        <Text style={styles.fallbackTitle}>{t('preview_unavailable')}</Text>
         <Text style={styles.fallbackSubtitle}>
-          This file type ({typeMeta.label}) cannot be previewed directly.
+          This file type ({t(typeMeta.label)}) cannot be previewed directly.
         </Text>
         <TouchableOpacity style={styles.downloadBtnPlaceholder} onPress={handleDownload}>
-          <Download size={18} color="#0FBBA1" style={{ marginRight: 8 }} />
-          <Text style={styles.downloadBtnText}>Download File</Text>
+          <Download size={18} color="#10B981" style={{ marginRight: 8 }} />
+          <Text style={styles.downloadBtnText}>{t('download_file')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -206,22 +212,22 @@ export default function RecordDetailScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Document Details</Text>
+        <Text style={styles.headerTitle}>{t('document_details')}</Text>
 
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <TouchableOpacity
             style={styles.iconBtn}
             onPress={handleDownload}
           >
-            <Download size={22} color="#1F2937" />
+            <Download size={22} color={theme.text} />
           </TouchableOpacity>
 
           {!record.isSystem && (
             <TouchableOpacity
-              style={[styles.iconBtn, { backgroundColor: '#FEF2F2' }]}
+              style={[styles.iconBtn, { backgroundColor: theme.errorBg }]}
               onPress={handleDelete}
               disabled={isDeleting}
             >
@@ -237,14 +243,14 @@ export default function RecordDetailScreen() {
         <View style={styles.docHeader}>
           <View style={styles.badgeRow}>
             <View style={[styles.typeBadge, { backgroundColor: typeMeta.bg }]}>
-              <Text style={[styles.typeText, { color: typeMeta.color }]}>{typeMeta.label.toUpperCase()}</Text>
+              <Text style={[styles.typeText, { color: typeMeta.color }]}>{t(typeMeta.label).toUpperCase()}</Text>
             </View>
           </View>
 
           <Text style={styles.docTitle}>{record.title}</Text>
 
           <View style={styles.metaRow}>
-            <Clock size={14} color="#6B7280" style={{ marginRight: 6 }} />
+            <Clock size={14} color={theme.textSecondary} style={{ marginRight: 6 }} />
             <Text style={styles.docSubtitle}>{record.date}</Text>
 
             <View style={styles.dotSeparator} />
@@ -273,10 +279,10 @@ export default function RecordDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.background,
   },
   // Same header recipe as the rest of the app - white bar + shadow, plain
   // icon back button, fontSize 20/600/#111827 title. The right-side
@@ -288,7 +294,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -304,7 +310,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
   },
   iconBtn: {
     width: 44,
@@ -312,7 +318,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 22,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
   },
   scrollContent: {
     padding: 24,
@@ -339,7 +345,7 @@ const styles = StyleSheet.create({
   docTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1F2937',
+    color: c.text,
     lineHeight: 32,
     marginBottom: 8,
   },
@@ -351,7 +357,7 @@ const styles = StyleSheet.create({
   },
   docSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: c.textSecondary,
     fontWeight: '500',
   },
   dotSeparator: {
@@ -364,13 +370,13 @@ const styles = StyleSheet.create({
 
   // Preview
   imageCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
     borderRadius: 20,
     overflow: 'hidden',
     width: '100%',
     // height: 450, // Removed fixed height
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
     justifyContent: 'center', // Keep vertical center in case of loading
     // alignItems: 'center', // Removed to let image fill width
     shadowColor: '#000',
@@ -389,7 +395,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fallbackCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
     borderRadius: 20,
     padding: 40,
     alignItems: 'center',
@@ -400,7 +406,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -413,12 +419,12 @@ const styles = StyleSheet.create({
   fallbackTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1F2937',
+    color: c.text,
     marginBottom: 8,
   },
   fallbackSubtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: c.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 22,
@@ -428,9 +434,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 24,
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
     borderRadius: 100,
-    shadowColor: '#0FBBA1',
+    shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,

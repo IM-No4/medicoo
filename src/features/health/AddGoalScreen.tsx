@@ -1,7 +1,7 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     BackHandler,
@@ -23,6 +23,9 @@ import GoalTypeStep, { GOAL_TYPES } from '../../components/modals/AddGoalModal/s
 import GoalTargetStep from '../../components/modals/AddGoalModal/steps/GoalTargetStep';
 import GoalFrequencyStep from '../../components/modals/AddGoalModal/steps/GoalFrequencyStep';
 import { enableStepsTracking, isHealthConnectSupported, openHealthConnectInPlayStore } from '../../services/health/healthConnectStepsService';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const STEPS = [GoalTypeStep, GoalTargetStep, GoalFrequencyStep];
 const STEP_TITLES = ['Choose Goal', 'Set Target', 'Frequency'];
@@ -31,6 +34,9 @@ const STEP_TITLES = ['Choose Goal', 'Set Target', 'Frequency'];
 // pushed screen, not a bottom sheet, matching how the rest of the app's
 // multi-step flows now look.
 export default function AddGoalScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation();
     const dispatch = useDispatch<AppDispatch>();
     const insets = useSafeAreaInsets();
@@ -103,8 +109,8 @@ export default function AddGoalScreen() {
             setStatus({
                 visible: true,
                 type: 'success',
-                title: 'Tracking Enabled',
-                message: 'Medicoo will keep your steps goal updated automatically from Health Connect.',
+                title: t('tracking_enabled'),
+                message: t('medicoo_will_keep_your_steps_goal_upda'),
                 closeOnDismiss: true,
             });
             return;
@@ -131,8 +137,8 @@ export default function AddGoalScreen() {
         setStatus({
             visible: true,
             type: 'error',
-            title: 'Could not enable tracking',
-            message: 'Permission wasn\'t granted, so tracking is off for now. You can try again from Manage Goals.',
+            title: t('could_not_enable_tracking_2'),
+            message: t('permission_wasn_t_granted_so_tracking'),
             closeOnDismiss: true,
         });
     };
@@ -161,7 +167,7 @@ export default function AddGoalScreen() {
                 setStatus({
                     visible: true,
                     type: 'info',
-                    title: 'Track Steps Automatically?',
+                    title: t('track_steps_automatically'),
                     message: `Let Medicoo read your steps from Health Connect so "${createdTitle || 'Daily Steps'}" updates automatically using your phone's background step data.`,
                     primaryAction: handleEnableTracking,
                     primaryActionText: 'Enable',
@@ -171,7 +177,7 @@ export default function AddGoalScreen() {
                 setStatus({
                     visible: true,
                     type: 'success',
-                    title: 'Goal Created',
+                    title: t('goal_created'),
                     message: `Your ${createdTitle || 'goal'} has been added to your daily habits.`,
                     closeOnDismiss: true,
                 });
@@ -184,7 +190,7 @@ export default function AddGoalScreen() {
             setStatus({
                 visible: true,
                 type: 'error',
-                title: 'Could not save goal',
+                title: t('could_not_save_goal'),
                 message: typeof error === 'string' ? error : 'Something went wrong. Please try again.',
                 closeOnDismiss: false,
             });
@@ -207,7 +213,7 @@ export default function AddGoalScreen() {
 
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={goBack} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{STEP_TITLES[stepIndex]}</Text>
                 <View style={{ width: 40 }} />
@@ -245,9 +251,9 @@ export default function AddGoalScreen() {
                 <TouchableOpacity
                     style={[
                         styles.nextBtn,
-                        { backgroundColor: isNextDisabled() ? '#E2E8F0' : '#0FBBA1' },
+                        { backgroundColor: isNextDisabled() ? '#E2E8F0' : '#10B981' },
                         !isNextDisabled() && {
-                            shadowColor: '#0FBBA1',
+                            shadowColor: '#10B981',
                             shadowOffset: { width: 0, height: 6 },
                             shadowOpacity: 0.35,
                             shadowRadius: 12,
@@ -261,7 +267,7 @@ export default function AddGoalScreen() {
                     {loading ? (
                         <ActivityIndicator color="#FFF" />
                     ) : (
-                        <Text style={[styles.nextBtnText, isNextDisabled() && { color: '#94A3B8' }]}>
+                        <Text style={[styles.nextBtnText, isNextDisabled() && { color: theme.textMuted }]}>
                             {isLastStep ? 'Save Goal' : 'Continue'}
                         </Text>
                     )}
@@ -285,8 +291,8 @@ export default function AddGoalScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.card },
     // Same header recipe as the rest of the app's screens - white bar +
     // shadow, plain icon back button, fontSize 20/600/#111827 title.
     header: {
@@ -295,7 +301,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -311,7 +317,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     progressTrack: {
         flexDirection: 'row',
@@ -329,8 +335,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: '#F1F5F9',
-        backgroundColor: '#FFFFFF',
+        borderTopColor: c.borderLight,
+        backgroundColor: c.card,
     },
     nextBtn: {
         borderRadius: 18,

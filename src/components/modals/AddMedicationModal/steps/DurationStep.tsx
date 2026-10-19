@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Switch, Text, View } from 'react-native';
 import { RenderMedicationIcon } from '../config/shapes';
-import { styles } from '../styles';
+import { createStyles } from '../styles';
+import { useTheme } from '../../../../theme/ThemeContext';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 interface DurationStepProps {
   data: any;
@@ -9,6 +11,9 @@ interface DurationStepProps {
 }
 
 export default function DurationStep({ data, onChange }: DurationStepProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
   return (
     <View style={styles.stepContainer}>
       {/* Visual Anchor */}
@@ -23,23 +28,23 @@ export default function DurationStep({ data, onChange }: DurationStepProps) {
         </View>
       </View>
 
-      <Text style={styles.stepTitle}>Privacy & Visibility</Text>
+      <Text style={styles.stepTitle}>{t('privacy_visibility')}</Text>
 
-      <Text style={styles.sectionLabel}>Permissions</Text>
+      <Text style={styles.sectionLabel}>{t('permissions')}</Text>
       <View style={styles.listGroup}>
         <View style={styles.simpleRow}>
           <View style={{ flex: 1, paddingRight: 16 }}>
-            <Text style={styles.simpleRowText}>Share with Family</Text>
-            <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>
-              Allow family members to see this medication.
+            <Text style={styles.simpleRowText}>{t('share_with_family')}</Text>
+            <Text style={{ fontSize: 13, color: theme.textSecondary, marginTop: 2 }}>
+              {t('allow_family_members_to_see_this_medic')}
             </Text>
           </View>
           <Switch
             value={data.familyVisible}
             onValueChange={v => onChange({ familyVisible: v })}
-            trackColor={{ false: '#E5E7EB', true: '#0FBBA1' }}
+            trackColor={{ false: theme.border, true: '#10B981' }}
             thumbColor={'#FFF'}
-            ios_backgroundColor="#E5E7EB"
+            ios_backgroundColor={theme.border}
           />
         </View>
       </View>

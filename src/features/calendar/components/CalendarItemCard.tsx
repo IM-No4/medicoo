@@ -1,6 +1,8 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { styles } from '../styles';
+import { useMemo } from 'react';
+import { createStyles } from '../styles';
+import { useTheme } from '../../../theme/ThemeContext';
 
 interface Props {
   title: string;
@@ -11,6 +13,8 @@ export default function CalendarItemCard({
   title,
   subtitle,
 }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{title}</Text>

@@ -1,11 +1,14 @@
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Activity, Calendar, HeartPulse, Target, WifiOff, Wind } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../redux/store';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 // Rendered instead of HomeHeader while offline (see HomeScreen.tsx) - no
 // location selector, search bar, cart, or notification bell, since none of
@@ -30,6 +33,9 @@ const QUICK_LINKS: { key: string; icon: any; label: string; screen: string }[] =
 ];
 
 export default function OfflineHomeHeader() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
     const navigation = useNavigation<any>();
     // Cached on-device the last time the profile was reachable (see
@@ -39,7 +45,7 @@ export default function OfflineHomeHeader() {
 
     return (
         <LinearGradient
-            colors={['#0FBBA1', '#007C69']}
+            colors={['#10B981', '#007C69']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[styles.container, { paddingTop: insets.top + 20 }]}
@@ -49,7 +55,7 @@ export default function OfflineHomeHeader() {
             </Text>
             <View style={styles.offlinePill}>
                 <WifiOff size={12} color="#FFFFFF" />
-                <Text style={styles.offlineText}>More awaits you online</Text>
+                <Text style={styles.offlineText}>{t('more_online')}</Text>
             </View>
 
             <View style={styles.quickLinks}>
@@ -63,7 +69,7 @@ export default function OfflineHomeHeader() {
                         <View style={styles.quickLinkIcon}>
                             <Icon size={20} color="#FFFFFF" />
                         </View>
-                        <Text style={styles.quickLinkLabel}>{label}</Text>
+                        <Text style={styles.quickLinkLabel}>{t(label)}</Text>
                     </TouchableOpacity>
                 ))}
             </View>
@@ -71,7 +77,7 @@ export default function OfflineHomeHeader() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         paddingHorizontal: 24,
         paddingBottom: 22,

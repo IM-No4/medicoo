@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import * as Location from "expo-location";
 import {
@@ -39,10 +40,16 @@ import {
 } from "../../../../services/api/address.api";
 import { getProfileDetails } from "../../../../services/api/user.api";
 import { getDistanceKm } from "../../../../utils/geo";
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 type AddressType = "Home" | "Work" | "Other";
 
 export default function AddressBookScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -159,7 +166,7 @@ export default function AddressBookScreen() {
       const data = await getUserAddresses();
       setAddresses(data);
     } catch (error) {
-      showStatus("error", "Error", "Failed to fetch addresses");
+      showStatus("error", t('error'), t('failed_to_fetch_addresses'));
     } finally {
       setLoading(false);
     }
@@ -168,8 +175,8 @@ export default function AddressBookScreen() {
   const handleDelete = (id: string) => {
     showStatus(
       "warning",
-      "Remove Address?",
-      "Are you sure you want to delete this address from your book?",
+      t('remove_address'),
+      t('are_you_sure_you_want_to_delete_this_a'),
       async () => {
         hideStatus();
         setLoading(true);
@@ -182,9 +189,9 @@ export default function AddressBookScreen() {
             dispatch(clearSelectedAddress());
           }
           await fetchAddresses(); // Refresh the list
-          showStatus("success", "Deleted", "Address deleted successfully.");
+          showStatus("success", t('deleted'), t('address_deleted_successfully'));
         } catch (error) {
-          showStatus("error", "Error", "Failed to delete address.");
+          showStatus("error", t('error'), t('failed_to_delete_address'));
         } finally {
           setLoading(false);
         }
@@ -239,21 +246,21 @@ export default function AddressBookScreen() {
 
       await Share.share({
         message: `Here is my address on Medicoo: ${item.fullAddress || item.address}. Tap the link to save it: ${deepLink}`,
-        title: "Share Address",
+        title: t('share_address'),
       });
     } catch (error) {
-      showStatus("error", "Error", "Failed to share address");
+      showStatus("error", t('error'), t('failed_to_share_address'));
     }
   };
 
   const getIconColor = (type: AddressType) => {
     switch (type) {
       case "Home":
-        return { bg: "#ECFDF5", icon: "#10B981" };
+        return { bg: theme.successBg, icon: "#10B981" };
       case "Work":
-        return { bg: "#EEF2FF", icon: "#4F46E5" };
+        return { bg: theme.infoBg, icon: "#4F46E5" };
       default:
-        return { bg: "#F3F4F6", icon: "#6B7280" };
+        return { bg: theme.cardSecondary, icon: theme.textSecondary };
     }
   };
 
@@ -278,13 +285,13 @@ export default function AddressBookScreen() {
           style={styles.backButton}
           activeOpacity={0.7}
         >
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Address Book</Text>
+        <Text style={styles.headerTitle}>{t('address_book')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {loading ? (
           <View
             style={{
@@ -294,16 +301,16 @@ export default function AddressBookScreen() {
               marginTop: 100,
             }}
           >
-            <ActivityIndicator size="large" color="#0FBBA1" />
+            <ActivityIndicator size="large" color="#10B981" />
           </View>
         ) : addresses.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIconCircle}>
-              <MapPin size={40} color="#9CA3AF" />
+              <MapPin size={40} color={theme.textMuted} />
             </View>
-            <Text style={styles.emptyTitle}>No Addresses Found</Text>
+            <Text style={styles.emptyTitle}>{t('no_addresses_found')}</Text>
             <Text style={styles.emptyText}>
-              Add an address to make checking out faster.
+              {t('add_an_address_to_make_checking_out_fa')}
             </Text>
           </View>
         ) : (
@@ -384,7 +391,7 @@ export default function AddressBookScreen() {
                         >
                           {item.isDefault && (
                             <View style={styles.defaultBadge}>
-                              <Text style={styles.defaultText}>Default</Text>
+                              <Text style={styles.defaultText}>{t('default')}</Text>
                             </View>
                           )}
                         </View>
@@ -397,7 +404,7 @@ export default function AddressBookScreen() {
                         activeOpacity={0.6}
                         onPress={() => handleShare(item)}
                       >
-                        <Share2 size={15} color="#64748B" />
+                        <Share2 size={15} color={theme.textSecondary} />
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.headerActionBtn}
@@ -419,7 +426,7 @@ export default function AddressBookScreen() {
                           })
                         }
                       >
-                        <Edit size={15} color="#64748B" />
+                        <Edit size={15} color={theme.textSecondary} />
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.headerActionBtn, styles.deleteHeaderBtn]}
@@ -456,7 +463,7 @@ export default function AddressBookScreen() {
                         <View style={styles.selectedIndicatorBtn}>
                           <Check size={14} color="#089643" />
                           <Text style={styles.selectedIndicatorText}>
-                            Selected
+                            {t('selected')}
                           </Text>
                         </View>
                       ) : (
@@ -466,7 +473,7 @@ export default function AddressBookScreen() {
                           onPress={() => handleSelectAddress(item)}
                         >
                           <Text style={styles.selectAddressBtnText}>
-                            Select
+                            {String(t('select')).toUpperCase()}
                           </Text>
                         </TouchableOpacity>
                       )}
@@ -489,8 +496,8 @@ export default function AddressBookScreen() {
           style={styles.addButton}
           onPress={() => navigation.navigate("AddAddress")}
         >
-          <Plus size={20} color="#fff" />
-          <Text style={styles.addButtonText}>Add New Address</Text>
+          <Plus size={18} color="#fff" />
+          <Text style={styles.addButtonText}>{String(t('add_new_address')).toUpperCase()}</Text>
         </TouchableOpacity>
       </View>
 
@@ -509,10 +516,10 @@ export default function AddressBookScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FE",
+    backgroundColor: c.background,
   },
   // Same header recipe as the Family Members / Add Family Member screens -
   // white bar + shadow, plain icon back button, fontSize 20/600/#111827
@@ -523,9 +530,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      ios: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
     }),
   },
@@ -539,42 +546,42 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#111827",
+    color: c.text,
   },
   content: {
-    // padding: 20,
-    paddingBottom: 120,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 130,
   },
   list: {
-    gap: 0,
+    gap: 10,
   },
   card: {
-    backgroundColor: "#fff",
-    // borderRadius: 18,
-    padding: 24,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    backgroundColor: c.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: c.borderLight,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   cardSelected: {
-    // borderColor: "#089643",
-    // borderWidth: 1,
+    backgroundColor: c.card,
   },
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 6,
   },
   badgeRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
   iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -584,14 +591,14 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   typeText: {
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: "700",
-    color: "#1E293B",
+    color: c.text,
   },
   distanceText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: "600",
-    color: "#0FBBA1",
+    color: "#10B981",
   },
   rightBadges: {
     flexDirection: "row",
@@ -599,7 +606,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   defaultBadge: {
-    backgroundColor: "#E8F5E9",
+    backgroundColor: c.successBg,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -609,44 +616,45 @@ const styles = StyleSheet.create({
   defaultText: {
     fontSize: 9,
     fontWeight: "800",
-    color: "#2E7D32",
+    color: c.success,
     textTransform: "uppercase",
     letterSpacing: 0.3,
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
   headerActionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F8FAFC",
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: c.cardSecondary,
     alignItems: "center",
     justifyContent: "center",
   },
   deleteHeaderBtn: {
-    backgroundColor: "#FEF2F2",
+    backgroundColor: c.errorBg,
   },
   addressBody: {
-    marginTop: 2,
+    marginTop: 0,
   },
   flatText: {
-    fontSize: 14,
-    color: "#334155",
-    marginBottom: 4,
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: c.text,
+    marginBottom: 2,
   },
   addressText: {
-    fontSize: 13,
-    color: "#64748B",
-    lineHeight: 18,
+    fontSize: 12,
+    color: c.textSecondary,
+    lineHeight: 17,
   },
   receiverText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#1F2937",
-    lineHeight: 18,
+    fontSize: 12,
+    fontWeight: "600",
+    color: c.text,
+    lineHeight: 17,
     marginTop: 4,
   },
   emptyState: {
@@ -654,83 +662,84 @@ const styles = StyleSheet.create({
     marginTop: 60,
   },
   emptyIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#F3F4F6",
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    backgroundColor: c.cardSecondary,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
-    color: "#1F2937",
-    marginBottom: 8,
+    color: c.text,
+    marginBottom: 6,
   },
   emptyText: {
-    fontSize: 14,
-    color: "#6B7280",
+    fontSize: 13,
+    color: c.textSecondary,
     textAlign: "center",
+    lineHeight: 19,
   },
   footer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#fff",
-    padding: 20,
+    backgroundColor: c.card,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
+    borderTopColor: c.borderLight,
   },
   addButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0FBBA1",
-    paddingVertical: 16,
-    borderRadius: 14,
+    backgroundColor: "#10B981",
+    height: 48,
+    borderRadius: 10,
     gap: 8,
   },
   addButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.6,
     color: "#fff",
   },
   cardActionsRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    marginTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-    paddingTop: 12,
+    marginTop: 8,
     alignItems: "center",
   },
   selectAddressBtn: {
-    backgroundColor: "#089643",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignSelf: "flex-start",
+    height: 34,
+    paddingHorizontal: 20,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "#10B981",
+    backgroundColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
   },
   selectAddressBtnText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "700",
+    color: "#10B981",
+    fontSize: 12.5,
+    fontWeight: "800",
+    letterSpacing: 0.6,
   },
   selectedIndicatorBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: "#F0FDF4",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignSelf: "flex-start",
+    gap: 6,
+    height: 34,
+    paddingHorizontal: 8,
   },
   selectedIndicatorText: {
-    color: "#089643",
-    fontSize: 13,
-    fontWeight: "700",
+    color: "#10B981",
+    fontSize: 12.5,
+    fontWeight: "800",
   },
 });

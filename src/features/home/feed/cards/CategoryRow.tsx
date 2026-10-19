@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { FeedAction } from '../feed.actions';
 import { CategoryRowItem } from '../feed.types';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
 
 type Props = {
     title: string;
@@ -14,6 +16,8 @@ type Props = {
 // label below, tightly packed, no card border/shadow - a flat entry point
 // into a category, not a product carousel in its own right.
 function CategoryRow({ title, items, onAction }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const renderItem = ({ item }: { item: CategoryRowItem }) => (
         <TouchableOpacity
             style={styles.item}
@@ -24,7 +28,7 @@ function CategoryRow({ title, items, onAction }: Props) {
                 {item.imageUrl ? (
                     <Image source={{ uri: item.imageUrl }} style={styles.image} resizeMode="cover" />
                 ) : (
-                    <AppIcon name="shopping-bag" size={28} color="#9CA3AF" />
+                    <AppIcon name="shopping-bag" size={28} color={theme.textMuted} />
                 )}
             </View>
             <Text style={styles.label} numberOfLines={2}>{item.title}</Text>
@@ -48,7 +52,7 @@ function CategoryRow({ title, items, onAction }: Props) {
 
 export default React.memo(CategoryRow);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         // No extra marginTop - every other feed card relies solely on its
         // own marginBottom:28 for the gap before it, so an additional top
@@ -59,7 +63,7 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 13,
-        color: '#494949',
+        color: c.text,
         letterSpacing: 2,
         fontWeight: '700',
         textTransform: 'uppercase',
@@ -82,7 +86,7 @@ const styles = StyleSheet.create({
         width: 72,
         height: 72,
         borderRadius: 36,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 8,
@@ -98,7 +102,7 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#374151',
+        color: c.text,
         textAlign: 'center',
     },
 });

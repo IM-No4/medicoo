@@ -2,20 +2,19 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, CheckCircle, ChevronDown, ChevronLeft, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MediaPickerModal from '../../../../components/modals/image-picker/MediaPickerModal';
@@ -23,11 +22,19 @@ import OtpModal from '../../../../components/modals/OtpModal';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
 import { sendEmailOtp, updateProfile, verifyEmailOtp } from '../../../../services/api/user.api';
 import { formatDateForApi, formatDateForDisplay, formatGenderForApi, formatGenderForDisplay } from '../../../../utils/formatters';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
+import { Modal } from '../../../../components/ThemedModal';
+import { AuthImage } from '../../../../components/AuthImage';
 
 const GENDER_OPTIONS = ['Male', 'Female', 'Other'];
 const BLOOD_GROUP_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 export default function EditProfileScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const insets = useSafeAreaInsets();
@@ -50,11 +57,7 @@ export default function EditProfileScreen() {
     const [loading, setLoading] = useState(false);
 
     // State for image handling
-    const [profileImageUri, setProfileImageUri] = useState<string | null>(
-        profile?.profileImage
-            ? (profile.profileImage.startsWith('http') ? profile.profileImage : `data:image/jpeg;base64,${profile.profileImage}`)
-            : null
-    );
+    const [profileImageUri, setProfileImageUri] = useState<string | null>(profile?.profileImage || null);
     // Remove newBase64Image as we are using FormData now
     const [selectedImage, setSelectedImage] = useState<any>(null);
 
@@ -98,7 +101,7 @@ export default function EditProfileScreen() {
                 handleImageSelected(result.assets[0]);
             }
         } catch (e) {
-            setStatusModal({ visible: true, status: 'error', title: 'Gallery Error', message: 'We couldn\'t open your photo gallery. Please check app permissions.' });
+            setStatusModal({ visible: true, status: 'error', title: t('gallery_error'), message: t('we_couldn_t_open_your_photo_gallery_pl') });
         }
     };
 
@@ -107,7 +110,7 @@ export default function EditProfileScreen() {
         try {
             const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
             if (cameraStatus !== 'granted') {
-                setStatusModal({ visible: true, status: 'warning', title: 'Camera Access', message: 'Camera permission is required to take a profile photo.' });
+                setStatusModal({ visible: true, status: 'warning', title: t('camera_access'), message: t('camera_permission_is_required_to_take') });
                 return;
             }
 
@@ -122,7 +125,7 @@ export default function EditProfileScreen() {
                 handleImageSelected(result.assets[0]);
             }
         } catch (e) {
-            setStatusModal({ visible: true, status: 'error', title: 'Camera Error', message: 'Failed to open camera. Please try again.' });
+            setStatusModal({ visible: true, status: 'error', title: t('camera_error'), message: t('failed_to_open_camera_please_try_again') });
         }
     };
 
@@ -140,7 +143,7 @@ export default function EditProfileScreen() {
 
     const handleSave = async () => {
         setLoading(true);
-        setStatusModal({ visible: true, status: 'loading', message: 'Updating profile...' });
+        setStatusModal({ visible: true, status: 'loading', message: t('updating_profile') });
 
         try {
             const formDataPayload = new FormData();
@@ -175,8 +178,8 @@ export default function EditProfileScreen() {
             setStatusModal({
                 visible: true,
                 status: 'success',
-                title: 'Profile Updated',
-                message: 'Your changes have been saved successfully.',
+                title: t('profile_updated'),
+                message: t('your_changes_have_been_saved_successfu'),
                 shouldGoBack: true,
             });
 
@@ -185,8 +188,8 @@ export default function EditProfileScreen() {
             setStatusModal({
                 visible: true,
                 status: 'error',
-                title: 'Update Failed',
-                message: 'Could not update profile. Please try again.',
+                title: t('update_failed'),
+                message: t('could_not_update_profile_please_try_ag'),
                 shouldGoBack: false,
             });
         } finally {
@@ -199,8 +202,8 @@ export default function EditProfileScreen() {
             setStatusModal({
                 visible: true,
                 status: 'warning',
-                title: 'Email Required',
-                message: 'Please enter an email address to proceed.',
+                title: t('email_required'),
+                message: t('please_enter_an_email_address_to_proce'),
                 shouldGoBack: false
             });
             return;
@@ -213,8 +216,8 @@ export default function EditProfileScreen() {
             setStatusModal({
                 visible: true,
                 status: 'error',
-                title: 'OTP Error',
-                message: 'Failed to send verification code. Please try again.',
+                title: t('otp_error'),
+                message: t('failed_to_send_verification_code_pleas'),
                 shouldGoBack: false
             });
         } finally {
@@ -230,16 +233,16 @@ export default function EditProfileScreen() {
             setStatusModal({
                 visible: true,
                 status: 'success',
-                title: 'Email Verified',
-                message: 'Your email address has been verified successfully.',
+                title: t('email_verified'),
+                message: t('your_email_address_has_been_verified_s'),
                 shouldGoBack: false
             });
         } catch (error) {
             setStatusModal({
                 visible: true,
                 status: 'error',
-                title: 'Verification Failed',
-                message: 'Invalid or expired code. Please try again.',
+                title: t('verification_failed'),
+                message: t('invalid_or_expired_code_please_try_aga'),
                 shouldGoBack: false
             });
         } finally {
@@ -263,15 +266,15 @@ export default function EditProfileScreen() {
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1, backgroundColor: '#fff' }}
+            style={{ flex: 1, backgroundColor: theme.card }}
         >
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Edit Profile</Text>
+                <Text style={styles.headerTitle}>{t('edit_profile')}</Text>
                 <TouchableOpacity onPress={handleSave} disabled={loading}>
-                    {loading ? <ActivityIndicator size="small" color="#0FBBA1" /> : <Text style={styles.saveText}>Save</Text>}
+                    {loading ? <ActivityIndicator size="small" color="#10B981" /> : <Text style={styles.saveText}>Save</Text>}
                 </TouchableOpacity>
             </View>
 
@@ -281,7 +284,7 @@ export default function EditProfileScreen() {
                 <View style={styles.imageSection}>
                     <View style={styles.imageContainer}>
                         {profileImageUri ? (
-                            <Image source={{ uri: profileImageUri }} style={styles.avatar} />
+                            <AuthImage uri={profileImageUri} style={styles.avatar} />
                         ) : (
                             <View style={styles.placeholderAvatar}>
                                 <Text style={styles.initials}>{formData.name ? formData.name.charAt(0).toUpperCase() : 'U'}</Text>
@@ -291,27 +294,27 @@ export default function EditProfileScreen() {
                             <Camera size={18} color="#fff" />
                         </TouchableOpacity>
                     </View>
-                    <Text style={styles.changePhotoText}>Change Profile Photo</Text>
+                    <Text style={styles.changePhotoText}>{t('change_profile_photo')}</Text>
                 </View>
 
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Full Name</Text>
+                    <Text style={styles.label}>{t('full_name_2')}</Text>
                     <TextInput
                         style={styles.input}
                         value={formData.name}
                         onChangeText={(text) => handleChange('name', text)}
-                        placeholder="Enter your name"
+                        placeholder={t('enter_your_name')}
                     />
                 </View>
 
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Email Address</Text>
+                    <Text style={styles.label}>{t('email_address')}</Text>
                     <View style={styles.emailRow}>
                         <TextInput
                             style={[styles.input, { flex: 1, backgroundColor: profile?.email && profile.email === formData.email ? '#F3F4F6' : '#F9FAFB' }]}
                             value={formData.email}
                             onChangeText={(text) => handleChange('email', text)}
-                            placeholder="Enter your email"
+                            placeholder={t('enter_your_email')}
                             keyboardType="email-address"
                             autoCapitalize="none"
                         />
@@ -322,7 +325,7 @@ export default function EditProfileScreen() {
                                 onPress={handleSendOtp}
                                 disabled={verifying}
                             >
-                                {verifying ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.verifyTextSmall}>Verify</Text>}
+                                {verifying ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.verifyTextSmall}>{t('verify')}</Text>}
                             </TouchableOpacity>
                         )}
                         {/* Show checkmark if verified and unchanged */}
@@ -336,7 +339,7 @@ export default function EditProfileScreen() {
 
                 <View style={styles.row}>
                     <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                        <Text style={styles.label}>Gender</Text>
+                        <Text style={styles.label}>{t('gender')}</Text>
                         <TouchableOpacity
                             style={styles.selectInput}
                             onPress={() => openSelection('Select Gender', GENDER_OPTIONS, 'gender')}
@@ -344,12 +347,12 @@ export default function EditProfileScreen() {
                             <Text style={[styles.selectText, !formData.gender && styles.placeholderText]}>
                                 {formData.gender || 'Select'}
                             </Text>
-                            <ChevronDown size={20} color="#9CA3AF" />
+                            <ChevronDown size={20} color={theme.textMuted} />
                         </TouchableOpacity>
                     </View>
 
                     <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                        <Text style={styles.label}>Date of Birth</Text>
+                        <Text style={styles.label}>{t('date_of_birth_2')}</Text>
                         <TouchableOpacity
                             style={styles.selectInput}
                             onPress={() => setShowDatePicker(true)}
@@ -357,14 +360,14 @@ export default function EditProfileScreen() {
                             <Text style={[styles.selectText, !formData.dob && styles.placeholderText]}>
                                 {formData.dob ? formatDateForDisplay(formData.dob) : 'Select Date'}
                             </Text>
-                            <ChevronDown size={20} color="#9CA3AF" />
+                            <ChevronDown size={20} color={theme.textMuted} />
                         </TouchableOpacity>
                     </View>
                 </View>
 
                 <View style={styles.row}>
                     <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                        <Text style={styles.label}>Blood Group</Text>
+                        <Text style={styles.label}>{t('blood_group_2')}</Text>
                         <TouchableOpacity
                             style={styles.selectInput}
                             onPress={() => openSelection('Select Blood Group', BLOOD_GROUP_OPTIONS, 'bloodGroup')}
@@ -372,14 +375,14 @@ export default function EditProfileScreen() {
                             <Text style={[styles.selectText, !formData.bloodGroup && styles.placeholderText]}>
                                 {formData.bloodGroup || 'Select'}
                             </Text>
-                            <ChevronDown size={20} color="#9CA3AF" />
+                            <ChevronDown size={20} color={theme.textMuted} />
                         </TouchableOpacity>
                     </View>
                 </View>
 
                 <View style={styles.row}>
                     <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                        <Text style={styles.label}>Height (cm)</Text>
+                        <Text style={styles.label}>{t('height_cm')}</Text>
                         <TextInput
                             style={styles.input}
                             value={formData.tryHeight}
@@ -389,7 +392,7 @@ export default function EditProfileScreen() {
                         />
                     </View>
                     <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                        <Text style={styles.label}>Weight (kg)</Text>
+                        <Text style={styles.label}>{t('weight_kg')}</Text>
                         <TextInput
                             style={styles.input}
                             value={formData.tryWeight}
@@ -401,12 +404,12 @@ export default function EditProfileScreen() {
                 </View>
 
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Address</Text>
+                    <Text style={styles.label}>{t('address')}</Text>
                     <TextInput
                         style={[styles.input, styles.textArea]}
                         value={formData.address}
                         onChangeText={(text) => handleChange('address', text)}
-                        placeholder="Enter your full address"
+                        placeholder={t('enter_your_full_address')}
                         multiline
                         numberOfLines={3}
                     />
@@ -447,7 +450,7 @@ export default function EditProfileScreen() {
                             <View style={styles.modalHeader}>
                                 <Text style={styles.modalTitle}>{selectionModal?.title}</Text>
                                 <TouchableOpacity onPress={closeSelection}>
-                                    <X size={24} color="#6B7280" />
+                                    <X size={24} color={theme.textSecondary} />
                                 </TouchableOpacity>
                             </View>
                             <ScrollView style={{ maxHeight: 300 }}>
@@ -479,7 +482,7 @@ export default function EditProfileScreen() {
                 onClose={() => setMediaPickerVisible(false)}
                 onCameraSelect={launchCamera}
                 onGallerySelect={launchLibrary}
-                title="Change Profile Photo"
+                title={t('change_profile_photo')}
             />
 
             <StatusModal
@@ -509,7 +512,7 @@ export default function EditProfileScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     // Same header recipe as the rest of the Profile screens - white bar +
     // shadow, plain icon back button, fontSize 20/600/#111827 title.
     header: {
@@ -518,15 +521,15 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
         }),
     },
     backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
-    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
-    saveText: { fontSize: 16, fontWeight: '600', color: '#0FBBA1' },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
+    saveText: { fontSize: 16, fontWeight: '600', color: '#10B981' },
 
     content: { padding: 20 },
 
@@ -535,7 +538,7 @@ const styles = StyleSheet.create({
         width: 100,
         height: 100,
         borderRadius: 50,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         borderWidth: 4,
         borderColor: '#fff',
         shadowColor: '#000',
@@ -547,13 +550,13 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     avatar: { width: '100%', height: '100%', borderRadius: 50 },
-    placeholderAvatar: { width: '100%', height: '100%', borderRadius: 50, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E5E7EB' },
-    initials: { fontSize: 32, fontWeight: '600', color: '#9CA3AF' },
+    placeholderAvatar: { width: '100%', height: '100%', borderRadius: 50, alignItems: 'center', justifyContent: 'center', backgroundColor: c.cardSecondary },
+    initials: { fontSize: 32, fontWeight: '600', color: c.textMuted },
     cameraButton: {
         position: 'absolute',
         bottom: 0,
         right: 0,
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         width: 32,
         height: 32,
         borderRadius: 16,
@@ -562,33 +565,33 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#fff',
     },
-    changePhotoText: { color: '#0FBBA1', fontSize: 14, fontWeight: '600', marginTop: 12 },
+    changePhotoText: { color: '#10B981', fontSize: 14, fontWeight: '600', marginTop: 12 },
 
     inputGroup: { marginBottom: 20 },
-    label: { fontSize: 13, fontWeight: '500', color: '#374151', marginBottom: 8 },
+    label: { fontSize: 13, fontWeight: '500', color: c.text, marginBottom: 8 },
     input: {
         borderWidth: 1,
-        borderColor: '#D1D5DB',
+        borderColor: c.border,
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 12,
         fontSize: 16,
-        color: '#1F2937',
-        backgroundColor: '#F9FAFB',
+        color: c.text,
+        backgroundColor: c.cardSecondary,
     },
     selectInput: {
         borderWidth: 1,
-        borderColor: '#D1D5DB',
+        borderColor: c.border,
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 12,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
     },
-    selectText: { fontSize: 16, color: '#1F2937' },
-    placeholderText: { color: '#9CA3AF' },
+    selectText: { fontSize: 16, color: c.text },
+    placeholderText: { color: c.textMuted },
     textArea: {
         height: 100,
         textAlignVertical: 'top',
@@ -602,7 +605,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 20,
@@ -615,22 +618,22 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         paddingBottom: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderLight,
     },
-    modalTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+    modalTitle: { fontSize: 18, fontWeight: '600', color: c.text },
     optionItem: {
         paddingVertical: 14,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
     },
-    optionText: { fontSize: 16, color: '#374151' },
-    selectedOptionText: { color: '#0FBBA1', fontWeight: '600' },
-    selectedDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#0FBBA1' },
+    optionText: { fontSize: 16, color: c.text },
+    selectedOptionText: { color: '#10B981', fontWeight: '600' },
+    selectedDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' },
 
     emailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     verifyButtonSmall: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         paddingVertical: 12,
         paddingHorizontal: 16,
         borderRadius: 12,

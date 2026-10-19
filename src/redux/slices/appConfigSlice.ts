@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { AppUpdateInfo, EnabledServices, getAppConfig, MaintenanceInfo } from '../../services/api/appConfig.api';
+import { AppUpdateInfo, EnabledServices, getAppConfig, MaintenanceInfo, PaymentGateway } from '../../services/api/appConfig.api';
 
 interface AppConfigState {
   // Defaults to the current launch state (pharmacy + consultations) so the
@@ -21,6 +21,10 @@ interface AppConfigState {
   // alone.
   restricted: boolean;
   loaded: boolean;
+  // Defaults to 'razorpay' (the only gateway before this toggle existed)
+  // and stays there on any failed/pending fetch - same fail-safe
+  // convention as `maintenance`/`enabledServices` above.
+  activePaymentGateway: PaymentGateway;
 }
 
 const initialState: AppConfigState = {
@@ -29,6 +33,7 @@ const initialState: AppConfigState = {
     consultations: true,
     labTests: false,
     homeCare: false,
+    hospitals: false,
     bloodDonation: false,
     ambulance: false,
     doctorPrescriptions: false,
@@ -40,6 +45,7 @@ const initialState: AppConfigState = {
   maintenance: null,
   restricted: false,
   loaded: false,
+  activePaymentGateway: 'razorpay',
 };
 
 export const loadAppConfig = createAsyncThunk('appConfig/load', async () => {
@@ -69,6 +75,7 @@ const appConfigSlice = createSlice({
       if (!action.payload?.maintenance?.enabled) {
         state.restricted = false;
       }
+      state.activePaymentGateway = action.payload?.activePaymentGateway === 'cashfree' ? 'cashfree' : 'razorpay';
       state.loaded = true;
     });
     // A failed fetch keeps the safe pharmacy-only default, `update: null`,
@@ -78,6 +85,7 @@ const appConfigSlice = createSlice({
       state.update = null;
       state.maintenance = null;
       state.restricted = false;
+      state.activePaymentGateway = 'razorpay';
       state.loaded = true;
     });
   },

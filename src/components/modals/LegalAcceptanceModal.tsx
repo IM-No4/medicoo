@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { bootSuccess } from '../../bootstrap/boot.slice';
@@ -14,6 +14,10 @@ import { logoutApi } from '../../services/api';
 import { unregisterDeviceToken } from '../../services/api/pushNotification.api';
 import { isSnoozed, setSnoozeUntil } from '../../services/storage/legalStorage';
 import LegalDocumentModal from './LegalDocumentModal';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../ThemedModal';
 
 const SNOOZE_HOURS = 6;
 
@@ -22,6 +26,9 @@ const SNOOZE_HOURS = 6;
 // by reading legal.required from Redux and checking the local snooze
 // timestamp, rather than being prop-controlled by a parent screen.
 export default function LegalAcceptanceModal() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const dispatch = useDispatch<AppDispatch>();
     const required = useSelector((state: RootState) => state.legal.required);
     const checked = useSelector((state: RootState) => state.legal.checked);
@@ -91,17 +98,17 @@ export default function LegalAcceptanceModal() {
         <Modal transparent visible={visible} animationType="fade" statusBarTranslucent onRequestClose={() => {}}>
             <View style={styles.overlay}>
                 <View style={styles.card}>
-                    <Text style={styles.title}>Terms & Privacy Updated</Text>
+                    <Text style={styles.title}>{t('terms_privacy_updated')}</Text>
                     <Text style={styles.message}>
-                        We've updated our Terms of Service and Privacy Policy. Please review and accept to keep using Medicoo.
+                        {t('we_ve_updated_our_terms_of_service_and')}
                     </Text>
 
                     <View style={styles.linksRow}>
                         <TouchableOpacity onPress={() => setDocModalType('terms')}>
-                            <Text style={styles.linkText}>Read Terms of Service</Text>
+                            <Text style={styles.linkText}>{t('read_terms_of_service')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => setDocModalType('privacy')}>
-                            <Text style={styles.linkText}>Read Privacy Policy</Text>
+                            <Text style={styles.linkText}>{t('read_privacy_policy')}</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -113,7 +120,7 @@ export default function LegalAcceptanceModal() {
                         {busy === 'accept' ? (
                             <ActivityIndicator color="#fff" />
                         ) : (
-                            <Text style={styles.acceptButtonText}>Accept & Continue</Text>
+                            <Text style={styles.acceptButtonText}>{t('accept_continue')}</Text>
                         )}
                     </TouchableOpacity>
 
@@ -122,7 +129,7 @@ export default function LegalAcceptanceModal() {
                         onPress={handleRemindLater}
                         disabled={!!busy}
                     >
-                        <Text style={styles.laterButtonText}>Remind Me Later</Text>
+                        <Text style={styles.laterButtonText}>{t('remind_me_later')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -133,7 +140,7 @@ export default function LegalAcceptanceModal() {
                         {busy === 'decline' ? (
                             <ActivityIndicator color="#EF4444" />
                         ) : (
-                            <Text style={styles.declineButtonText}>Decline & Log Out</Text>
+                            <Text style={styles.declineButtonText}>{t('decline_log_out')}</Text>
                         )}
                     </TouchableOpacity>
                 </View>
@@ -150,7 +157,7 @@ export default function LegalAcceptanceModal() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -161,7 +168,7 @@ const styles = StyleSheet.create({
     card: {
         width: '100%',
         maxWidth: 340,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 24,
         shadowColor: '#000',
@@ -172,12 +179,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     message: {
         marginTop: 8,
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         lineHeight: 20,
     },
     linksRow: {
@@ -197,7 +204,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     acceptButton: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
     },
     acceptButtonText: {
         color: '#fff',
@@ -205,15 +212,15 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     laterButton: {
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
     },
     laterButtonText: {
-        color: '#374151',
+        color: c.text,
         fontSize: 15,
         fontWeight: '700',
     },
     declineButton: {
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.errorBg,
     },
     declineButtonText: {
         color: '#EF4444',

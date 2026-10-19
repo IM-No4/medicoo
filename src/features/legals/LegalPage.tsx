@@ -1,16 +1,18 @@
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     Platform,
     ScrollView,
-    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AdaptiveStatusBar } from '../../components/ThemedStatusBar';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 export interface LegalSection {
     heading?: string;
@@ -24,12 +26,14 @@ interface LegalPageProps {
 }
 
 export default function LegalPage({ title, lastUpdated, sections }: LegalPageProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <AdaptiveStatusBar barStyle="dark-content" backgroundColor="#fff" />
             {/* Header - same recipe as the rest of the Profile screens: white
                 bar + shadow, plain icon back button, fontSize 20/600/#111827
                 title. */}
@@ -39,7 +43,7 @@ export default function LegalPage({ title, lastUpdated, sections }: LegalPagePro
                     style={styles.backButton}
                     activeOpacity={0.7}
                 >
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{title}</Text>
                 <View style={{ width: 40 }} />
@@ -72,12 +76,12 @@ export default function LegalPage({ title, lastUpdated, sections }: LegalPagePro
                 means it can't be scrolled past - a plain content padding
                 only leaves a gap at the very end of the list, but content
                 still passes behind the transparent nav bar while scrolling. */}
-            <View style={{ height: Math.max(insets.bottom, 16), backgroundColor: '#FFFFFF' }} />
+            <View style={{ height: Math.max(insets.bottom, 16), backgroundColor: theme.card }} />
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         // Absolute + StyleSheet.absoluteFillObject instead of flex: 1 -
         // with the nav bar forced fully transparent (see colors.xml's
@@ -90,10 +94,10 @@ const styles = StyleSheet.create({
         // genuinely unpainted. Sizing against the root instead of flexing
         // against its immediate parent closes that gap.
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
     },
     header: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -114,7 +118,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     scroll: {
         flex: 1,
@@ -124,7 +128,7 @@ const styles = StyleSheet.create({
     },
     lastUpdated: {
         fontSize: 12,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginBottom: 24,
         fontStyle: 'italic',
     },
@@ -134,14 +138,14 @@ const styles = StyleSheet.create({
     sectionHeading: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 8,
         letterSpacing: 0.5,
     },
     sectionBody: {
         fontSize: 14,
         lineHeight: 24,
-        color: '#4B5563',
+        color: c.textSecondary,
         textAlign: 'justify',
     },
 });

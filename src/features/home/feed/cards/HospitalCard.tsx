@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { Hospital, HospitalShowcaseFeedItem } from '../feed.types';
 import SectionHeader from './SectionHeader';
 
 import { FeedAction } from '../feed.actions';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
 
 type Props = {
     data: HospitalShowcaseFeedItem;
@@ -12,6 +14,8 @@ type Props = {
 };
 
 function HospitalCard({ data, onAction }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const handlePress = (item: Hospital) => {
         if (item.action && onAction) {
             onAction(item.action);
@@ -36,7 +40,7 @@ function HospitalCard({ data, onAction }: Props) {
                     <Image source={{ uri: item.image }} style={styles.image} resizeMode="cover" />
                 ) : (
                     <View style={styles.placeholderImage}>
-                        <AppIcon name="hospital" size={32} color="#9CA3AF" />
+                        <AppIcon name="hospital" size={32} color={theme.textMuted} />
                     </View>
                 )}
                 <View style={styles.ratingBadge}>
@@ -90,7 +94,7 @@ function HospitalCard({ data, onAction }: Props) {
 
 export default React.memo(HospitalCard);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         marginBottom: 30,
     },
@@ -101,7 +105,7 @@ const styles = StyleSheet.create({
     card: {
         width: 200,
         marginHorizontal: 8,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 16,
         // Shadow
         shadowColor: "#000",
@@ -110,12 +114,12 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 2,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
         overflow: 'hidden'
     },
     imageContainer: {
         height: 110,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         position: 'relative'
     },
     image: {
@@ -150,12 +154,12 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 2
     },
     address: {
         fontSize: 11,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginBottom: 10
     },
     facilitiesRow: {
@@ -165,19 +169,19 @@ const styles = StyleSheet.create({
         marginBottom: 10
     },
     facilityTag: {
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 4
     },
     facilityText: {
         fontSize: 10,
-        color: '#4B5563',
+        color: c.textSecondary,
         fontWeight: '600'
     },
     moreFacilities: {
         fontSize: 10,
-        color: '#6B7280'
+        color: c.textSecondary
     },
     distanceBadge: {
         flexDirection: 'row',

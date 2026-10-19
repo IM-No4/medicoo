@@ -1,5 +1,5 @@
 import AppIcon from '@/src/components/icons/AppIcon';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Image,
   StyleSheet,
@@ -8,6 +8,8 @@ import {
   View,
 } from 'react-native';
 import { formatDoctorName } from '../../../utils/formatters';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 type Doctor = {
   id: string;
@@ -29,6 +31,8 @@ export default function DoctorResultCard({
   doctor,
   onPress,
 }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -92,13 +96,13 @@ export default function DoctorResultCard({
       <AppIcon
         name="chevron-right"
         size={20}
-        color="#9CA3AF"
+        color={theme.textMuted}
       />
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -107,7 +111,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 4,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -123,7 +127,7 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#EEF2FF',
+    backgroundColor: c.infoBg,
   },
   image: {
     width: '100%',
@@ -134,7 +138,7 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#EEF2FF',
+    backgroundColor: c.infoBg,
   },
   content: {
     flex: 1,
@@ -142,12 +146,12 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: c.text,
     marginBottom: 4,
   },
   specialty: {
     fontSize: 13,
-    color: '#6B7280',
+    color: c.textSecondary,
     marginBottom: 6,
   },
   metaRow: {
@@ -168,10 +172,10 @@ const styles = StyleSheet.create({
   },
   experience: {
     fontSize: 12,
-    color: '#6B7280',
+    color: c.textSecondary,
   },
   location: {
     fontSize: 12,
-    color: '#6B7280',
+    color: c.textSecondary,
   },
 });

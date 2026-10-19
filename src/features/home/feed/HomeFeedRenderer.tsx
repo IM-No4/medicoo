@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../redux/store';
 import HealthSummary from '../components/HealthSummary';
+import HeroBannerCard from './cards/HeroBannerCard';
 import { GoalsCard } from '../../health/components/GoalsCard';
 import HomeFeedFooter from '../components/HomeFeedFooter';
 import QuickActions from '../components/QuickActions';
@@ -76,7 +77,9 @@ export default function HomeFeedRenderer({ item, onAction }: Props) {
     case 'QUICK_ACTIONS':
       return <QuickActions items={item.items} onAction={onAction!} />;
     case 'SERVICES_SECTION':
-      return <ServicesSection title={item.title} services={item.services} onAction={onAction!} />;
+      return <ServicesSection title={item.title} services={item.services} layout={item.layout} onAction={onAction!} />;
+    case 'HERO_BANNER':
+      return <HeroBannerCard data={item as any} onAction={onAction} />;
     case 'UPCOMING_APPOINTMENTS_CARD':
       return <UpcomingAppointmentsCard />;
     case 'CATEGORY_ROW':

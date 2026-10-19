@@ -1,7 +1,9 @@
 import { Layers } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { styles } from '../styles';
+import { createStyles } from '../styles';
+import { useTheme } from '../../../../theme/ThemeContext';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 const COMMON_FORMS = [
   'Capsule',
@@ -24,6 +26,9 @@ const MORE_FORMS = [
 ];
 
 export default function MedicationTypeStep({ data, onChange, onNext }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
   const renderList = (items: string[]) => (
     <View style={styles.listGroup}>
       {items.map((item, index) => {
@@ -42,7 +47,7 @@ export default function MedicationTypeStep({ data, onChange, onNext }) {
               ]}>
                 {item}
               </Text>
-              {isSelected && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#0FBBA1' }} />}
+              {isSelected && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' }} />}
             </TouchableOpacity>
             {!isLast && <View style={styles.separator} />}
           </View>
@@ -62,12 +67,12 @@ export default function MedicationTypeStep({ data, onChange, onNext }) {
         </View>
       </View>
 
-      <Text style={styles.stepTitle}>Choose the Medication Type</Text>
+      <Text style={styles.stepTitle}>{t('choose_the_medication_type')}</Text>
 
-      <Text style={styles.sectionLabel}>Common Forms</Text>
+      <Text style={styles.sectionLabel}>{t('common_forms')}</Text>
       {renderList(COMMON_FORMS)}
 
-      <Text style={styles.sectionLabel}>More Forms</Text>
+      <Text style={styles.sectionLabel}>{t('more_forms')}</Text>
       {renderList(MORE_FORMS)}
 
       {/* Extra padding for scroll */}

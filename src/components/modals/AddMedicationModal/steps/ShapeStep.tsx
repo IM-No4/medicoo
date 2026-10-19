@@ -1,8 +1,10 @@
 import { Pill } from 'lucide-react-native'; // For default (no shape chosen yet) state only
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { RenderMedicationIcon, SHAPES } from '../config/shapes';
-import { styles } from '../styles';
+import { createStyles } from '../styles';
+import { useTheme } from '../../../../theme/ThemeContext';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 interface ShapeStepProps {
   data: any;
@@ -10,6 +12,9 @@ interface ShapeStepProps {
 }
 
 export default function ShapeStep({ data, onChange }: ShapeStepProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
   const commonKeys = ['capsule', 'round', 'oval', 'tablet'];
   const commonShapes = SHAPES.filter(s => commonKeys.includes(s.key));
   const moreShapes = SHAPES.filter(s => !commonKeys.includes(s.key));
@@ -46,7 +51,7 @@ export default function ShapeStep({ data, onChange }: ShapeStepProps) {
           used on every other step; falls back to a plain pill icon before
           a shape's been picked instead of a bespoke composition. */}
       <View style={styles.iconHeader}>
-        <View style={[styles.iconCircle, { backgroundColor: '#0FBBA1' }]}>
+        <View style={[styles.iconCircle, { backgroundColor: '#10B981' }]}>
           {data.shape ? (
             <RenderMedicationIcon
               shapeKey={data.shape}
@@ -59,14 +64,14 @@ export default function ShapeStep({ data, onChange }: ShapeStepProps) {
         </View>
       </View>
 
-      <Text style={styles.stepTitle}>Choose the Shape</Text>
+      <Text style={styles.stepTitle}>{t('choose_the_shape')}</Text>
 
       {/* Grid 1 */}
       <View style={{ marginTop: 20 }}>
         {renderGrid(commonShapes)}
       </View>
 
-      <Text style={[styles.sectionLabel, { marginTop: 10 }]}>More</Text>
+      <Text style={[styles.sectionLabel, { marginTop: 10 }]}>{t('more')}</Text>
       {renderGrid(moreShapes)}
 
       <View style={{ height: 20 }} />

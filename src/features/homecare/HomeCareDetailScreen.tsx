@@ -1,20 +1,23 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import React, { useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '@/src/components/icons/AppIcon';
 import { PROVIDERS_DATA } from './HomeCareListScreen';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../../components/ThemedModal';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 const DATES_OPTIONS = ['Today', 'Tomorrow', '21 July', '22 July', '23 July'];
 
@@ -27,6 +30,9 @@ const DURATION_OPTIONS = [
 ];
 
 export default function HomeCareDetailScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
     const route = useRoute<any>();
@@ -130,17 +136,17 @@ export default function HomeCareDetailScreen() {
             {isSticky && (
                 <View style={[styles.clonedStickyHeader, { paddingTop: insets.top + 8 }]}>
                     <View style={styles.searchContainerSticky}>
-                        <AppIcon name="search" size={18} color="#94A3B8" />
+                        <AppIcon name="search" size={18} color={theme.textMuted} />
                         <TextInput
                             placeholder={`Search services in ${provider.name}...`}
-                            placeholderTextColor="#94A3B8"
+                            placeholderTextColor={theme.textMuted}
                             style={styles.searchInput}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
                         {searchQuery !== '' && (
                             <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                <AppIcon name="x" size={16} color="#94A3B8" />
+                                <AppIcon name="x" size={16} color={theme.textMuted} />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -188,17 +194,17 @@ export default function HomeCareDetailScreen() {
 
                     {/* Integrated Search Bar inside heroCard */}
                     <View style={styles.searchContainerHero}>
-                        <AppIcon name="search" size={18} color="#94A3B8" />
+                        <AppIcon name="search" size={18} color={theme.textMuted} />
                         <TextInput
                             placeholder={`Search services in ${provider.name}...`}
-                            placeholderTextColor="#94A3B8"
+                            placeholderTextColor={theme.textMuted}
                             style={styles.searchInput}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
                         {searchQuery !== '' && (
                             <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                <AppIcon name="x" size={16} color="#94A3B8" />
+                                <AppIcon name="x" size={16} color={theme.textMuted} />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -252,7 +258,7 @@ export default function HomeCareDetailScreen() {
 
                                     <View style={styles.itemActionColumn}>
                                         <View style={styles.iconPlaceholder}>
-                                            <AppIcon name={srv.icon as any} size={28} color="#64748B" />
+                                            <AppIcon name={srv.icon as any} size={28} color={theme.textSecondary} />
                                         </View>
                                         <TouchableOpacity
                                             style={[styles.selectButton, isSelected && styles.selectButtonActive]}
@@ -271,7 +277,7 @@ export default function HomeCareDetailScreen() {
                         {filteredServices.length === 0 && (
                             <View style={styles.emptyState}>
                                 <AppIcon name="search" size={32} color="#CBD5E1" />
-                                <Text style={styles.emptyStateText}>No matching services found.</Text>
+                                <Text style={styles.emptyStateText}>{t('no_matching_services_found')}</Text>
                             </View>
                         )}
                     </View>
@@ -302,7 +308,7 @@ export default function HomeCareDetailScreen() {
                         end={{ x: 1, y: 0 }}
                         style={styles.bookGradient}
                     >
-                        <Text style={styles.bookText}>Select Schedule</Text>
+                        <Text style={styles.bookText}>{t('select_schedule')}</Text>
                         <AppIcon name="chevron-right" size={16} color="#FFFFFF" />
                     </LinearGradient>
                 </TouchableOpacity>
@@ -324,20 +330,20 @@ export default function HomeCareDetailScreen() {
                     <View style={[styles.modalSheet, { paddingBottom: insets.bottom > 0 ? insets.bottom : 24 }]}>
                         <View style={styles.sheetHeader}>
                             <View>
-                                <Text style={styles.sheetTitle}>Configure Schedule</Text>
+                                <Text style={styles.sheetTitle}>{t('configure_schedule')}</Text>
                                 <Text style={styles.sheetSubtitle}>{selectedServiceObj?.name} • ₹{selectedServiceObj?.price} / visit</Text>
                             </View>
                             <TouchableOpacity
                                 style={styles.sheetCloseButton}
                                 onPress={() => setIsConfigModalVisible(false)}
                             >
-                                <AppIcon name="x" size={20} color="#64748B" />
+                                <AppIcon name="x" size={20} color={theme.textSecondary} />
                             </TouchableOpacity>
                         </View>
 
                         {/* Scheduling Inputs */}
                         <View style={styles.sheetBody}>
-                            <Text style={styles.sheetLabel}>Choose Visit Frequency:</Text>
+                            <Text style={styles.sheetLabel}>{t('choose_visit_frequency')}</Text>
                             <View style={styles.modeTabs}>
                                 <TouchableOpacity
                                     style={[styles.modeTabButton, bookingMode === 'single' && styles.modeTabButtonActive]}
@@ -345,7 +351,7 @@ export default function HomeCareDetailScreen() {
                                 >
                                     <AppIcon name="clock" size={16} color={bookingMode === 'single' ? '#FFFFFF' : '#64748B'} />
                                     <Text style={[styles.modeTabText, bookingMode === 'single' && styles.modeTabTextActive]}>
-                                        Single Visit
+                                        {t('single_visit')}
                                     </Text>
                                 </TouchableOpacity>
 
@@ -355,14 +361,14 @@ export default function HomeCareDetailScreen() {
                                 >
                                     <AppIcon name="calendar" size={16} color={bookingMode === 'period' ? '#FFFFFF' : '#64748B'} />
                                     <Text style={[styles.modeTabText, bookingMode === 'period' && styles.modeTabTextActive]}>
-                                        Period Care
+                                        {t('period_care')}
                                     </Text>
                                 </TouchableOpacity>
                             </View>
 
                             {bookingMode === 'single' ? (
                                 <View style={styles.pickerSection}>
-                                    <Text style={styles.pickerLabel}>Select Visit Date:</Text>
+                                    <Text style={styles.pickerLabel}>{t('select_visit_date')}</Text>
                                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
                                         {DATES_OPTIONS.map((date) => (
                                             <TouchableOpacity
@@ -379,7 +385,7 @@ export default function HomeCareDetailScreen() {
                                 </View>
                             ) : (
                                 <View style={styles.pickerSection}>
-                                    <Text style={styles.pickerLabel}>Select Duration (Save with multi-day booking):</Text>
+                                    <Text style={styles.pickerLabel}>{t('select_duration_save_with_multi_day_bo')}</Text>
                                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
                                         {DURATION_OPTIONS.map((opt) => (
                                             <TouchableOpacity
@@ -403,26 +409,26 @@ export default function HomeCareDetailScreen() {
 
                             {/* Summary read-out */}
                             <View style={styles.calcSummaryBox}>
-                                <Text style={styles.calcSummaryTitle}>Billing Summary</Text>
+                                <Text style={styles.calcSummaryTitle}>{t('billing_summary')}</Text>
                                 <View style={styles.calcRow}>
-                                    <Text style={styles.calcLabel}>Caregiver Base Rate</Text>
+                                    <Text style={styles.calcLabel}>{t('caregiver_base_rate')}</Text>
                                     <Text style={styles.calcVal}>₹{selectedServiceObj?.price} / visit</Text>
                                 </View>
                                 {bookingMode === 'period' && (
                                     <View style={styles.calcRow}>
-                                        <Text style={styles.calcLabel}>Duration / Days</Text>
+                                        <Text style={styles.calcLabel}>{t('duration_days')}</Text>
                                         <Text style={styles.calcVal}>× {liveCalculations.days} days</Text>
                                     </View>
                                 )}
                                 {liveCalculations.discountText !== '' && liveCalculations.discountText !== 'Standard' && (
                                     <View style={styles.calcRow}>
-                                        <Text style={styles.calcLabelPink}>Package Discount</Text>
+                                        <Text style={styles.calcLabelPink}>{t('package_discount')}</Text>
                                         <Text style={styles.calcValPink}>{liveCalculations.discountText}</Text>
                                     </View>
                                 )}
                                 <View style={styles.calcDividerLine} />
                                 <View style={styles.calcRow}>
-                                    <Text style={styles.calcTotalLabel}>Total Pay Est.</Text>
+                                    <Text style={styles.calcTotalLabel}>{t('total_pay_est')}</Text>
                                     <Text style={styles.calcTotalVal}>₹{liveCalculations.totalPrice}</Text>
                                 </View>
                             </View>
@@ -448,7 +454,7 @@ export default function HomeCareDetailScreen() {
                                     end={{ x: 1, y: 0 }}
                                     style={styles.sheetPayGradient}
                                 >
-                                    <Text style={styles.sheetPayText}>Proceed to Pay</Text>
+                                    <Text style={styles.sheetPayText}>{t('proceed_to_pay')}</Text>
                                     <AppIcon name="chevron-right" size={14} color="#FFFFFF" />
                                 </LinearGradient>
                             </TouchableOpacity>
@@ -479,7 +485,7 @@ export default function HomeCareDetailScreen() {
                             </View>
                             <View style={styles.razorpayHeaderRight}>
                                 <TouchableOpacity onPress={() => setIsRazorpayVisible(false)}>
-                                    <AppIcon name="x" size={18} color="#94A3B8" />
+                                    <AppIcon name="x" size={18} color={theme.textMuted} />
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -495,7 +501,7 @@ export default function HomeCareDetailScreen() {
 
                                 {/* Method select */}
                                 <View style={styles.razorpayPaymentOptions}>
-                                    <Text style={styles.razorpayMethodHeading}>Select Payment Option</Text>
+                                    <Text style={styles.razorpayMethodHeading}>{t('select_payment_option')}</Text>
 
                                     {/* UPI method */}
                                     <TouchableOpacity
@@ -506,8 +512,8 @@ export default function HomeCareDetailScreen() {
                                             <AppIcon name="phone" size={16} color="#EC4899" />
                                         </View>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={styles.methodName}>UPI / GPay / PhonePe</Text>
-                                            <Text style={styles.methodDesc}>Instant authorization via UPI app</Text>
+                                            <Text style={styles.methodName}>{t('upi_gpay_phonepe')}</Text>
+                                            <Text style={styles.methodDesc}>{t('instant_authorization_via_upi_app')}</Text>
                                         </View>
                                         <View style={[styles.methodRadio, paymentMethod === 'upi' && styles.methodRadioSelected]}>
                                             {paymentMethod === 'upi' && <View style={styles.methodRadioDot} />}
@@ -523,8 +529,8 @@ export default function HomeCareDetailScreen() {
                                             <AppIcon name="locate-fixed" size={16} color="#EC4899" />
                                         </View>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={styles.methodName}>Credit / Debit Cards</Text>
-                                            <Text style={styles.methodDesc}>Visa, Mastercard, RuPay, Maestro</Text>
+                                            <Text style={styles.methodName}>{t('credit_debit_cards')}</Text>
+                                            <Text style={styles.methodDesc}>{t('visa_mastercard_rupay_maestro')}</Text>
                                         </View>
                                         <View style={[styles.methodRadio, paymentMethod === 'card' && styles.methodRadioSelected]}>
                                             {paymentMethod === 'card' && <View style={styles.methodRadioDot} />}
@@ -540,8 +546,8 @@ export default function HomeCareDetailScreen() {
                                             <AppIcon name="briefcase-medical" size={16} color="#EC4899" />
                                         </View>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={styles.methodName}>Netbanking</Text>
-                                            <Text style={styles.methodDesc}>All major Indian banks supported</Text>
+                                            <Text style={styles.methodName}>{t('netbanking')}</Text>
+                                            <Text style={styles.methodDesc}>{t('all_major_indian_banks_supported')}</Text>
                                         </View>
                                         <View style={[styles.methodRadio, paymentMethod === 'nb' && styles.methodRadioSelected]}>
                                             {paymentMethod === 'nb' && <View style={styles.methodRadioDot} />}
@@ -563,8 +569,8 @@ export default function HomeCareDetailScreen() {
                         {paymentStep === 'processing' && (
                             <View style={styles.centerFlow}>
                                 <ActivityIndicator size="large" color="#0B79E1" />
-                                <Text style={styles.processingText}>Authenticating with Bank Gateway...</Text>
-                                <Text style={styles.processingSub}>Please do not press back or close the app.</Text>
+                                <Text style={styles.processingText}>{t('authenticating_with_bank_gateway')}</Text>
+                                <Text style={styles.processingSub}>{t('please_do_not_press_back_or_close_the')}</Text>
                             </View>
                         )}
 
@@ -573,25 +579,25 @@ export default function HomeCareDetailScreen() {
                                 <View style={styles.successCheckCircle}>
                                     <AppIcon name="shield-check" size={48} color="#FFFFFF" />
                                 </View>
-                                <Text style={styles.successHeading}>Booking Successful!</Text>
-                                <Text style={styles.successSub}>Your payment has been processed securely.</Text>
+                                <Text style={styles.successHeading}>{t('booking_successful')}</Text>
+                                <Text style={styles.successSub}>{t('your_payment_has_been_processed_secure')}</Text>
                                 
                                 <View style={styles.receiptBox}>
-                                    <Text style={styles.receiptLabel}>Transaction Details</Text>
+                                    <Text style={styles.receiptLabel}>{t('transaction_details')}</Text>
                                     <View style={styles.receiptRow}>
-                                        <Text style={styles.receiptKey}>Transaction ID</Text>
+                                        <Text style={styles.receiptKey}>{t('transaction_id')}</Text>
                                         <Text style={styles.receiptVal}>TXN-MED-{Math.floor(Math.random() * 900000) + 100000}</Text>
                                     </View>
                                     <View style={styles.receiptRow}>
-                                        <Text style={styles.receiptKey}>Provider</Text>
+                                        <Text style={styles.receiptKey}>{t('provider')}</Text>
                                         <Text style={styles.receiptVal}>{provider.name}</Text>
                                     </View>
                                     <View style={styles.receiptRow}>
-                                        <Text style={styles.receiptKey}>Service</Text>
+                                        <Text style={styles.receiptKey}>{t('service')}</Text>
                                         <Text style={styles.receiptVal}>{selectedServiceObj?.name}</Text>
                                     </View>
                                     <View style={styles.receiptRow}>
-                                        <Text style={styles.receiptKey}>Amount Paid</Text>
+                                        <Text style={styles.receiptKey}>{t('amount_paid')}</Text>
                                         <Text style={styles.receiptVal}>₹{liveCalculations.totalPrice}</Text>
                                     </View>
                                 </View>
@@ -603,7 +609,7 @@ export default function HomeCareDetailScreen() {
                                         setIsBooked(true);
                                     }}
                                 >
-                                    <Text style={styles.razorpaySuccessCloseText}>Go to Dashboard</Text>
+                                    <Text style={styles.razorpaySuccessCloseText}>{t('go_to_dashboard')}</Text>
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -616,21 +622,21 @@ export default function HomeCareDetailScreen() {
 
 /* ================= STYLES ================= */
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.background,
     },
     clonedStickyHeader: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         paddingHorizontal: 16,
         paddingBottom: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
+        borderBottomColor: c.border,
         zIndex: 9999,
         shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 4 },
@@ -699,7 +705,7 @@ const styles = StyleSheet.create({
     searchContainerHero: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 14,
         paddingHorizontal: 12,
         height: 44,
@@ -712,18 +718,18 @@ const styles = StyleSheet.create({
     searchContainerSticky: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderRadius: 14,
         paddingHorizontal: 12,
         height: 44,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
     },
     searchInput: {
         flex: 1,
         marginLeft: 8,
         fontSize: 13,
-        color: '#0F172A',
+        color: c.text,
     },
     filtersWrapperOutside: {
         marginHorizontal: -16,
@@ -731,11 +737,11 @@ const styles = StyleSheet.create({
         marginVertical: 12,
     },
     catalogContainer: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         marginHorizontal: -16,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         borderTopLeftRadius: 28,
         borderTopRightRadius: 28,
         overflow: 'hidden',
@@ -749,18 +755,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         paddingVertical: 8,
         borderRadius: 8,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
     },
     catChipActive: {
-        backgroundColor: '#FCE7F3',
+        backgroundColor: c.cardSecondary,
         borderColor: '#FCE7F3',
     },
     catChipText: {
         fontSize: 11,
         fontWeight: '700',
-        color: '#64748B',
+        color: c.textSecondary,
     },
     catChipTextActive: {
         color: '#DB2777',
@@ -771,10 +777,10 @@ const styles = StyleSheet.create({
     catalogItemCard: {
         flexDirection: 'row',
         paddingVertical: 18,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         gap: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        borderBottomColor: c.borderLight,
     },
     catalogItemCardSelected: {},
     itemDetails: {
@@ -783,11 +789,11 @@ const styles = StyleSheet.create({
     itemTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
     },
     itemDescription: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 4,
         lineHeight: 16,
     },
@@ -800,18 +806,18 @@ const styles = StyleSheet.create({
     itemPriceText: {
         fontSize: 14,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
     },
     itemUnitText: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         fontWeight: '500',
     },
     tagBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#FDF2F8',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 6,
@@ -831,11 +837,11 @@ const styles = StyleSheet.create({
         width: 96,
         height: 90,
         borderRadius: 16,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
     },
     selectButton: {
         position: 'absolute',
@@ -843,7 +849,7 @@ const styles = StyleSheet.create({
         width: 76,
         height: 28,
         borderRadius: 8,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderWidth: 1,
         borderColor: '#EC4899',
         justifyContent: 'center',
@@ -872,7 +878,7 @@ const styles = StyleSheet.create({
     },
     emptyStateText: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 8,
     },
     footerBar: {
@@ -880,14 +886,14 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: '#E2E8F0',
+        borderTopColor: c.border,
     },
     footerSummary: {
         flex: 1,
@@ -896,11 +902,11 @@ const styles = StyleSheet.create({
     footerCalculatedPrice: {
         fontSize: 20,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
     },
     footerCalculatedDetails: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 2,
     },
     bookButton: {
@@ -921,7 +927,7 @@ const styles = StyleSheet.create({
     },
     cardPriceUnit: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         fontWeight: '500',
     },
 
@@ -932,7 +938,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalSheet: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 20,
@@ -942,17 +948,17 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'flex-start',
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        borderBottomColor: c.borderLight,
         paddingBottom: 14,
     },
     sheetTitle: {
         fontSize: 18,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
     },
     sheetSubtitle: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 2,
     },
     sheetCloseButton: {
@@ -969,7 +975,7 @@ const styles = StyleSheet.create({
     },
     modeTabs: {
         flexDirection: 'row',
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderRadius: 12,
         padding: 4,
         marginBottom: 16,
@@ -989,7 +995,7 @@ const styles = StyleSheet.create({
     modeTabText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#64748B',
+        color: c.textSecondary,
     },
     modeTabTextActive: {
         color: '#FFFFFF',
@@ -1000,7 +1006,7 @@ const styles = StyleSheet.create({
     pickerLabel: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#64748B',
+        color: c.textSecondary,
         marginBottom: 8,
     },
     chipsRow: {
@@ -1010,18 +1016,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 10,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
     },
     dateChipActive: {
-        backgroundColor: '#FCE7F3',
+        backgroundColor: c.cardSecondary,
         borderColor: '#FBCFE8',
     },
     dateChipText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#475569',
+        color: c.textSecondary,
     },
     dateChipTextActive: {
         color: '#DB2777',
@@ -1033,24 +1039,24 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 10,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
     },
     durationChipActive: {
-        backgroundColor: '#FCE7F3',
+        backgroundColor: c.cardSecondary,
         borderColor: '#FBCFE8',
     },
     durationChipText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#475569',
+        color: c.textSecondary,
     },
     durationChipTextActive: {
         color: '#DB2777',
     },
     discountPill: {
-        backgroundColor: '#E2E8F0',
+        backgroundColor: c.infoBg,
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 6,
@@ -1061,23 +1067,23 @@ const styles = StyleSheet.create({
     discountPillText: {
         fontSize: 9,
         fontWeight: '800',
-        color: '#475569',
+        color: c.textSecondary,
     },
     discountPillTextActive: {
         color: '#FFFFFF',
     },
     calcSummaryBox: {
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         borderRadius: 16,
         padding: 14,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         marginTop: 8,
     },
     calcSummaryTitle: {
         fontSize: 13,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
         marginBottom: 10,
     },
     calcRow: {
@@ -1088,7 +1094,7 @@ const styles = StyleSheet.create({
     },
     calcLabel: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
     },
     calcVal: {
         fontSize: 12,
@@ -1107,13 +1113,13 @@ const styles = StyleSheet.create({
     },
     calcDividerLine: {
         height: 1,
-        backgroundColor: '#E2E8F0',
+        backgroundColor: c.infoBg,
         marginVertical: 8,
     },
     calcTotalLabel: {
         fontSize: 14,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
     },
     calcTotalVal: {
         fontSize: 16,
@@ -1124,9 +1130,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderTopWidth: 1,
-        borderTopColor: '#F1F5F9',
+        borderTopColor: c.borderLight,
         paddingTop: 16,
         marginTop: 12,
     },
@@ -1137,11 +1143,11 @@ const styles = StyleSheet.create({
     sheetFooterPrice: {
         fontSize: 20,
         fontWeight: '900',
-        color: '#0F172A',
+        color: c.text,
     },
     sheetFooterDetails: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 2,
     },
     sheetPayButtonSplit: {
@@ -1171,7 +1177,7 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     razorpayWidget: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         width: '100%',
         maxWidth: 360,
         height: 480,
@@ -1212,7 +1218,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     razorpayMerchant: {
-        color: '#94A3B8',
+        color: c.textMuted,
         fontSize: 9,
         fontWeight: '600',
         marginTop: 1,
@@ -1221,27 +1227,27 @@ const styles = StyleSheet.create({
         padding: 4,
     },
     razorpayAmountBox: {
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         padding: 16,
         alignItems: 'center',
         borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
+        borderBottomColor: c.border,
     },
     razorpayAmountLabel: {
         fontSize: 9,
         fontWeight: '800',
-        color: '#94A3B8',
+        color: c.textMuted,
         letterSpacing: 0.5,
     },
     razorpayAmountValue: {
         fontSize: 24,
         fontWeight: '900',
-        color: '#0F172A',
+        color: c.text,
         marginTop: 4,
     },
     razorpayServiceDetails: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 2,
     },
     razorpayPaymentOptions: {
@@ -1251,7 +1257,7 @@ const styles = StyleSheet.create({
     razorpayMethodHeading: {
         fontSize: 11,
         fontWeight: '800',
-        color: '#64748B',
+        color: c.textSecondary,
         textTransform: 'uppercase',
         marginBottom: 10,
         letterSpacing: 0.3,
@@ -1264,18 +1270,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         marginBottom: 8,
     },
     razorpayMethodRowSelected: {
         borderColor: '#FBCFE8',
-        backgroundColor: '#FFF1F2',
+        backgroundColor: c.errorBg,
     },
     methodIconWrapperPink: {
         width: 32,
         height: 32,
         borderRadius: 8,
-        backgroundColor: '#FDF2F8',
+        backgroundColor: c.cardSecondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -1286,7 +1292,7 @@ const styles = StyleSheet.create({
     },
     methodDesc: {
         fontSize: 10,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 1,
     },
     methodRadio: {
@@ -1329,12 +1335,12 @@ const styles = StyleSheet.create({
     processingText: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         marginTop: 16,
     },
     processingSub: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 4,
         textAlign: 'center',
     },
@@ -1350,19 +1356,19 @@ const styles = StyleSheet.create({
     successHeading: {
         fontSize: 18,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
     },
     successSub: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         textAlign: 'center',
         marginTop: 4,
         paddingHorizontal: 16,
     },
     receiptBox: {
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         borderRadius: 14,
         padding: 12,
         width: '100%',
@@ -1371,7 +1377,7 @@ const styles = StyleSheet.create({
     receiptLabel: {
         fontSize: 10,
         fontWeight: '800',
-        color: '#64748B',
+        color: c.textSecondary,
         textTransform: 'uppercase',
         marginBottom: 8,
     },
@@ -1383,11 +1389,11 @@ const styles = StyleSheet.create({
     },
     receiptKey: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
     },
     receiptVal: {
         fontSize: 11,
-        color: '#0F172A',
+        color: c.text,
         fontWeight: '700',
     },
     razorpaySuccessClose: {

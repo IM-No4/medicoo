@@ -48,6 +48,18 @@ export const loadFriendsData = createAsyncThunk<
   }
 });
 
+// Just the invites waiting for an answer - cheap enough to run whenever the app is opened, so the tab badge is right without opening Friends.
+export const loadIncomingFriendRequests = createAsyncThunk<FriendRequestEntry[], void, { rejectValue: string }>(
+  'friends/loadIncoming',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await fetchIncomingFriendRequests();
+    } catch (err: any) {
+      return rejectWithValue(err?.message || 'Unable to load friend requests');
+    }
+  }
+);
+
 export const sendFriendRequest = createAsyncThunk<
   { autoAccepted?: boolean },
   string,
@@ -124,6 +136,12 @@ const friendsSlice = createSlice({
       .addCase(loadFriendsData.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload ?? 'Unable to load friends';
+      })
+      .addCase(loadIncomingFriendRequests.fulfilled, (state, action) => {
+        state.incomingRequests = action.payload;
+      })
+      .addCase(acceptFriendRequest.fulfilled, (state, action) => {
+        state.incomingRequests = state.incomingRequests.filter(r => r.id !== action.payload);
       })
       .addCase(rejectFriendRequest.fulfilled, (state, action) => {
         state.incomingRequests = state.incomingRequests.filter(r => r.id !== action.payload);

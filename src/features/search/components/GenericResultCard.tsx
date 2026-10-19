@@ -1,6 +1,8 @@
 import AppIcon from '@/src/components/icons/AppIcon';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 export default function GenericResultCard({
   icon,
@@ -13,6 +15,8 @@ export default function GenericResultCard({
   subtitle: string;
   onPress: () => void;
 }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -28,12 +32,12 @@ export default function GenericResultCard({
         <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
 
-      <AppIcon name="chevron-right" size={18} color="#9CA3AF" />
+      <AppIcon name="chevron-right" size={18} color={theme.textMuted} />
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   card: {
     flexDirection: 'row',
     gap: 12,
@@ -42,24 +46,24 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 10,
     borderRadius: 14,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
   },
   iconWrapper: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: c.cardSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
   },
   subtitle: {
     marginTop: 2,
     fontSize: 12,
-    color: '#6B7280',
+    color: c.textSecondary,
   },
 });

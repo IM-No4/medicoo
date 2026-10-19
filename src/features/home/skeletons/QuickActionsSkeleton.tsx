@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import SkeletonBlock from '../../../components/loaders/SkeletonBlock';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 export default function QuickActionsSkeleton() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.row}>
       {[1, 2, 3, 4].map((i) => (
@@ -15,7 +19,7 @@ export default function QuickActionsSkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     paddingHorizontal: 16,

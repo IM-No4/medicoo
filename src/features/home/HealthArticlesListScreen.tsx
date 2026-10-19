@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -15,12 +15,18 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '../../components/icons/AppIcon';
 import { feedApi, HealthArticleDto } from '../../services/api/feed.api';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 // The Health Knowledge Hub's "See All" - previously handed off to an
 // external medicoo.com/blog URL. Now an in-app modal listing every active
 // article (the home feed's showcase row only carries the top 3), each
 // opening the same in-app HealthArticleDetail modal.
 export default function HealthArticlesListScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
@@ -52,19 +58,19 @@ export default function HealthArticlesListScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 8) }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <ChevronLeft size={22} color="#0F172A" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Health Knowledge Hub</Text>
+        <Text style={styles.headerTitle}>{t('health_hub')}</Text>
         <View style={styles.backButton} />
       </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color="#0FBBA1" />
+          <ActivityIndicator color="#10B981" />
         </View>
       ) : articles.length === 0 ? (
         <View style={styles.loadingContainer}>
-          <Text style={styles.emptyText}>No articles available right now.</Text>
+          <Text style={styles.emptyText}>{t('no_articles')}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
@@ -80,7 +86,7 @@ export default function HealthArticlesListScreen() {
                   <Image source={{ uri: article.imageUrl }} style={styles.image} resizeMode="cover" />
                 ) : (
                   <View style={styles.imagePlaceholder}>
-                    <AppIcon name="file-text" size={24} color="#9CA3AF" />
+                    <AppIcon name="file-text" size={24} color={theme.textMuted} />
                   </View>
                 )}
               </View>
@@ -102,10 +108,10 @@ export default function HealthArticlesListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FE',
+    backgroundColor: c.background,
   },
   header: {
     flexDirection: 'row',
@@ -113,7 +119,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingBottom: 12,
-    backgroundColor: '#F8F9FE',
+    backgroundColor: c.cardSecondary,
   },
   backButton: {
     width: 36,
@@ -124,7 +130,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0F172A',
+    color: c.text,
   },
   loadingContainer: {
     flex: 1,
@@ -133,7 +139,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#64748B',
+    color: c.textSecondary,
   },
   listContent: {
     padding: 16,
@@ -141,19 +147,19 @@ const styles = StyleSheet.create({
   },
   card: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 16,
     marginBottom: 12,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: c.borderLight,
   },
   imageWrapper: {
     width: 84,
     height: 84,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
   },
   image: {
     width: '100%',
@@ -172,13 +178,13 @@ const styles = StyleSheet.create({
   category: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#0FBBA1',
+    color: '#10B981',
     marginBottom: 4,
   },
   cardTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: c.text,
     lineHeight: 20,
     marginBottom: 6,
   },
@@ -189,7 +195,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 11,
-    color: '#6B7280',
+    color: c.textSecondary,
     fontWeight: '500',
   },
   dot: {

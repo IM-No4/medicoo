@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import AppIcon from "@/src/components/icons/AppIcon";
 import MedicalDisclaimerNote from "@/src/components/MedicalDisclaimerNote";
 import { uploadPrescription } from "@/src/services/api/prescription.api";
@@ -34,10 +35,17 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { formatDoctorName } from "../../utils/formatters";
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { AdaptiveStatusBar } from '../../components/ThemedStatusBar';
 
 const { width, height } = Dimensions.get("window");
 
 export default function PrescriptionResultScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -191,8 +199,8 @@ export default function PrescriptionResultScreen() {
             />
           </Animated.View>
           <View style={styles.overlayText}>
-            <Scan color="#0FBBA1" size={40} />
-            <Text style={styles.scanningLabel}>SCANNING</Text>
+            <Scan color="#10B981" size={40} />
+            <Text style={styles.scanningLabel}>{t('scanning')}</Text>
           </View>
         </View>
 
@@ -212,7 +220,7 @@ export default function PrescriptionResultScreen() {
           </View>
           <Text style={styles.statusText}>{processingStatus}</Text>
           <Text style={styles.subStatusText}>
-            AI-Powered analysis in progress
+            {t('ai_powered_analysis_in_progress')}
           </Text>
         </View>
       </View>
@@ -232,18 +240,18 @@ export default function PrescriptionResultScreen() {
           style={StyleSheet.absoluteFill}
         />
         <AlertCircle color="#EF4444" size={64} strokeWidth={1.5} />
-        <Text style={styles.errorFullTitle}>Analysis Failed</Text>
+        <Text style={styles.errorFullTitle}>{t('analysis_failed')}</Text>
         <Text style={styles.errorFullMsg}>{error}</Text>
         <View style={styles.errorBtnRow}>
           <TouchableOpacity style={styles.retryBtn} onPress={handleProcessing}>
             <RefreshCw size={18} color="#fff" />
-            <Text style={styles.retryBtnText}>Retry Analysis</Text>
+            <Text style={styles.retryBtnText}>{t('retry_analysis')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.backErrorBtn}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.backErrorText}>Go Back</Text>
+            <Text style={styles.backErrorText}>{t('go_back')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -285,7 +293,7 @@ export default function PrescriptionResultScreen() {
 
   return (
     <View style={styles.masterContainer}>
-      <StatusBar barStyle="dark-content" />
+      <AdaptiveStatusBar barStyle="dark-content" />
       <View style={styles.safeArea}>
         <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
           <TouchableOpacity
@@ -293,10 +301,10 @@ export default function PrescriptionResultScreen() {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <ChevronLeft size={22} color="#111827" />
+            <ChevronLeft size={22} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.headerMid}>
-            <Text style={styles.headerLabel}>Analysis Report</Text>
+            <Text style={styles.headerLabel}>{t('analysis_report')}</Text>
             <Text style={styles.headerId} numberOfLines={1}>
               {pt_id}
             </Text>
@@ -323,7 +331,7 @@ export default function PrescriptionResultScreen() {
                   ? ["#EF4444", "#B91C1C"]
                   : isPendingReview
                     ? ["#F59E0B", "#B45309"]
-                    : ["#0FBBA1", "#007C69"]
+                    : ["#10B981", "#007C69"]
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -331,7 +339,7 @@ export default function PrescriptionResultScreen() {
             >
               <View style={styles.heroContent}>
                 <View>
-                  <Text style={styles.heroSub}>Verification Status</Text>
+                  <Text style={styles.heroSub}>{t('verification_status')}</Text>
                   <Text style={styles.heroTitle}>
                     {isRevoked
                       ? "Could Not Be Verified"
@@ -351,7 +359,7 @@ export default function PrescriptionResultScreen() {
               <View style={styles.heroFooter}>
                 <View style={styles.trustBadge}>
                   <CheckCircle size={14} color="#FFF" />
-                  <Text style={styles.trustText}>AI Audited</Text>
+                  <Text style={styles.trustText}>{t('ai_audited')}</Text>
                 </View>
                 <Text style={styles.timestamp}>
                   Analyzed{" "}
@@ -386,15 +394,15 @@ export default function PrescriptionResultScreen() {
           >
             {/* Metadata Card */}
             <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionTitle}>Prescription Details</Text>
+              <Text style={styles.sectionTitle}>{t('prescription_details')}</Text>
             </View>
             <View style={styles.glassCard}>
               <View style={styles.dataRow}>
                 <View style={styles.iconCircle}>
-                  <User size={18} color="#0FBBA1" />
+                  <User size={18} color="#10B981" />
                 </View>
                 <View style={styles.dataTexts}>
-                  <Text style={styles.dataLabel}>Patient</Text>
+                  <Text style={styles.dataLabel}>{t('patient')}</Text>
                   <Text style={styles.dataVal}>
                     {patientName || "Identified Patient"}
                   </Text>
@@ -407,7 +415,7 @@ export default function PrescriptionResultScreen() {
                   <Stethoscope size={18} color="#2563EB" />
                 </View>
                 <View style={styles.dataTexts}>
-                  <Text style={styles.dataLabel}>Doctor / Clinic</Text>
+                  <Text style={styles.dataLabel}>{t('doctor_clinic')}</Text>
                   <Text style={styles.dataVal}>
                     {doctorName ? formatDoctorName(doctorName) : "Qualified Medical Practitioner"}
                   </Text>
@@ -415,12 +423,12 @@ export default function PrescriptionResultScreen() {
               </View>
               <View style={styles.dataRow}>
                 <View
-                  style={[styles.iconCircle, { backgroundColor: "#F0FDF4" }]}
+                  style={[styles.iconCircle, { backgroundColor: theme.successBg }]}
                 >
                   <Calendar size={18} color="#16A34A" />
                 </View>
                 <View style={styles.dataTexts}>
-                  <Text style={styles.dataLabel}>Prescribed On</Text>
+                  <Text style={styles.dataLabel}>{t('prescribed_on')}</Text>
                   <Text style={styles.dataVal}>
                     {formatDate(prescriptionDate)}
                   </Text>
@@ -434,7 +442,7 @@ export default function PrescriptionResultScreen() {
               <>
             <View style={styles.sectionTitleRow}>
               <View style={styles.titleWithCount}>
-                <Text style={styles.sectionTitle}>Pharmacies found</Text>
+                <Text style={styles.sectionTitle}>{t('pharmacies_found')}</Text>
                 <View style={styles.countPill}>
                   <Text style={styles.countPillText}>
                     {stores?.length || 0}
@@ -460,12 +468,12 @@ export default function PrescriptionResultScreen() {
                         colors={["#F1F5F9", "#E2E8F0"]}
                         style={StyleSheet.absoluteFill}
                       />
-                      <AppIcon name="shopping-bag" size={20} color="#64748B" />
+                      <AppIcon name="shopping-bag" size={20} color={theme.textSecondary} />
                     </View>
                     <View style={styles.storeNameBox}>
                       <Text style={styles.storeName}>{store.storeName}</Text>
                       <View style={styles.distRow}>
-                        <MapPin size={12} color="#94A3B8" />
+                        <MapPin size={12} color={theme.textMuted} />
                         <Text style={styles.storeDist}>
                           {store.distance} km away
                         </Text>
@@ -500,7 +508,7 @@ export default function PrescriptionResultScreen() {
                   }}
                   style={styles.emptyImg}
                 />
-                <Text style={styles.emptyTitle}>No matching stock found</Text>
+                <Text style={styles.emptyTitle}>{t('no_matching_stock')}</Text>
                 <Text style={styles.emptySub}>
                   We couldn't find matches in stores within 5km. Try expanding
                   your search area.
@@ -536,7 +544,7 @@ export default function PrescriptionResultScreen() {
             }}
           >
             <LinearGradient
-              colors={isRevoked ? ["#EF4444", "#B91C1C"] : ["#0FBBA1", "#007C69"]}
+              colors={isRevoked ? ["#EF4444", "#B91C1C"] : ["#10B981", "#007C69"]}
               style={StyleSheet.absoluteFill}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -556,10 +564,10 @@ export default function PrescriptionResultScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   masterContainer: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: c.cardSecondary,
   },
   processingContainer: {
     flex: 1,
@@ -593,7 +601,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 4,
-    backgroundColor: "#0FBBA1",
+    backgroundColor: "#10B981",
     zIndex: 5,
   },
   lineGlow: {
@@ -609,7 +617,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   scanningLabel: {
-    color: "#0FBBA1",
+    color: "#10B981",
     fontSize: 16,
     fontWeight: "900",
     letterSpacing: 4,
@@ -630,7 +638,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: "100%",
-    backgroundColor: "#0FBBA1",
+    backgroundColor: "#10B981",
     borderRadius: 3,
   },
   statusText: {
@@ -640,7 +648,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   subStatusText: {
-    color: "#64748B",
+    color: c.textSecondary,
     fontSize: 14,
     marginTop: 8,
   },
@@ -653,7 +661,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -673,13 +681,13 @@ const styles = StyleSheet.create({
   headerLabel: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#64748B",
+    color: c.textSecondary,
     textTransform: "uppercase",
   },
   headerId: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#111827",
+    color: c.text,
     maxWidth: 200,
   },
 
@@ -692,7 +700,7 @@ const styles = StyleSheet.create({
     padding: 24,
     marginBottom: 20,
     elevation: 8,
-    shadowColor: "#0FBBA1",
+    shadowColor: "#10B981",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 15,
@@ -731,16 +739,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   reviewNoticeError: {
-    backgroundColor: "#FEF2F2",
+    backgroundColor: c.errorBg,
     borderColor: "#FECACA",
   },
   reviewNoticeWarn: {
-    backgroundColor: "#FFFBEB",
+    backgroundColor: c.warningBg,
     borderColor: "#FDE68A",
   },
   reviewNoticeText: {
     fontSize: 13,
-    color: "#374151",
+    color: c.text,
     lineHeight: 18,
   },
   trustBadge: {
@@ -764,11 +772,11 @@ const styles = StyleSheet.create({
   },
   stickyBarWrapper: {
     marginBottom: 24,
-    backgroundColor: "#F8FAFC", // Match master bg
+    backgroundColor: c.cardSecondary, // Match master bg
   },
   stickyBar: {
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     borderRadius: 16,
     padding: 14,
     elevation: 4,
@@ -777,7 +785,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: c.borderLight,
   },
   stickyItem: {
     flex: 1,
@@ -786,14 +794,14 @@ const styles = StyleSheet.create({
   stickyLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#94A3B8",
+    color: c.textMuted,
     textTransform: "uppercase",
     marginBottom: 6,
   },
   stickyVal: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1E293B",
+    color: c.text,
   },
   badge: {
     flexDirection: "row",
@@ -825,30 +833,30 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   countPill: {
-    backgroundColor: "#F1F5F9",
+    backgroundColor: c.cardSecondary,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: c.border,
   },
   countPillText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#64748B",
+    color: c.textSecondary,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#0F172A",
+    color: c.text,
   },
   glassCard: {
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     borderRadius: 20,
     padding: 20,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: c.borderLight,
   },
   dataRow: {
     flexDirection: "row",
@@ -859,7 +867,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: c.successBg,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
@@ -870,7 +878,7 @@ const styles = StyleSheet.create({
   dataLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#94A3B8",
+    color: c.textMuted,
     textTransform: "uppercase",
     marginBottom: 2,
   },
@@ -887,43 +895,43 @@ const styles = StyleSheet.create({
   insightScore: {
     fontSize: 32,
     fontWeight: "900",
-    color: "#0FBBA1",
+    color: "#10B981",
     marginRight: 8,
   },
   insightScoreLabel: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#64748B",
+    color: c.textSecondary,
   },
   insightExplanation: {
     fontSize: 14,
-    color: "#475569",
+    color: c.textSecondary,
     lineHeight: 22,
     marginBottom: 16,
   },
   validityExplanationBox: {
     flexDirection: "row",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: c.cardSecondary,
     padding: 14,
     borderRadius: 12,
     gap: 10,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: c.borderLight,
   },
   validityExplanationText: {
     flex: 1,
     fontSize: 12,
-    color: "#475569",
+    color: c.textSecondary,
     lineHeight: 18,
     fontWeight: "500",
   },
   storeCard: {
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     borderRadius: 20,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: c.borderLight,
   },
   storeMain: {
     flexDirection: "row",
@@ -945,7 +953,7 @@ const styles = StyleSheet.create({
   storeName: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#1E293B",
+    color: c.text,
   },
   distRow: {
     flexDirection: "row",
@@ -955,7 +963,7 @@ const styles = StyleSheet.create({
   },
   storeDist: {
     fontSize: 12,
-    color: "#94A3B8",
+    color: c.textMuted,
     fontWeight: "500",
   },
   medTagCloud: {
@@ -967,29 +975,29 @@ const styles = StyleSheet.create({
   medTag: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: c.cardSecondary,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
     gap: 6,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: c.borderLight,
   },
   medDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#0FBBA1",
+    backgroundColor: "#10B981",
   },
   medTagName: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#475569",
+    color: c.textSecondary,
   },
   moreMeds: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#94A3B8",
+    color: c.textMuted,
     marginLeft: 4,
   },
   bottomAction: {
@@ -1010,7 +1018,7 @@ const styles = StyleSheet.create({
     gap: 12,
     overflow: "hidden",
     elevation: 8,
-    shadowColor: "#0FBBA1",
+    shadowColor: "#10B981",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1022,13 +1030,13 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   emptyCard: {
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     borderRadius: 24,
     padding: 30,
     alignItems: "center",
     borderStyle: "dashed",
     borderWidth: 2,
-    borderColor: "#E2E8F0",
+    borderColor: c.border,
   },
   emptyImg: {
     width: 120,
@@ -1044,7 +1052,7 @@ const styles = StyleSheet.create({
   },
   emptySub: {
     fontSize: 14,
-    color: "#64748B",
+    color: c.textSecondary,
     textAlign: "center",
     lineHeight: 20,
   },
@@ -1057,12 +1065,12 @@ const styles = StyleSheet.create({
   errorFullTitle: {
     fontSize: 24,
     fontWeight: "900",
-    color: "#0F172A",
+    color: c.text,
     marginTop: 24,
   },
   errorFullMsg: {
     fontSize: 15,
-    color: "#64748B",
+    color: c.textSecondary,
     textAlign: "center",
     marginTop: 12,
     lineHeight: 22,
@@ -1073,7 +1081,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   retryBtn: {
-    backgroundColor: "#0FBBA1",
+    backgroundColor: "#10B981",
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 14,
@@ -1091,10 +1099,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: c.border,
   },
   backErrorText: {
-    color: "#64748B",
+    color: c.textSecondary,
     fontWeight: "700",
     fontSize: 15,
   },

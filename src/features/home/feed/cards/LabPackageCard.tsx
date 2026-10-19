@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { LabPackage, LabPackageShowcaseFeedItem } from '../feed.types';
 import SectionHeader from './SectionHeader';
 
 import { FeedAction } from '../feed.actions';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 type Props = {
     data: LabPackageShowcaseFeedItem;
@@ -12,6 +15,9 @@ type Props = {
 };
 
 function LabPackageCard({ data, onAction }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const handlePress = (item: LabPackage) => {
         if (item.action && onAction) {
             onAction(item.action);
@@ -35,7 +41,7 @@ function LabPackageCard({ data, onAction }: Props) {
                     <AppIcon name="flask" size={18} color="#7C3AED" />
                 </View>
                 <View style={styles.tatBadge}>
-                    <AppIcon name="clock" size={10} color="#6B7280" />
+                    <AppIcon name="clock" size={10} color={theme.textSecondary} />
                     <Text style={styles.tatText}>{item.tat}</Text>
                 </View>
             </View>
@@ -68,7 +74,7 @@ function LabPackageCard({ data, onAction }: Props) {
                     style={styles.bookButton}
                     onPress={() => handlePress(item)}
                 >
-                    <Text style={styles.bookButtonText}>Book</Text>
+                    <Text style={styles.bookButtonText}>{t('book')}</Text>
                 </TouchableOpacity>
             </View>
         </TouchableOpacity>
@@ -96,7 +102,7 @@ function LabPackageCard({ data, onAction }: Props) {
 
 export default React.memo(LabPackageCard);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         marginBottom: 30,
     },
@@ -107,7 +113,7 @@ const styles = StyleSheet.create({
     card: {
         width: 200,
         marginHorizontal: 8,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 16,
         padding: 16,
         // Shadow
@@ -117,7 +123,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 2,
         borderWidth: 1,
-        borderColor: '#F3F4F6'
+        borderColor: c.borderLight
     },
     headerRow: {
         flexDirection: 'row',
@@ -129,7 +135,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 12,
-        backgroundColor: '#F5F3FF',
+        backgroundColor: c.cardSecondary,
         justifyContent: 'center',
         alignItems: 'center'
     },
@@ -137,20 +143,20 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8
     },
     tatText: {
         fontSize: 10,
-        color: '#4B5563',
+        color: c.textSecondary,
         fontWeight: '600'
     },
     title: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 8,
         height: 40
     },
@@ -161,15 +167,15 @@ const styles = StyleSheet.create({
     includesCount: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#4B5563'
+        color: c.textSecondary
     },
     includesList: {
         fontSize: 11,
-        color: '#9CA3AF'
+        color: c.textMuted
     },
     divider: {
         height: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         marginBottom: 12
     },
     priceRow: {
@@ -180,11 +186,11 @@ const styles = StyleSheet.create({
     price: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#111827'
+        color: c.text
     },
     originalPrice: {
         fontSize: 12,
-        color: '#9CA3AF',
+        color: c.textMuted,
         textDecorationLine: 'line-through'
     },
     discountText: {

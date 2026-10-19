@@ -11,13 +11,15 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../theme/ThemeContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 // Full-width white card (rounded bottom corners only) over a full-bleed
 // brand gradient background - the gradient shows through the rounded
 // corner notches at the base of the white card, and fills the section
 // below it where the dots/button sit. Same brand gradient used elsewhere
 // in the app (HealthProfileScreen's header, the splash screen).
-const GRADIENT_COLORS = ['#0FBBA1', '#007C69'] as const;
+const GRADIENT_COLORS = ['#10B981', '#007C69'] as const;
 
 const slides = [
   {
@@ -41,8 +43,10 @@ const slides = [
 ];
 
 export default function IntroScreen({ onFinish }: { onFinish: () => void }) {
+  const { t } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(0);
   const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
 
   // This screen's gradient reaches the transparent system nav bar, so its
   // default dark icons (set app-wide in useSystemUI.ts, for the mostly
@@ -53,9 +57,9 @@ export default function IntroScreen({ onFinish }: { onFinish: () => void }) {
     if (Platform.OS !== 'android') return;
     NavigationBar.setButtonStyleAsync('light');
     return () => {
-      NavigationBar.setButtonStyleAsync('dark');
+      NavigationBar.setButtonStyleAsync(isDark ? 'light' : 'dark');
     };
-  }, []);
+  }, [isDark]);
 
   const handleNext = () => {
     if (currentIndex === slides.length - 1) {
@@ -85,7 +89,7 @@ export default function IntroScreen({ onFinish }: { onFinish: () => void }) {
       <View style={[styles.topCard, { paddingTop: insets.top + 16 }]}>
         <View style={styles.skipRow}>
           <TouchableOpacity onPress={onFinish} style={styles.skipButton}>
-            <Text style={styles.skipText}>Skip</Text>
+            <Text style={styles.skipText}>{t('skip')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -98,8 +102,8 @@ export default function IntroScreen({ onFinish }: { onFinish: () => void }) {
             />
           </View>
 
-          <Text style={styles.title}>{currentSlide.title}</Text>
-          <Text style={styles.description}>{currentSlide.description}</Text>
+          <Text style={styles.title}>{t(currentSlide.title)}</Text>
+          <Text style={styles.description}>{t(currentSlide.description)}</Text>
         </View>
       </View>
 

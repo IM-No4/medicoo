@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import SkeletonBlock from '../../components/loaders/SkeletonBlock';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 // Mirrors the real layout (search bar + 2-column folder grid) so the
 // loading state reads as "this page" rather than a generic spinner.
 export default function RecordsSkeleton() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.container}>
       <SkeletonBlock height={54} borderRadius={14} style={{ marginBottom: 14 }} />
@@ -24,7 +28,7 @@ export default function RecordsSkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     paddingHorizontal: 16,
     paddingTop: 16,
@@ -36,12 +40,12 @@ const styles = StyleSheet.create({
   },
   folderCard: {
     width: '48.5%',
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: c.borderLight,
   },
   folderTopRow: {
     flexDirection: 'row',

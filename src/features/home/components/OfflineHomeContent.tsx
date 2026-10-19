@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { Activity, Calendar, Footprints, HeartPulse, LucideIcon, Target, TrendingUp, Wind } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../redux/store';
@@ -11,6 +11,9 @@ import { getLocalDateString } from '../../../utils/dateUtils';
 import { timeToMinutes } from '../../calendar/utils/scheduleSort';
 import MedicineCard from '../../calendar/components/MedicineCard';
 import { GoalsCard } from '../../health/components/GoalsCard';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 // Rendered instead of the normal network-fed feed while offline - see
 // HomeScreen.tsx's early return and OfflineHomeHeader.tsx for the header
@@ -48,6 +51,8 @@ type GridCard = {
 // adjacent cards (in the same row OR the same column) share a hue - teal is
 // reserved for the header/hero only, so nothing below repeats it.
 function Card({ icon: Icon, accent, tint, title, subtitle, screen }: GridCard) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     return (
         <TouchableOpacity
@@ -55,7 +60,7 @@ function Card({ icon: Icon, accent, tint, title, subtitle, screen }: GridCard) {
             activeOpacity={0.88}
             onPress={() => navigation.navigate(screen)}
         >
-            <View style={[styles.cardIcon, { backgroundColor: '#FFFFFF' }]}>
+            <View style={[styles.cardIcon, { backgroundColor: theme.card }]}>
                 <Icon size={22} color={accent} />
             </View>
             <View>
@@ -67,6 +72,9 @@ function Card({ icon: Icon, accent, tint, title, subtitle, screen }: GridCard) {
 }
 
 export default function OfflineHomeContent() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const dispatch = useDispatch<AppDispatch>();
     const latestVital = useSelector((state: RootState) => state.vitals.records[0]);
@@ -166,10 +174,10 @@ export default function OfflineHomeContent() {
                 fought the header's own bold teal right above it. */}
             <TouchableOpacity style={styles.heroCard} activeOpacity={0.9} onPress={() => navigation.navigate('ActivityHistory')}>
                 <View style={styles.heroTop}>
-                    <View style={[styles.cardIcon, { backgroundColor: '#FFFFFF' }]}>
+                    <View style={[styles.cardIcon, { backgroundColor: theme.card }]}>
                         <Footprints size={22} color="#0284C7" />
                     </View>
-                    <Text style={styles.heroLabel}>Steps Today</Text>
+                    <Text style={styles.heroLabel}>{t('steps_today')}</Text>
                 </View>
                 <Text style={styles.heroValue}>
                     {todaySteps > 0 ? todaySteps.toLocaleString() : '0'}
@@ -181,7 +189,7 @@ export default function OfflineHomeContent() {
 
             {sortedMedicines.length > 0 && (
                 <View>
-                    <Text style={styles.sectionLabel}>Today's Medications</Text>
+                    <Text style={styles.sectionLabel}>{t('todays_medications')}</Text>
                     {sortedMedicines.map((item: any) => (
                         <MedicineCard
                             key={item.id}
@@ -240,14 +248,14 @@ export default function OfflineHomeContent() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         paddingHorizontal: 20,
         paddingTop: 20,
         gap: 12,
     },
     heroCard: {
-        backgroundColor: '#E0F2FE',
+        backgroundColor: c.infoBg,
         borderRadius: 22,
         padding: 20,
     },
@@ -260,22 +268,22 @@ const styles = StyleSheet.create({
     heroLabel: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#6B7280',
+        color: c.textSecondary,
     },
     heroValue: {
         fontSize: 34,
         fontWeight: '800',
-        color: '#111827',
+        color: c.text,
         marginBottom: 2,
     },
     heroSubtitle: {
         fontSize: 12.5,
-        color: '#9CA3AF',
+        color: c.textMuted,
     },
     sectionLabel: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 12,
     },
     row: {
@@ -302,11 +310,11 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: 14.5,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 3,
     },
     cardSubtitle: {
         fontSize: 12,
-        color: '#6B7280',
+        color: c.textSecondary,
     },
 });

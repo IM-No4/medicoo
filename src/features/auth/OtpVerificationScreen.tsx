@@ -14,6 +14,8 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { useTheme } from '../../theme/ThemeContext';
 import { useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -33,6 +35,8 @@ type RouteParams = {
 export default function OtpVerificationScreen() {
     const dispatch = useDispatch();
     const insets = useSafeAreaInsets();
+    const { theme, isDark } = useTheme();
+    const { t } = useLanguage();
     const navigation = useNavigation();
     const route = useRoute<RouteProp<RouteParams, 'params'>>();
     const { phone } = route.params;
@@ -88,15 +92,15 @@ export default function OtpVerificationScreen() {
                 setStatusModal({
                     visible: true,
                     status: 'error',
-                    title: 'OTP Expired',
-                    message: 'The OTP has expired. Please request a new one.',
+                    title: t('otp_expired'),
+                    message: t('the_otp_has_expired_please_request_a_n'),
                 });
             } else {
                 setStatusModal({
                     visible: true,
                     status: 'error',
-                    title: 'Error',
-                    message: 'Failed to verify OTP. Please try again.',
+                    title: t('error'),
+                    message: t('failed_to_verify_otp_please_try_again'),
                 });
             }
         } finally {
@@ -131,8 +135,8 @@ export default function OtpVerificationScreen() {
             setStatusModal({
                 visible: true,
                 status: 'success',
-                title: 'OTP Sent',
-                message: 'A new OTP has been sent to your mobile number.',
+                title: t('otp_sent'),
+                message: t('a_new_otp_has_been_sent_to_your_mobile'),
             });
             setOtp(['', '', '', '', '', '']);
             setTimeLeft(15);
@@ -141,8 +145,8 @@ export default function OtpVerificationScreen() {
             setStatusModal({
                 visible: true,
                 status: 'error',
-                title: 'Error',
-                message: 'Failed to send OTP. Please try again.',
+                title: t('error'),
+                message: t('failed_to_send_otp_please_try_again'),
             });
         } finally {
             setLoading(false);
@@ -150,12 +154,12 @@ export default function OtpVerificationScreen() {
     };
 
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <View style={[styles.container, { backgroundColor: theme.card }]}>
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.card} />
 
-            <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
+            <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4), backgroundColor: theme.card }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
             </View>
 
@@ -165,15 +169,15 @@ export default function OtpVerificationScreen() {
             >
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                     <View style={styles.contentContainer}>
-                        <Text style={styles.otpTitle}>Verify Phone</Text>
-                        <Text style={styles.otpSubtitle}>Code is sent to +91 {phone}</Text>
+                        <Text style={[styles.otpTitle, { color: theme.text }]}>{t('verify_phone')}</Text>
+                        <Text style={[styles.otpSubtitle, { color: theme.textSecondary }]}>{t('code_sent_to')} +91 {phone}</Text>
 
                         <View style={styles.otpContainer}>
                             {otp.map((digit, index) => (
                                 <TextInput
                                     key={index}
                                     ref={ref => { inputs.current[index] = ref; }}
-                                    style={[styles.otpBox, digit ? styles.otpBoxFilled : null]}
+                                    style={[styles.otpBox, { backgroundColor: theme.inputBg, borderColor: theme.inputBorder, color: theme.text }, digit ? [styles.otpBoxFilled, { backgroundColor: theme.primaryBg }] : null]}
                                     keyboardType="number-pad"
                                     maxLength={1}
                                     value={digit}
@@ -192,15 +196,15 @@ export default function OtpVerificationScreen() {
                             {loading ? (
                                 <ActivityIndicator color="#fff" />
                             ) : (
-                                <Text style={styles.continueButtonText}>Verify OTP</Text>
+                                <Text style={styles.continueButtonText}>{t('verify_otp')}</Text>
                             )}
                         </TouchableOpacity>
 
                         <View style={styles.resendContainer}>
-                            <Text style={styles.resendText}>Didn't receive code? </Text>
+                            <Text style={[styles.resendText, { color: theme.textSecondary }]}>{t('didnt_receive_code')} </Text>
                             <TouchableOpacity onPress={handleResendOtp} disabled={loading || timeLeft > 0}>
-                                <Text style={[styles.resendLink, timeLeft > 0 && styles.disabledLink]}>
-                                    {timeLeft > 0 ? `Request again in ${timeLeft}s` : 'Request again'}
+                                <Text style={[styles.resendLink, { color: theme.text }, timeLeft > 0 && styles.disabledLink]}>
+                                    {timeLeft > 0 ? `${t('request_again_in')} ${timeLeft}s` : t('request_again')}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -281,15 +285,22 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: '600',
         textAlign: 'center',
+        // Android adds default vertical padding + font padding to TextInput,
+        // which pushes the digit up (clipped at the top) and leaves a gap below.
+        textAlignVertical: 'center',
+        includeFontPadding: false,
+        paddingVertical: 0,
+        paddingHorizontal: 0,
+        lineHeight: 24,
         backgroundColor: '#fff',
         color: '#111827',
     },
     otpBoxFilled: {
-        borderColor: '#0FBBA1',
+        borderColor: '#10B981',
         backgroundColor: '#F0FDF4',
     },
     continueButton: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         borderRadius: 8,
         height: 50,
         alignItems: 'center',

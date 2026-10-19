@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import SkeletonBlock from '../../components/loaders/SkeletonBlock';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 // Mirrors the real notification card layout (icon circle + title/subtitle/
 // time lines) so the loading state reads as "this page" rather than a
 // generic spinner.
 export default function NotificationsSkeleton() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.list}>
       {[0, 1, 2, 3, 4].map((i) => (
@@ -23,7 +27,7 @@ export default function NotificationsSkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   list: {
     paddingTop: 4,
   },
@@ -32,7 +36,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     borderBottomWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: c.borderLight,
     gap: 14,
   },
   content: {

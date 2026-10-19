@@ -1,9 +1,12 @@
 import AppIcon from '@/src/components/icons/AppIcon';
 import { RenderMedicationIcon } from '@/src/components/modals/AddMedicationModal/config/shapes';
 import { useNavigation } from '@react-navigation/native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { FeedAction } from '../feed/feed.actions';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 type UpcomingItem = {
   id: string;
@@ -27,6 +30,9 @@ type Props = {
 };
 
 function UpcomingSection({ title, appointments = [], medicines = [], onAction, seeAllAction }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
   // Combine and transform data
   const items: UpcomingItem[] = [
@@ -77,7 +83,7 @@ function UpcomingSection({ title, appointments = [], medicines = [], onAction, s
           style={{ flexDirection: 'row', alignItems: 'center' }}
           onPress={handleSeeAll}
         >
-          <Text style={styles.seeAll}>See all</Text>
+          <Text style={styles.seeAll}>{t('see_all')}</Text>
           <AppIcon name={"chevron-right" as any} color="#1c1c1e" />
         </TouchableOpacity>
       </View>
@@ -126,7 +132,7 @@ function UpcomingSection({ title, appointments = [], medicines = [], onAction, s
 
 export default React.memo(UpcomingSection);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: 30,
   },
@@ -140,18 +146,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1c1c1e',
+    color: c.text,
   },
   seeAll: {
     fontSize: 14,
-    color: '#1c1c1e',
+    color: c.text,
     fontWeight: '600',
   },
   cardSection: {
     paddingHorizontal: 24,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 20,
     padding: 16,
     flexDirection: 'row',
@@ -171,10 +177,10 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   iconBoxMed: {
-    backgroundColor: '#E0F7F4', // Light teal
+    backgroundColor: c.successBg, // Light teal
   },
   iconBoxAppt: {
-    backgroundColor: '#EEF2FF', // Light indigo
+    backgroundColor: c.infoBg, // Light indigo
   },
   info: {
     flex: 1,
@@ -182,7 +188,7 @@ const styles = StyleSheet.create({
   primary: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1D1D21',
+    color: c.text,
   },
   secondary: {
     fontSize: 13,
@@ -190,7 +196,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   timeBadge: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -198,6 +204,6 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#4B5563',
+    color: c.textSecondary,
   },
 });

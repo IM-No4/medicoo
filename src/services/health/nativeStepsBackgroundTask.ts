@@ -12,6 +12,18 @@ export const NATIVE_STEPS_TASK_NAME = 'medicoo-native-steps-sync';
 // codebase's existing FCM background handler registration in index.js).
 TaskManager.defineTask(NATIVE_STEPS_TASK_NAME, async () => {
     const result = await runNativeStepsSync();
+    if (result === 'success') {
+        // With the app closed nothing else carries the count anywhere: read today's total from Health Connect and send it to the
+        // server, so the steps goal (and the friends leaderboard) is current without anyone opening the app. Loaded lazily because
+        // healthConnectStepsService itself imports this file.
+        try {
+            const { getTodayHealthConnectSteps } = await import('./healthConnectStepsService');
+            const { pushTodayStepsToServer } = await import('./stepsServerSync');
+            await pushTodayStepsToServer(await getTodayHealthConnectSteps());
+        } catch (error) {
+            console.warn('[nativeStepsBackgroundTask] Could not send steps to the server', error);
+        }
+    }
     return result === 'success'
         ? BackgroundTask.BackgroundTaskResult.Success
         : BackgroundTask.BackgroundTaskResult.Failed;

@@ -1,22 +1,25 @@
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import React, { useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    Image,
-    Linking,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '@/src/components/icons/AppIcon';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../../components/ThemedModal';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -145,6 +148,9 @@ const FLEET_DATA: AmbulanceUnit[] = [
 ];
 
 export default function AmbulanceScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
 
@@ -243,17 +249,17 @@ export default function AmbulanceScreen() {
             {isSticky && (
                 <View style={[styles.clonedStickyHeader, { paddingTop: insets.top + 8 }]}>
                     <View style={styles.searchContainerSticky}>
-                        <AppIcon name="search" size={18} color="#94A3B8" />
+                        <AppIcon name="search" size={18} color={theme.textMuted} />
                         <TextInput
-                            placeholder="Search emergency ambulance fleet..."
-                            placeholderTextColor="#94A3B8"
+                            placeholder={t('search_emergency_ambulance_fleet')}
+                            placeholderTextColor={theme.textMuted}
                             style={styles.searchInput}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
                         {searchQuery !== '' && (
                             <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                <AppIcon name="x" size={16} color="#94A3B8" />
+                                <AppIcon name="x" size={16} color={theme.textMuted} />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -297,22 +303,22 @@ export default function AmbulanceScreen() {
                         </View>
                     </View>
 
-                    <Text style={styles.providerNameText}>Emergency Ambulance Fleet</Text>
+                    <Text style={styles.providerNameText}>{t('emergency_ambulance_fleet')}</Text>
                     <Text style={[styles.providerAddressText, { marginBottom: 16 }]}>📍 Bandra West, Hill Road • Mumbai Response Hub</Text>
 
                     {/* Integrated Search Bar (Completely Inside Hero Card) */}
                     <View style={styles.searchContainerHero}>
-                        <AppIcon name="search" size={18} color="#94A3B8" />
+                        <AppIcon name="search" size={18} color={theme.textMuted} />
                         <TextInput
-                            placeholder="Search emergency ambulance fleet..."
-                            placeholderTextColor="#94A3B8"
+                            placeholder={t('search_emergency_ambulance_fleet')}
+                            placeholderTextColor={theme.textMuted}
                             style={styles.searchInput}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
                         {searchQuery !== '' && (
                             <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                <AppIcon name="x" size={16} color="#94A3B8" />
+                                <AppIcon name="x" size={16} color={theme.textMuted} />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -359,7 +365,7 @@ export default function AmbulanceScreen() {
                         onPress={() => setActiveTab('hospital')}
                     >
                         <Text style={[styles.tabText, activeTab === 'hospital' && styles.tabTextActive]}>
-                            Hospital Fleet
+                            {t('hospital_fleet')}
                         </Text>
                     </TouchableOpacity>
 
@@ -368,7 +374,7 @@ export default function AmbulanceScreen() {
                         onPress={() => setActiveTab('scheduled')}
                     >
                         <Text style={[styles.tabText, activeTab === 'scheduled' && styles.tabTextActive]}>
-                            Scheduled
+                            {t('scheduled')}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -418,7 +424,7 @@ export default function AmbulanceScreen() {
 
                                     <View style={styles.itemActionColumn}>
                                         <View style={styles.iconPlaceholder}>
-                                            <AppIcon name="ambulance" size={32} color="#64748B" />
+                                            <AppIcon name="ambulance" size={32} color={theme.textSecondary} />
                                         </View>
                                         <TouchableOpacity
                                             style={[styles.selectButton, isSelected && styles.selectButtonActive]}
@@ -437,7 +443,7 @@ export default function AmbulanceScreen() {
                         {filteredFleet.length === 0 && (
                             <View style={styles.emptyState}>
                                 <AppIcon name="search" size={32} color="#CBD5E1" />
-                                <Text style={styles.emptyStateText}>No available units match search/tabs.</Text>
+                                <Text style={styles.emptyStateText}>{t('no_available_units_match_search_tabs')}</Text>
                             </View>
                         )}
                     </View>
@@ -450,7 +456,7 @@ export default function AmbulanceScreen() {
             <View style={[styles.footerBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : 16 }]}>
                 <View style={styles.footerSummary}>
                     <Text style={styles.footerCalculatedPrice}>
-                        ₹{selectedUnitObj?.baseFare} <Text style={styles.cardPriceUnit}>base rate</Text>
+                        ₹{selectedUnitObj?.baseFare} <Text style={styles.cardPriceUnit}>{t('base_rate')}</Text>
                     </Text>
                     <Text style={styles.footerCalculatedDetails} numberOfLines={1}>
                         Unit: {selectedUnitObj?.name}
@@ -468,7 +474,7 @@ export default function AmbulanceScreen() {
                         end={{ x: 1, y: 0 }}
                         style={styles.bookGradient}
                     >
-                        <Text style={styles.bookText}>Dispatch Config</Text>
+                        <Text style={styles.bookText}>{t('dispatch_config')}</Text>
                         <AppIcon name="chevron-right" size={16} color="#FFFFFF" />
                     </LinearGradient>
                 </TouchableOpacity>
@@ -490,28 +496,28 @@ export default function AmbulanceScreen() {
                     <View style={[styles.modalSheet, { paddingBottom: insets.bottom > 0 ? insets.bottom : 24 }]}>
                         <View style={styles.sheetHeader}>
                             <View>
-                                <Text style={styles.sheetTitle}>Dispatch Booking</Text>
+                                <Text style={styles.sheetTitle}>{t('dispatch_booking')}</Text>
                                 <Text style={styles.sheetSubtitle}>{selectedUnitObj?.name} • Base ₹{selectedUnitObj?.baseFare}</Text>
                             </View>
                             <TouchableOpacity
                                 style={styles.sheetCloseButton}
                                 onPress={() => setIsConfigModalVisible(false)}
                             >
-                                <AppIcon name="x" size={20} color="#64748B" />
+                                <AppIcon name="x" size={20} color={theme.textSecondary} />
                             </TouchableOpacity>
                         </View>
 
                         {/* Dispatch Fields Form */}
                         <View style={styles.sheetBody}>
-                            <Text style={styles.sheetLabel}>Confirm Pickup Address (GPS Fixed)</Text>
+                            <Text style={styles.sheetLabel}>{t('confirm_pickup_address_gps_fixed')}</Text>
                             <TextInput
                                 style={styles.modalInput}
                                 value={pickupAddress}
                                 onChangeText={setPickupAddress}
-                                placeholder="Enter pickup address..."
+                                placeholder={t('enter_pickup_address')}
                             />
 
-                            <Text style={[styles.sheetLabel, { marginTop: 16 }]}>Patient Emergency Category</Text>
+                            <Text style={[styles.sheetLabel, { marginTop: 16 }]}>{t('patient_emergency_category')}</Text>
                             <View style={styles.conditionChipGrid}>
                                 {['Accident / Trauma', 'Chest Pain', 'Respiratory Arrest', 'General Transfer'].map((cond) => (
                                     <TouchableOpacity
@@ -528,18 +534,18 @@ export default function AmbulanceScreen() {
 
                             {/* Summary Box */}
                             <View style={styles.calcSummaryBox}>
-                                <Text style={styles.calcSummaryTitle}>Dispatch Bill Breakdown</Text>
+                                <Text style={styles.calcSummaryTitle}>{t('dispatch_bill_breakdown')}</Text>
                                 <View style={styles.calcRow}>
-                                    <Text style={styles.calcLabel}>Initial Base Fare (First 5 km)</Text>
+                                    <Text style={styles.calcLabel}>{t('initial_base_fare_first_5_km')}</Text>
                                     <Text style={styles.calcVal}>₹{selectedUnitObj?.baseFare}</Text>
                                 </View>
                                 <View style={styles.calcRow}>
-                                    <Text style={styles.calcLabel}>Fuel & Toll Surcharge</Text>
-                                    <Text style={styles.calcVal}>Included</Text>
+                                    <Text style={styles.calcLabel}>{t('fuel_toll_surcharge')}</Text>
+                                    <Text style={styles.calcVal}>{t('included')}</Text>
                                 </View>
                                 <View style={styles.calcDividerLine} />
                                 <View style={styles.calcRow}>
-                                    <Text style={styles.calcTotalLabel}>Estimated Total</Text>
+                                    <Text style={styles.calcTotalLabel}>{t('estimated_total')}</Text>
                                     <Text style={styles.calcTotalVal}>₹{selectedUnitObj?.baseFare}</Text>
                                 </View>
                             </View>
@@ -549,7 +555,7 @@ export default function AmbulanceScreen() {
                         <View style={styles.sheetFooterBar}>
                             <View style={styles.sheetFooterSummary}>
                                 <Text style={styles.sheetFooterPrice}>₹{selectedUnitObj?.baseFare}</Text>
-                                <Text style={styles.sheetFooterDetails}>Base Pay authorization</Text>
+                                <Text style={styles.sheetFooterDetails}>{t('base_pay_authorization')}</Text>
                             </View>
 
                             <TouchableOpacity
@@ -563,7 +569,7 @@ export default function AmbulanceScreen() {
                                     end={{ x: 1, y: 0 }}
                                     style={styles.sheetPayGradient}
                                 >
-                                    <Text style={styles.sheetPayText}>Confirm & Pay</Text>
+                                    <Text style={styles.sheetPayText}>{t('confirm_pay')}</Text>
                                     <AppIcon name="chevron-right" size={14} color="#FFFFFF" />
                                 </LinearGradient>
                             </TouchableOpacity>
@@ -593,7 +599,7 @@ export default function AmbulanceScreen() {
                             </View>
                             <View style={styles.razorpayHeaderRight}>
                                 <TouchableOpacity onPress={() => setIsRazorpayVisible(false)}>
-                                    <AppIcon name="x" size={18} color="#94A3B8" />
+                                    <AppIcon name="x" size={18} color={theme.textMuted} />
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -607,7 +613,7 @@ export default function AmbulanceScreen() {
                                 </View>
 
                                 <View style={styles.razorpayPaymentOptions}>
-                                    <Text style={styles.razorpayMethodHeading}>Select Payment Option</Text>
+                                    <Text style={styles.razorpayMethodHeading}>{t('select_payment_option')}</Text>
 
                                     <TouchableOpacity
                                         style={[styles.razorpayMethodRow, paymentMethod === 'upi' && styles.razorpayMethodRowSelected]}
@@ -617,8 +623,8 @@ export default function AmbulanceScreen() {
                                             <AppIcon name="phone" size={16} color="#DC2626" />
                                         </View>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={styles.methodName}>UPI / GPay / PhonePe</Text>
-                                            <Text style={styles.methodDesc}>Instant authorization via UPI app</Text>
+                                            <Text style={styles.methodName}>{t('upi_gpay_phonepe')}</Text>
+                                            <Text style={styles.methodDesc}>{t('instant_authorization_via_upi_app')}</Text>
                                         </View>
                                         <View style={[styles.methodRadio, paymentMethod === 'upi' && styles.methodRadioSelected]}>
                                             {paymentMethod === 'upi' && <View style={styles.methodRadioDot} />}
@@ -633,8 +639,8 @@ export default function AmbulanceScreen() {
                                             <AppIcon name="locate-fixed" size={16} color="#DC2626" />
                                         </View>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={styles.methodName}>Credit / Debit Cards</Text>
-                                            <Text style={styles.methodDesc}>Visa, Mastercard, RuPay, Maestro</Text>
+                                            <Text style={styles.methodName}>{t('credit_debit_cards')}</Text>
+                                            <Text style={styles.methodDesc}>{t('visa_mastercard_rupay_maestro')}</Text>
                                         </View>
                                         <View style={[styles.methodRadio, paymentMethod === 'card' && styles.methodRadioSelected]}>
                                             {paymentMethod === 'card' && <View style={styles.methodRadioDot} />}
@@ -649,8 +655,8 @@ export default function AmbulanceScreen() {
                                             <AppIcon name="briefcase-medical" size={16} color="#DC2626" />
                                         </View>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={styles.methodName}>Netbanking</Text>
-                                            <Text style={styles.methodDesc}>All major Indian banks supported</Text>
+                                            <Text style={styles.methodName}>{t('netbanking')}</Text>
+                                            <Text style={styles.methodDesc}>{t('all_major_indian_banks_supported')}</Text>
                                         </View>
                                         <View style={[styles.methodRadio, paymentMethod === 'nb' && styles.methodRadioSelected]}>
                                             {paymentMethod === 'nb' && <View style={styles.methodRadioDot} />}
@@ -671,8 +677,8 @@ export default function AmbulanceScreen() {
                         {paymentStep === 'processing' && (
                             <View style={styles.centerFlow}>
                                 <ActivityIndicator size="large" color="#DC2626" />
-                                <Text style={styles.processingText}>Securing Bank Authorization...</Text>
-                                <Text style={styles.processingSub}>Contacting gateway. Please do not close application.</Text>
+                                <Text style={styles.processingText}>{t('securing_bank_authorization')}</Text>
+                                <Text style={styles.processingSub}>{t('contacting_gateway_please_do_not_close')}</Text>
                             </View>
                         )}
 
@@ -681,25 +687,25 @@ export default function AmbulanceScreen() {
                                 <View style={styles.successCheckCircle}>
                                     <AppIcon name="shield-check" size={48} color="#FFFFFF" />
                                 </View>
-                                <Text style={styles.successHeading}>Dispatch Confirmed!</Text>
-                                <Text style={styles.successSub}>Ambulance vehicle has been dispatched successfully.</Text>
+                                <Text style={styles.successHeading}>{t('dispatch_confirmed')}</Text>
+                                <Text style={styles.successSub}>{t('ambulance_vehicle_has_been_dispatched')}</Text>
                                 
                                 <View style={styles.receiptBox}>
-                                    <Text style={styles.receiptLabel}>Dispatch Info Summary</Text>
+                                    <Text style={styles.receiptLabel}>{t('dispatch_info_summary')}</Text>
                                     <View style={styles.receiptRow}>
-                                        <Text style={styles.receiptKey}>Vehicle ID</Text>
+                                        <Text style={styles.receiptKey}>{t('vehicle_id')}</Text>
                                         <Text style={styles.receiptVal}>{selectedUnitObj?.vehicleNo}</Text>
                                     </View>
                                     <View style={styles.receiptRow}>
-                                        <Text style={styles.receiptKey}>Provider</Text>
+                                        <Text style={styles.receiptKey}>{t('provider')}</Text>
                                         <Text style={styles.receiptVal}>{selectedUnitObj?.provider}</Text>
                                     </View>
                                     <View style={styles.receiptRow}>
-                                        <Text style={styles.receiptKey}>ETA</Text>
+                                        <Text style={styles.receiptKey}>{t('eta')}</Text>
                                         <Text style={styles.receiptVal}>{selectedUnitObj?.eta}</Text>
                                     </View>
                                     <View style={styles.receiptRow}>
-                                        <Text style={styles.receiptKey}>Status</Text>
+                                        <Text style={styles.receiptKey}>{t('status')}</Text>
                                         <Text style={styles.receiptValActive}>En Route ⚡</Text>
                                     </View>
                                 </View>
@@ -711,7 +717,7 @@ export default function AmbulanceScreen() {
                                         navigation.navigate('Tabs', { screen: 'Home' }); // Go to Dashboard/Home
                                     }}
                                 >
-                                    <Text style={styles.razorpaySuccessCloseText}>Go to Dashboard</Text>
+                                    <Text style={styles.razorpaySuccessCloseText}>{t('go_to_dashboard')}</Text>
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -724,21 +730,21 @@ export default function AmbulanceScreen() {
 
 /* ================= STYLES ================= */
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.background,
     },
     clonedStickyHeader: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         paddingHorizontal: 16,
         paddingBottom: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
+        borderBottomColor: c.border,
         zIndex: 9999,
         shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 4 },
@@ -807,7 +813,7 @@ const styles = StyleSheet.create({
     searchContainerHero: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 14,
         paddingHorizontal: 12,
         height: 44,
@@ -820,18 +826,18 @@ const styles = StyleSheet.create({
     searchContainerSticky: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderRadius: 14,
         paddingHorizontal: 12,
         height: 44,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
     },
     searchInput: {
         flex: 1,
         marginLeft: 8,
         fontSize: 13,
-        color: '#0F172A',
+        color: c.text,
     },
     filtersWrapperOutside: {
         marginHorizontal: -16,
@@ -847,28 +853,28 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         paddingVertical: 8,
         borderRadius: 8,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         gap: 6,
     },
     catChipActive: {
-        backgroundColor: '#FCE7F3',
+        backgroundColor: c.cardSecondary,
         borderColor: '#FBCFE8',
     },
     catChipText: {
         fontSize: 11,
         fontWeight: '700',
-        color: '#64748B',
+        color: c.textSecondary,
     },
     catChipTextActive: {
         color: '#DB2777',
     },
     tabsContainer: {
         flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        borderBottomColor: c.borderLight,
         marginBottom: 12,
     },
     tabButton: {
@@ -884,7 +890,7 @@ const styles = StyleSheet.create({
     tabText: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#64748B',
+        color: c.textSecondary,
     },
     tabTextActive: {
         color: '#DC2626',
@@ -952,7 +958,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 12,
         paddingVertical: 12,
         gap: 8,
@@ -979,11 +985,11 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     catalogContainer: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         marginHorizontal: -16,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         borderTopLeftRadius: 28,
         borderTopRightRadius: 28,
         overflow: 'hidden',
@@ -996,10 +1002,10 @@ const styles = StyleSheet.create({
     catalogItemCard: {
         flexDirection: 'row',
         paddingVertical: 18,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         gap: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        borderBottomColor: c.borderLight,
     },
     titleBadgeRow: {
         flexDirection: 'row',
@@ -1010,14 +1016,14 @@ const styles = StyleSheet.create({
     itemTitle: {
         fontSize: 14,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
         flex: 1,
     },
     etaBadgeSmall: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#ECFDF5',
+        backgroundColor: c.successBg,
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 6,
@@ -1029,7 +1035,7 @@ const styles = StyleSheet.create({
     },
     itemDescription: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 4,
     },
     metaRow: {
@@ -1058,16 +1064,16 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     equipmentChip: {
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         borderRadius: 6,
         paddingHorizontal: 6,
         paddingVertical: 2,
     },
     equipmentChipText: {
         fontSize: 9,
-        color: '#475569',
+        color: c.textSecondary,
         fontWeight: '600',
     },
     itemActionColumn: {
@@ -1080,11 +1086,11 @@ const styles = StyleSheet.create({
         width: 96,
         height: 90,
         borderRadius: 16,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
     },
     selectButton: {
         position: 'absolute',
@@ -1092,7 +1098,7 @@ const styles = StyleSheet.create({
         width: 76,
         height: 28,
         borderRadius: 8,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderWidth: 1,
         borderColor: '#DC2626',
         justifyContent: 'center',
@@ -1121,7 +1127,7 @@ const styles = StyleSheet.create({
     },
     emptyStateText: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 8,
     },
     footerBar: {
@@ -1129,14 +1135,14 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: '#E2E8F0',
+        borderTopColor: c.border,
     },
     footerSummary: {
         flex: 1,
@@ -1145,11 +1151,11 @@ const styles = StyleSheet.create({
     footerCalculatedPrice: {
         fontSize: 20,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
     },
     footerCalculatedDetails: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 2,
     },
     bookButton: {
@@ -1170,7 +1176,7 @@ const styles = StyleSheet.create({
     },
     cardPriceUnit: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         fontWeight: '500',
     },
 
@@ -1181,7 +1187,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalSheet: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 20,
@@ -1191,17 +1197,17 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'flex-start',
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
+        borderBottomColor: c.borderLight,
         paddingBottom: 14,
     },
     sheetTitle: {
         fontSize: 18,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
     },
     sheetSubtitle: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 2,
     },
     sheetCloseButton: {
@@ -1218,13 +1224,13 @@ const styles = StyleSheet.create({
     },
     modalInput: {
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         borderRadius: 12,
         paddingHorizontal: 12,
         height: 44,
         fontSize: 13,
-        color: '#0F172A',
-        backgroundColor: '#F8FAFC',
+        color: c.text,
+        backgroundColor: c.cardSecondary,
     },
     conditionChipGrid: {
         flexDirection: 'row',
@@ -1235,35 +1241,35 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 8,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
     },
     conditionChipSelected: {
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.errorBg,
         borderColor: '#FCA5A5',
     },
     conditionChipText: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#475569',
+        color: c.textSecondary,
     },
     conditionChipTextSelected: {
         color: '#DC2626',
         fontWeight: '700',
     },
     calcSummaryBox: {
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         borderRadius: 16,
         padding: 14,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         marginTop: 16,
     },
     calcSummaryTitle: {
         fontSize: 13,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
         marginBottom: 10,
     },
     calcRow: {
@@ -1274,7 +1280,7 @@ const styles = StyleSheet.create({
     },
     calcLabel: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
     },
     calcVal: {
         fontSize: 12,
@@ -1283,13 +1289,13 @@ const styles = StyleSheet.create({
     },
     calcDividerLine: {
         height: 1,
-        backgroundColor: '#E2E8F0',
+        backgroundColor: c.infoBg,
         marginVertical: 8,
     },
     calcTotalLabel: {
         fontSize: 13,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
     },
     calcTotalVal: {
         fontSize: 16,
@@ -1300,9 +1306,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderTopWidth: 1,
-        borderTopColor: '#F1F5F9',
+        borderTopColor: c.borderLight,
         paddingTop: 16,
         marginTop: 12,
     },
@@ -1313,11 +1319,11 @@ const styles = StyleSheet.create({
     sheetFooterPrice: {
         fontSize: 22,
         fontWeight: '950',
-        color: '#0F172A',
+        color: c.text,
     },
     sheetFooterDetails: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 2,
     },
     sheetPayButtonSplit: {
@@ -1347,7 +1353,7 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     razorpayWidget: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         width: '100%',
         maxWidth: 360,
         height: 480,
@@ -1388,7 +1394,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     razorpayMerchant: {
-        color: '#94A3B8',
+        color: c.textMuted,
         fontSize: 9,
         fontWeight: '600',
         marginTop: 1,
@@ -1397,27 +1403,27 @@ const styles = StyleSheet.create({
         padding: 4,
     },
     razorpayAmountBox: {
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         padding: 16,
         alignItems: 'center',
         borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
+        borderBottomColor: c.border,
     },
     razorpayAmountLabel: {
         fontSize: 9,
         fontWeight: '800',
-        color: '#94A3B8',
+        color: c.textMuted,
         letterSpacing: 0.5,
     },
     razorpayAmountValue: {
         fontSize: 24,
         fontWeight: '900',
-        color: '#0F172A',
+        color: c.text,
         marginTop: 4,
     },
     razorpayServiceDetails: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 2,
     },
     razorpayPaymentOptions: {
@@ -1427,7 +1433,7 @@ const styles = StyleSheet.create({
     razorpayMethodHeading: {
         fontSize: 11,
         fontWeight: '800',
-        color: '#64748B',
+        color: c.textSecondary,
         textTransform: 'uppercase',
         marginBottom: 10,
         letterSpacing: 0.3,
@@ -1440,18 +1446,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         marginBottom: 8,
     },
     razorpayMethodRowSelected: {
         borderColor: '#FCA5A5',
-        backgroundColor: '#FFF5F5',
+        backgroundColor: c.cardSecondary,
     },
     methodIconWrapperPink: {
         width: 32,
         height: 32,
         borderRadius: 8,
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.errorBg,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -1462,7 +1468,7 @@ const styles = StyleSheet.create({
     },
     methodDesc: {
         fontSize: 10,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 1,
     },
     methodRadio: {
@@ -1505,12 +1511,12 @@ const styles = StyleSheet.create({
     processingText: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         marginTop: 16,
     },
     processingSub: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         marginTop: 4,
         textAlign: 'center',
     },
@@ -1526,19 +1532,19 @@ const styles = StyleSheet.create({
     successHeading: {
         fontSize: 18,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
     },
     successSub: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         textAlign: 'center',
         marginTop: 4,
         paddingHorizontal: 16,
     },
     receiptBox: {
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: c.border,
         borderRadius: 14,
         padding: 12,
         width: '100%',
@@ -1547,7 +1553,7 @@ const styles = StyleSheet.create({
     receiptLabel: {
         fontSize: 10,
         fontWeight: '800',
-        color: '#64748B',
+        color: c.textSecondary,
         textTransform: 'uppercase',
         marginBottom: 8,
     },
@@ -1559,11 +1565,11 @@ const styles = StyleSheet.create({
     },
     receiptKey: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
     },
     receiptVal: {
         fontSize: 11,
-        color: '#0F172A',
+        color: c.text,
         fontWeight: '700',
     },
     receiptValActive: {
@@ -1610,12 +1616,12 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 16,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
         marginBottom: 6,
     },
     emptySubtitle: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         textAlign: 'center',
         lineHeight: 18,
         paddingHorizontal: 24,

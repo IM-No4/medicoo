@@ -1,11 +1,12 @@
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import {
     Activity,
     Brain,
     ChevronLeft,
     Check,
+    ChevronRight,
     Copy,
     Droplets,
     Footprints,
@@ -18,7 +19,7 @@ import {
     Users,
     X,
 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     Platform,
@@ -41,7 +42,14 @@ import {
     removeFriend,
     sendFriendRequest,
 } from '../../redux/slices/friendsSlice';
+import { loadOnDeviceSteps, selectTodaySteps } from '../../redux/slices/deviceSlice';
+import { updateGoalProgress } from '../../redux/slices/goalsSlice';
+import { BadgeInfo, EarnedBadge, fetchBadges } from '../../services/api/goals.api';
+import { BadgesStrip } from './components/BadgesStrip';
 import { getProfileDetails } from '../../services/api/user.api';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const getGoalIcon = (type: string) => {
     switch (type) {
@@ -57,13 +65,23 @@ const getGoalIcon = (type: string) => {
 };
 
 export default function FriendsScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation();
     const dispatch = useDispatch<AppDispatch>();
     const insets = useSafeAreaInsets();
 
     const { friends, incomingRequests, goalProgress, loading } = useSelector((s: RootState) => s.friends);
+    const myGoals = useSelector((s: RootState) => s.goals.goals);
+    const stepsVal = useSelector(selectTodaySteps);
+    const { connectedDevice, onDeviceSteps } = useSelector((s: RootState) => s.device);
+    const hasStepsSource = !!connectedDevice || onDeviceSteps !== null;
+    const sharedGoals = myGoals.filter((g) => g.sharedWithFriends && g.enabled !== false);
+    const stepsGoal = myGoals.find((g) => g.type === 'steps' && g.enabled !== false);
 
     const [myMedId, setMyMedId] = useState<string | null>(null);
+    const [badges, setBadges] = useState<{ earned: EarnedBadge[]; available: BadgeInfo[] }>({ earned: [], available: [] });
     const [copied, setCopied] = useState(false);
     const [medIdInput, setMedIdInput] = useState('');
     const [sending, setSending] = useState(false);
@@ -75,9 +93,27 @@ export default function FriendsScreen() {
     }>({ visible: false, type: 'idle', title: '', message: '' });
 
     useEffect(() => {
-        dispatch(loadFriendsData());
         getProfileDetails().then((p: any) => setMyMedId(p?.med_id || null)).catch(() => {});
-    }, [dispatch]);
+    }, []);
+
+    // Every time this screen is opened: read today's steps, then load the board - so what friends see of you (and what you see of them)
+    // is today's, not whatever the Health tab last happened to save.
+    useFocusEffect(
+        useCallback(() => {
+            dispatch(loadOnDeviceSteps());
+            dispatch(loadFriendsData());
+            fetchBadges().then(setBadges).catch(() => {});
+        }, [dispatch]),
+    );
+
+    // Save today's steps onto the steps goal, then refresh the board with it.
+    const stepsGoalId = stepsGoal?.id;
+    const storedSteps = stepsGoal?.current;
+    useEffect(() => {
+        if (stepsGoalId && hasStepsSource && storedSteps !== stepsVal) {
+            dispatch(updateGoalProgress({ id: stepsGoalId, current: stepsVal })).then(() => dispatch(loadFriendsData()));
+        }
+    }, [stepsGoalId, hasStepsSource, storedSteps, stepsVal, dispatch]);
 
     const showStatus = (type: StatusType, title: string, message: string) => {
         setStatus({ visible: true, type, title, message });
@@ -110,7 +146,7 @@ export default function FriendsScreen() {
             // error.message is always undefined here even when the backend
             // sent a specific, useful reason (e.g. "No user found with that
             // MED ID"). Same fix already applied in LogVitalsScreen.tsx.
-            showStatus('error', 'Could not send request', typeof error === 'string' ? error : 'Something went wrong. Please try again.');
+            showStatus('error', t('could_not_send_request'), typeof error === 'string' ? error : 'Something went wrong. Please try again.');
         } finally {
             setSending(false);
         }
@@ -128,9 +164,9 @@ export default function FriendsScreen() {
 
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Friends</Text>
+                <Text style={styles.headerTitle}>{t('friends')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -142,22 +178,22 @@ export default function FriendsScreen() {
                 {myMedId && (
                     <View style={styles.medIdCard}>
                         <View style={{ flex: 1 }}>
-                            <Text style={styles.medIdLabel}>YOUR MED ID</Text>
+                            <Text style={styles.medIdLabel}>{t('your_med_id')}</Text>
                             <Text style={styles.medIdValue}>{myMedId}</Text>
                         </View>
                         <TouchableOpacity style={styles.copyBtn} onPress={handleCopy} activeOpacity={0.7}>
-                            <Copy size={14} color="#0FBBA1" />
+                            <Copy size={14} color="#10B981" />
                             <Text style={styles.copyBtnText}>{copied ? 'Copied' : 'Copy'}</Text>
                         </TouchableOpacity>
                     </View>
                 )}
 
-                <Text style={styles.sectionLabel}>ADD A FRIEND</Text>
+                <Text style={styles.sectionLabel}>{t('add_a_friend')}</Text>
                 <View style={styles.addRow}>
                     <TextInput
                         style={styles.addInput}
-                        placeholder="Enter their MED ID"
-                        placeholderTextColor="#94A3B8"
+                        placeholder={t('enter_med_id')}
+                        placeholderTextColor={theme.textMuted}
                         value={medIdInput}
                         onChangeText={setMedIdInput}
                         autoCapitalize="characters"
@@ -170,13 +206,13 @@ export default function FriendsScreen() {
                         disabled={sending || !medIdInput.trim()}
                         activeOpacity={0.8}
                     >
-                        {sending ? <ActivityIndicator color="#FFF" size="small" /> : <UserPlus size={18} color="#FFF" />}
+                        {sending ? <ActivityIndicator color="#FFF" size="small" /> : <UserPlus size={18} color={medIdInput.trim() ? '#FFFFFF' : theme.textMuted} />}
                     </TouchableOpacity>
                 </View>
 
                 {incomingRequests.length > 0 && (
                     <>
-                        <Text style={styles.sectionLabel}>FRIEND REQUESTS</Text>
+                        <Text style={styles.sectionLabel}>{t('friend_requests')}</Text>
                         <View style={styles.list}>
                             {incomingRequests.map((r) => (
                                 <View key={r.id} style={styles.requestCard}>
@@ -211,11 +247,11 @@ export default function FriendsScreen() {
                 {friends.length === 0 ? (
                     <View style={styles.emptyCard}>
                         <View style={styles.emptyIconBox}>
-                            <Users size={28} color="#94A3B8" />
+                            <Users size={28} color={theme.textMuted} />
                         </View>
-                        <Text style={styles.emptyTitle}>No friends yet</Text>
+                        <Text style={styles.emptyTitle}>{t('no_friends')}</Text>
                         <Text style={styles.emptySubtitle}>
-                            Add a friend using their MED ID to start comparing goals.
+                            {t('add_a_friend_using_their_med_id_to_sta')}
                         </Text>
                     </View>
                 ) : (
@@ -241,48 +277,125 @@ export default function FriendsScreen() {
                     </View>
                 )}
 
+                {friends.length > 0 && goalProgress.length === 0 && (
+                    <>
+                        <Text style={styles.sectionLabel}>{t('how_you_compare')}</Text>
+                        <View style={styles.emptyCard}>
+                            <View style={styles.emptyIconBox}>
+                                <Target size={28} color={theme.textMuted} />
+                            </View>
+                            {sharedGoals.length === 0 ? (
+                                <>
+                                    <Text style={styles.emptyTitle}>Share a goal to compare</Text>
+                                    <Text style={styles.emptySubtitle}>
+                                        Goals are private until you share them. Open Manage Goals and tap Share on a goal, then ask your friends to share the same one.
+                                    </Text>
+                                    <TouchableOpacity style={styles.compareBtn} onPress={() => (navigation as any).navigate('ManageGoals')} activeOpacity={0.85}>
+                                        <Text style={styles.compareBtnText}>Manage goals</Text>
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                <>
+                                    <Text style={styles.emptyTitle}>No friend shares the same goal yet</Text>
+                                    <Text style={styles.emptySubtitle}>
+                                        You are sharing {sharedGoals.map((g) => g.title).join(', ')}. A comparison shows up once a friend shares the same kind of goal.
+                                    </Text>
+                                </>
+                            )}
+                        </View>
+                    </>
+                )}
+
                 {goalProgress.length > 0 && (
                     <>
-                        <Text style={styles.sectionLabel}>HOW YOU COMPARE</Text>
+                        <Text style={styles.sectionLabel}>{t('how_you_compare')}</Text>
                         <View style={styles.list}>
                             {goalProgress.map((group) => {
                                 const Icon = getGoalIcon(group.type);
+                                const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
+                                const unitText = group.unit ? ` ${group.unit}` : '';
+                                const me = group.entries.find((e) => e.isSelf);
+                                const leader = group.entries[0];
+                                const runnerUp = group.entries.find((e) => !e.isSelf);
+                                const nameOf = (e: any) => e?.profile?.name || 'your friend';
+                                // How the race stands: ahead, or how far behind the leader
+                                let standing = '';
+                                let leading = false;
+                                if (me && leader) {
+                                    if (leader.isSelf && runnerUp) {
+                                        leading = true;
+                                        standing = me.current > runnerUp.current
+                                            ? `You are leading, ${fmt(me.current - runnerUp.current)}${unitText} ahead of ${nameOf(runnerUp)}.`
+                                            : `Level with ${nameOf(runnerUp)} for now.`;
+                                    } else if (!leader.isSelf) {
+                                        standing = leader.current === me.current
+                                            ? `Level with ${nameOf(leader)} for now.`
+                                            : `You are ${fmt(leader.current - me.current)}${unitText} behind ${nameOf(leader)}.`;
+                                    }
+                                }
                                 return (
                                     <View key={group.key} style={styles.leaderboardCard}>
                                         <View style={styles.leaderboardHeader}>
-                                            <Icon size={18} color="#0FBBA1" />
+                                            <Icon size={18} color="#10B981" />
                                             <Text style={styles.leaderboardTitle}>{group.title}</Text>
                                         </View>
-                                        {group.entries.map((entry, index) => (
-                                            <View key={entry.userId} style={styles.entryRow}>
-                                                <Text style={styles.entryRank}>#{index + 1}</Text>
-                                                <View style={{ flex: 1 }}>
-                                                    <View style={styles.entryHeader}>
-                                                        <Text style={[styles.entryName, entry.isSelf && styles.entryNameSelf]}>
-                                                            {entry.isSelf ? 'You' : (entry.profile?.name || 'Friend')}
+                                        {standing ? (
+                                            <Text style={[styles.standing, leading && styles.standingLeading]}>{standing}</Text>
+                                        ) : null}
+                                        {group.entries.map((entry, index) => {
+                                            const Row: any = entry.isSelf ? View : TouchableOpacity;
+                                            const rowProps = entry.isSelf
+                                                ? {}
+                                                : {
+                                                    activeOpacity: 0.7,
+                                                    onPress: () => (navigation as any).navigate('GoalComparison', {
+                                                        friendId: entry.userId,
+                                                        friendName: entry.profile?.name,
+                                                        goalKey: group.key,
+                                                    }),
+                                                };
+                                            return (
+                                                <Row key={entry.userId} style={styles.entryRow} {...rowProps}>
+                                                    <Text style={[styles.entryRank, index === 0 && styles.entryRankFirst]}>#{index + 1}</Text>
+                                                    <View style={{ flex: 1 }}>
+                                                        <View style={styles.entryHeader}>
+                                                            <Text style={[styles.entryName, entry.isSelf && styles.entryNameSelf]}>
+                                                                {entry.isSelf ? 'You' : (entry.profile?.name || 'Friend')}
+                                                            </Text>
+                                                            <Text style={styles.entryPercent}>{entry.progressPercent}%</Text>
+                                                        </View>
+                                                        <Text style={styles.entryDetail}>
+                                                            {`${fmt(entry.current)} / ${fmt(entry.target)}${unitText}`}
+                                                            {!entry.isSelf && entry.syncedToday === false ? '  ·  not updated today' : ''}
                                                         </Text>
-                                                        <Text style={styles.entryPercent}>{entry.progressPercent}%</Text>
+                                                        <View style={styles.entryBarBg}>
+                                                            <View
+                                                                style={[
+                                                                    styles.entryBarFill,
+                                                                    { width: `${entry.progressPercent}%`, backgroundColor: entry.isSelf ? '#10B981' : '#94A3B8' },
+                                                                ]}
+                                                            />
+                                                        </View>
                                                     </View>
-                                                    <View style={styles.entryBarBg}>
-                                                        <View
-                                                            style={[
-                                                                styles.entryBarFill,
-                                                                {
-                                                                    width: `${entry.progressPercent}%`,
-                                                                    backgroundColor: entry.isSelf ? '#0FBBA1' : '#94A3B8',
-                                                                },
-                                                            ]}
-                                                        />
-                                                    </View>
-                                                </View>
-                                            </View>
-                                        ))}
+                                                    {!entry.isSelf ? <ChevronRight size={16} color={theme.textMuted} /> : null}
+                                                </Row>
+                                            );
+                                        })}
+                                        <Text style={styles.tapHint}>Tap a friend to see how you compare day by day.</Text>
                                     </View>
                                 );
                             })}
                         </View>
                     </>
                 )}
+                {friends.length > 0 && (badges.earned.length > 0 || badges.available.length > 0) ? (
+                    <>
+                        <Text style={styles.sectionLabel}>YOUR BADGES</Text>
+                        <View style={styles.badgesCard}>
+                            <BadgesStrip earned={badges.earned} available={badges.available} />
+                        </View>
+                    </>
+                ) : null}
             </ScrollView>
 
             <StatusModal
@@ -296,10 +409,10 @@ export default function FriendsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.background,
     },
     header: {
         flexDirection: 'row',
@@ -307,7 +420,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -323,7 +436,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     scrollContent: {
         paddingHorizontal: 20,
@@ -333,45 +446,45 @@ const styles = StyleSheet.create({
     medIdCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: '#DCFCE7',
+        borderColor: c.isDark ? 'rgba(16,185,129,0.25)' : '#DCFCE7',
         padding: 16,
         marginBottom: 24,
     },
     medIdLabel: {
         fontSize: 10,
         fontWeight: '700',
-        color: '#0FBBA1',
+        color: '#10B981',
         letterSpacing: 1,
         marginBottom: 4,
     },
     medIdValue: {
         fontSize: 16,
         fontWeight: '800',
-        color: '#0F172A',
+        color: c.text,
     },
     copyBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 10,
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderWidth: 1,
-        borderColor: '#DCFCE7',
+        borderColor: c.isDark ? 'rgba(16,185,129,0.25)' : '#DCFCE7',
     },
     copyBtnText: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#0FBBA1',
+        color: '#10B981',
     },
     sectionLabel: {
         fontSize: 10,
         fontWeight: '700',
-        color: '#94A3B8',
+        color: c.textMuted,
         letterSpacing: 1,
         marginBottom: 12,
     },
@@ -382,26 +495,28 @@ const styles = StyleSheet.create({
     },
     addInput: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 14,
         paddingHorizontal: 16,
         paddingVertical: 12,
         fontSize: 15,
         fontWeight: '600',
-        color: '#0F172A',
+        color: c.text,
     },
     addBtn: {
         width: 48,
         height: 48,
         borderRadius: 14,
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         alignItems: 'center',
         justifyContent: 'center',
     },
     addBtnDisabled: {
-        backgroundColor: '#CBD5E1',
+        backgroundColor: c.cardSecondary,
+        borderWidth: 1,
+        borderColor: c.border,
     },
     list: {
         gap: 12,
@@ -410,29 +525,29 @@ const styles = StyleSheet.create({
     requestCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 16,
         paddingVertical: 12,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         gap: 10,
     },
     friendCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 16,
         paddingVertical: 12,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
     },
     avatarCircle: {
         width: 44,
         height: 44,
         borderRadius: 14,
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 14,
@@ -440,16 +555,16 @@ const styles = StyleSheet.create({
     avatarInitial: {
         fontSize: 16,
         fontWeight: '800',
-        color: '#0FBBA1',
+        color: '#10B981',
     },
     friendName: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
     },
     friendMedId: {
         fontSize: 12,
-        color: '#64748B',
+        color: c.textSecondary,
         fontWeight: '500',
         marginTop: 1,
     },
@@ -462,24 +577,24 @@ const styles = StyleSheet.create({
         marginLeft: 8,
     },
     acceptBtn: {
-        backgroundColor: '#ECFDF5',
+        backgroundColor: c.successBg,
     },
     rejectBtn: {
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.errorBg,
     },
     removeBtn: {
         width: 36,
         height: 36,
         borderRadius: 10,
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.errorBg,
         alignItems: 'center',
         justifyContent: 'center',
     },
     emptyCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         paddingVertical: 32,
         paddingHorizontal: 20,
         alignItems: 'center',
@@ -489,7 +604,7 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,
@@ -497,21 +612,21 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         marginBottom: 4,
     },
     emptySubtitle: {
         fontSize: 13,
-        color: '#64748B',
+        color: c.textSecondary,
         textAlign: 'center',
         lineHeight: 19,
     },
     leaderboardCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
     },
     leaderboardHeader: {
         flexDirection: 'row',
@@ -522,7 +637,7 @@ const styles = StyleSheet.create({
     leaderboardTitle: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
     },
     entryRow: {
         flexDirection: 'row',
@@ -533,7 +648,7 @@ const styles = StyleSheet.create({
     entryRank: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#94A3B8',
+        color: c.textMuted,
         width: 22,
     },
     entryHeader: {
@@ -545,20 +660,28 @@ const styles = StyleSheet.create({
     entryName: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#475569',
+        color: c.textSecondary,
     },
     entryNameSelf: {
-        color: '#0FBBA1',
+        color: '#10B981',
         fontWeight: '800',
     },
+    standing: { fontSize: 12.5, fontWeight: '700', color: c.textSecondary, marginBottom: 6 },
+    standingLeading: { color: '#10B981' },
+    entryRankFirst: { color: '#F59E0B' },
+    tapHint: { fontSize: 11, color: c.textMuted, marginTop: 8 },
+    badgesCard: { backgroundColor: c.card, borderRadius: 16, borderWidth: 1, borderColor: c.borderLight, padding: 14 },
+    entryDetail: { fontSize: 11, color: c.textMuted, marginBottom: 4 },
+    compareBtn: { marginTop: 16, height: 44, borderRadius: 10, paddingHorizontal: 24, backgroundColor: '#10B981', alignItems: 'center', justifyContent: 'center' },
+    compareBtnText: { fontSize: 13, fontWeight: '800', letterSpacing: 0.6, color: '#fff' },
     entryPercent: {
         fontSize: 12,
-        color: '#6B7280',
+        color: c.textSecondary,
         fontWeight: '600',
     },
     entryBarBg: {
         height: 6,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         borderRadius: 3,
         overflow: 'hidden',
     },

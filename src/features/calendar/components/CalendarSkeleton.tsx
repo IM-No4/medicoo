@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import SkeletonBlock from '../../../components/loaders/SkeletonBlock';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 // Mirrors the real layout (Appointments + Medications sections, each with
 // their own rows) so the screen doesn't flash from blank -> content, and the
 // loading state reads as "this page" rather than a generic spinner.
 export default function CalendarSkeleton() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View>
       <View style={styles.sectionHeaderRow}>
@@ -44,7 +48,7 @@ export default function CalendarSkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -58,7 +62,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 20,
     padding: 16,
     marginBottom: 12,

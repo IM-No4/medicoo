@@ -1,6 +1,6 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Calendar, ChevronLeft, Droplet, Edit2, Mail, MapPin, Phone, Ruler, Trash2, User, Weight } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
@@ -14,8 +14,15 @@ import { unregisterDeviceToken } from '../../../../services/api/pushNotification
 import { getFCMToken } from '../../../../utils/deviceUtils';
 import { formatDateForDisplay, formatGenderForDisplay } from '../../../../utils/formatters';
 import { clearToken } from '../../../../utils/tokenManagement';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
+import { AuthImage } from '../../../../components/AuthImage';
 
 export default function ProfileDetailsScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
     const dispatch = useDispatch();
@@ -43,8 +50,8 @@ export default function ProfileDetailsScreen() {
         setStatus({
             visible: true,
             type: 'warning',
-            title: 'Delete Account',
-            message: "Your account will be permanently deleted after 30 days. Log back in anytime before then to cancel.",
+            title: t('delete_account'),
+            message: t('your_account_will_be_permanently_delet'),
             primaryActionText: 'Delete',
             secondaryActionText: 'Keep',
             primaryAction: async () => {
@@ -56,8 +63,8 @@ export default function ProfileDetailsScreen() {
                     setStatus({
                         visible: true,
                         type: 'error',
-                        title: 'Something went wrong',
-                        message: 'Could not schedule account deletion. Please try again.',
+                        title: t('something_went_wrong'),
+                        message: t('could_not_schedule_account_deletion_pl'),
                     });
                     return;
                 }
@@ -100,7 +107,7 @@ export default function ProfileDetailsScreen() {
     const renderDetailRow = (icon: any, label: string, value: string | null | undefined, isVerified = false) => (
         <View style={styles.detailRow}>
             <View style={styles.iconContainer}>
-                {React.createElement(icon, { size: 20, color: '#6B7280' })}
+                {React.createElement(icon, { size: 20, color: theme.textSecondary })}
             </View>
             <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>{label}</Text>
@@ -117,23 +124,21 @@ export default function ProfileDetailsScreen() {
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#0FBBA1" />
+                <ActivityIndicator size="large" color="#10B981" />
             </View>
         );
     }
 
-    const profileImage = profile?.profileImage
-        ? (profile.profileImage.startsWith('http') ? profile.profileImage : `data:image/jpeg;base64,${profile.profileImage}`)
-        : null;
+    const profileImage: string | null = profile?.profileImage || null;
 
     return (
         <View style={styles.container}>
             {/* Header */}
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Profile Details</Text>
+                <Text style={styles.headerTitle}>{t('profile_details')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -142,7 +147,7 @@ export default function ProfileDetailsScreen() {
                 <View style={styles.profileHeader}>
                     <View style={styles.imageContainer}>
                         {profileImage ? (
-                            <Image source={{ uri: profileImage }} style={styles.avatar} />
+                            <AuthImage uri={profileImage} style={styles.avatar} />
                         ) : (
                             <View style={styles.placeholderAvatar}>
                                 <Text style={styles.initials}>{profile?.name ? profile.name.charAt(0).toUpperCase() : 'U'}</Text>
@@ -154,13 +159,13 @@ export default function ProfileDetailsScreen() {
 
                 {/* Details Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Contact Information</Text>
+                    <Text style={styles.sectionTitle}>{t('contact_information')}</Text>
                     {renderDetailRow(Phone, 'Phone Number', profile?.mobile || profile?.phone || authMobile, true)}
                     {renderDetailRow(Mail, 'Email', profile?.email, !!profile?.email)}
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Personal Details</Text>
+                    <Text style={styles.sectionTitle}>{t('personal_details')}</Text>
                     {renderDetailRow(User, 'Gender', formatGenderForDisplay(profile?.gender))}
                     {renderDetailRow(Calendar, 'Date of Birth', formatDateForDisplay(profile?.dob))}
                     {renderDetailRow(Droplet, 'Blood Group', profile?.bloodGroup)}
@@ -169,7 +174,7 @@ export default function ProfileDetailsScreen() {
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Address</Text>
+                    <Text style={styles.sectionTitle}>{t('address')}</Text>
                     {renderDetailRow(MapPin, 'Home Address', profile?.address)}
                 </View>
 
@@ -183,7 +188,7 @@ export default function ProfileDetailsScreen() {
                         <View style={[styles.iconContainer, styles.deleteIconContainer]}>
                             <Trash2 size={20} color="#EF4444" />
                         </View>
-                        <Text style={styles.deleteRowText}>Delete Account</Text>
+                        <Text style={styles.deleteRowText}>{t('delete_account')}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -197,7 +202,7 @@ export default function ProfileDetailsScreen() {
                     onPress={() => executeAction('OPEN_EDIT_PROFILE', { profile })}
                 >
                     <Edit2 size={20} color="#fff" />
-                    <Text style={styles.editButtonText}>Edit Profile</Text>
+                    <Text style={styles.editButtonText}>{t('edit_profile')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -215,8 +220,8 @@ export default function ProfileDetailsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8F9FE' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     // Same header recipe as the rest of the Profile screens - white bar +
     // shadow, plain icon back button, fontSize 20/600/#111827 title.
@@ -226,14 +231,14 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
         }),
     },
     backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
-    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
 
     content: { padding: 20 },
 
@@ -250,43 +255,43 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 10,
         elevation: 5,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.cardSecondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
     avatar: { width: '100%', height: '100%' },
-    placeholderAvatar: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0FBBA1' },
+    placeholderAvatar: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#10B981' },
     initials: { fontSize: 36, fontWeight: '600', color: '#fff' },
-    nameText: { fontSize: 24, fontWeight: '700', color: '#111827' },
+    nameText: { fontSize: 24, fontWeight: '700', color: c.text },
 
-    section: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 20 },
-    sectionTitle: { fontSize: 14, fontWeight: '600', color: '#6B7280', marginBottom: 16, textTransform: 'uppercase' },
+    section: { backgroundColor: c.card, borderRadius: 16, padding: 16, marginBottom: 20 },
+    sectionTitle: { fontSize: 14, fontWeight: '600', color: c.textSecondary, marginBottom: 16, textTransform: 'uppercase' },
 
     detailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
     iconContainer: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 16,
     },
     detailContent: { flex: 1 },
-    detailLabel: { fontSize: 12, color: '#6B7280' },
-    detailValue: { fontSize: 14, color: '#1F2937', fontWeight: '500', marginTop: 2 },
+    detailLabel: { fontSize: 12, color: c.textSecondary },
+    detailValue: { fontSize: 14, color: c.text, fontWeight: '500', marginTop: 2 },
 
     deleteRow: { flexDirection: 'row', alignItems: 'center' },
-    deleteIconContainer: { backgroundColor: '#FEF2F2' },
+    deleteIconContainer: { backgroundColor: c.errorBg },
     deleteRowText: { fontSize: 15, fontWeight: '600', color: '#EF4444' },
 
     verifiedBadge: {
-        backgroundColor: '#DCFCE7',
+        backgroundColor: c.successBg,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 12,
     },
-    verifiedText: { fontSize: 10, fontWeight: '600', color: '#166534' },
+    verifiedText: { fontSize: 10, fontWeight: '600', color: c.success },
 
     footer: {
         position: 'absolute',
@@ -295,12 +300,12 @@ const styles = StyleSheet.create({
         right: 0,
         paddingHorizontal: 20,
         paddingVertical: 12,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderTopWidth: 1,
-        borderTopColor: '#E5E7EB',
+        borderTopColor: c.border,
     },
     editButton: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         borderRadius: 12,
         paddingVertical: 16,
         flexDirection: 'row',

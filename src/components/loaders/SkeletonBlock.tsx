@@ -1,5 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { Animated, StyleSheet, ViewStyle } from 'react-native';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 interface Props {
   height: number;
@@ -14,6 +16,8 @@ export default function SkeletonBlock({
   borderRadius = 12,
   style,
 }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const opacity = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
@@ -44,8 +48,8 @@ export default function SkeletonBlock({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   block: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: c.cardSecondary,
   },
 });

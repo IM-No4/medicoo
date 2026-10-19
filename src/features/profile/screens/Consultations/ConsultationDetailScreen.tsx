@@ -1,4 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import BookingBadge from '../../../doctor/components/BookingBadge';
 import {
     AlertTriangle,
     Award,
@@ -16,9 +17,12 @@ import {
     Phone,
     Stethoscope,
     Video,
+    RefreshCw,
+    HelpCircle,
+    User,
     XCircle
 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     Image,
@@ -30,16 +34,21 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import RazorpayCheckout from 'react-native-razorpay';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { executeAction } from '../../../../actions/ActionExecutor';
 import ConsultationDetailsCard from '../../../../components/consultation/ConsultationDetailsCard';
+import PaymentMethodsModal from '../../../../components/modals/PaymentMethodsModal';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
 import { getMyAppointmentRequestDetail } from '../../../../services/api';
 import { API_BASE_URL } from '../../../../services/api/client';
-import { cancelAppointmentRequest, createAppointmentPayment, getMyConsultationHistoryWithDoctor, PastConsultationSummary, requestNoShowRefund, requestReschedule, verifyAppointmentPayment } from '../../../../services/api/doctor.api';
+import { cancelAppointmentRequest, getMyConsultationHistoryWithDoctor, PastConsultationSummary, requestNoShowRefund, requestReschedule, verifyAppointmentPayment } from '../../../../services/api/doctor.api';
 import { formatDoctorName } from '../../../../utils/formatters';
 import RescheduleRequestModal from './components/RescheduleRequestModal';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
+import { AdaptiveStatusBar } from '../../../../components/ThemedStatusBar';
+import { Modal } from '../../../../components/ThemedModal';
 
 const STATUS_COLORS: Record<string, string> = {
     completed: '#10B981',
@@ -70,16 +79,16 @@ const CONSULTATION_TYPE_META: Record<'chat' | 'voice' | 'video', { label: string
 };
 
 const TIMELINE_META: Record<string, { label: string; Icon: typeof FileText; color: string; fallbackSubtitle: string }> = {
-    pending: { label: 'Request Created', Icon: FilePlus, color: '#0FBBA1', fallbackSubtitle: 'Your request was sent to the doctor.' },
-    approved: { label: 'Request Approved', Icon: CheckCircle2, color: '#0FBBA1', fallbackSubtitle: 'The doctor approved your request.' },
+    pending: { label: 'Request Created', Icon: FilePlus, color: '#10B981', fallbackSubtitle: 'Your request was sent to the doctor.' },
+    approved: { label: 'Request Approved', Icon: CheckCircle2, color: '#10B981', fallbackSubtitle: 'The doctor approved your request.' },
     rejected: { label: 'Request Rejected', Icon: XCircle, color: '#DC2626', fallbackSubtitle: 'The doctor was unable to accept this request.' },
     cancelled: { label: 'Request Cancelled', Icon: XCircle, color: '#9CA3AF', fallbackSubtitle: 'This request was cancelled.' },
-    paid: { label: 'Payment Confirmed', Icon: CreditCard, color: '#0FBBA1', fallbackSubtitle: 'Payment was received and the slot was confirmed.' },
-    completed: { label: 'Consultation Completed', Icon: Award, color: '#0FBBA1', fallbackSubtitle: 'The consultation was marked as completed.' },
+    paid: { label: 'Payment Confirmed', Icon: CreditCard, color: '#10B981', fallbackSubtitle: 'Payment was received and the slot was confirmed.' },
+    completed: { label: 'Consultation Completed', Icon: Award, color: '#10B981', fallbackSubtitle: 'The consultation was marked as completed.' },
     expired: { label: 'Request Expired', Icon: XCircle, color: '#9CA3AF', fallbackSubtitle: 'This request was automatically terminated after too much time passed.' },
     no_show: { label: 'Consultation Missed', Icon: XCircle, color: '#DC2626', fallbackSubtitle: 'Neither party joined the consultation in time.' },
     reschedule_requested: { label: 'Reschedule Requested', Icon: Clock, color: '#1D4ED8', fallbackSubtitle: 'You proposed a new time for this consultation.' },
-    rescheduled: { label: 'Reschedule Accepted', Icon: CheckCircle2, color: '#0FBBA1', fallbackSubtitle: 'The doctor confirmed your new time.' },
+    rescheduled: { label: 'Reschedule Accepted', Icon: CheckCircle2, color: '#10B981', fallbackSubtitle: 'The doctor confirmed your new time.' },
 };
 
 const formatTimelineDate = (timestamp: string) => {
@@ -148,6 +157,9 @@ const getPaymentErrorDetails = (error: any): { title: string; message: string } 
 };
 
 export default function ConsultationDetailScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const insets = useSafeAreaInsets();
@@ -156,6 +168,7 @@ export default function ConsultationDetailScreen() {
     const [loading, setLoading] = useState(true);
     const [consultation, setConsultation] = useState<any>(null);
     const [paying, setPaying] = useState(false);
+    const [paymentOpen, setPaymentOpen] = useState(false);
     const [pastConsultations, setPastConsultations] = useState<PastConsultationSummary[]>([]);
     const [paymentStatus, setPaymentStatus] = useState<{
         visible: boolean;
@@ -189,6 +202,7 @@ export default function ConsultationDetailScreen() {
     const [cancelling, setCancelling] = useState(false);
     const [choiceBusy, setChoiceBusy] = useState(false);
     const [rescheduleModalVisible, setRescheduleModalVisible] = useState(false);
+    const [menuVisible, setMenuVisible] = useState(false);
     const [now, setNow] = useState(() => Date.now());
 
     // Ticks so the "Join Consultation" button re-enables on its own once the
@@ -227,69 +241,18 @@ export default function ConsultationDetailScreen() {
     const isConfirmed = consultation?.status === 'approved' && consultation?.paymentStatus === 'paid';
     const isAwaitingPayment = consultation?.status === 'approved' && consultation?.paymentStatus !== 'paid';
 
-    const handlePayNow = async () => {
+    // Opens the payment screen. Everything from picking a method to confirming
+    // the payment happens there; the server marks the appointment paid itself, so
+    // all this screen has to do afterwards is refresh.
+    const handlePayNow = () => {
         hidePaymentStatus();
-        setPaying(true);
+        setPaymentOpen(true);
+    };
 
-        let paymentOrder;
-        try {
-            paymentOrder = await createAppointmentPayment(requestId);
-        } catch (error: any) {
-            const { title, message } = getPaymentErrorDetails(error);
-            showPaymentStatus('error', title, message);
-            setPaying(false);
-            return;
-        }
-
-        if ('free' in paymentOrder) {
-            await fetchDetail();
-            setPaying(false);
-            return;
-        }
-
-        let result;
-        try {
-            const { orderId, amount, currency, keyId } = paymentOrder;
-            result = await RazorpayCheckout.open({
-                key: keyId,
-                order_id: orderId,
-                amount,
-                currency,
-                name: 'Medicoo',
-                description: `Consultation with ${formatDoctorName(consultation?.doctorDetails?.name) || 'your doctor'}`,
-                theme: { color: '#0FBBA1' },
-            });
-        } catch (error: any) {
-            const { title, message } = getPaymentErrorDetails(error);
-            showPaymentStatus('error', title, message);
-            setPaying(false);
-            return;
-        }
-
-        // Razorpay confirmed the payment on its end - now waiting on our
-        // backend to verify the signature. This is a distinct, longer step
-        // (network round trip) so it gets its own loading modal rather than
-        // just leaving the pay button's inline spinner running.
-        setPaying(false);
-        showPaymentStatus('loading', '', 'Verifying your payment...');
-        try {
-            await verifyAppointmentPayment(requestId, {
-                razorpayOrderId: result.razorpay_order_id,
-                razorpayPaymentId: result.razorpay_payment_id,
-                razorpaySignature: result.razorpay_signature,
-            });
-            await fetchDetail();
-            showPaymentStatus('success', 'Payment Confirmed!', 'Your appointment is now confirmed. Chat and call will unlock shortly.');
-        } catch (error: any) {
-            const backendMessage = error?.response?.data?.message;
-            showPaymentStatus(
-                'error',
-                'Verification Pending',
-                isUsableString(backendMessage)
-                    ? backendMessage
-                    : 'Your payment went through, but we could not verify it yet. Please check back in a moment or contact support if this continues.'
-            );
-        }
+    const handlePaid = async () => {
+        setPaymentOpen(false);
+        await fetchDetail();
+        showPaymentStatus('success', 'Payment Confirmed!', 'Your appointment is now confirmed. Chat and call will unlock shortly.');
     };
 
     const performCancel = async () => {
@@ -349,8 +312,8 @@ export default function ConsultationDetailScreen() {
     if (loading) {
         return (
             <View style={styles.center}>
-                <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-                <ActivityIndicator size="large" color="#0FBBA1" />
+                <AdaptiveStatusBar barStyle="dark-content" backgroundColor="#fff" />
+                <ActivityIndicator size="large" color="#10B981" />
             </View>
         );
     }
@@ -358,14 +321,24 @@ export default function ConsultationDetailScreen() {
     if (!consultation) {
         return (
             <View style={styles.center}>
-                <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-                <Text style={styles.detailText}>This consultation could not be found.</Text>
+                <AdaptiveStatusBar barStyle="dark-content" backgroundColor="#fff" />
+                <Text style={styles.detailText}>{t('this_consultation_could_not_be_found')}</Text>
             </View>
         );
     }
 
     const statusColor = STATUS_COLORS[consultation.status] || '#3B82F6';
     const doctorDisplayName = formatDoctorName(consultation.doctorDetails?.name);
+    const detailDoctorId = consultation.doctorId;
+    const canBookAgain = !!detailDoctorId && ['expired', 'cancelled', 'rejected', 'completed', 'no_show'].includes(consultation.status);
+
+    // Closes the menu first so the action's own navigation/alert isn't layered under it.
+    const menuActions: { key: string; label: string; Icon: typeof User; danger?: boolean; run: () => void }[] = [
+        ...(canBookAgain ? [{ key: 'again', label: 'Book again', Icon: RefreshCw, run: () => executeAction('OPEN_DOCTOR_DETAIL', { doctorId: detailDoctorId, intent: 'BOOK' }) }] : []),
+        ...(detailDoctorId ? [{ key: 'doctor', label: 'View doctor profile', Icon: User, run: () => executeAction('OPEN_DOCTOR_DETAIL', { doctorId: detailDoctorId }) }] : []),
+        ...(consultation.canCancel ? [{ key: 'cancel', label: 'Cancel appointment', Icon: XCircle, danger: true, run: handleCancel }] : []),
+        { key: 'help', label: 'Help & support', Icon: HelpCircle, run: () => executeAction('OPEN_HELP') },
+    ];
     const typeMeta = CONSULTATION_TYPE_META[(consultation.consultationType as 'chat' | 'voice' | 'video') || 'video'];
     const TypeIcon = typeMeta.Icon;
     const dateTimeLabel = consultation.preferredDate
@@ -378,16 +351,34 @@ export default function ConsultationDetailScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <AdaptiveStatusBar barStyle="dark-content" backgroundColor="#fff" />
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Consultation Detail</Text>
-                <TouchableOpacity style={styles.moreButton} onPress={() => executeAction('OPEN_HELP')}>
-                    <MoreVertical size={20} color="#111827" />
+                <Text style={styles.headerTitle}>{t('consultation_detail')}</Text>
+                <TouchableOpacity style={styles.moreButton} onPress={() => setMenuVisible(true)}>
+                    <MoreVertical size={20} color={theme.text} />
                 </TouchableOpacity>
             </View>
+
+            <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+                <TouchableOpacity style={styles.menuBackdrop} activeOpacity={1} onPress={() => setMenuVisible(false)}>
+                    <View style={[styles.menuCard, { top: insets.top + (Platform.OS === 'android' ? 56 : 48) }]}>
+                        {menuActions.map((action, index) => (
+                            <TouchableOpacity
+                                key={action.key}
+                                style={[styles.menuItem, index > 0 && styles.menuItemDivider]}
+                                activeOpacity={0.7}
+                                onPress={() => { setMenuVisible(false); setTimeout(action.run, 150); }}
+                            >
+                                <action.Icon size={18} color={action.danger ? '#DC2626' : theme.text} />
+                                <Text style={[styles.menuItemText, action.danger && { color: '#DC2626' }]}>{action.label}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </TouchableOpacity>
+            </Modal>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 {/* Doctor + schedule card */}
@@ -404,12 +395,13 @@ export default function ConsultationDetailScreen() {
                             />
                         ) : (
                             <View style={[styles.avatar, styles.placeholderAvatar]}>
-                                <Stethoscope size={26} color="#0FBBA1" />
+                                <Stethoscope size={26} color="#10B981" />
                             </View>
                         )}
                         <View style={styles.doctorInfo}>
                             <Text style={styles.doctorName} numberOfLines={1}>{doctorDisplayName}</Text>
                             <Text style={styles.specialtyText} numberOfLines={1}>{consultation.doctorDetails?.specialization}</Text>
+                            <BookingBadge booking={consultation.booking} myRole={consultation.myRole} />
                         </View>
                     </View>
 
@@ -419,10 +411,10 @@ export default function ConsultationDetailScreen() {
                                 style={styles.messageButton}
                                 onPress={() => executeAction('OPEN_DOCTOR_CHAT', { requestId: consultation.requestId, title: doctorDisplayName, image: consultation.doctorDetails?.image })}
                             >
-                                <MessageCircle size={16} color="#0FBBA1" />
-                                <Text style={styles.messageButtonText}>Message</Text>
+                                <MessageCircle size={16} color="#10B981" />
+                                <Text style={styles.messageButtonText}>{t('message')}</Text>
                             </TouchableOpacity>
-                            {consultation.consultationType !== 'chat' && (
+                            {consultation.consultationType !== 'chat' && consultation.joinAllowed !== false && (
                                 <TouchableOpacity
                                     style={[styles.callButton, !canJoinCallNow && styles.callButtonDisabled]}
                                     disabled={!canJoinCallNow}
@@ -445,7 +437,7 @@ export default function ConsultationDetailScreen() {
 
                     {/* Date and time together */}
                     <View style={styles.metaItem}>
-                        <Calendar size={14} color="#9CA3AF" />
+                        <Calendar size={14} color={theme.textMuted} />
                         <Text style={styles.metaText}>{dateTimeLabel}</Text>
                     </View>
 
@@ -453,7 +445,7 @@ export default function ConsultationDetailScreen() {
                     <View style={[styles.metaRow, { marginTop: 10 }]}>
                         <View style={[styles.modeBadge, { backgroundColor: typeMeta.bg }]}>
                             <TypeIcon size={12} color={typeMeta.color} />
-                            <Text style={[styles.modeBadgeText, { color: typeMeta.color }]}>{typeMeta.label}</Text>
+                            <Text style={[styles.modeBadgeText, { color: typeMeta.color }]}>{t(typeMeta.label)}</Text>
                         </View>
                         <View style={[styles.statusBadge, { backgroundColor: isAwaitingPayment ? '#F59E0B' : statusColor }]}>
                             <Text style={styles.statusBadgeText}>{isAwaitingPayment ? 'Awaiting Payment' : (STATUS_LABELS[consultation.status] || consultation.status)}</Text>
@@ -464,15 +456,15 @@ export default function ConsultationDetailScreen() {
                 {/* Reason & Doctor's Response */}
                 <View style={styles.card}>
                     <View style={styles.sectionHeader}>
-                        <FileText size={16} color="#111827" />
-                        <Text style={styles.sectionTitle}>Reason & Doctor's Response</Text>
+                        <FileText size={16} color={theme.text} />
+                        <Text style={styles.sectionTitle}>{t('reason_doctor_s_response')}</Text>
                     </View>
-                    <Text style={styles.diagnosisTitle}>Reason for visit</Text>
+                    <Text style={styles.diagnosisTitle}>{t('reason_for_visit_2')}</Text>
                     <Text style={styles.detailText}>{consultation.reason}</Text>
                     {consultation.doctorResponse?.remarks && (
                         <>
                             <View style={styles.innerDivider} />
-                            <Text style={styles.diagnosisTitle}>Doctor's Notes</Text>
+                            <Text style={styles.diagnosisTitle}>{t('doctor_s_notes')}</Text>
                             <Text style={styles.detailText}>{consultation.doctorResponse.remarks}</Text>
                         </>
                     )}
@@ -484,15 +476,15 @@ export default function ConsultationDetailScreen() {
                 {isAwaitingPayment && (
                     <View style={styles.payCard}>
                         <View style={styles.payCardHeader}>
-                            <CreditCard size={20} color="#0FBBA1" />
-                            <Text style={styles.payCardTitle}>Payment Required</Text>
+                            <CreditCard size={20} color="#10B981" />
+                            <Text style={styles.payCardTitle}>{t('payment_required')}</Text>
                         </View>
                         <Text style={styles.payCardText}>
                             {doctorDisplayName} approved your request. Complete payment to confirm your appointment and unlock chat/call.
                         </Text>
                         {formatCountdown(consultation.paymentDeadline) && (
                             <View style={styles.deadlineNotice}>
-                                <Clock size={13} color="#B45309" />
+                                <Clock size={13} color={theme.warning} />
                                 <Text style={styles.deadlineNoticeText}>
                                     Pay within {formatCountdown(consultation.paymentDeadline)} or this appointment will expire.
                                 </Text>
@@ -518,9 +510,9 @@ export default function ConsultationDetailScreen() {
                         <View style={styles.noShowCard}>
                             <View style={styles.noShowHeader}>
                                 <View style={styles.noShowIconBadge}>
-                                    <Clock size={16} color="#B45309" />
+                                    <Clock size={16} color={theme.warning} />
                                 </View>
-                                <Text style={styles.noShowTitle}>Reschedule Requested</Text>
+                                <Text style={styles.noShowTitle}>{t('reschedule_requested')}</Text>
                             </View>
                             <Text style={styles.noShowText}>
                                 Waiting for {doctorDisplayName} to confirm your proposed time: {new Date(consultation.rescheduleRequest.proposedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {consultation.rescheduleRequest.proposedTime}.
@@ -530,7 +522,7 @@ export default function ConsultationDetailScreen() {
                         <View style={styles.noShowCard}>
                             <View style={styles.noShowHeader}>
                                 <View style={styles.noShowIconBadge}>
-                                    <AlertTriangle size={16} color="#B45309" />
+                                    <AlertTriangle size={16} color={theme.warning} />
                                 </View>
                                 <Text style={styles.noShowTitle}>{doctorDisplayName} Missed Your Consultation</Text>
                             </View>
@@ -543,7 +535,7 @@ export default function ConsultationDetailScreen() {
                                     onPress={handleNoShowRefund}
                                     disabled={choiceBusy}
                                 >
-                                    <Text style={styles.refundChoiceButtonText} numberOfLines={1}>Get Refund</Text>
+                                    <Text style={styles.refundChoiceButtonText} numberOfLines={1}>{t('get_refund')}</Text>
                                 </TouchableOpacity>
                                 {consultation.rescheduleCount < 1 && (
                                     <TouchableOpacity
@@ -551,7 +543,7 @@ export default function ConsultationDetailScreen() {
                                         onPress={() => setRescheduleModalVisible(true)}
                                         disabled={choiceBusy}
                                     >
-                                        <Text style={styles.rescheduleChoiceButtonText} numberOfLines={1}>Request Reschedule</Text>
+                                        <Text style={styles.rescheduleChoiceButtonText} numberOfLines={1}>{t('request_reschedule')}</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>
@@ -563,8 +555,8 @@ export default function ConsultationDetailScreen() {
                 {consultation.paymentStatus === 'refunded' && consultation.refundDetails && (
                     <View style={styles.refundCard}>
                         <View style={styles.payCardHeader}>
-                            <CreditCard size={20} color="#0FBBA1" />
-                            <Text style={styles.payCardTitle}>Refund Issued</Text>
+                            <CreditCard size={20} color="#10B981" />
+                            <Text style={styles.payCardTitle}>{t('refund_issued')}</Text>
                         </View>
                         <Text style={styles.payCardText}>
                             ₹{consultation.refundDetails.amount} was refunded to your original payment method
@@ -577,11 +569,11 @@ export default function ConsultationDetailScreen() {
                 {consultation.paymentStatus === 'refund_failed' && (
                     <View style={styles.refundFailedCard}>
                         <View style={styles.payCardHeader}>
-                            <AlertTriangle size={20} color="#B45309" />
-                            <Text style={styles.payCardTitle}>Refund In Progress</Text>
+                            <AlertTriangle size={20} color={theme.warning} />
+                            <Text style={styles.payCardTitle}>{t('refund_in_progress')}</Text>
                         </View>
                         <Text style={styles.payCardText}>
-                            We ran into an issue automatically processing your refund. Our team has been notified and will follow up shortly.
+                            {t('we_ran_into_an_issue_automatically_pro')}
                         </Text>
                     </View>
                 )}
@@ -590,8 +582,8 @@ export default function ConsultationDetailScreen() {
                 {consultation.status === 'completed' && (
                     <View style={styles.feedbackSection}>
                         <View style={styles.feedbackPrompt}>
-                            <Text style={styles.promptTitle}>How was your experience?</Text>
-                            <Text style={styles.promptText}>Your feedback helps other patients find the best doctors.</Text>
+                            <Text style={styles.promptTitle}>{t('how_was_your_experience')}</Text>
+                            <Text style={styles.promptText}>{t('your_feedback_helps_other_patients_fin')}</Text>
                             <TouchableOpacity
                                 style={styles.reviewButton}
                                 onPress={() => executeAction('OPEN_DOCTOR_FEEDBACK', {
@@ -603,7 +595,7 @@ export default function ConsultationDetailScreen() {
                                     doctor: { ...consultation.doctorDetails, _id: consultation.doctorId },
                                 })}
                             >
-                                <Text style={styles.reviewButtonText}>Write a Review</Text>
+                                <Text style={styles.reviewButtonText}>{t('write_a_review')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -613,7 +605,7 @@ export default function ConsultationDetailScreen() {
                 {pastConsultations.length > 0 && (
                     <View style={styles.card}>
                         <View style={styles.sectionHeader}>
-                            <History size={16} color="#111827" />
+                            <History size={16} color={theme.text} />
                             <Text style={styles.sectionTitle}>Past Consultations with {doctorDisplayName}</Text>
                         </View>
                         {pastConsultations.map((past, index) => {
@@ -640,7 +632,7 @@ export default function ConsultationDetailScreen() {
                                         <Text style={styles.pastDate}>{pastDate}</Text>
                                         <Text style={styles.pastReason} numberOfLines={1}>{past.reason || 'No reason provided'}</Text>
                                     </View>
-                                    <ChevronRight size={16} color="#D1D5DB" />
+                                    <ChevronRight size={16} color={theme.textMuted} />
                                 </TouchableOpacity>
                             );
                         })}
@@ -651,8 +643,8 @@ export default function ConsultationDetailScreen() {
                 {consultation.statusHistory?.length > 0 && (
                     <View style={styles.card}>
                         <View style={styles.sectionHeader}>
-                            <History size={16} color="#111827" />
-                            <Text style={styles.sectionTitle}>Timeline</Text>
+                            <History size={16} color={theme.text} />
+                            <Text style={styles.sectionTitle}>{t('timeline')}</Text>
                         </View>
                         {[...consultation.statusHistory].reverse().map((entry: any, index: number, arr: any[]) => {
                             const meta = TIMELINE_META[entry.status] || TIMELINE_META.pending;
@@ -668,7 +660,7 @@ export default function ConsultationDetailScreen() {
                                     </View>
                                     <View style={[styles.timelineContent, isLast && { paddingBottom: 0 }]}>
                                         <Text style={styles.timelineDate}>{formatTimelineDate(entry.timestamp)}</Text>
-                                        <Text style={styles.timelineTitle}>{meta.label}</Text>
+                                        <Text style={styles.timelineTitle}>{t(meta.label)}</Text>
                                         <Text style={styles.timelineSubtitle}>{entry.remarks || meta.fallbackSubtitle}</Text>
                                     </View>
                                 </View>
@@ -687,7 +679,7 @@ export default function ConsultationDetailScreen() {
                         {cancelling ? (
                             <ActivityIndicator color="#DC2626" size="small" />
                         ) : (
-                            <Text style={styles.cancelButtonText}>Cancel Appointment</Text>
+                            <Text style={styles.cancelButtonText}>{t('cancel_appointment')}</Text>
                         )}
                     </TouchableOpacity>
                 )}
@@ -717,14 +709,25 @@ export default function ConsultationDetailScreen() {
                 primaryAction={alertStatus.primaryAction}
                 primaryActionText={alertStatus.primaryActionText}
             />
+
+            <PaymentMethodsModal
+                visible={paymentOpen}
+                requestId={requestId}
+                amount={consultation?.consultationFee || 0}
+                onPaid={handlePaid}
+                onClose={() => {
+                    setPaymentOpen(false);
+                    fetchDetail();
+                }}
+            />
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FE',
+        backgroundColor: c.background,
     },
     center: {
         flex: 1,
@@ -737,7 +740,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -753,23 +756,42 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     moreButton: {
         padding: 8,
         marginRight: -12,
     },
+    menuBackdrop: { flex: 1 },
+    menuCard: {
+        position: 'absolute',
+        right: 16,
+        minWidth: 210,
+        backgroundColor: c.card,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: c.border,
+        paddingVertical: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 8,
+    },
+    menuItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
+    menuItemDivider: { borderTopWidth: 1, borderTopColor: c.borderLight },
+    menuItemText: { fontSize: 14, fontWeight: '600', color: c.text },
     content: {
         padding: 16,
         paddingBottom: 40,
     },
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 16,
         marginBottom: 14,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
     },
     doctorRow: {
         flexDirection: 'row',
@@ -782,7 +804,7 @@ const styles = StyleSheet.create({
         borderRadius: 18,
     },
     placeholderAvatar: {
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
@@ -794,11 +816,11 @@ const styles = StyleSheet.create({
     doctorName: {
         fontSize: 17,
         fontWeight: '800',
-        color: '#111827',
+        color: c.text,
     },
     specialtyText: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         fontWeight: '500',
         marginTop: 2,
     },
@@ -816,12 +838,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 12,
         borderRadius: 14,
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         borderWidth: 1,
         borderColor: '#DCFCE7',
     },
     messageButtonText: {
-        color: '#0FBBA1',
+        color: '#10B981',
         fontSize: 14,
         fontWeight: '700',
     },
@@ -834,7 +856,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 12,
         borderRadius: 14,
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
     },
     callButtonText: {
         color: '#fff',
@@ -842,14 +864,14 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     callButtonDisabled: {
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
     },
     callButtonTextDisabled: {
-        color: '#9CA3AF',
+        color: c.textMuted,
     },
     divider: {
         height: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         marginVertical: 14,
     },
     metaRow: {
@@ -865,7 +887,7 @@ const styles = StyleSheet.create({
     metaText: {
         fontSize: 13.5,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     modeBadge: {
         flexDirection: 'row',
@@ -899,23 +921,23 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     diagnosisTitle: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#9CA3AF',
+        color: c.textMuted,
         textTransform: 'uppercase',
         marginBottom: 6,
     },
     detailText: {
         fontSize: 14.5,
-        color: '#4B5563',
+        color: c.textSecondary,
         lineHeight: 21,
     },
     innerDivider: {
         height: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         marginVertical: 14,
     },
     pastRow: {
@@ -924,7 +946,7 @@ const styles = StyleSheet.create({
         gap: 12,
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderLight,
     },
     pastRowLast: { borderBottomWidth: 0, paddingBottom: 0 },
     pastTypeIconBox: {
@@ -934,8 +956,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    pastDate: { fontSize: 13.5, fontWeight: '700', color: '#111827' },
-    pastReason: { fontSize: 12.5, color: '#9CA3AF', marginTop: 2 },
+    pastDate: { fontSize: 13.5, fontWeight: '700', color: c.text },
+    pastReason: { fontSize: 12.5, color: c.textMuted, marginTop: 2 },
     timelineRow: {
         flexDirection: 'row',
     },
@@ -954,7 +976,7 @@ const styles = StyleSheet.create({
     timelineLine: {
         flex: 1,
         width: 2,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.cardSecondary,
         marginVertical: 4,
         minHeight: 20,
     },
@@ -964,23 +986,23 @@ const styles = StyleSheet.create({
     },
     timelineDate: {
         fontSize: 11.5,
-        color: '#9CA3AF',
+        color: c.textMuted,
         fontWeight: '600',
         marginBottom: 3,
     },
     timelineTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 2,
     },
     timelineSubtitle: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         lineHeight: 18,
     },
     payCard: {
-        backgroundColor: '#FFFBEB',
+        backgroundColor: c.warningBg,
         borderRadius: 20,
         padding: 18,
         marginBottom: 14,
@@ -988,7 +1010,7 @@ const styles = StyleSheet.create({
         borderColor: '#FDE68A',
     },
     refundCard: {
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         borderRadius: 20,
         padding: 18,
         marginBottom: 14,
@@ -996,7 +1018,7 @@ const styles = StyleSheet.create({
         borderColor: '#DCFCE7',
     },
     refundFailedCard: {
-        backgroundColor: '#FFFBEB',
+        backgroundColor: c.warningBg,
         borderRadius: 20,
         padding: 18,
         marginBottom: 14,
@@ -1007,12 +1029,12 @@ const styles = StyleSheet.create({
     // confined to the icon badge) rather than a full-color fill, so it
     // doesn't compete with the two action buttons below it.
     noShowCard: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 18,
         marginBottom: 14,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
     },
     noShowHeader: {
         flexDirection: 'row',
@@ -1024,7 +1046,7 @@ const styles = StyleSheet.create({
         width: 30,
         height: 30,
         borderRadius: 15,
-        backgroundColor: '#FEF3C7',
+        backgroundColor: c.warningBg,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -1032,11 +1054,11 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 15,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     noShowText: {
         fontSize: 13.5,
-        color: '#6B7280',
+        color: c.textSecondary,
         lineHeight: 19,
         marginBottom: 16,
     },
@@ -1053,7 +1075,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingVertical: 12,
         borderRadius: 12,
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
     },
     refundChoiceButtonText: {
         color: '#fff',
@@ -1066,12 +1088,12 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingVertical: 12,
         borderRadius: 12,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderWidth: 1,
-        borderColor: '#D1D5DB',
+        borderColor: c.border,
     },
     rescheduleChoiceButtonText: {
-        color: '#374151',
+        color: c.text,
         fontSize: 13,
         fontWeight: '600',
     },
@@ -1084,11 +1106,11 @@ const styles = StyleSheet.create({
     payCardTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     payCardText: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         lineHeight: 20,
         marginBottom: 16,
     },
@@ -1100,12 +1122,12 @@ const styles = StyleSheet.create({
     },
     deadlineNoticeText: {
         fontSize: 12.5,
-        color: '#B45309',
+        color: c.warning,
         fontWeight: '600',
         flex: 1,
     },
     payButton: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         borderRadius: 14,
         paddingVertical: 14,
         alignItems: 'center',
@@ -1133,29 +1155,29 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     feedbackPrompt: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 22,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
         textAlign: 'center',
     },
     promptTitle: {
         fontSize: 17,
         fontWeight: '800',
-        color: '#111827',
+        color: c.text,
         marginBottom: 8,
     },
     promptText: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         lineHeight: 20,
         marginBottom: 18,
     },
     reviewButton: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         paddingHorizontal: 30,
         paddingVertical: 14,
         borderRadius: 16,

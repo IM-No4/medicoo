@@ -3,7 +3,7 @@ import AppIcon from '@/src/components/icons/AppIcon';
 import QuantityControl from '@/src/features/pharmacy/components/QuantityControl';
 import { RootState } from '@/src/redux/store';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   FlatList,
   Image,
@@ -13,6 +13,9 @@ import {
   View,
 } from 'react-native';
 import { useSelector } from 'react-redux';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 type MedicineItem = {
   id: string;
@@ -64,6 +67,9 @@ export default function PharmacyListingCard({
   isLast,
   variant = 'list',
 }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const carts = useSelector((state: RootState) => state.cart);
 
   const getUnavailableText = () => {
@@ -115,7 +121,7 @@ export default function PharmacyListingCard({
             />
           ) : (
             <View style={styles.medicineDefaultImage}>
-              <AppIcon name="pill" size={24} color="#9CA3AF" />
+              <AppIcon name="pill" size={24} color={theme.textMuted} />
             </View>
           )}
           {hasDiscount && (
@@ -197,7 +203,7 @@ export default function PharmacyListingCard({
             />
 
             <View style={styles.heroOfferBadge}>
-              <Text style={styles.heroOfferText}>GET 30% OFF</Text>
+              <Text style={styles.heroOfferText}>{t('get_30_off')}</Text>
             </View>
 
             <View style={styles.heroContent}>
@@ -307,7 +313,7 @@ export default function PharmacyListingCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     backgroundColor: 'transparent',
   },
@@ -330,7 +336,7 @@ const styles = StyleSheet.create({
   pharmacyName: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1F2937',
+    color: c.text,
     letterSpacing: -0.5,
   },
   metaRow: {
@@ -354,7 +360,7 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#1F2937',
+    color: c.text,
   },
   dot: {
     width: 3,
@@ -366,14 +372,14 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
+    color: c.textSecondary,
   },
   pharmacyImageWrapper: {
     width: 90,
     height: 90,
     borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
     position: 'relative',
   },
   medicineDiscountBadge: {
@@ -399,15 +405,15 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
   },
   divider: {
     height: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
   },
   itemDivider: {
     height: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
     marginHorizontal: 16,
     marginTop: 8,
   },
@@ -422,16 +428,16 @@ const styles = StyleSheet.create({
   },
   medicineCard: {
     width: 140,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: c.borderLight,
   },
   medicineImageContainer: {
     width: '100%',
     height: 85,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
     borderRadius: 8,
     marginBottom: 12,
     justifyContent: 'center',
@@ -455,7 +461,7 @@ const styles = StyleSheet.create({
   medicineName: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1F2937',
+    color: c.text,
     marginBottom: 8,
   },
   medicineFooterRow: {
@@ -472,10 +478,10 @@ const styles = StyleSheet.create({
   medicinePrice: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#111827',
+    color: c.text,
   },
   medicineAddIcon: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.card,
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -496,7 +502,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -513,7 +519,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   heroPlaceholder: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },

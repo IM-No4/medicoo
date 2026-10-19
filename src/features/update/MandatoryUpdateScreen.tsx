@@ -1,11 +1,15 @@
 import { ArrowUpCircle } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, AppStateStatus, Linking, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { ActivityIndicator, AppState, AppStateStatus, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { runBootSequence } from '../../bootstrap/BootCoordinator';
 import { AppDispatch, RootState } from '../../redux/store';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { AdaptiveStatusBar } from '../../components/ThemedStatusBar';
 
 // Shown by RootNavigator instead of the normal Auth/Onboarding/Main stacks
 // while boot.status === 'mandatoryUpdate' - see BootCoordinator.ts. No
@@ -15,6 +19,9 @@ import { AppDispatch, RootState } from '../../redux/store';
 // after updating from the store and reopening) rather than requiring a
 // manual retry.
 export default function MandatoryUpdateScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const insets = useSafeAreaInsets();
     const dispatch = useDispatch<AppDispatch>();
     const update = useSelector((state: RootState) => state.appConfig.update);
@@ -40,13 +47,13 @@ export default function MandatoryUpdateScreen() {
 
     return (
         <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom + 24 }]}>
-            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+            <AdaptiveStatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
             <View style={styles.iconCircle}>
-                <ArrowUpCircle size={44} color="#0FBBA1" />
+                <ArrowUpCircle size={44} color="#10B981" />
             </View>
 
-            <Text style={styles.title}>Update Required</Text>
+            <Text style={styles.title}>{t('update_required')}</Text>
             <Text style={styles.message}>
                 A new version of Medicoo is required to continue. Please update the app from the
                 {update?.storeUrl ? ' store' : ' app/play store'} to keep using it.
@@ -61,23 +68,23 @@ export default function MandatoryUpdateScreen() {
                 onPress={handleUpdateNow}
                 disabled={!update?.storeUrl}
             >
-                <Text style={styles.primaryButtonText}>Update Now</Text>
+                <Text style={styles.primaryButtonText}>{t('update_now')}</Text>
             </TouchableOpacity>
 
             {checking && (
                 <View style={styles.checkingRow}>
-                    <ActivityIndicator size="small" color="#9CA3AF" />
-                    <Text style={styles.checkingText}>Checking your version...</Text>
+                    <ActivityIndicator size="small" color={theme.textMuted} />
+                    <Text style={styles.checkingText}>{t('checking_your_version')}</Text>
                 </View>
             )}
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 32,
@@ -86,7 +93,7 @@ const styles = StyleSheet.create({
         width: 88,
         height: 88,
         borderRadius: 44,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 24,
@@ -99,25 +106,25 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 20,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 10,
         textAlign: 'center',
     },
     message: {
         fontSize: 14,
         lineHeight: 21,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         marginBottom: 12,
     },
     versionText: {
         fontSize: 13,
-        color: '#9CA3AF',
+        color: c.textMuted,
         marginBottom: 28,
     },
     primaryButton: {
         width: '100%',
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         borderRadius: 16,
         paddingVertical: 16,
         alignItems: 'center',
@@ -139,6 +146,6 @@ const styles = StyleSheet.create({
     },
     checkingText: {
         fontSize: 13,
-        color: '#9CA3AF',
+        color: c.textMuted,
     },
 });

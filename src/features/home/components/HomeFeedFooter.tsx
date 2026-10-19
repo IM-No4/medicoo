@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import AppIcon from '../../../components/icons/AppIcon';
-import { APP_VERSION } from '../../../utils/appVersion';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface Props {
     appName: string;
@@ -14,10 +16,13 @@ interface Props {
 }
 
 export default function HomeFeedFooter({ appName, tagline, showTrustBadges }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     return (
         <View style={styles.container}>
             <View style={styles.iconContainer}>
-                <AppIcon name={"activity" as any} size={24} color="#9CA3AF" />
+                <AppIcon name={"activity" as any} size={24} color={theme.textMuted} />
             </View>
 
             <Text style={styles.appName}>{appName}</Text>
@@ -26,18 +31,18 @@ export default function HomeFeedFooter({ appName, tagline, showTrustBadges }: Pr
             {showTrustBadges && (
                 <View style={styles.badgesRow}>
                     <View style={styles.badge}>
-                        <AppIcon name="shield-check" size={12} color="#6B7280" />
+                        <AppIcon name="shield-check" size={12} color={theme.textSecondary} />
                         <Text style={styles.badgeText}>100% Secure</Text>
                     </View>
                     <View style={styles.dot} />
                     <View style={styles.badge}>
-                        <AppIcon name="users" size={12} color="#6B7280" />
+                        <AppIcon name="users" size={12} color={theme.textSecondary} />
                         <Text style={styles.badgeText}>10M+ Users</Text>
                     </View>
                     <View style={styles.dot} />
                     <View style={styles.badge}>
-                        <AppIcon name="heart" size={12} color="#6B7280" />
-                        <Text style={styles.badgeText}>ISO Certified</Text>
+                        <AppIcon name="heart" size={12} color={theme.textSecondary} />
+                        <Text style={styles.badgeText}>{t('iso_certified')}</Text>
                     </View>
                 </View>
             )}
@@ -45,20 +50,18 @@ export default function HomeFeedFooter({ appName, tagline, showTrustBadges }: Pr
             <Text style={styles.footerText}>
                 Made with ❤️ for a Healthy India
             </Text>
-
-            <Text style={styles.version}>v{APP_VERSION} • Terms of Service • Privacy Policy</Text>
         </View >
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         paddingVertical: 24,
         paddingHorizontal: 24,
         alignItems: 'center',
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6'
+        borderTopColor: c.borderLight
     },
     iconContainer: {
         marginBottom: 12,
@@ -67,14 +70,14 @@ const styles = StyleSheet.create({
     appName: {
         fontSize: 20,
         fontWeight: '800',
-        color: '#D1D5DB', // Very light gray for watermark feel
+        color: c.textMuted, // Very light gray for watermark feel
         marginBottom: 4,
         letterSpacing: 1
     },
     tagline: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#6B7280',
+        color: c.textSecondary,
         marginBottom: 24,
         textAlign: 'center'
     },
@@ -92,7 +95,7 @@ const styles = StyleSheet.create({
     badgeText: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#4B5563'
+        color: c.textSecondary
     },
     dot: {
         width: 3,
@@ -102,12 +105,7 @@ const styles = StyleSheet.create({
     },
     footerText: {
         fontSize: 12,
-        color: '#9CA3AF',
-        marginBottom: 8,
+        color: c.textMuted,
         fontWeight: '500'
-    },
-    version: {
-        fontSize: 10,
-        color: '#D1D5DB'
     }
 });

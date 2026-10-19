@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import AppIcon from "@/src/components/icons/AppIcon";
 import { updateItemQuantityLocal } from "@/src/redux/slices/cartSlice";
 import {
@@ -7,6 +8,8 @@ import {
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useDispatch } from "react-redux";
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 interface Props {
   storeId: string;
@@ -27,6 +30,8 @@ export default function QuantityControl({
   productId,
   onQuantityChange,
 }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const dispatch = useDispatch();
 
   const handleIncrement = async () => {
@@ -162,11 +167,11 @@ export default function QuantityControl({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.background,
     borderWidth: 1,
     borderColor: "#16A34A",
     borderRadius: 8,
@@ -180,13 +185,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   buttonDisabled: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: c.cardSecondary,
   },
   quantityText: {
     minWidth: 32,
     textAlign: "center",
     fontWeight: "700",
-    color: "#1C1C1E",
+    color: c.text,
   },
   // Extra-small size (compact card footers, e.g. search result item cards)
   xsmallContainer: {

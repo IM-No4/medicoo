@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { COLORS } from '../styles';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 // Configuration
 const ITEM_WIDTH = 60;
@@ -14,6 +15,8 @@ interface DateStripProps {
 }
 
 export default function DateStrip({ selectedDate, onSelectDate }: DateStripProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const [dates, setDates] = useState<any[]>([]);
 
     const flatListRef = useRef<FlatList>(null);
@@ -143,14 +146,14 @@ export default function DateStrip({ selectedDate, onSelectDate }: DateStripProps
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         paddingVertical: 0,
     },
     dayItem: {
         width: ITEM_WIDTH,
         height: 72,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 18, // Keep rounded corners base
         alignItems: 'center',
         justifyContent: 'center',
@@ -164,12 +167,12 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     activeDayItem: {
-        backgroundColor: COLORS.primary,
+        backgroundColor: c.primary,
     },
     // Subtle border when today is NOT selected
     todayItemBorder: {
         borderWidth: 1,
-        borderColor: COLORS.primary,
+        borderColor: c.primary,
     },
     // NEW: Sharp, crisp border when today IS selected
     selectedTodayBorder: {
@@ -179,13 +182,13 @@ const styles = StyleSheet.create({
     dayLabel: {
         fontSize: 12,
         fontWeight: '500',
-        color: COLORS.textSecondary,
+        color: c.textSecondary,
         marginBottom: 6,
     },
     dateLabel: {
         fontSize: 16,
         fontWeight: '700',
-        color: COLORS.text,
+        color: c.text,
     },
     activeText: {
         color: '#FFFFFF',

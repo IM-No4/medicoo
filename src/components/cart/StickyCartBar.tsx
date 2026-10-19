@@ -11,12 +11,18 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 type Props = {
   onPress: (storeId: string) => void;
 };
 
 export default function StickyCartBar({ onPress }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -77,7 +83,7 @@ export default function StickyCartBar({ onPress }: Props) {
         <View style={styles.cardContent}>
           <View style={styles.leftSection}>
             <View style={styles.storeBadge}>
-              <AppIcon name="shopping-bag" size={22} color="#64748B" />
+              <AppIcon name="shopping-bag" size={22} color={theme.textSecondary} />
             </View>
 
             <View style={styles.storeInfo}>
@@ -102,7 +108,7 @@ export default function StickyCartBar({ onPress }: Props) {
                 { transform: [{ scale: scaleAnim }] },
               ]}
             >
-              <Text style={styles.viewCartText}>View Cart</Text>
+              <Text style={styles.viewCartText}>{t('view_cart')}</Text>
               <AppIcon name="chevron-right" size={16} color="#FFFFFF" />
             </Animated.View>
           </TouchableOpacity>
@@ -112,21 +118,21 @@ export default function StickyCartBar({ onPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   wrapper: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.background,
     paddingHorizontal: 20,
     paddingTop: 4,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
     overflow: 'hidden',
   },
   cardContent: {
@@ -146,7 +152,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: c.cardSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -163,7 +169,7 @@ const styles = StyleSheet.create({
   itemCount: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0F172A',
+    color: c.text,
     marginBottom: 6,
     letterSpacing: -0.3,
   },

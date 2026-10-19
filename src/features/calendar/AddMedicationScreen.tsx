@@ -1,8 +1,8 @@
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -26,11 +26,13 @@ import ScheduleStep from '../../components/modals/AddMedicationModal/steps/Sched
 import ShapeStep from '../../components/modals/AddMedicationModal/steps/ShapeStep';
 import StrengthStep from '../../components/modals/AddMedicationModal/steps/StrengthStep';
 
-import { styles } from '../../components/modals/AddMedicationModal/styles';
+import { createStyles } from '../../components/modals/AddMedicationModal/styles';
+import { useTheme } from '../../theme/ThemeContext';
 import { createMedicineSchedule, updateMedicineSchedule } from '../../services/api/medicine.api';
 import { StorageService } from '../../services/storage';
 import { loadMedicineSchedules, saveMedicineSchedules } from '../../services/storage/medicineSchedulesStorage';
 import { refreshAndScheduleMedicineReminders, scheduleLocalMedicineReminders } from '../../services/notifications/medicineReminderScheduler';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const STEPS = [
   MedicationDetailsStep,
@@ -120,9 +122,15 @@ function buildFormFromSchedule(schedule: any) {
 // schedule instead of creating a new one - pre-fills every step from its
 // data and PUTs on submit.
 export default function AddMedicationScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const editingSchedule = route.params?.editingSchedule ?? null;
+  // Adding (or editing) a medicine for a family member, not for me
+  const forMemberId: string | null = route.params?.forMemberId ?? null;
+  const forMemberName: string | null = route.params?.forMemberName ?? null;
   const isEditing = !!editingSchedule;
   const [stepIndex, setStepIndex] = useState(0);
   const insets = useSafeAreaInsets();
@@ -279,6 +287,7 @@ export default function AddMedicationScreen() {
         medicineType: form.type,
         shape: form.shape,
         frequency,
+        ...(forMemberId ? { forMemberId } : {}),
       };
 
       try {
@@ -287,18 +296,19 @@ export default function AddMedicationScreen() {
         if (isEditing) {
           await updateMedicineSchedule(editingSchedule._id, payload);
           setLoading(false);
-          showStatus('success', 'Medication Updated', 'Your medication schedule has been updated.');
+          showStatus('success', t('medication_updated'), t('your_medication_schedule_has_been_upda'));
         } else {
           await createMedicineSchedule(payload);
           setLoading(false);
-          showStatus('success', 'Medication Saved', 'Your prescription schedule has been updated.');
+          showStatus('success', t('medication_saved'), t('your_prescription_schedule_has_been_up'));
         }
 
         // Re-fetches the full, authoritative schedule list (rather than
         // guessing at the create/update response's exact shape) and
         // re-derives the local reminder window from it - not awaited, the
         // save itself already succeeded and shouldn't wait on this.
-        refreshAndScheduleMedicineReminders();
+        // (A family member's medicines remind them on their own phone, or the family head from the server - not this phone.)
+        if (!forMemberId) refreshAndScheduleMedicineReminders();
       } catch (error: any) {
         setLoading(false);
 
@@ -340,7 +350,7 @@ export default function AddMedicationScreen() {
           return;
         }
 
-        showStatus('error', 'Update Failed', error.response?.data?.message || `Failed to ${isEditing ? 'update' : 'create'} medication schedule. Please try again.`);
+        showStatus('error', t('update_failed'), error.response?.data?.message || `Failed to ${isEditing ? 'update' : 'create'} medication schedule. Please try again.`);
       }
     } else {
       goToStep(Math.min(stepIndex + 1, STEPS.length - 1));
@@ -358,7 +368,7 @@ export default function AddMedicationScreen() {
             plain icon back button, fontSize 20/600/#111827 title. */}
         <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
           <TouchableOpacity onPress={goBack} style={styles.backButton} activeOpacity={0.7}>
-            <ChevronLeft size={22} color="#111827" />
+            <ChevronLeft size={22} color={theme.text} />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
@@ -367,7 +377,10 @@ export default function AddMedicationScreen() {
                 ? (isEditing ? 'Edit Medication' : 'Add Medication')
                 : form.medicineName || 'Medication'}
             </Text>
-            {(form.type && stepIndex > 1) && (
+            {forMemberName ? (
+              <Text style={styles.headerSubtitle}>For {forMemberName}</Text>
+            ) : null}
+            {(form.type && stepIndex > 1 && !forMemberName) && (
               <Text style={styles.headerSubtitle}>
                 {form.type.charAt(0).toUpperCase() + form.type.slice(1)}
               </Text>
@@ -399,7 +412,7 @@ export default function AddMedicationScreen() {
 
         {/* FIXED FOOTER */}
         <LinearGradient
-          colors={['rgba(255,255,255,0)', '#ffffff']}
+          colors={[theme.background + '00', theme.background]}
           locations={[0, 0.3]}
           style={[
             styles.fixedFooter,
@@ -430,7 +443,7 @@ export default function AddMedicationScreen() {
               style={styles.skipButton}
               onPress={() => goToStep(Math.min(stepIndex + 1, STEPS.length - 1))}
             >
-              <Text style={styles.skipButtonText}>Skip</Text>
+              <Text style={styles.skipButtonText}>{t('skip')}</Text>
             </TouchableOpacity>
           )}
         </LinearGradient>

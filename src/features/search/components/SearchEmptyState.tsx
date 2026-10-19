@@ -1,7 +1,10 @@
 import { executeAction } from '@/src/actions/ActionExecutor';
 import AppIcon from '@/src/components/icons/AppIcon';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 function getSuggestions(query: string) {
   const q = query.toLowerCase();
@@ -60,18 +63,21 @@ function getSuggestions(query: string) {
 }
 
 export default function SearchEmptyState({ query }: { query: string }) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const suggestions = getSuggestions(query);
 
   return (
     <View style={styles.container}>
-      <AppIcon name="search" size={36} color="#9CA3AF" />
+      <AppIcon name="search" size={36} color={theme.textMuted} />
 
       <Text style={styles.title}>
         No results for “{query}”
       </Text>
 
       <Text style={styles.subtitle}>
-        Try one of these instead
+        {t('try_one_of_these_instead')}
       </Text>
 
       <View style={styles.actions}>
@@ -89,7 +95,7 @@ export default function SearchEmptyState({ query }: { query: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
@@ -100,13 +106,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: c.text,
     textAlign: 'center',
   },
   subtitle: {
     marginTop: 4,
     fontSize: 13,
-    color: '#9CA3AF',
+    color: c.textMuted,
     textAlign: 'center',
   },
   actions: {
@@ -117,12 +123,12 @@ const styles = StyleSheet.create({
   action: {
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
     alignItems: 'center',
   },
   actionText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#111827',
+    color: c.text,
   },
 });

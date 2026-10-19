@@ -1,5 +1,7 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 interface SectionProps {
     title: string;
@@ -8,6 +10,8 @@ interface SectionProps {
 }
 
 export function HealthSection({ title, icon, children }: SectionProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     return (
         <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -19,7 +23,7 @@ export function HealthSection({ title, icon, children }: SectionProps) {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     section: { marginVertical: 16, paddingHorizontal: 20 },
     sectionHeader: {
         flexDirection: 'row',
@@ -30,7 +34,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#6B7280',
+        color: c.textSecondary,
         textTransform: 'uppercase',
         letterSpacing: 1
     },

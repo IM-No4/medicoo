@@ -1,7 +1,7 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { Bot, ChevronLeft, History, Send } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -19,6 +19,9 @@ import {
     sendHealthAssistantQuery,
 } from '../../services/api/healthAssistant.api';
 import { getProfileDetails } from '../../services/api/user.api';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface ChatMessage {
     id: string;
@@ -59,6 +62,9 @@ function buildGreeting(name?: string): ChatMessage {
 }
 
 export default function AIAssistantChatScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const insets = useSafeAreaInsets();
@@ -241,7 +247,7 @@ export default function AIAssistantChatScreen() {
                                             : handleSelectSuggestion(s.prompt!)
                                     }
                                 >
-                                    <Text style={styles.suggestionButtonText}>{s.label}</Text>
+                                    <Text style={styles.suggestionButtonText}>{t(s.label)}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
@@ -295,28 +301,28 @@ export default function AIAssistantChatScreen() {
 
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
 
                 <View style={styles.headerInfo}>
                     <View style={styles.avatarHeader}>
-                        <Bot size={18} color="#0FBBA1" />
+                        <Bot size={18} color="#10B981" />
                     </View>
                     <View>
-                        <Text style={styles.headerTitle}>Medo</Text>
-                        <Text style={styles.headerSubtitle}>Health assistant</Text>
+                        <Text style={styles.headerTitle}>{t('medo')}</Text>
+                        <Text style={styles.headerSubtitle}>{t('health_assistant')}</Text>
                     </View>
                 </View>
 
                 <TouchableOpacity onPress={() => navigation.navigate('HealthAssistantHistory')} style={styles.iconButton}>
-                    <History size={20} color="#4B5563" />
+                    <History size={20} color={theme.textSecondary} />
                 </TouchableOpacity>
             </View>
 
             <View style={[styles.flexOne, { marginBottom: keyboardHeight > 0 ? keyboardHeight + insets.bottom : 0 }]}>
                 {loadingHistory ? (
                     <View style={styles.center}>
-                        <ActivityIndicator size="large" color="#0FBBA1" />
+                        <ActivityIndicator size="large" color="#10B981" />
                     </View>
                 ) : (
                     <FlatList
@@ -331,16 +337,16 @@ export default function AIAssistantChatScreen() {
 
                 {sending && (
                     <View style={styles.typingRow}>
-                        <ActivityIndicator size="small" color="#0FBBA1" />
-                        <Text style={styles.typingText}>Medo is typing...</Text>
+                        <ActivityIndicator size="small" color="#10B981" />
+                        <Text style={styles.typingText}>{t('medo_typing')}</Text>
                     </View>
                 )}
 
                 <View style={[styles.inputContainer, { paddingBottom: (keyboardHeight > 0 ? 0 : insets.bottom) + 12 }]}>
                     <TextInput
                         style={styles.input}
-                        placeholder="Ask Medo anything..."
-                        placeholderTextColor="#9CA3AF"
+                        placeholder={t('ask_medo')}
+                        placeholderTextColor={theme.textMuted}
                         value={input}
                         onChangeText={setInput}
                         multiline
@@ -358,8 +364,8 @@ export default function AIAssistantChatScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F3F4F6' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
     flexOne: { flex: 1 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     header: {
@@ -367,7 +373,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         gap: 12,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
@@ -380,38 +386,34 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: '#E6FBF7',
+        backgroundColor: c.successBg,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    headerTitle: { fontSize: 16, fontWeight: '600', color: '#111827' },
-    headerSubtitle: { fontSize: 12, color: '#6B7280', marginTop: 1 },
+    headerTitle: { fontSize: 16, fontWeight: '600', color: c.text },
+    headerSubtitle: { fontSize: 12, color: c.textSecondary, marginTop: 1 },
     iconButton: { padding: 4 },
 
-    chatContent: { padding: 16, paddingBottom: 24, gap: 16, flexGrow: 1 },
+    chatContent: { padding: 16, paddingBottom: 24, gap: 8, flexGrow: 1 },
 
-    messageRow: { maxWidth: '85%' },
+    messageRow: { maxWidth: '80%' },
     messageRowLeft: { alignSelf: 'flex-start' },
     messageRowRight: { alignSelf: 'flex-end' },
 
     messageBubble: {
-        borderRadius: 18,
+        borderRadius: 16,
         paddingHorizontal: 16,
         paddingVertical: 10,
-        ...Platform.select({
-            ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3 },
-            android: { elevation: 1 },
-        }),
     },
-    bubbleLeft: { backgroundColor: '#fff', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: '#F1F5F9' },
-    bubbleRight: { backgroundColor: '#0FBBA1', borderBottomRightRadius: 4 },
-    messageText: { fontSize: 15, lineHeight: 22 },
-    textLeft: { color: '#1F2937' },
+    bubbleLeft: { backgroundColor: c.card, borderTopLeftRadius: 4, borderWidth: 1, borderColor: c.border },
+    bubbleRight: { backgroundColor: '#475569', borderTopRightRadius: 4 },
+    messageText: { fontSize: 13, lineHeight: 18 },
+    textLeft: { color: c.text },
     textRight: { color: '#fff' },
 
     disclaimerText: {
-        fontSize: 11,
-        color: '#9CA3AF',
+        fontSize: 10.5,
+        color: c.textMuted,
         fontStyle: 'italic',
         marginTop: 4,
         marginHorizontal: 4,
@@ -431,20 +433,22 @@ const styles = StyleSheet.create({
     },
     suggestionButton: {
         borderRadius: 12,
+        borderWidth: 1,
+        borderColor: c.border,
         paddingHorizontal: 14,
-        paddingVertical: 10,
-        backgroundColor: '#0FBBA1',
+        paddingVertical: 11,
+        backgroundColor: c.cardSecondary,
     },
     suggestionButtonText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#FFFFFF',
+        color: c.text,
     },
     suggestionButtonDisabled: {
-        backgroundColor: '#E5E7EB',
+        opacity: 0.55,
     },
     suggestionButtonTextDisabled: {
-        color: '#9CA3AF',
+        color: c.textMuted,
     },
 
     typingRow: {
@@ -454,14 +458,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingBottom: 8,
     },
-    typingText: { fontSize: 12, color: '#6B7280' },
+    typingText: { fontSize: 12, color: c.textSecondary },
 
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'flex-end',
         paddingHorizontal: 16,
         paddingTop: 12,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         gap: 10,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -1 }, shadowOpacity: 0.03, shadowRadius: 4 },
@@ -470,25 +474,23 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
+        minHeight: 40,
         paddingHorizontal: 16,
         paddingVertical: 10,
         paddingTop: 10,
-        fontSize: 15,
-        color: '#1F2937',
+        fontSize: 14,
+        color: c.text,
         maxHeight: 100,
     },
     sendButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#0FBBA1',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#10B981',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 4,
     },
-    sendButtonDisabled: { backgroundColor: '#D1D5DB' },
+    sendButtonDisabled: { backgroundColor: c.border },
 });

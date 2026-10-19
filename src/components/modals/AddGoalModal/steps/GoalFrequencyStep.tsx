@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     View,
     Text,
@@ -7,6 +7,9 @@ import {
     ScrollView,
 } from 'react-native';
 import { GOAL_TYPES } from './GoalTypeStep';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 const FREQUENCIES = [
     { id: 'Daily', label: 'Daily', desc: 'Every day' },
@@ -36,6 +39,9 @@ interface Props {
 }
 
 export default function GoalFrequencyStep({ data, onChange }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const goalMeta = GOAL_TYPES.find(g => g.id === data.type);
     const accentColor = data.color ?? goalMeta?.color ?? '#6366F1';
     const isCustom = data.type === 'custom';
@@ -52,7 +58,7 @@ export default function GoalFrequencyStep({ data, onChange }: Props) {
             </Text>
 
             {/* Frequency */}
-            <Text style={styles.sectionLabel}>FREQUENCY</Text>
+            <Text style={styles.sectionLabel}>{t('frequency')}</Text>
             <View style={styles.freqList}>
                 {FREQUENCIES.map((f) => {
                     const isActive = data.frequency === f.id;
@@ -68,9 +74,9 @@ export default function GoalFrequencyStep({ data, onChange }: Props) {
                         >
                             <View style={styles.freqText}>
                                 <Text style={[styles.freqLabel, isActive && { color: accentColor }]}>
-                                    {f.label}
+                                    {t(f.label)}
                                 </Text>
-                                <Text style={styles.freqDesc}>{f.desc}</Text>
+                                <Text style={styles.freqDesc}>{t(f.desc)}</Text>
                             </View>
                             <View style={[
                                 styles.radio,
@@ -86,7 +92,7 @@ export default function GoalFrequencyStep({ data, onChange }: Props) {
             {/* Color picker — only for custom goals */}
             {isCustom && (
                 <>
-                    <Text style={[styles.sectionLabel, { marginTop: 28 }]}>GOAL COLOR</Text>
+                    <Text style={[styles.sectionLabel, { marginTop: 28 }]}>{t('goal_color')}</Text>
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -119,7 +125,7 @@ export default function GoalFrequencyStep({ data, onChange }: Props) {
                                         styles.colorName,
                                         isSelected && { color: c.hex, fontWeight: '700' },
                                     ]}>
-                                        {c.name}
+                                        {t(c.name)}
                                     </Text>
                                 </TouchableOpacity>
                             );
@@ -139,7 +145,7 @@ export default function GoalFrequencyStep({ data, onChange }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         paddingHorizontal: 20,
         paddingBottom: 100,
@@ -147,19 +153,19 @@ const styles = StyleSheet.create({
     heading: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         marginBottom: 6,
     },
     subheading: {
         fontSize: 14,
-        color: '#64748B',
+        color: c.textSecondary,
         marginBottom: 24,
         fontWeight: '500',
     },
     sectionLabel: {
         fontSize: 10,
         fontWeight: '700',
-        color: '#94A3B8',
+        color: c.textMuted,
         letterSpacing: 1.5,
         marginBottom: 12,
     },
@@ -169,10 +175,10 @@ const styles = StyleSheet.create({
     freqRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         paddingHorizontal: 16,
         paddingVertical: 14,
     },
@@ -183,11 +189,11 @@ const styles = StyleSheet.create({
     freqLabel: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
     },
     freqDesc: {
         fontSize: 12,
-        color: '#94A3B8',
+        color: c.textMuted,
         fontWeight: '500',
     },
     radio: {
@@ -203,7 +209,7 @@ const styles = StyleSheet.create({
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
     },
     colorRow: {
         gap: 12,
@@ -231,7 +237,7 @@ const styles = StyleSheet.create({
     colorName: {
         fontSize: 10,
         fontWeight: '600',
-        color: '#94A3B8',
+        color: c.textMuted,
     },
     previewPill: {
         flexDirection: 'row',

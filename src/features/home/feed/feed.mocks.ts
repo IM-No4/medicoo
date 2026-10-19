@@ -6,7 +6,7 @@ export const FULL_FEED: HomeFeedItem[] = [
     {
         id: 'header_1',
         type: 'DYNAMIC_HEADER',
-        colors: ['#0FBBA1', '#007C69'],
+        colors: ['#10B981', '#007C69'],
         greeting: 'Good morning',
         userName: 'Amrit',
         showLocationSelector: true,

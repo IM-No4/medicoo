@@ -2,7 +2,7 @@ import { DoctorStackParamList } from '@/src/navigation/DoctorStack';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { ActivityIndicator, Image, ScrollView, Share, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
@@ -11,11 +11,14 @@ import AppIcon from '../../components/icons/AppIcon';
 import { useTrackActivity } from '../../hooks/useTrackActivity';
 import { dismissActivity } from '../../redux/slices/activitySlice';
 import { AppDispatch, RootState } from '../../redux/store';
-import { API_BASE_URL } from '../../services/api/client';
+import AuthImage from '../../components/AuthImage';
 import { getPublicDoctorProfile, requestAppointment } from '../../services/api/doctor.api';
 import { addFavoriteDoctor, getFavoriteDoctors, removeFavoriteDoctor } from '../../services/api/user.api';
 import { formatDoctorName } from '../../utils/formatters';
 import RequestAppointmentModal from './components/RequestAppointmentModal';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 // Define useAppSelector locally since hooks file is missing
 const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
@@ -26,6 +29,16 @@ const ACTIVE_APPOINTMENT_LABEL: Record<string, string> = {
 };
 
 export default function DoctorDetailsScreen() {
+  const { t } = useLanguage();
+  const { theme, isDark } = useTheme();
+  // Pastel cards are right in light mode but glow white in dark: there, use the
+  // accent colour at low opacity over the dark surface instead.
+  const soft = (accent: string, light: string) => (isDark ? `${accent}26` : light);
+  const tone = (accent: string, lightBg: string, lightBorder: string) => ({
+    card: { backgroundColor: isDark ? `${accent}1A` : lightBg, borderColor: isDark ? `${accent}40` : lightBorder },
+    icon: { backgroundColor: soft(accent, lightBorder) },
+  });
+  const styles = useMemo(() => createStyles(theme), [theme]);
   type NavProp = NativeStackNavigationProp<
     DoctorStackParamList,
     'DoctorDetail'
@@ -52,6 +65,8 @@ export default function DoctorDetailsScreen() {
   const { user } = useAppSelector(state => state.auth);
   // Normalize user ID comparison - convert to string to be safe
   const isOwnProfile = user?.id && data?.id && String(user.id) === String(data.id);
+  // A pending/approved request already exists with this doctor.
+  const hasActiveRequest = !!data?.activeAppointment;
   const isActionDisabled = isOwnProfile || preview;
   const isNotAccepting = data?.isAcceptingAppointments === false;
   // Backend still rejects a submitted request either way (maintenanceGate.js)
@@ -199,6 +214,7 @@ export default function DoctorDetailsScreen() {
       preferredTime,
       reason: requestData.reason,
       consultationType: requestData.type,
+      forMemberId: requestData.forMemberId || null,
     });
 
     setShowRequestModal(false);
@@ -209,6 +225,7 @@ export default function DoctorDetailsScreen() {
     navigation.navigate('BookingSuccess', {
       isRequest: true,
       requestId: res?.data?.requestId,
+      forName: requestData.forName || null,
     });
   };
 
@@ -222,20 +239,27 @@ export default function DoctorDetailsScreen() {
 
         {/* Hero Image with basic details overlaid on it */}
         <View style={styles.heroContainer}>
-          {data.image || data.uniformPhoto ? (
-            <Image
-              source={{
-                uri: (data.image || data.uniformPhoto).startsWith('http')
-                  ? (data.image || data.uniformPhoto)
-                  : `${API_BASE_URL}/${data.image || data.uniformPhoto}`
-              }}
-              style={styles.heroImage}
-            />
-          ) : (
-            <View style={styles.heroPlaceholder}>
-              <Text style={{ fontSize: 72 }}>👨‍⚕️</Text>
-            </View>
-          )}
+          {/* AuthImage loads the stored photo path and shows the coloured placeholder
+              if there's no photo or it fails to load (instead of a pale empty box). */}
+          <AuthImage
+            uri={data.image || data.uniformPhoto}
+            style={styles.heroImage}
+            fallback={
+              <LinearGradient colors={[theme.primary, '#007C69']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroPlaceholder}>
+                <AppIcon name="stethoscope" size={72} color="rgba(255,255,255,0.9)" />
+              </LinearGradient>
+            }
+          />
+
+          {/* Top scrim: white photos (doctor in a white coat on white) made the
+              status bar icons and back/heart/share buttons vanish. A soft dark
+              fade behind them keeps white controls legible on any image. */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0.5)', 'rgba(0,0,0,0.22)', 'transparent']}
+            locations={[0, 0.55, 1]}
+            style={[styles.heroTopScrim, { height: insets.top + 90 }]}
+            pointerEvents="none"
+          />
 
           {/* Header icons, overlaid on the image */}
           <View style={[styles.heroHeader, { paddingTop: insets.top + 10 }]}>
@@ -262,9 +286,9 @@ export default function DoctorDetailsScreen() {
               graduated so it only darkens the strip right behind the text,
               not the photo as a whole. */}
           <LinearGradient
-            colors={['transparent', 'transparent', 'rgba(0,0,0,0.7)']}
-            locations={[0, 0.35, 1]}
-            style={styles.heroScrim}
+            colors={['transparent', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.78)']}
+            locations={[0, 0.4, 1]}
+            style={[styles.heroScrim, { height: '48%' }]}
             pointerEvents="none"
           />
 
@@ -300,19 +324,19 @@ export default function DoctorDetailsScreen() {
 
         {/* Doctor Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Doctor information</Text>
+          <Text style={styles.sectionTitle}>{t('doctor_information')}</Text>
           <View style={styles.infoCardsRow}>
-            <View style={[styles.infoCard, { backgroundColor: '#EEF4FF', borderColor: '#DCE8FF' }]}>
-              <View style={[styles.infoCardIconBox, { backgroundColor: '#DCE8FF' }]}>
+            <View style={[styles.infoCard, tone('#1C6ED5', '#EEF4FF', '#DCE8FF').card]}>
+              <View style={[styles.infoCardIconBox, tone('#1C6ED5', '#EEF4FF', '#DCE8FF').icon]}>
                 <AppIcon name="briefcase" size={17} color="#1C6ED5" />
               </View>
               <Text style={styles.infoCardValue}>
                 {typeof data.experience === 'number' ? `${data.experience} Years` : (data.experience || '—')}
               </Text>
-              <Text style={styles.infoCardLabel}>Experience</Text>
+              <Text style={styles.infoCardLabel}>{t('experience')}</Text>
             </View>
-            <View style={[styles.infoCard, { backgroundColor: '#F0FBF3', borderColor: '#D7F3DF' }]}>
-              <View style={[styles.infoCardIconBox, { backgroundColor: '#D7F3DF' }]}>
+            <View style={[styles.infoCard, tone('#0E9448', '#F0FBF3', '#D7F3DF').card]}>
+              <View style={[styles.infoCardIconBox, tone('#0E9448', '#F0FBF3', '#D7F3DF').icon]}>
                 <AppIcon name="languages" size={17} color="#0E9448" />
               </View>
               <Text style={styles.infoCardValue} numberOfLines={1}>
@@ -320,21 +344,21 @@ export default function DoctorDetailsScreen() {
               </Text>
               <Text style={styles.infoCardLabel}>Language</Text>
             </View>
-            <View style={[styles.infoCard, { backgroundColor: '#FFF6EA', borderColor: '#FDE9C8' }]}>
-              <View style={[styles.infoCardIconBox, { backgroundColor: '#FDE9C8' }]}>
+            <View style={[styles.infoCard, tone('#C47A16', '#FFF6EA', '#FDE9C8').card]}>
+              <View style={[styles.infoCardIconBox, tone('#C47A16', '#FFF6EA', '#FDE9C8').icon]}>
                 <AppIcon name="clock" size={17} color="#C47A16" />
               </View>
               <Text style={styles.infoCardValue} numberOfLines={1}>
                 {[data.nextSlot, data.availability].find(v => typeof v === 'string') || 'Check profile'}
               </Text>
-              <Text style={styles.infoCardLabel}>Availability</Text>
+              <Text style={styles.infoCardLabel}>{t('availability')}</Text>
             </View>
           </View>
         </View>
 
         {/* About Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About Doctor</Text>
+          <Text style={styles.sectionTitle}>{t('about_doctor')}</Text>
           <Text style={styles.aboutText}>
             {data.description || `${formatDoctorName(data.name)} is a highly skilled ${data.specialty || data.specialization} with over ${data.experience} experience.`}
           </Text>
@@ -362,7 +386,7 @@ export default function DoctorDetailsScreen() {
         {
           data.consultationFees && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Consultation Fees</Text>
+              <Text style={styles.sectionTitle}>{t('consultation_fees')}</Text>
               <View style={styles.feesContainer}>
                 {(() => {
                   const chat = data.consultationFees.chat;
@@ -371,11 +395,11 @@ export default function DoctorDetailsScreen() {
 
                   if (isChatEnabled) return (
                     <View style={styles.feeItem}>
-                      <View style={[styles.feeIcon, { backgroundColor: '#EAF4FF' }]}>
+                      <View style={[styles.feeIcon, { backgroundColor: soft('#1C6ED5', '#EAF4FF') }]}>
                         <AppIcon name="message-square" size={20} color="#1C6ED5" />
                       </View>
                       <View>
-                        <Text style={styles.feeLabel}>Chat</Text>
+                        <Text style={styles.feeLabel}>{t('chat')}</Text>
                         <Text style={styles.feeAmount}>₹{chatFee}</Text>
                       </View>
                     </View>
@@ -389,11 +413,11 @@ export default function DoctorDetailsScreen() {
 
                   if (isVoiceEnabled) return (
                     <View style={styles.feeItem}>
-                      <View style={[styles.feeIcon, { backgroundColor: '#EAFBF3' }]}>
+                      <View style={[styles.feeIcon, { backgroundColor: soft('#007C69', '#EAFBF3') }]}>
                         <AppIcon name="phone" size={20} color="#007C69" />
                       </View>
                       <View>
-                        <Text style={styles.feeLabel}>Voice</Text>
+                        <Text style={styles.feeLabel}>{t('voice')}</Text>
                         <Text style={styles.feeAmount}>₹{voiceFee}</Text>
                       </View>
                     </View>
@@ -407,11 +431,11 @@ export default function DoctorDetailsScreen() {
 
                   if (isVideoEnabled) return (
                     <View style={styles.feeItem}>
-                      <View style={[styles.feeIcon, { backgroundColor: '#FFF6EA' }]}>
+                      <View style={[styles.feeIcon, { backgroundColor: soft('#C47A16', '#FFF6EA') }]}>
                         <AppIcon name="video" size={20} color="#C47A16" />
                       </View>
                       <View>
-                        <Text style={styles.feeLabel}>Video</Text>
+                        <Text style={styles.feeLabel}>{t('video')}</Text>
                         <Text style={styles.feeAmount}>₹{videoFee}</Text>
                       </View>
                     </View>
@@ -426,30 +450,36 @@ export default function DoctorDetailsScreen() {
       </ScrollView>
 
       {/* Bottom Action Bar */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 8 }]}>
         {data.activeAppointment && (
           <TouchableOpacity
             style={styles.activeAppointmentBanner}
             onPress={() => executeAction('OPEN_CONSULTATION_DETAIL', { requestId: data.activeAppointment.requestId })}
           >
-            <AppIcon name="calendar-days" size={16} color="#166534" />
+            <AppIcon name="calendar-days" size={16} color={theme.success} />
             <Text style={styles.activeAppointmentText}>
               {ACTIVE_APPOINTMENT_LABEL[data.activeAppointment.status] || 'You have an active appointment with this doctor'}
             </Text>
-            <AppIcon name="chevron-right" size={16} color="#166534" />
+            <AppIcon name="chevron-right" size={16} color={theme.success} />
           </TouchableOpacity>
         )}
         <View style={styles.bottomBarButtonRow}>
           <TouchableOpacity
-            style={[styles.bookButton, (isActionDisabled || isNotAccepting || isBookingPaused) && styles.disabledButton, { flex: 1 }]}
+            style={[styles.bookButton, !hasActiveRequest && (isActionDisabled || isNotAccepting || isBookingPaused) && styles.disabledButton, { flex: 1 }]}
             onPress={() => {
+              if (hasActiveRequest) {
+                executeAction('OPEN_CONSULTATION_DETAIL', { requestId: data.activeAppointment.requestId });
+                return;
+              }
               if (isActionDisabled || isNotAccepting || isBookingPaused) return;
               setShowRequestModal(true);
             }}
-            disabled={!!(isActionDisabled || isNotAccepting || isBookingPaused)}
+            disabled={!hasActiveRequest && !!(isActionDisabled || isNotAccepting || isBookingPaused)}
           >
             <Text style={styles.bookButtonText}>
-              {isActionDisabled
+              {hasActiveRequest
+                ? 'View Your Request'
+                : isActionDisabled
                 ? (preview ? 'Preview Mode' : 'Your Profile')
                 : isNotAccepting
                   ? 'Not Available'
@@ -470,6 +500,7 @@ export default function DoctorDetailsScreen() {
           consultationFees={data.consultationFees || {}}
           weeklyAvailability={data.weeklyAvailability}
           urgentSurchargePercent={data.urgentSurchargePercent}
+          activeAppointment={data.activeAppointment}
           onRequest={handleRequestSubmit}
         />
       )}
@@ -477,23 +508,22 @@ export default function DoctorDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingBottom: 60,
+    backgroundColor: c.background,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   scrollContent: {
-    paddingBottom: 140,
+    paddingBottom: 120,
   },
   heroContainer: {
     width: '100%',
     height: 320,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: c.cardSecondary,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
     overflow: 'hidden',
@@ -506,7 +536,7 @@ const styles = StyleSheet.create({
   heroPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#EAF4FF',
+    backgroundColor: c.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -527,6 +557,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  heroTopScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
   },
   heroScrim: {
     position: 'absolute',
@@ -565,7 +601,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   verifiedBadge: {
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
     borderRadius: 9,
     width: 18,
     height: 18,
@@ -608,27 +644,27 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     paddingHorizontal: 4,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#F2F2F7',
+    borderColor: c.borderLight,
   },
   infoCardIconBox: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#EEEAFF',
+    backgroundColor: c.infoBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   infoCardValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1c1c1e',
+    color: c.text,
   },
   infoCardLabel: {
     fontSize: 11,
-    color: '#8e8e93',
+    color: c.textSecondary,
   },
   languageContainer: {
     flexDirection: 'row',
@@ -637,21 +673,21 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   languageBadge: {
-    backgroundColor: '#F2F2F7',
+    backgroundColor: c.cardSecondary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
   },
   languageText: {
     fontSize: 12,
-    color: '#3A3A3C',
+    color: c.text,
     fontWeight: '500',
   },
   activeAppointmentBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: c.successBg,
     borderWidth: 1,
     borderColor: '#DCFCE7',
     borderRadius: 14,
@@ -664,33 +700,33 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: '700',
-    color: '#166534',
+    color: c.success,
   },
   section: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    borderBottomColor: c.borderLight,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1c1c1e',
+    color: c.text,
     marginBottom: 12,
   },
   aboutText: {
     fontSize: 14,
-    color: '#3A3A3C',
+    color: c.text,
     lineHeight: 22,
   },
   registrationText: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: c.textSecondary,
     marginTop: 8,
   },
   feesContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
     borderRadius: 16,
     padding: 16,
   },
@@ -708,33 +744,31 @@ const styles = StyleSheet.create({
   },
   feeLabel: {
     fontSize: 12,
-    color: '#8e8e93',
+    color: c.textSecondary,
   },
   feeAmount: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1c1c1e',
+    color: c.text,
   },
   bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     flexDirection: 'column',
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 12,
     borderTopWidth: 1,
-    padding: 20,
-    paddingBottom: 32,
-    borderTopColor: '#E5E5EA',
+    borderTopColor: c.border,
   },
   bottomBarButtonRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   bookButton: {
-    backgroundColor: '#0FBBA1', borderRadius: 24, paddingVertical: 16, alignItems: 'center',
+    backgroundColor: '#10B981', borderRadius: 24, paddingVertical: 14, alignItems: 'center',
   },
   bookButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   disabledButton: { backgroundColor: '#A0C4F2' },

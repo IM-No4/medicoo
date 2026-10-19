@@ -5,12 +5,18 @@ import { useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import { RootState } from '../../../redux/store';
 import { getLocalDateString } from '../../../utils/dateUtils';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface Props {
   title?: string;
 }
 
 function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
 
   const { records } = useSelector((state: RootState) => state.vitals);
@@ -56,13 +62,13 @@ function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
         <Text style={styles.title}>{title.toUpperCase()}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={() => navigation.navigate('LogVitals')}>
-            <Text style={styles.seeAll}>Log</Text>
+            <Text style={styles.seeAll}>{t('log')}</Text>
           </TouchableOpacity>
           {hasAnyVitals && (
             <>
               <View style={styles.headerDot} />
               <TouchableOpacity onPress={() => navigation.navigate('VitalsHistory')}>
-                <Text style={styles.seeAll}>History</Text>
+                <Text style={styles.seeAll}>{t('history')}</Text>
               </TouchableOpacity>
             </>
           )}
@@ -76,12 +82,12 @@ function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
           activeOpacity={0.8}
         >
           <View style={styles.placeholderIconWrapper}>
-            <PlusCircle size={28} color="#0FBBA1" />
+            <PlusCircle size={28} color="#10B981" />
           </View>
           <View style={styles.placeholderTextWrapper}>
-            <Text style={styles.placeholderTitle}>Record Vitals</Text>
+            <Text style={styles.placeholderTitle}>{t('record_vitals')}</Text>
             <Text style={styles.placeholderDesc}>
-              Log your heart rate, pressure, and weight to unlock trends and smart health insights.
+              {t('log_your_heart_rate_pressure_and_weigh')}
             </Text>
           </View>
         </TouchableOpacity>
@@ -132,12 +138,15 @@ function HealthSummary({ title = 'HEALTH SUMMARY' }: Props) {
 }
 
 function HealthCard({ info, onPress }: any) {
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const Icon = info.icon;
   const hasTodayValue = info.value !== undefined;
 
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={onPress}>
-      <View style={[styles.iconBox, { backgroundColor: info.bgColor }]}>
+      {/* The pastel tile glares on a dark card: there it is a soft tint of the icon's own colour. */}
+      <View style={[styles.iconBox, { backgroundColor: isDark ? info.color + '26' : info.bgColor }]}>
         <Icon size={18} color={info.color} />
       </View>
 
@@ -160,7 +169,7 @@ function HealthCard({ info, onPress }: any) {
 
 export default React.memo(HealthSummary);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: 30,
   },
@@ -175,7 +184,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 13,
-    color: '#494949',
+    color: c.text,
     letterSpacing: 2,
     fontWeight: '700',
   },
@@ -193,7 +202,7 @@ const styles = StyleSheet.create({
   seeAll: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#0FBBA1',
+    color: '#10B981',
   },
   row: {
     flexDirection: 'row',
@@ -202,12 +211,12 @@ const styles = StyleSheet.create({
   },
   card: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 20,
     padding: 12,
     paddingBottom: 16,
     borderWidth: 1,
-    borderColor: '#F1F5F9', // Clean light border
+    borderColor: c.borderLight, // Clean light border
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.02,
@@ -233,17 +242,17 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1e293b',
+    color: c.text,
   },
   unit: {
     fontSize: 10,
-    color: '#94a3b8',
+    color: c.textMuted,
     fontWeight: '600',
     marginBottom: 1,
   },
   label: {
     fontSize: 11,
-    color: '#64748b',
+    color: c.textSecondary,
     fontWeight: '600',
     marginTop: 2,
   },
@@ -257,13 +266,13 @@ const styles = StyleSheet.create({
   emptyPlaceholder: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 18,
     marginHorizontal: 20,
     borderWidth: 1,
-    borderColor: '#F1F5F9', // Subtle slate border
+    borderColor: c.borderLight, // Subtle slate border
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.02,
@@ -274,12 +283,12 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: c.successBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
     borderWidth: 1,
-    borderColor: '#DCFCE7',
+    borderColor: c.isDark ? 'rgba(16,185,129,0.25)' : '#DCFCE7',
   },
   placeholderTextWrapper: {
     flex: 1,
@@ -287,12 +296,12 @@ const styles = StyleSheet.create({
   placeholderTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#0F172A',
+    color: c.text,
     marginBottom: 3,
   },
   placeholderDesc: {
     fontSize: 12,
-    color: '#64748B',
+    color: c.textSecondary,
     lineHeight: 18,
   },
 });

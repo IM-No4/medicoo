@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import AppIcon from "@/src/components/icons/AppIcon";
 import React, { useState } from "react";
 import {
@@ -7,6 +8,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -17,6 +21,9 @@ const FILTERS = [
 ];
 
 export default function FilterChips() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [selected, setSelected] = useState<string>("all");
 
   return (
@@ -42,7 +49,7 @@ export default function FilterChips() {
                 />
               )}
               <Text style={[styles.text, isSelected && styles.textSelected]}>
-                {filter.label}
+                {t(filter.label)}
               </Text>
             </TouchableOpacity>
           );
@@ -52,7 +59,7 @@ export default function FilterChips() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: 12,
   },
@@ -64,12 +71,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#fff",
+    backgroundColor: c.card,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: c.border,
   },
   chipSelected: {
     backgroundColor: "#007C69",
@@ -78,7 +85,7 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#8A8A8E",
+    color: c.textMuted,
   },
   textSelected: {
     color: "#fff",

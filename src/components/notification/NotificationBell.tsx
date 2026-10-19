@@ -1,15 +1,19 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 
 import { RootState } from '../../redux/store';
 import AppIcon from '../icons/AppIcon';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 type Props = {
   onPress?: () => void;
 };
 
 export default function NotificationBell({ onPress }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const unreadCount = useSelector(
     (state: RootState) => state.notifications.unreadCount
   );
@@ -33,7 +37,7 @@ export default function NotificationBell({ onPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     width: 40,
     height: 40,

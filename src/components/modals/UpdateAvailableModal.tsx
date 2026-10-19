@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { Linking, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 
 import { RootState } from '../../redux/store';
 import { getDismissedVersion, setDismissedVersion } from '../../services/storage/updateStorage';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../ThemedModal';
 
 // Renders unconditionally at the RootNavigator tier (same as
 // LegalAcceptanceModal) - decides for itself whether to show by reading
@@ -12,6 +16,9 @@ import { getDismissedVersion, setDismissedVersion } from '../../services/storage
 // boolean, so a future, newer release makes this eligible to show again
 // automatically.
 export default function UpdateAvailableModal() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const update = useSelector((state: RootState) => state.appConfig.update);
     const [dismissedVersion, setDismissedVersionState] = useState<string | null | undefined>(undefined);
 
@@ -59,11 +66,11 @@ export default function UpdateAvailableModal() {
                     </Text>
 
                     <TouchableOpacity style={[styles.button, styles.updateButton]} onPress={handleUpdateNow}>
-                        <Text style={styles.updateButtonText}>Update Now</Text>
+                        <Text style={styles.updateButtonText}>{t('update_now')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={[styles.button, styles.laterButton]} onPress={handleLater}>
-                        <Text style={styles.laterButtonText}>Later</Text>
+                        <Text style={styles.laterButtonText}>{t('later')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -71,7 +78,7 @@ export default function UpdateAvailableModal() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -82,7 +89,7 @@ const styles = StyleSheet.create({
     card: {
         width: '100%',
         maxWidth: 340,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 24,
         shadowColor: '#000',
@@ -93,12 +100,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     message: {
         marginTop: 8,
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         lineHeight: 20,
     },
     button: {
@@ -109,7 +116,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     updateButton: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
     },
     updateButtonText: {
         color: '#fff',
@@ -117,11 +124,11 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     laterButton: {
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         marginTop: 10,
     },
     laterButtonText: {
-        color: '#374151',
+        color: c.text,
         fontSize: 15,
         fontWeight: '700',
     },

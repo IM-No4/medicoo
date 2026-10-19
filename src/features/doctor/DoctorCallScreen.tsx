@@ -7,7 +7,7 @@ import {
     PhoneOff,
     Video as VideoIcon, VideoOff, Volume2, VolumeX
 } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     Animated, Dimensions,
@@ -25,9 +25,13 @@ import createAgoraRtcEngine, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 import { completeAppointmentRequest, ConsultationDetailsInput, getCallToken } from '../../services/api/doctor.api';
+import { cancelIncomingCall } from '../../services/incomingCall';
 import ConsultationDetailsModal, { ConsultationDraft } from './components/ConsultationDetailsModal';
 import InCallToolsSheet from './components/InCallToolsSheet';
 import PatientReportsModal from './components/PatientReportsModal';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const EMPTY_DRAFT: ConsultationDraft = { notes: '', prescribedMedicines: [], prescribedLabTests: [] };
 
@@ -36,6 +40,9 @@ const { width, height } = Dimensions.get('window');
 // --- Main Component ---
 
 export default function DoctorCallScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
     const route = useRoute<any>();
     const navigation = useNavigation();
@@ -51,7 +58,11 @@ export default function DoctorCallScreen() {
 
     // Agora State
     const [isJoined, setIsJoined] = useState(false);
-    const [remoteUid, setRemoteUid] = useState<number | null>(null);
+    // Up to three people can be in the call: the doctor, the patient and (when someone booked for a family member with their own
+    // account) the person who booked. Everyone else in the channel is a "remote"; the main one fills the screen, the rest are tiles.
+    const [remoteUids, setRemoteUids] = useState<number[]>([]);
+    const [participants, setParticipants] = useState<{ uid: number; role: string; name: string }[]>([]);
+    const [myRole, setMyRole] = useState<'doctor' | 'patient' | 'booker' | null>(null);
     const [joinError, setJoinError] = useState<string | null>(null);
     // Reconnecting is a transient state the SDK recovers from on its own
     // (brief wifi hiccups etc) - Failed only fires after ~20 minutes of
@@ -99,13 +110,26 @@ export default function DoctorCallScreen() {
     // appointment.doctorDetails is only ever populated on the patient-facing
     // detail fetch (the "other party" info) - its presence is what tells us
     // which role is viewing this shared screen.
-    const isPatientViewing = !!appointment?.doctorDetails;
+    // The server tells us who we are in this call (a ring opens this screen with only a requestId, so the old "does the payload carry
+    // doctorDetails" guess is wrong there).
+    const isPatientViewing = myRole ? myRole !== 'doctor' : !!appointment?.doctorDetails;
 
     const [now, setNow] = useState(() => Date.now());
     useEffect(() => {
         const interval = setInterval(() => setNow(Date.now()), 15000);
         return () => clearInterval(interval);
     }, []);
+
+    const nameOfUid = (uid: number) => {
+        const known = participants.find((p) => p.uid === uid);
+        if (known && known.role === 'doctor') return displayNameParam && isPatientViewing ? displayNameParam : known.name;
+        return known ? known.name : 'Participant';
+    };
+    const roleLabel = (uid: number) => (uid === 1 ? 'Doctor' : uid === 2 ? 'Patient' : uid === 3 ? 'Booked by' : '');
+    // The person you most want to see fills the screen: the doctor for the patient side, the patient for the doctor.
+    const preferredUid = isPatientViewing ? 1 : 2;
+    const remoteUid = remoteUids.includes(preferredUid) ? preferredUid : (remoteUids[0] ?? null);
+    const otherRemoteUids = remoteUids.filter((id) => id !== remoteUid);
 
     const noShowMinutesLeft = appointment?.noShowCutoffAt
         ? Math.max(0, Math.ceil((new Date(appointment.noShowCutoffAt).getTime() - now) / 60000))
@@ -175,7 +199,11 @@ export default function DoctorCallScreen() {
                 return;
             }
 
-            const { appId, channelName, token, uid } = await getCallToken(appointment.requestId);
+            const { appId, channelName, token, uid, role, participants: people } = await getCallToken(appointment.requestId);
+            setMyRole(role || null);
+            setParticipants(people || []);
+            // Answering from the ring: stop the ringing.
+            cancelIncomingCall(appointment.requestId);
 
             const permissionsGranted = await requestPermissions();
             if (!permissionsGranted) {
@@ -192,8 +220,8 @@ export default function DoctorCallScreen() {
 
             engine.current.registerEventHandler({
                 onJoinChannelSuccess: () => { setIsJoined(true); setConnectionFailed(false); },
-                onUserJoined: (_conn, remoteJoinedUid) => setRemoteUid(remoteJoinedUid),
-                onUserOffline: () => setRemoteUid(null),
+                onUserJoined: (_conn, remoteJoinedUid) => setRemoteUids((prev) => (prev.includes(remoteJoinedUid) ? prev : [...prev, remoteJoinedUid])),
+                onUserOffline: (_conn, remoteLeftUid) => setRemoteUids((prev) => prev.filter((id) => id !== remoteLeftUid)),
                 onConnectionStateChanged: (_conn, state) => {
                     if (state === ConnectionStateType.ConnectionStateReconnecting) {
                         setIsReconnecting(true);
@@ -228,7 +256,7 @@ export default function DoctorCallScreen() {
     const handleRetryConnection = async () => {
         setConnectionFailed(false);
         setJoinError(null);
-        setRemoteUid(null);
+        setRemoteUids([]);
         await leaveChannel();
         await setupAgora();
     };
@@ -236,8 +264,8 @@ export default function DoctorCallScreen() {
     const handleEndCall = () => {
         showStatus(
             'warning',
-            'End Consultation?',
-            'Are you sure you want to hang up?',
+            t('end_consultation'),
+            t('are_you_sure_you_want_to_hang_up'),
             () => {
                 hideStatus();
                 leaveChannel();
@@ -268,7 +296,7 @@ export default function DoctorCallScreen() {
         } catch (error: any) {
             showStatus(
                 'error',
-                'Could Not Complete',
+                t('could_not_complete'),
                 error?.response?.data?.message || 'The call ended, but we could not save this yet. You can complete it from the appointment details screen.',
                 () => { hideStatus(); navigation.goBack(); },
                 'OK'
@@ -313,15 +341,34 @@ export default function DoctorCallScreen() {
                 )}
             </View>
 
+            {/* The other people in the call (a family member's consultation can have the doctor, the patient and the person who booked) */}
+            {otherRemoteUids.length > 0 && (
+                <View style={[styles.tilesColumn, { top: insets.top + 74 }]}>
+                    {otherRemoteUids.map((uid) => (
+                        <View key={`tile-${uid}`} style={styles.tile}>
+                            {isVoiceMode ? (
+                                <View style={styles.tileAvatar}><Text style={styles.tileAvatarText}>{nameOfUid(uid).charAt(0)}</Text></View>
+                            ) : (
+                                <RtcSurfaceView canvas={{ uid }} style={styles.videoStream} zOrderMediaOverlay={true} />
+                            )}
+                            <View style={styles.tileLabel}>
+                                <Text style={styles.tileLabelText} numberOfLines={1}>{nameOfUid(uid)}</Text>
+                                <Text style={styles.tileRoleText} numberOfLines={1}>{roleLabel(uid)}</Text>
+                            </View>
+                        </View>
+                    ))}
+                </View>
+            )}
+
             {/* Connection Lost Overlay - the SDK gives up auto-retrying after
                 ~20 min, so from here on the user needs a manual rejoin. */}
             {connectionFailed && (
                 <View style={styles.connectionLostOverlay}>
                     <View style={styles.avatarLarge}><Text style={styles.avatarTextLarge}>{displayName.charAt(0)}</Text></View>
-                    <Text style={styles.connectionLostTitle}>Connection Lost</Text>
-                    <Text style={styles.connectionLostText}>We couldn't reconnect you to the call. Check your network and try again.</Text>
+                    <Text style={styles.connectionLostTitle}>{t('connection_lost')}</Text>
+                    <Text style={styles.connectionLostText}>{t('we_couldn_t_reconnect_you_to_the_call')}</Text>
                     <TouchableOpacity style={styles.retryButton} onPress={handleRetryConnection}>
-                        <Text style={styles.retryButtonText}>Try Again</Text>
+                        <Text style={styles.retryButtonText}>{t('try_again')}</Text>
                     </TouchableOpacity>
                 </View>
             )}
@@ -332,7 +379,7 @@ export default function DoctorCallScreen() {
             {isReconnecting && !connectionFailed && (
                 <View style={[styles.reconnectingBanner, { top: insets.top + 70 }]}>
                     <ActivityIndicator size="small" color="#fff" />
-                    <Text style={styles.reconnectingText}>Reconnecting...</Text>
+                    <Text style={styles.reconnectingText}>{t('reconnecting')}</Text>
                 </View>
             )}
 
@@ -361,7 +408,7 @@ export default function DoctorCallScreen() {
             {/* Self View */}
             {isVideoOn && !isVoiceMode && (
                 <Animated.View style={[styles.selfViewContainer, { transform: pan.getTranslateTransform() }]} {...panResponder.panHandlers}>
-                    <View style={styles.liveBadge}><Text style={styles.liveBadgeText}>LIVE NOW</Text></View>
+                    <View style={styles.liveBadge}><Text style={styles.liveBadgeText}>{t('live_now')}</Text></View>
                     <RtcSurfaceView key="local-feed" canvas={{ uid: 0 }} style={styles.videoStream} zOrderMediaOverlay={true} />
                 </Animated.View>
             )}
@@ -384,7 +431,7 @@ export default function DoctorCallScreen() {
                             style={[styles.iconCircle, isMicOn ? styles.iconActive : styles.iconInactive]}
                             onPress={toggleMic}
                         >
-                            {isMicOn ? <Mic size={22} color="#0FBBA1" /> : <MicOff size={22} color="#fff" />}
+                            {isMicOn ? <Mic size={22} color="#10B981" /> : <MicOff size={22} color="#fff" />}
                         </TouchableOpacity>
 
                         {/* Video Button */}
@@ -393,7 +440,7 @@ export default function DoctorCallScreen() {
                                 style={[styles.iconCircle, isVideoOn ? styles.iconActive : styles.iconInactive]}
                                 onPress={toggleVideo}
                             >
-                                {isVideoOn ? <VideoIcon size={22} color="#0FBBA1" /> : <VideoOff size={22} color="#fff" />}
+                                {isVideoOn ? <VideoIcon size={22} color="#10B981" /> : <VideoOff size={22} color="#fff" />}
                             </TouchableOpacity>
                         )}
 
@@ -402,7 +449,7 @@ export default function DoctorCallScreen() {
                             style={[styles.iconCircle, isSpeakerOn ? styles.iconActive : styles.iconInactive]}
                             onPress={toggleSpeaker}
                         >
-                            {isSpeakerOn ? <Volume2 size={22} color="#0FBBA1" /> : <VolumeX size={22} color="#fff" />}
+                            {isSpeakerOn ? <Volume2 size={22} color="#10B981" /> : <VolumeX size={22} color="#fff" />}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -451,22 +498,29 @@ export default function DoctorCallScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: { flex: 1, backgroundColor: '#000' },
     fullScreenVideo: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
     videoStream: { width: '100%', height: '100%' },
     placeholderStream: { width: '100%', height: '100%', backgroundColor: '#1F2937', alignItems: 'center', justifyContent: 'center' },
     avatarLarge: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#374151', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-    avatarTextLarge: { fontSize: 40, color: '#9CA3AF', fontWeight: '700' },
-    connectingText: { color: '#9CA3AF', fontSize: 16, fontWeight: '500', paddingHorizontal: 32, textAlign: 'center' },
-    noShowNotice: { color: '#6B7280', fontSize: 13, fontWeight: '500', paddingHorizontal: 40, textAlign: 'center', marginTop: 12, lineHeight: 18 },
+    avatarTextLarge: { fontSize: 40, color: c.textMuted, fontWeight: '700' },
+    connectingText: { color: c.textMuted, fontSize: 16, fontWeight: '500', paddingHorizontal: 32, textAlign: 'center' },
+    tilesColumn: { position: 'absolute', right: 12, zIndex: 20, gap: 10 },
+    tile: { width: 92, height: 128, borderRadius: 14, overflow: 'hidden', backgroundColor: '#374151', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
+    tileAvatar: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    tileAvatarText: { fontSize: 28, fontWeight: '700', color: '#D1D5DB' },
+    tileLabel: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 6, paddingVertical: 4, backgroundColor: 'rgba(0,0,0,0.55)' },
+    tileLabelText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+    tileRoleText: { color: 'rgba(255,255,255,0.7)', fontSize: 9.5, fontWeight: '600' },
+    noShowNotice: { color: c.textSecondary, fontSize: 13, fontWeight: '500', paddingHorizontal: 40, textAlign: 'center', marginTop: 12, lineHeight: 18 },
     connectionLostOverlay: {
         position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 40,
         backgroundColor: 'rgba(0,0,0,0.85)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32,
     },
     connectionLostTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginTop: 4 },
-    connectionLostText: { color: '#9CA3AF', fontSize: 14, textAlign: 'center', marginTop: 8, lineHeight: 20 },
-    retryButton: { backgroundColor: '#0FBBA1', borderRadius: 24, paddingHorizontal: 28, paddingVertical: 12, marginTop: 20 },
+    connectionLostText: { color: c.textMuted, fontSize: 14, textAlign: 'center', marginTop: 8, lineHeight: 20 },
+    retryButton: { backgroundColor: '#10B981', borderRadius: 24, paddingHorizontal: 28, paddingVertical: 12, marginTop: 20 },
     retryButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
     reconnectingBanner: {
         position: 'absolute', alignSelf: 'center', zIndex: 45,
@@ -516,7 +570,7 @@ const styles = StyleSheet.create({
     },
     actionRowBackground: {
         flexDirection: 'row',
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         width: '100%',
         alignItems: 'center',
         justifyContent: 'space-evenly',
@@ -532,7 +586,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     iconActive: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
     },
     iconInactive: {
         backgroundColor: 'rgba(255,255,255,0.2)',

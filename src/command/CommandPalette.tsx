@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import {
-    Modal,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 
 import { executeAction } from '@/src/actions/ActionExecutor';
 import { RootState } from '@/src/redux/store';
 import { resolveCommands } from './resolveCommands';
+import { useLanguage } from '../i18n/LanguageContext';
+import { Modal } from '../components/ThemedModal';
 
 type Props = {
   visible: boolean;
@@ -22,6 +23,7 @@ export default function CommandPalette({
   visible,
   onClose,
 }: Props) {
+  const { t } = useLanguage();
   const [query, setQuery] = useState('');
 
   const searchResults = useSelector(
@@ -52,7 +54,7 @@ export default function CommandPalette({
             autoFocus
             value={query}
             onChangeText={setQuery}
-            placeholder="Search or type a command…"
+            placeholder={t('search_or_type_a_command')}
             placeholderTextColor="#9CA3AF"
             style={styles.input}
           />

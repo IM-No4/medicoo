@@ -1,5 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { API_BASE_URL } from '../config/env';
+import { apiClient } from './api/client';
 import { getToken } from '../utils/tokenManagement';
 import { store } from '../redux/store';
 import { setActiveOrder, updateOrderStatus } from '../redux/slices/orderSlice';
@@ -74,6 +75,54 @@ export function onDeliveryLocationUpdate(handler: DeliveryLocationHandler) {
   };
 }
 
+/** Shows the customer's in-flight order (banner, tracking) from the server's list. */
+export function applyActiveOrders(orders: any[]) {
+    if (orders && orders.length > 0) {
+      const activeOrder = orders[0]; // grab the most recent active order
+      const storeName = activeOrder.storeName || activeOrder.storeId?.storeName || 'Pharmacy';
+      
+      let resolvedAmount = 0;
+      if (activeOrder.billData) {
+        try {
+          const bd = typeof activeOrder.billData === 'string' ? JSON.parse(activeOrder.billData) : activeOrder.billData;
+          resolvedAmount = Number(bd.finalTotal || bd.totalAmount || bd.grandTotal || bd.total || bd.payableAmount || 0);
+        } catch (e) {
+          console.warn('[Socket] Error parsing billData:', e);
+        }
+      }
+      if (!resolvedAmount) {
+        resolvedAmount = Number(activeOrder.amount || 0);
+      }
+
+      console.log('[Socket] Resolved amount:', resolvedAmount, 'from billData:', activeOrder.billData);
+
+      // Format to map exactly to ActiveOrder interface in orderSlice.ts
+      const formattedOrder = {
+        orderId: activeOrder._id,
+        orderNumber: activeOrder.orderNumber,
+        storeId: activeOrder.storeId?._id || activeOrder.storeId,
+        storeName: storeName,
+        amount: resolvedAmount,
+        address: activeOrder.deliveryAddress || null,
+        status: activeOrder.status,
+        timestamp: new Date(activeOrder.createdOn || Date.now()).getTime(),
+        items: activeOrder.items || [],
+        billData: activeOrder.billData || null,
+      };
+      store.dispatch(setActiveOrder(formattedOrder));
+    }
+}
+
+/** Same list over plain HTTP, so the banner survives a socket that is down at app start. */
+export async function restoreActiveOrders() {
+  try {
+    const res = await apiClient.get('/api/orders/active');
+    if (res.data?.success) applyActiveOrders(res.data.orders || []);
+  } catch (e) {
+    console.warn('[Orders] Could not restore active orders', e);
+  }
+}
+
 export async function initializeSocket() {
   if (socket?.connected) return;
 
@@ -103,40 +152,7 @@ export async function initializeSocket() {
 
     socket.on('activeOrders', (orders: any[]) => {
       console.log('[Socket] Received active orders:', orders);
-      if (orders && orders.length > 0) {
-        const activeOrder = orders[0]; // grab the most recent active order
-        const storeName = activeOrder.storeName || activeOrder.storeId?.storeName || 'Pharmacy';
-        
-        let resolvedAmount = 0;
-        if (activeOrder.billData) {
-          try {
-            const bd = typeof activeOrder.billData === 'string' ? JSON.parse(activeOrder.billData) : activeOrder.billData;
-            resolvedAmount = Number(bd.finalTotal || bd.totalAmount || bd.grandTotal || bd.total || bd.payableAmount || 0);
-          } catch (e) {
-            console.warn('[Socket] Error parsing billData:', e);
-          }
-        }
-        if (!resolvedAmount) {
-          resolvedAmount = Number(activeOrder.amount || 0);
-        }
-
-        console.log('[Socket] Resolved amount:', resolvedAmount, 'from billData:', activeOrder.billData);
-
-        // Format to map exactly to ActiveOrder interface in orderSlice.ts
-        const formattedOrder = {
-          orderId: activeOrder._id,
-          orderNumber: activeOrder.orderNumber,
-          storeId: activeOrder.storeId?._id || activeOrder.storeId,
-          storeName: storeName,
-          amount: resolvedAmount,
-          address: activeOrder.deliveryAddress || null,
-          status: activeOrder.status,
-          timestamp: new Date(activeOrder.createdOn || Date.now()).getTime(),
-          items: activeOrder.items || [],
-          billData: activeOrder.billData || null,
-        };
-        store.dispatch(setActiveOrder(formattedOrder));
-      }
+      applyActiveOrders(orders);
     });
 
     socket.on('order_status_update', (data: any) => {

@@ -9,12 +9,11 @@ import {
 } from "@/src/services/api/pharmacy.api";
 import { getMedicinePrescriptions } from "@/src/services/api/prescription.api";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { StatusBar } from "expo-status-bar";
+import { StatusBar } from '@/src/components/ThemedStatusBar';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -31,8 +30,15 @@ import CartItemsHorizontalScroll from "./components/CartItemsHorizontalScroll";
 import FilterChips from "./components/FilterChips";
 import MedicineRow from "./components/MedicineRow";
 import PharmacyHeader from "./components/PharmacyHeader";
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../../components/ThemedModal';
 
 export default function PharmacyDetailScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { pharmacyId } = route.params || {};
@@ -185,9 +191,9 @@ export default function PharmacyDetailScreen() {
       setStatusModal({
         visible: true,
         status: "error",
-        title: "Location Error",
+        title: t('location_error'),
         message:
-          "Location not found. Please ensure you have an address selected or location services enabled.",
+          t('location_not_found_please_ensure_you_h'),
       });
       return;
     }
@@ -235,7 +241,7 @@ export default function PharmacyDetailScreen() {
               activeOpacity={0.7}
               onPress={() => setIsSearchModalVisible(true)}
             >
-              <AppIcon name="search" size={20} color="#8A8A8E" />
+              <AppIcon name="search" size={20} color={theme.textMuted} />
               <Text
                 style={[
                   styles.searchInput,
@@ -251,7 +257,7 @@ export default function PharmacyDetailScreen() {
             style={styles.scanIconButton}
             onPress={() => setIsUploadModalVisible(true)}
           >
-            <AppIcon name="scan-text-icon" size={24} color="#8A8A8E" />
+            <AppIcon name="scan-text-icon" size={24} color={theme.textMuted} />
           </TouchableOpacity>
         </View>
       )}
@@ -279,7 +285,7 @@ export default function PharmacyDetailScreen() {
                 <AppIcon
                   name={query.trim() ? "search" : "pill"}
                   size={40}
-                  color="#9CA3AF"
+                  color={theme.textMuted}
                 />
               </View>
               <Text style={styles.emptyTitle}>
@@ -311,7 +317,7 @@ export default function PharmacyDetailScreen() {
                     activeOpacity={0.7}
                     onPress={() => setIsSearchModalVisible(true)}
                   >
-                    <AppIcon name="search" size={20} color="#8A8A8E" />
+                    <AppIcon name="search" size={20} color={theme.textMuted} />
                     <Text
                       style={[
                         styles.searchInput,
@@ -327,7 +333,7 @@ export default function PharmacyDetailScreen() {
                   style={styles.scanIconButton}
                   onPress={() => setIsUploadModalVisible(true)}
                 >
-                  <AppIcon name="scan-text-icon" size={24} color="#8A8A8E" />
+                  <AppIcon name="scan-text-icon" size={24} color={theme.textMuted} />
                 </TouchableOpacity>
               </View>
             </PharmacyHeader>
@@ -392,21 +398,21 @@ export default function PharmacyDetailScreen() {
               onPress={() => setIsSearchModalVisible(false)}
               activeOpacity={0.7}
             >
-              <AppIcon name="chevron-left" size={22} color="#111827" />
+              <AppIcon name="chevron-left" size={22} color={theme.text} />
             </TouchableOpacity>
             <View style={[styles.searchContainer, { flex: 1 }]}>
-              <AppIcon name="search" size={20} color="#8A8A8E" />
+              <AppIcon name="search" size={20} color={theme.textMuted} />
               <TextInput
                 ref={searchModalInputRef}
-                placeholder="Search medicines..."
+                placeholder={t('search_medicines')}
                 value={query}
                 onChangeText={setQuery}
                 style={styles.searchInput}
-                placeholderTextColor="#8A8A8E"
+                placeholderTextColor={theme.textMuted}
               />
               {query.length > 0 && (
                 <TouchableOpacity onPress={() => setQuery("")}>
-                  <AppIcon name="x" size={18} color="#8A8A8E" />
+                  <AppIcon name="x" size={18} color={theme.textMuted} />
                 </TouchableOpacity>
               )}
             </View>
@@ -430,7 +436,7 @@ export default function PharmacyDetailScreen() {
                   <AppIcon
                     name={query.trim() ? "search" : "pill"}
                     size={40}
-                    color="#9CA3AF"
+                    color={theme.textMuted}
                   />
                 </View>
                 <Text style={styles.emptyTitle}>
@@ -496,7 +502,6 @@ export default function PharmacyDetailScreen() {
         storeName={pharmacy?.storeName || ""}
         isStoreOpen={pharmacy?.status === "online"}
         allMedicines={medicines}
-        onSelectMedicine={(m) => setSelectedMedicine(m)}
         onClose={() => {
           setIsMedicineDetailVisible(false);
           setSelectedMedicine(null);
@@ -523,16 +528,16 @@ export default function PharmacyDetailScreen() {
 
 /* ================= STYLES ================= */
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F6F7F9",
+    backgroundColor: c.background,
   },
   loader: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F6F7F9",
+    backgroundColor: c.cardSecondary,
   },
   searchRowWrapper: {
     flexDirection: "row",
@@ -552,45 +557,45 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 48,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: c.border,
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
     fontSize: 15,
-    color: "#1c1c1e",
+    color: c.text,
   },
   searchPlaceholder: {
-    color: "#8A8A8E",
+    color: c.textMuted,
   },
   scanIconButton: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: c.border,
   },
   stickySearchContainer: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#ffffff",
+    backgroundColor: c.card,
     zIndex: 1000,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: c.border,
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
     shadowColor: "#000",
@@ -610,7 +615,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: c.cardSecondary,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
@@ -618,13 +623,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#1C1C1E",
+    color: c.text,
     marginBottom: 8,
     textAlign: "center",
   },
   emptySubtitle: {
     fontSize: 14,
-    color: "#8A8A8E",
+    color: c.textMuted,
     textAlign: "center",
     lineHeight: 20,
   },
@@ -633,12 +638,12 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
     zIndex: 999,
   },
   searchModalContainer: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.card,
   },
   searchModalHeader: {
     flexDirection: "row",
@@ -647,7 +652,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: c.borderLight,
   },
   searchModalBackBtn: {
     padding: 4,

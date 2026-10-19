@@ -56,7 +56,7 @@ export default function TermsOfServiceScreen() {
 
                 <View style={styles.center}>
                     {loading ? (
-                        <ActivityIndicator size="large" color="#0FBBA1" />
+                        <ActivityIndicator size="large" color="#10B981" />
                     ) : (
                         <ErrorState message="Couldn't load Terms of Service." onRetry={load} />
                     )}

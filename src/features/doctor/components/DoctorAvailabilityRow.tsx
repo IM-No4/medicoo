@@ -1,16 +1,20 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 export default function DoctorAvailabilityRow({
   label,
 }: {
   label: string;
 }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
@@ -26,7 +30,7 @@ export default function DoctorAvailabilityRow({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -37,14 +41,14 @@ const styles = StyleSheet.create({
   label: {
     width: 80,
     fontSize: 12,
-    color: '#6B7280',
+    color: c.textSecondary,
   },
 
   slot: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: c.successBg,
   },
 
   slotText: {

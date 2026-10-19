@@ -35,30 +35,37 @@ async function setSyncState(state: SyncState): Promise<void> {
     }
 }
 
-// Health Connect's aggregate SUMS every record overlapping a time range -
-// inserting one record whose interval straddles local midnight would let
-// its whole step count bleed into "today" even if most of those steps
-// actually happened yesterday (or vice versa). Splitting proportionally by
-// elapsed time bounds that error to a few minutes' worth of steps instead
-// of the whole delta.
+// Health Connect's aggregate SUMS every record overlapping a time range - inserting one record whose interval straddles local midnight
+// would let its whole step count bleed into "today" even if most of those steps actually happened yesterday (or vice versa). So the
+// steps are split proportionally by elapsed time at EVERY local midnight in the range (a phone that was not synced for a few days has
+// several), which keeps each day's share close to what really happened.
 function splitAtLocalMidnight(start: Date, end: Date, totalDelta: number): StepsRecord[] {
-    const midnight = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-
-    if (start.getTime() >= midnight.getTime()) {
-        return [{ recordType: 'Steps', startTime: start.toISOString(), endTime: end.toISOString(), count: totalDelta }];
-    }
-
     const totalMs = end.getTime() - start.getTime();
-    const preMs = midnight.getTime() - start.getTime();
-    const preSteps = totalMs > 0 ? Math.round((totalDelta * preMs) / totalMs) : 0;
-    const postSteps = totalDelta - preSteps;
+    if (totalMs <= 0) return [];
+
+    // Day boundaries inside (start, end)
+    const edges: number[] = [start.getTime()];
+    const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+    while (cursor.getTime() < end.getTime()) {
+        edges.push(cursor.getTime());
+        cursor.setDate(cursor.getDate() + 1);
+    }
+    edges.push(end.getTime());
 
     const records: StepsRecord[] = [];
-    if (preSteps > 0) {
-        records.push({ recordType: 'Steps', startTime: start.toISOString(), endTime: midnight.toISOString(), count: preSteps });
-    }
-    if (postSteps > 0) {
-        records.push({ recordType: 'Steps', startTime: midnight.toISOString(), endTime: end.toISOString(), count: postSteps });
+    let assigned = 0;
+    for (let i = 0; i < edges.length - 1; i += 1) {
+        const isLast = i === edges.length - 2;
+        const share = isLast ? totalDelta - assigned : Math.round((totalDelta * (edges[i + 1] - edges[i])) / totalMs);
+        assigned += share;
+        if (share > 0) {
+            records.push({
+                recordType: 'Steps',
+                startTime: new Date(edges[i]).toISOString(),
+                endTime: new Date(edges[i + 1]).toISOString(),
+                count: share,
+            });
+        }
     }
     return records;
 }

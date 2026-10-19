@@ -1,21 +1,24 @@
 import { X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StatusModal, { StatusType } from '../../../components/modals/StatusModal';
 import { DOCUMENT_TYPES, DocumentTypeValue, getDocumentTypeMeta } from '../documentTypes';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { Modal } from '../../../components/ThemedModal';
 
 interface Props {
     visible: boolean;
@@ -38,6 +41,9 @@ interface Props {
 }
 
 export default function EditRecordModal({ visible, onClose, onSubmit, initialData, initialType, lockType }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
     const [title, setTitle] = useState('');
     const [type, setType] = useState<DocumentTypeValue>('prescription');
@@ -89,7 +95,7 @@ export default function EditRecordModal({ visible, onClose, onSubmit, initialDat
 
     const handleSubmit = async () => {
         if (!title.trim()) {
-            showStatus('warning', 'Name Required', 'Please provide a name for this document to keep your records organized.');
+            showStatus('warning', t('name_required'), t('please_provide_a_name_for_this_documen'));
             return;
         }
 
@@ -106,7 +112,7 @@ export default function EditRecordModal({ visible, onClose, onSubmit, initialDat
             // status code 400" - the server's actual reason (e.g. an
             // unsupported file type) lives in the response body instead.
             const serverMessage = error?.response?.data?.error || error?.response?.data?.message;
-            showStatus('error', 'Upload Failed', serverMessage || 'We couldn\'t save your record. Please check your connection and try again.');
+            showStatus('error', t('upload_failed'), serverMessage || 'We couldn\'t save your record. Please check your connection and try again.');
             setIsSubmitting(false);
         }
     };
@@ -120,9 +126,9 @@ export default function EditRecordModal({ visible, onClose, onSubmit, initialDat
             <SafeAreaView style={styles.container}>
                 {/* Header */}
                 <View style={[styles.header, { marginTop: insets.top }]}>
-                    <Text style={styles.headerTitle}>Record Details</Text>
+                    <Text style={styles.headerTitle}>{t('record_details')}</Text>
                     <TouchableOpacity onPress={onClose} style={styles.closeButton} disabled={isSubmitting}>
-                        <X size={20} color="#1F2937" />
+                        <X size={20} color={theme.text} />
                     </TouchableOpacity>
                 </View>
 
@@ -134,13 +140,13 @@ export default function EditRecordModal({ visible, onClose, onSubmit, initialDat
                 >
                     {/* Document Name */}
                     <View style={styles.field}>
-                        <Text style={styles.label}>Document Name <Text style={styles.required}>*</Text></Text>
+                        <Text style={styles.label}>{t('Document Name')} <Text style={styles.required}>*</Text></Text>
                         <TextInput
                             style={styles.input}
                             value={title}
                             onChangeText={setTitle}
                             placeholder="e.g. Blood Test Report"
-                            placeholderTextColor="#9CA3AF"
+                            placeholderTextColor={theme.textMuted}
                             autoFocus
                             editable={!isSubmitting}
                         />
@@ -148,28 +154,28 @@ export default function EditRecordModal({ visible, onClose, onSubmit, initialDat
 
                     {/* Document Type */}
                     <View style={styles.field}>
-                        <Text style={styles.label}>Document Type <Text style={styles.required}>*</Text></Text>
+                        <Text style={styles.label}>{t('Document Type')} <Text style={styles.required}>*</Text></Text>
                         {lockType ? (
                             <View style={styles.lockedTypeBadge}>
-                                <Text style={styles.lockedTypeText}>{getDocumentTypeMeta(type).label}</Text>
+                                <Text style={styles.lockedTypeText}>{t(getDocumentTypeMeta(type).label)}</Text>
                             </View>
                         ) : (
                             <View style={styles.typeContainer}>
-                                {DOCUMENT_TYPES.map((t) => (
+                                {DOCUMENT_TYPES.map((docType) => (
                                     <TouchableOpacity
-                                        key={t.value}
+                                        key={docType.value}
                                         style={[
                                             styles.typePill,
-                                            type === t.value && styles.typePillActive
+                                            type === docType.value && styles.typePillActive
                                         ]}
-                                        onPress={() => setType(t.value)}
+                                        onPress={() => setType(docType.value)}
                                         disabled={isSubmitting}
                                     >
                                         <Text style={[
                                             styles.typeText,
-                                            type === t.value && styles.typeTextActive
+                                            type === docType.value && styles.typeTextActive
                                         ]}>
-                                            {t.label}
+                                            {t(docType.label)}
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
@@ -179,13 +185,13 @@ export default function EditRecordModal({ visible, onClose, onSubmit, initialDat
 
                     {/* Source */}
                     <View style={styles.field}>
-                        <Text style={styles.label}>Source (Optional)</Text>
+                        <Text style={styles.label}>{t('source_optional')}</Text>
                         <TextInput
                             style={styles.input}
                             value={source}
                             onChangeText={setSource}
-                            placeholder="Hospital / Lab / Doctor"
-                            placeholderTextColor="#9CA3AF"
+                            placeholder={t('hospital_lab_doctor')}
+                            placeholderTextColor={theme.textMuted}
                             editable={!isSubmitting}
                         />
                     </View>
@@ -205,7 +211,7 @@ export default function EditRecordModal({ visible, onClose, onSubmit, initialDat
                             {isSubmitting ? (
                                 <ActivityIndicator color="#FFFFFF" />
                             ) : (
-                                <Text style={styles.submitButtonText}>Save Record</Text>
+                                <Text style={styles.submitButtonText}>{t('save_record')}</Text>
                             )}
                         </TouchableOpacity>
                     </View>
@@ -215,8 +221,8 @@ export default function EditRecordModal({ visible, onClose, onSubmit, initialDat
                 {isSubmitting && (
                     <View style={styles.overlay}>
                         <View style={styles.overlayContent}>
-                            <ActivityIndicator size="large" color="#0FBBA1" />
-                            <Text style={styles.overlayText}>Saving...</Text>
+                            <ActivityIndicator size="large" color="#10B981" />
+                            <Text style={styles.overlayText}>{t('saving')}</Text>
                         </View>
                     </View>
                 )}
@@ -234,10 +240,10 @@ export default function EditRecordModal({ visible, onClose, onSubmit, initialDat
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
     },
     header: {
         flexDirection: 'row',
@@ -246,17 +252,17 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderLight,
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     closeButton: {
         width: 40,
         height: 40,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
@@ -274,20 +280,20 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#374151',
+        color: c.text,
     },
     required: {
         color: '#EF4444',
     },
     input: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 12,
         fontSize: 16,
-        color: '#111827',
+        color: c.text,
     },
     typeContainer: {
         flexDirection: 'row',
@@ -298,7 +304,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
         borderColor: 'transparent',
     },
@@ -308,7 +314,7 @@ const styles = StyleSheet.create({
     },
     typeText: {
         fontSize: 14,
-        color: '#4B5563',
+        color: c.textSecondary,
         fontWeight: '500',
     },
     typeTextActive: {
@@ -316,7 +322,7 @@ const styles = StyleSheet.create({
     },
     lockedTypeBadge: {
         alignSelf: 'flex-start',
-        backgroundColor: '#EAFBF3',
+        backgroundColor: c.successBg,
         borderWidth: 1,
         borderColor: '#D1FAE5',
         borderRadius: 20,
@@ -331,15 +337,15 @@ const styles = StyleSheet.create({
     footer: {
         padding: 20,
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-        backgroundColor: '#FFFFFF',
+        borderTopColor: c.borderLight,
+        backgroundColor: c.card,
     },
     submitButton: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         paddingVertical: 16,
         borderRadius: 14,
         alignItems: 'center',
-        shadowColor: "#0FBBA1",
+        shadowColor: "#10B981",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
@@ -362,7 +368,7 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     overlayContent: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         padding: 24,
         borderRadius: 16,
         alignItems: 'center',
@@ -376,6 +382,6 @@ const styles = StyleSheet.create({
     overlayText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#374151',
+        color: c.text,
     }
 });

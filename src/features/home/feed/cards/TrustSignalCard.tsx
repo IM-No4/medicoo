@@ -1,13 +1,17 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { TrustSignalFeedItem } from '../feed.types';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
 
 type Props = {
     data: TrustSignalFeedItem;
 };
 
 function TrustSignalCard({ data }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     return (
         <View style={styles.container}>
             <View style={styles.content}>
@@ -24,7 +28,7 @@ function TrustSignalCard({ data }: Props) {
 
 export default React.memo(TrustSignalCard);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         marginHorizontal: 20,
         marginBottom: 30,

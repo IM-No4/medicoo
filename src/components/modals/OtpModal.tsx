@@ -1,7 +1,11 @@
 import { X } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../ThemedModal';
 
 interface OtpModalProps {
     visible: boolean;
@@ -18,6 +22,9 @@ export default function OtpModal({
     onVerify,
     loading = false,
 }: OtpModalProps) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
     const [otp, setOtp] = useState('');
 
@@ -37,15 +44,15 @@ export default function OtpModal({
             <View style={styles.overlay}>
                 <View style={styles.container}>
                     <View style={styles.header}>
-                        <Text style={styles.title}>Verification Code</Text>
+                        <Text style={styles.title}>{t('verification_code')}</Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                            <X size={24} color="#6B7280" />
+                            <X size={24} color={theme.textSecondary} />
                         </TouchableOpacity>
                     </View>
 
                     <View style={styles.content}>
                         <Text style={styles.subtitle}>
-                            Please enter the 6-digit code sent to
+                            {t('please_enter_the_6_digit_code_sent_to')}
                         </Text>
                         <Text style={styles.emailText}>{email}</Text>
 
@@ -68,7 +75,7 @@ export default function OtpModal({
                             {loading ? (
                                 <ActivityIndicator color="#fff" size="small" />
                             ) : (
-                                <Text style={styles.verifyButtonText}>Verify Email</Text>
+                                <Text style={styles.verifyButtonText}>{t('verify_email')}</Text>
                             )}
                         </TouchableOpacity>
                     </View>
@@ -78,7 +85,7 @@ export default function OtpModal({
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -86,7 +93,7 @@ const styles = StyleSheet.create({
         padding: 24,
     },
     container: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 24,
         padding: 24,
         width: '100%',
@@ -104,7 +111,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 20,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     closeButton: {
         padding: 4,
@@ -114,31 +121,31 @@ const styles = StyleSheet.create({
     },
     subtitle: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginBottom: 4,
     },
     emailText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
         marginBottom: 24,
     },
     input: {
         width: '100%',
         height: 56,
         borderWidth: 1,
-        borderColor: '#D1D5DB',
+        borderColor: c.border,
         borderRadius: 12,
         fontSize: 24,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
         letterSpacing: 8,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         marginBottom: 24,
     },
     verifyButton: {
         width: '100%',
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         paddingVertical: 14,
         borderRadius: 12,
         alignItems: 'center',

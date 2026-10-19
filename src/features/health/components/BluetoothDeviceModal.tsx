@@ -1,16 +1,15 @@
 import { addAvailableDevice, connectDevice, setAvailableDevices, setScanning } from '@/src/redux/slices/deviceSlice';
 import { AppDispatch, RootState } from '@/src/redux/store';
 import { Bluetooth, Info, RefreshCw, Smartphone, Watch, X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    FlatList,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
@@ -24,8 +23,15 @@ interface Props {
 
 import { bluetoothService } from '@/src/services/health/BluetoothService';
 import StatusModal, { StatusType } from '@/src/components/modals/StatusModal';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { Modal } from '../../../components/ThemedModal';
 
 export default function BluetoothDeviceModal({ visible, onClose }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
     const dispatch = useDispatch<AppDispatch>();
     const { isScanning, availableDevices } = useSelector((state: RootState) => state.device);
@@ -157,7 +163,7 @@ export default function BluetoothDeviceModal({ visible, onClose }: Props) {
             // protocol we don't implement), so say that plainly instead.
             setConnectError({
                 visible: true,
-                title: 'Device Not Supported',
+                title: t('device_not_supported'),
                 message: `${device.name} couldn't be connected for health tracking. It may require its own companion app to pair, or isn't a supported device yet.`,
             });
         }
@@ -171,16 +177,16 @@ export default function BluetoothDeviceModal({ visible, onClose }: Props) {
             disabled={connectingId !== null}
         >
             <View style={styles.deviceIconBox}>
-                {item.name.includes('Watch') ? <Watch size={20} color="#64748B" /> : <Smartphone size={20} color="#64748B" />}
+                {item.name.includes('Watch') ? <Watch size={20} color={theme.textSecondary} /> : <Smartphone size={20} color={theme.textSecondary} />}
             </View>
             <View style={styles.deviceInfo}>
                 <Text style={styles.deviceName}>{item.name}</Text>
-                <Text style={styles.deviceStatus}>Ready to pair</Text>
+                <Text style={styles.deviceStatus}>{t('ready_to_pair')}</Text>
             </View>
             {connectingId === item.id ? (
-                <ActivityIndicator size="small" color="#0FBBA1" />
+                <ActivityIndicator size="small" color="#10B981" />
             ) : (
-                <Text style={styles.connectText}>Connect</Text>
+                <Text style={styles.connectText}>{t('connect')}</Text>
             )}
         </TouchableOpacity>
     );
@@ -200,41 +206,41 @@ export default function BluetoothDeviceModal({ visible, onClose }: Props) {
                                 <Bluetooth size={20} color="#fff" />
                             </View>
                             <View>
-                                <Text style={styles.title}>Pair New Device</Text>
-                                <Text style={styles.subtitle}>Searching for nearby trackers</Text>
+                                <Text style={styles.title}>{t('pair_new_device')}</Text>
+                                <Text style={styles.subtitle}>{t('searching_trackers')}</Text>
                             </View>
                         </View>
                         <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                            <X size={20} color="#94A3B8" />
+                            <X size={20} color={theme.textMuted} />
                         </TouchableOpacity>
                     </View>
 
                     <View style={styles.scanSection}>
                         <View style={styles.scanHeader}>
-                            <Text style={styles.sectionLabel}>Available Devices</Text>
+                            <Text style={styles.sectionLabel}>{t('available_devices')}</Text>
                             <TouchableOpacity onPress={checkAndStartScan} disabled={isScanning || bluetoothOff}>
                                 {isScanning ? (
-                                    <ActivityIndicator size="small" color="#0FBBA1" />
+                                    <ActivityIndicator size="small" color="#10B981" />
                                 ) : (
-                                    <RefreshCw size={16} color={bluetoothOff ? "#94A3B8" : "#0FBBA1"} />
+                                    <RefreshCw size={16} color={bluetoothOff ? "#94A3B8" : "#10B981"} />
                                 )}
                             </TouchableOpacity>
                         </View>
 
                         {bluetoothOff ? (
                             <View style={styles.emptyState}>
-                                <Bluetooth size={40} color="#94A3B8" style={{ marginBottom: 16 }} />
-                                <Text style={styles.emptyText}>Bluetooth is turned off. Please enable it to scan for devices.</Text>
+                                <Bluetooth size={40} color={theme.textMuted} style={{ marginBottom: 16 }} />
+                                <Text style={styles.emptyText}>{t('bluetooth_is_turned_off_please_enable')}</Text>
                                 <TouchableOpacity
                                     style={styles.enableBtn}
                                     onPress={handleEnableBluetooth}
                                 >
-                                    <Text style={styles.enableBtnText}>Enable Bluetooth</Text>
+                                    <Text style={styles.enableBtnText}>{t('enable_bluetooth')}</Text>
                                 </TouchableOpacity>
                             </View>
                         ) : availableDevices.length === 0 && !isScanning ? (
                             <View style={styles.emptyState}>
-                                <Text style={styles.emptyText}>No devices found. Make sure your tracker is in pairing mode.</Text>
+                                <Text style={styles.emptyText}>{t('no_devices_found_make_sure_your_tracke')}</Text>
                             </View>
                         ) : (
                             <FlatList
@@ -247,8 +253,8 @@ export default function BluetoothDeviceModal({ visible, onClose }: Props) {
                     </View>
 
                     <View style={styles.footer}>
-                        <Info size={14} color="#94A3B8" />
-                        <Text style={styles.footerText}>Only Bluetooth 4.0+ devices are supported</Text>
+                        <Info size={14} color={theme.textMuted} />
+                        <Text style={styles.footerText}>{t('only_bluetooth_4_0_devices_are_support')}</Text>
                     </View>
                 </View>
             </View>
@@ -264,7 +270,7 @@ export default function BluetoothDeviceModal({ visible, onClose }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -272,7 +278,7 @@ const styles = StyleSheet.create({
     },
     container: {
         height: SCREEN_HEIGHT * 0.65,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderTopLeftRadius: 36,
         borderTopRightRadius: 36,
         paddingTop: 32,
@@ -293,25 +299,25 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         alignItems: 'center',
         justifyContent: 'center',
     },
     title: {
         fontSize: 20,
         fontWeight: '800',
-        color: '#111827',
+        color: c.text,
     },
     subtitle: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginTop: 2,
     },
     closeBtn: {
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -328,7 +334,7 @@ const styles = StyleSheet.create({
     sectionLabel: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#94A3B8',
+        color: c.textMuted,
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
@@ -339,21 +345,21 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         borderRadius: 20,
         marginBottom: 12,
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: c.borderLight,
     },
     deviceIconBox: {
         width: 44,
         height: 44,
         borderRadius: 12,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: c.borderLight,
     },
     deviceInfo: {
         flex: 1,
@@ -362,17 +368,17 @@ const styles = StyleSheet.create({
     deviceName: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#1E293B',
+        color: c.text,
     },
     deviceStatus: {
         fontSize: 12,
-        color: '#94A3B8',
+        color: c.textMuted,
         marginTop: 2,
     },
     connectText: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#0FBBA1',
+        color: '#10B981',
     },
     emptyState: {
         flex: 1,
@@ -382,13 +388,13 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         textAlign: 'center',
-        color: '#94A3B8',
+        color: c.textMuted,
         fontSize: 14,
         lineHeight: 20,
     },
     enableBtn: {
         marginTop: 20,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 20,
         paddingVertical: 10,
         borderRadius: 12,
@@ -396,7 +402,7 @@ const styles = StyleSheet.create({
     enableBtnText: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#0FBBA1',
+        color: '#10B981',
     },
     footer: {
         flexDirection: 'row',
@@ -407,7 +413,7 @@ const styles = StyleSheet.create({
     },
     footerText: {
         fontSize: 12,
-        color: '#94A3B8',
+        color: c.textMuted,
         fontWeight: '500',
     }
 });

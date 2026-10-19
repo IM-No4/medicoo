@@ -1,5 +1,8 @@
-import React, { useEffect } from 'react';
-import { ActivityIndicator, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { Modal } from '../ThemedModal';
 
 export type StatusType = 'idle' | 'loading' | 'success' | 'date_error' | 'error' | 'warning' | 'info';
 
@@ -24,10 +27,10 @@ const DEFAULT_TITLES: Partial<Record<StatusType, string>> = {
 };
 
 const PRIMARY_COLORS: Partial<Record<StatusType, string>> = {
-    success: '#0FBBA1',
+    success: '#10B981',
     error: '#EF4444',
     date_error: '#EF4444',
-    warning: '#0FBBA1',
+    warning: '#10B981',
     info: '#3B82F6',
 };
 
@@ -41,9 +44,9 @@ const PRIMARY_COLORS: Partial<Record<StatusType, string>> = {
 // ring is the zero-dependency stand-in for the glow on that platform, on
 // top of the same elevation for depth.
 const GLOW_COLORS: Record<StatusType, string> = {
-    idle: '#0FBBA1',
-    loading: '#0FBBA1',
-    success: '#0FBBA1',
+    idle: '#10B981',
+    loading: '#10B981',
+    success: '#10B981',
     error: '#EF4444',
     date_error: '#EF4444',
     warning: '#F59E0B',
@@ -66,6 +69,8 @@ export default function StatusModal({
     primaryActionText,
     secondaryActionText
 }: StatusModalProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
     // Auto-close logic for success state if requested
     useEffect(() => {
@@ -91,7 +96,7 @@ export default function StatusModal({
             <Modal transparent visible={visible} animationType="fade" statusBarTranslucent>
                 <View style={styles.overlay}>
                     <View style={[styles.card, styles.loadingCard, glowStyle]}>
-                        <ActivityIndicator size="large" color="#0FBBA1" />
+                        <ActivityIndicator size="large" color="#10B981" />
                         <Text style={styles.loadingText}>{message || 'Processing...'}</Text>
                     </View>
                 </View>
@@ -139,7 +144,7 @@ export default function StatusModal({
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -150,7 +155,7 @@ const styles = StyleSheet.create({
     card: {
         width: '100%',
         maxWidth: 340,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 24,
         // Base depth - the actual glow color/opacity/radius (iOS) or border
@@ -164,20 +169,20 @@ const styles = StyleSheet.create({
     loadingText: {
         marginTop: 16,
         fontSize: 15,
-        color: '#374151',
+        color: c.text,
         fontWeight: '500',
         textAlign: 'center',
     },
     title: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         textAlign: 'center',
     },
     message: {
         marginTop: 8,
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         lineHeight: 20,
         textAlign: 'center',
     },
@@ -201,10 +206,10 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     secondaryButton: {
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
     },
     secondaryButtonText: {
-        color: '#374151',
+        color: c.text,
         fontSize: 15,
         fontWeight: '700',
     },

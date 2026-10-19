@@ -17,13 +17,29 @@ export interface LiveChat {
   lastActivityAt: string;
 }
 
+/** The welcome and topics for the general support chat: decided by the server, so they can change without an app update. */
+export interface LiveChatIntro {
+  greeting: string;
+  prompt: string;
+  categories: { value: string; label: string }[];
+}
+
+export const getLiveChatIntro = async (): Promise<LiveChatIntro> => {
+  const res = await apiClient.get('/api/live-chat/customer/intro');
+  return res.data.data as LiveChatIntro;
+};
+
 export const getActiveLiveChat = async (): Promise<LiveChat | null> => {
   const res = await apiClient.get('/api/live-chat/customer/active');
   return res.data?.data ?? null;
 };
 
-export const startLiveChat = async (subject: string, category?: string): Promise<LiveChat> => {
-  const res = await apiClient.post('/api/live-chat/customer/start', { subject, category });
+/**
+ * Opening the chat screen creates nothing: a session exists only once the customer sends a message. That first message goes
+ * with the start, so the server creates the session and delivers the message (and the assistant's reply) in one go.
+ */
+export const startLiveChat = async (subject: string, category?: string, message?: string): Promise<LiveChat> => {
+  const res = await apiClient.post('/api/live-chat/customer/start', { subject, category, message });
   return res.data.data as LiveChat;
 };
 

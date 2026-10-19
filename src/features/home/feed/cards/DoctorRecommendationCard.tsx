@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { Doctor, DoctorRecommendationFeedItem } from '../feed.types';
 import SectionHeader from './SectionHeader';
 
 import { FeedAction } from '../feed.actions';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 type Props = {
     data: DoctorRecommendationFeedItem;
@@ -12,6 +15,9 @@ type Props = {
 };
 
 function DoctorRecommendationCard({ data, onAction }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const handleDoctorPress = (item: Doctor) => {
         if (item.action && onAction) {
             onAction(item.action);
@@ -60,7 +66,7 @@ function DoctorRecommendationCard({ data, onAction }: Props) {
                 onPress={() => handleDoctorPress(item)}
                 disabled={!item.action}
             >
-                <Text style={styles.bookButtonText}>Book</Text>
+                <Text style={styles.bookButtonText}>{t('book')}</Text>
             </TouchableOpacity>
         </TouchableOpacity>
     );
@@ -87,7 +93,7 @@ function DoctorRecommendationCard({ data, onAction }: Props) {
 
 export default React.memo(DoctorRecommendationCard);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         marginBottom: 30,
     },
@@ -98,7 +104,7 @@ const styles = StyleSheet.create({
     card: {
         width: 130,
         marginHorizontal: 8,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 16,
         padding: 12,
         alignItems: 'center',
@@ -107,7 +113,7 @@ const styles = StyleSheet.create({
         // elevation here, however tuned down, still read as heavier than
         // the rest of the feed's cards.
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: c.borderLight,
     },
     imageContainer: {
         width: 64,
@@ -117,8 +123,8 @@ const styles = StyleSheet.create({
         position: 'relative',
         // Border for clean look
         borderWidth: 2,
-        borderColor: '#F3F4F6',
-        backgroundColor: '#F9FAFB',
+        borderColor: c.borderLight,
+        backgroundColor: c.cardSecondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -131,7 +137,7 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: 32,
-        backgroundColor: '#E0E7FF',
+        backgroundColor: c.infoBg,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -161,24 +167,24 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 2,
         textAlign: 'center',
     },
     specialty: {
         fontSize: 11,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginBottom: 2,
         textAlign: 'center',
     },
     experience: {
         fontSize: 10,
-        color: '#9CA3AF',
+        color: c.textMuted,
         marginBottom: 12,
         textAlign: 'center',
     },
     bookButton: {
-        backgroundColor: '#EFF6FF',
+        backgroundColor: c.infoBg,
         paddingVertical: 6,
         paddingHorizontal: 16,
         borderRadius: 8,

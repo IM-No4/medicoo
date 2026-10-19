@@ -1,6 +1,6 @@
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { ActivityIndicator, Image, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '../../components/icons/AppIcon';
@@ -9,8 +9,15 @@ import { executeAction } from '@/src/actions/ActionExecutor';
 import { DoctorStackParamList } from '@/src/navigation/DoctorStack';
 import { API_BASE_URL } from '../../services/api/client';
 import { formatDoctorName } from '../../utils/formatters';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { AdaptiveStatusBar } from '../../components/ThemedStatusBar';
 
 export default function BookAppointmentScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   // ... (NavProp type defs remain, just ensuring consistent imports)
   type RouteProps = RouteProp<
     DoctorStackParamList,
@@ -84,12 +91,12 @@ export default function BookAppointmentScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <AdaptiveStatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity onPress={() => executeAction('GO_BACK')} style={styles.iconButton} activeOpacity={0.7}>
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{isRequestMode ? 'Request Appointment' : 'Select Time'}</Text>
         <View style={{ width: 40 }} />
@@ -178,12 +185,12 @@ export default function BookAppointmentScreen() {
             <>
               {(!slots?.morning?.length && !slots?.afternoon?.length && !slots?.evening?.length) ? (
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyText}>No slots available for this date.</Text>
+                  <Text style={styles.emptyText}>{t('no_slots_available_for_this_date')}</Text>
                 </View>
               ) : (
                 <>
                   {/* Morning */}
-                  {slots?.morning?.length > 0 && <Text style={styles.slotHeader}>Morning</Text>}
+                  {slots?.morning?.length > 0 && <Text style={styles.slotHeader}>{t('morning')}</Text>}
                   <View style={styles.slotGrid}>
                     {slots?.morning.map((time: string) => (
                       <TouchableOpacity
@@ -199,7 +206,7 @@ export default function BookAppointmentScreen() {
                   </View>
 
                   {/* Afternoon */}
-                  {slots?.afternoon?.length > 0 && <Text style={styles.slotHeader}>Afternoon</Text>}
+                  {slots?.afternoon?.length > 0 && <Text style={styles.slotHeader}>{t('afternoon')}</Text>}
                   <View style={styles.slotGrid}>
                     {slots?.afternoon.map((time: string) => (
                       <TouchableOpacity
@@ -215,7 +222,7 @@ export default function BookAppointmentScreen() {
                   </View>
 
                   {/* Evening */}
-                  {slots?.evening?.length > 0 && <Text style={styles.slotHeader}>Evening</Text>}
+                  {slots?.evening?.length > 0 && <Text style={styles.slotHeader}>{t('evening')}</Text>}
                   <View style={styles.slotGrid}>
                     {slots?.evening.map((time: string) => (
                       <TouchableOpacity
@@ -253,10 +260,10 @@ export default function BookAppointmentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: c.background,
   },
   header: {
     flexDirection: 'row',
@@ -264,82 +271,82 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingBottom: 16,
     paddingHorizontal: 24,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
     }),
   },
   iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
   scrollContent: { paddingBottom: 140 },
   doctorSummary: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    borderBottomColor: c.borderLight,
   },
   imageContainer: {
-    width: 60, height: 60, borderRadius: 30, backgroundColor: '#F2F2F7',
+    width: 60, height: 60, borderRadius: 30, backgroundColor: c.cardSecondary,
     justifyContent: 'center', alignItems: 'center', marginRight: 16,
     position: 'relative'
   },
   doctorImage: { width: '100%', height: '100%', borderRadius: 30 },
   verifiedBadge: {
-    position: 'absolute', bottom: 0, right: 0, backgroundColor: '#0FBBA1',
+    position: 'absolute', bottom: 0, right: 0, backgroundColor: '#10B981',
     borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center',
     borderWidth: 1.5, borderColor: '#fff'
   },
-  docName: { fontSize: 17, fontWeight: '700', color: '#1c1c1e', marginBottom: 2 },
-  docSpecialty: { fontSize: 14, color: '#8e8e93', marginBottom: 4 },
+  docName: { fontSize: 17, fontWeight: '700', color: c.text, marginBottom: 2 },
+  docSpecialty: { fontSize: 14, color: c.textSecondary, marginBottom: 4 },
   miniLocation: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  docLocation: { fontSize: 13, color: '#8e8e93' },
+  docLocation: { fontSize: 13, color: c.textSecondary },
   section: { padding: 20, paddingBottom: 0 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: '#1c1c1e', marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: c.text, marginBottom: 16 },
   dateCard: {
-    width: 64, height: 76, borderRadius: 16, borderWidth: 1, borderColor: '#E5E5EA',
-    justifyContent: 'center', alignItems: 'center', marginRight: 12, backgroundColor: '#fff',
+    width: 64, height: 76, borderRadius: 16, borderWidth: 1, borderColor: c.border,
+    justifyContent: 'center', alignItems: 'center', marginRight: 12, backgroundColor: c.card,
   },
-  dateCardSelected: { backgroundColor: '#0FBBA1', borderColor: '#0FBBA1' },
-  dayText: { fontSize: 12, color: '#8e8e93', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-  dateText: { fontSize: 18, fontWeight: '700', color: '#1c1c1e' },
+  dateCardSelected: { backgroundColor: '#10B981', borderColor: '#10B981' },
+  dayText: { fontSize: 12, color: c.textSecondary, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  dateText: { fontSize: 18, fontWeight: '700', color: c.text },
   textSelected: { color: '#fff' },
-  slotHeader: { fontSize: 14, fontWeight: '600', color: '#8e8e93', marginTop: 16, marginBottom: 12 },
+  slotHeader: { fontSize: 14, fontWeight: '600', color: c.textSecondary, marginTop: 16, marginBottom: 12 },
   slotGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   slotChip: {
-    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: '#E5E5EA',
-    marginRight: 10, marginBottom: 10, backgroundColor: '#fff',
+    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: c.border,
+    marginRight: 10, marginBottom: 10, backgroundColor: c.card,
   },
-  slotChipSelected: { backgroundColor: '#0FBBA1', borderColor: '#0FBBA1' },
-  slotText: { fontSize: 14, color: '#1c1c1e' },
+  slotChipSelected: { backgroundColor: '#10B981', borderColor: '#10B981' },
+  slotText: { fontSize: 14, color: c.text },
   slotTextSelected: { color: '#fff', fontWeight: '600' },
 
   // Request Mode Styles
   requestContainer: {
-    backgroundColor: '#F9FAFB', borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: '#F2F2F7'
+    backgroundColor: c.cardSecondary, borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: c.borderLight
   },
-  requestInfo: { fontSize: 14, color: '#3A3A3C', lineHeight: 20, marginBottom: 16 },
+  requestInfo: { fontSize: 14, color: c.text, lineHeight: 20, marginBottom: 16 },
   preferenceButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   prefChip: {
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff',
-    borderWidth: 1, borderColor: '#E5E5EA'
+    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: c.card,
+    borderWidth: 1, borderColor: c.border
   },
-  prefChipSelected: { backgroundColor: '#0FBBA1', borderColor: '#0FBBA1' },
-  prefText: { fontSize: 14, color: '#3A3A3C' },
+  prefChipSelected: { backgroundColor: '#10B981', borderColor: '#10B981' },
+  prefText: { fontSize: 14, color: c.text },
   prefTextSelected: { color: '#fff', fontWeight: '600' },
 
   // Empty State
   emptyState: { padding: 20, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { fontSize: 14, color: '#8e8e93' },
+  emptyText: { fontSize: 14, color: c.textSecondary },
 
   bottomBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff',
-    padding: 20, paddingBottom: 32, borderTopWidth: 1, borderTopColor: '#E5E5EA',
+    position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: c.card,
+    padding: 20, paddingBottom: 32, borderTopWidth: 1, borderTopColor: c.border,
   },
   confirmButton: {
-    backgroundColor: '#0FBBA1', borderRadius: 24, paddingVertical: 16, alignItems: 'center',
+    backgroundColor: '#10B981', borderRadius: 24, paddingVertical: 16, alignItems: 'center',
   },
   disabledButton: { backgroundColor: '#A0A0A0' },
   confirmButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },

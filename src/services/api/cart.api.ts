@@ -5,7 +5,7 @@ export interface ApiCoupon {
   code: string;
   type: string;
   description?: string;
-  discountType: 'percentage' | 'flat' | 'free_shipping' | 'free_subscription';
+  discountType: 'percentage' | 'flat' | 'free_shipping' | 'free_subscription' | 'fixed_total';
   discountValue: number;
   minOrderValue?: number;
   maxDiscount?: number;

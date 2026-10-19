@@ -1,10 +1,13 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Minus, Plus } from 'lucide-react-native';
-import React, { useRef, useState } from 'react';
-import { Animated, Modal, PanResponder, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef, useState, useMemo } from 'react';
+import { Animated, PanResponder, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RenderMedicationIcon } from '../config/shapes';
-import { styles } from '../styles';
+import { createStyles } from '../styles';
+import { useTheme } from '../../../../theme/ThemeContext';
+import { useLanguage } from '../../../../i18n/LanguageContext';
+import { Modal } from '../../../ThemedModal';
 
 interface ScheduleStepProps {
   data: any;
@@ -15,6 +18,9 @@ type ScheduleType = 'Every Day' | 'On a Cyclical Schedule' | 'On Specific Days o
 type IntervalType = 'Day' | 'Week';
 
 export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
   const [showPicker, setShowPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<'time' | 'date'>('time');
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -242,7 +248,7 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <Animated.View
             style={{
-              backgroundColor: '#FFFFFF',
+              backgroundColor: theme.card,
               borderTopLeftRadius: 32,
               borderTopRightRadius: 32,
               paddingBottom: Math.max(insets.bottom, 20),
@@ -251,19 +257,19 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
             }}
           >
             <View {...panResponder.panHandlers} style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 16 }}>
-              <View style={{ width: 40, height: 5, backgroundColor: '#E5E7EB', borderRadius: 3 }} />
+              <View style={{ width: 40, height: 5, backgroundColor: theme.cardSecondary, borderRadius: 3 }} />
             </View>
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16 }}>
-              <Text style={{ color: '#111827', fontSize: 18, fontWeight: '700' }}>When will you take this?</Text>
+              <Text style={{ color: theme.text, fontSize: 18, fontWeight: '700' }}>{t('when_will_you_take_this')}</Text>
               <TouchableOpacity onPress={() => setShowScheduleModal(false)}>
-                <Text style={{ color: '#0FBBA1', fontSize: 15, fontWeight: '600' }}>Done</Text>
+                <Text style={{ color: '#10B981', fontSize: 15, fontWeight: '600' }}>{t('done')}</Text>
               </TouchableOpacity>
             </View>
 
             <View style={{ paddingHorizontal: 20, paddingBottom: 12 }}>
-              <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                Schedule Options
+              <Text style={{ fontSize: 13, color: theme.textSecondary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                {t('schedule_options')}
               </Text>
             </View>
 
@@ -275,8 +281,8 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                     paddingVertical: 16,
                     paddingHorizontal: 20,
                     borderBottomWidth: index < scheduleOptions.length - 1 ? 1 : 0,
-                    borderBottomColor: '#E5E7EB',
-                    backgroundColor: scheduleType === option.type ? '#ECFDF5' : '#FFFFFF',
+                    borderBottomColor: theme.border,
+                    backgroundColor: scheduleType === option.type ? theme.successBg : theme.card,
                   }}
                   onPress={() => {
                     onChange({ ...data, scheduleType: option.type });
@@ -284,17 +290,17 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 15, color: '#1F2937', fontWeight: scheduleType === option.type ? '600' : '400' }}>
+                      <Text style={{ fontSize: 15, color: theme.text, fontWeight: scheduleType === option.type ? '600' : '400' }}>
                         {option.type}
                       </Text>
                       {option.description && (
-                        <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>
+                        <Text style={{ fontSize: 13, color: theme.textSecondary, marginTop: 2 }}>
                           {option.description}
                         </Text>
                       )}
                     </View>
                     {scheduleType === option.type && (
-                      <Text style={{ fontSize: 18, color: '#0FBBA1', fontWeight: '600', marginLeft: 12 }}>✓</Text>
+                      <Text style={{ fontSize: 18, color: '#10B981', fontWeight: '600', marginLeft: 12 }}>✓</Text>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -321,7 +327,7 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <Animated.View
             style={{
-              backgroundColor: '#FFFFFF',
+              backgroundColor: theme.card,
               borderTopLeftRadius: 32,
               borderTopRightRadius: 32,
               paddingBottom: Math.max(insets.bottom, 20),
@@ -330,21 +336,21 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
             }}
           >
             <View {...panResponder.panHandlers} style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 16 }}>
-              <View style={{ width: 40, height: 5, backgroundColor: '#E5E7EB', borderRadius: 3 }} />
+              <View style={{ width: 40, height: 5, backgroundColor: theme.cardSecondary, borderRadius: 3 }} />
             </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: theme.border }}>
               <View style={{ width: 60 }} />
-              <Text style={{ color: '#111827', fontSize: 15, fontWeight: '600' }}>Interval</Text>
+              <Text style={{ color: theme.text, fontSize: 15, fontWeight: '600' }}>{t('interval')}</Text>
               <TouchableOpacity onPress={() => setShowIntervalPicker(false)}>
-                <Text style={{ color: '#0FBBA1', fontSize: 15, fontWeight: '600' }}>Done</Text>
+                <Text style={{ color: '#10B981', fontSize: 15, fontWeight: '600' }}>{t('done')}</Text>
               </TouchableOpacity>
             </View>
 
             <View style={{ flexDirection: 'row', justifyContent: 'center', paddingVertical: 10 }}>
               <View style={{
                 flexDirection: 'row',
-                backgroundColor: '#F3F4F6',
+                backgroundColor: theme.cardSecondary,
                 borderRadius: 8,
                 padding: 2,
               }}>
@@ -356,7 +362,7 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                       paddingVertical: 6,
                       paddingHorizontal: 24,
                       borderRadius: 6,
-                      backgroundColor: intervalType === type ? '#FFFFFF' : 'transparent',
+                      backgroundColor: intervalType === type ? theme.card : 'transparent',
                       shadowColor: intervalType === type ? '#000' : 'transparent',
                       shadowOpacity: intervalType === type ? 0.1 : 0,
                       shadowRadius: 2,
@@ -366,7 +372,7 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                     <Text style={{
                       fontSize: 15,
                       fontWeight: '600',
-                      color: intervalType === type ? '#111827' : '#6B7280'
+                      color: intervalType === type ? theme.text : theme.textSecondary
                     }}>
                       {type}s
                     </Text>
@@ -383,8 +389,8 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                     paddingVertical: 16,
                     paddingHorizontal: 20,
                     borderBottomWidth: 1,
-                    borderBottomColor: '#E5E7EB',
-                    backgroundColor: intervalValue === num ? '#ECFDF5' : '#FFFFFF',
+                    borderBottomColor: theme.border,
+                    backgroundColor: intervalValue === num ? theme.successBg : theme.card,
                   }}
                   onPress={() => {
                     onChange({ ...data, intervalValue: num });
@@ -392,11 +398,11 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                   }}
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 15, color: '#1F2937', fontWeight: intervalValue === num ? '600' : '400' }}>
+                    <Text style={{ fontSize: 15, color: theme.text, fontWeight: intervalValue === num ? '600' : '400' }}>
                       {num} {intervalType}{num > 1 ? 's' : ''}
                     </Text>
                     {intervalValue === num && (
-                      <Text style={{ fontSize: 18, color: '#0FBBA1', fontWeight: '600' }}>✓</Text>
+                      <Text style={{ fontSize: 18, color: '#10B981', fontWeight: '600' }}>✓</Text>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -424,7 +430,7 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <Animated.View
             style={{
-              backgroundColor: '#FFFFFF',
+              backgroundColor: theme.card,
               borderTopLeftRadius: 32,
               borderTopRightRadius: 32,
               paddingBottom: Math.max(insets.bottom, 20),
@@ -433,16 +439,16 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
             }}
           >
             <View {...panResponder.panHandlers} style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 16 }}>
-              <View style={{ width: 40, height: 5, backgroundColor: '#E5E7EB', borderRadius: 3 }} />
+              <View style={{ width: 40, height: 5, backgroundColor: theme.cardSecondary, borderRadius: 3 }} />
             </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: theme.border }}>
               <View style={{ width: 60 }} />
-              <Text style={{ color: '#111827', fontSize: 15, fontWeight: '600' }}>
+              <Text style={{ color: theme.text, fontSize: 15, fontWeight: '600' }}>
                 {cycleEditType === 'on' ? 'Days On' : 'Days Off'}
               </Text>
               <TouchableOpacity onPress={() => setShowCycleDaysPicker(false)}>
-                <Text style={{ color: '#0FBBA1', fontSize: 15, fontWeight: '600' }}>Done</Text>
+                <Text style={{ color: '#10B981', fontSize: 15, fontWeight: '600' }}>{t('done')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -454,8 +460,8 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                     paddingVertical: 16,
                     paddingHorizontal: 20,
                     borderBottomWidth: 1,
-                    borderBottomColor: '#E5E7EB',
-                    backgroundColor: currentValue === num ? '#ECFDF5' : '#FFFFFF',
+                    borderBottomColor: theme.border,
+                    backgroundColor: currentValue === num ? theme.successBg : theme.card,
                   }}
                   onPress={() => {
                     if (cycleEditType === 'on') {
@@ -467,11 +473,11 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                   }}
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 15, color: '#1F2937', fontWeight: currentValue === num ? '600' : '400' }}>
+                    <Text style={{ fontSize: 15, color: theme.text, fontWeight: currentValue === num ? '600' : '400' }}>
                       {num} {num === 1 ? 'Day' : 'Days'}
                     </Text>
                     {currentValue === num && (
-                      <Text style={{ fontSize: 18, color: '#0FBBA1', fontWeight: '600' }}>✓</Text>
+                      <Text style={{ fontSize: 18, color: '#10B981', fontWeight: '600' }}>✓</Text>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -497,7 +503,7 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
           <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
             <Animated.View
               style={{
-                backgroundColor: '#FFFFFF',
+                backgroundColor: theme.card,
                 borderTopLeftRadius: 32,
                 borderTopRightRadius: 32,
                 paddingBottom: Math.max(insets.bottom, 20),
@@ -505,18 +511,18 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
               }}
             >
               <View {...panResponder.panHandlers} style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 16 }}>
-                <View style={{ width: 40, height: 5, backgroundColor: '#E5E7EB', borderRadius: 3 }} />
+                <View style={{ width: 40, height: 5, backgroundColor: theme.cardSecondary, borderRadius: 3 }} />
               </View>
 
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: theme.border }}>
                 <TouchableOpacity onPress={onIosCancel}>
-                  <Text style={{ color: '#6B7280', fontSize: 15, fontWeight: '600' }}>Cancel</Text>
+                  <Text style={{ color: theme.textSecondary, fontSize: 15, fontWeight: '600' }}>{t('cancel')}</Text>
                 </TouchableOpacity>
-                <Text style={{ color: '#111827', fontSize: 15, fontWeight: '600' }}>
+                <Text style={{ color: theme.text, fontSize: 15, fontWeight: '600' }}>
                   {pickerMode === 'time' ? 'Select Time' : dateField === 'start' ? 'Start Date' : 'End Date'}
                 </Text>
                 <TouchableOpacity onPress={onIosDone}>
-                  <Text style={{ color: '#0FBBA1', fontSize: 15, fontWeight: '600' }}>Done</Text>
+                  <Text style={{ color: '#10B981', fontSize: 15, fontWeight: '600' }}>{t('done')}</Text>
                 </TouchableOpacity>
               </View>
               <DateTimePicker
@@ -524,8 +530,8 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                 mode={pickerMode}
                 display="spinner"
                 onChange={onPickerChange}
-                textColor="#111827"
-                style={{ backgroundColor: '#FFFFFF' }}
+                textColor={theme.text}
+                style={{ backgroundColor: theme.card }}
               />
             </Animated.View>
           </View>
@@ -556,9 +562,9 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
         </View>
       </View>
 
-      <Text style={styles.stepTitle}>Set a Schedule</Text>
+      <Text style={styles.stepTitle}>{t('set_a_schedule')}</Text>
 
-      <Text style={styles.sectionLabel}>When will you take this?</Text>
+      <Text style={styles.sectionLabel}>{t('when_will_you_take_this')}</Text>
       <View style={styles.listGroup}>
         <View style={styles.simpleRow}>
           <Text style={styles.simpleRowText}>{getScheduleDisplayText()}</Text>
@@ -574,7 +580,7 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
               style={styles.simpleRow}
               onPress={() => setShowIntervalPicker(true)}
             >
-              <Text style={styles.simpleRowText}>Interval</Text>
+              <Text style={styles.simpleRowText}>{t('interval')}</Text>
               <Text style={[styles.linkText, { fontWeight: '400' }]}>
                 {getIntervalDisplayText()} ⌃
               </Text>
@@ -586,45 +592,45 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
           <>
             <View style={styles.separator} />
             <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-              <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>What is the cycle?</Text>
+              <Text style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 12 }}>{t('what_is_the_cycle')}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ fontSize: 15, color: '#1F2937' }}>Take every day for</Text>
+                <Text style={{ fontSize: 15, color: theme.text }}>{t('take_every_day_for')}</Text>
                 <TouchableOpacity
                   onPress={() => {
                     setCycleEditType('on');
                     setShowCycleDaysPicker(true);
                   }}
                   style={{
-                    backgroundColor: '#F3F4F6',
+                    backgroundColor: theme.cardSecondary,
                     paddingHorizontal: 12,
                     paddingVertical: 6,
                     borderRadius: 8,
                     borderWidth: 1,
-                    borderColor: '#E5E7EB'
+                    borderColor: theme.border
                   }}
                 >
-                  <Text style={{ fontSize: 15, color: '#0FBBA1', fontWeight: '600' }}>
+                  <Text style={{ fontSize: 15, color: '#10B981', fontWeight: '600' }}>
                     {cycleDaysOn} days
                   </Text>
                 </TouchableOpacity>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                <Text style={{ fontSize: 15, color: '#1F2937' }}>and pause for</Text>
+                <Text style={{ fontSize: 15, color: theme.text }}>{t('and_pause_for')}</Text>
                 <TouchableOpacity
                   onPress={() => {
                     setCycleEditType('off');
                     setShowCycleDaysPicker(true);
                   }}
                   style={{
-                    backgroundColor: '#F3F4F6',
+                    backgroundColor: theme.cardSecondary,
                     paddingHorizontal: 12,
                     paddingVertical: 6,
                     borderRadius: 8,
                     borderWidth: 1,
-                    borderColor: '#E5E7EB'
+                    borderColor: theme.border
                   }}
                 >
-                  <Text style={{ fontSize: 15, color: '#0FBBA1', fontWeight: '600' }}>
+                  <Text style={{ fontSize: 15, color: '#10B981', fontWeight: '600' }}>
                     {cycleDaysOff} days
                   </Text>
                 </TouchableOpacity>
@@ -636,7 +642,7 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
 
       {scheduleType === 'On Specific Days of the Week' && (
         <>
-          <Text style={styles.sectionLabel}>On these days:</Text>
+          <Text style={styles.sectionLabel}>{t('on_these_days')}</Text>
           <View style={styles.listGroup}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 16, paddingHorizontal: 8 }}>
               {dayAbbreviations.map((day, index) => (
@@ -647,7 +653,7 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                     width: 40,
                     height: 40,
                     borderRadius: 20,
-                    backgroundColor: selectedDays.includes(index) ? '#0FBBA1' : '#F3F4F6',
+                    backgroundColor: selectedDays.includes(index) ? '#10B981' : theme.cardSecondary,
                     justifyContent: 'center',
                     alignItems: 'center',
                   }}
@@ -655,7 +661,7 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                   <Text style={{
                     fontSize: 16,
                     fontWeight: '600',
-                    color: selectedDays.includes(index) ? '#FFFFFF' : '#6B7280',
+                    color: selectedDays.includes(index) ? '#FFFFFF' : theme.textSecondary,
                   }}>
                     {day}
                   </Text>
@@ -668,7 +674,7 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
 
       {scheduleType !== 'As Needed' && (
         <>
-          <Text style={styles.sectionLabel}>At what time?</Text>
+          <Text style={styles.sectionLabel}>{t('at_what_time')}</Text>
           <View style={styles.listGroup}>
             {(data.times || []).map((time: string, index: number) => (
               <View key={index}>
@@ -695,7 +701,7 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
                 <View style={{ backgroundColor: '#30D158', borderRadius: 12, padding: 4 }}>
                   <Plus size={16} color="#FFF" strokeWidth={3} />
                 </View>
-                <Text style={styles.simpleRowText}>Add a Time</Text>
+                <Text style={styles.simpleRowText}>{t('add_a_time')}</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -709,18 +715,18 @@ export default function ScheduleStep({ data, onChange }: ScheduleStepProps) {
           : 'If you schedule a time, Health will send you a notification to take your medications.'}
       </Text>
 
-      <Text style={styles.sectionLabel}>Duration</Text>
+      <Text style={styles.sectionLabel}>{t('duration')}</Text>
       <View style={styles.listGroup}>
         <View style={styles.durationRow}>
           <TouchableOpacity style={styles.durationCol} onPress={() => openDatePicker('start')}>
-            <Text style={styles.durationLabel}>Start Date</Text>
+            <Text style={styles.durationLabel}>{t('start_date')}</Text>
             <Text style={styles.durationValue}>{formatDate(data.startDate)}</Text>
           </TouchableOpacity>
 
-          <View style={{ width: 1, backgroundColor: '#E5E7EB', marginHorizontal: 16 }} />
+          <View style={{ width: 1, backgroundColor: theme.cardSecondary, marginHorizontal: 16 }} />
 
           <TouchableOpacity style={styles.durationCol} onPress={() => openDatePicker('end')}>
-            <Text style={styles.durationLabel}>End Date</Text>
+            <Text style={styles.durationLabel}>{t('end_date')}</Text>
             <Text style={styles.durationValue}>{formatDate(data.endDate)}</Text>
           </TouchableOpacity>
         </View>

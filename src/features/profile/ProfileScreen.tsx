@@ -1,9 +1,10 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import {
   AlertCircle,
   ArrowUpCircle,
+  Bell,
   BookOpen,
   ChevronRight,
   Copy,
@@ -14,6 +15,9 @@ import {
   HeartPulse,
   HelpCircle,
   LogOut,
+  Moon,
+  Settings,
+  Sun,
   Pill,
   Stethoscope,
   Users
@@ -45,6 +49,9 @@ import { clearToken } from '../../utils/tokenManagement';
 import { getFCMToken } from '../../utils/deviceUtils';
 import ProfileHeader from './components/ProfileHeader';
 import ProfileSkeleton from './ProfileSkeleton';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeMode } from '../../theme/colors';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
@@ -52,6 +59,8 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const enabledServices = useSelector((state: RootState) => state.appConfig.enabledServices);
   const update = useSelector((state: RootState) => state.appConfig.update);
+  const { theme, isDark, themeMode, setThemeMode } = useTheme();
+  const { t } = useLanguage();
 
   const [loading, setLoading] = useState(true);
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -85,17 +94,9 @@ export default function ProfileScreen() {
     try {
       const profile = await getProfileDetails();
       // Handle base64 or URL image
-      let profileImageUri = null;
-      if (profile.profileImage) {
-        if (profile.profileImage.startsWith('http') || profile.profileImage.startsWith('data:')) {
-          profileImageUri = profile.profileImage;
-        } else {
-          // It's a relative path from the server
-          profileImageUri = `${API_BASE_URL}/${profile.profileImage}`;
-        }
-      }
-
-      setProfileImage(profileImageUri);
+      // Raw stored value (path / URL / data URI) - AuthImage resolves it and
+      // adds the auth header the protected profile-pictures folder requires.
+      setProfileImage(profile.profileImage || null);
       setName(profile.name);
       setMedId(profile.med_id);
     } catch (error) {
@@ -117,7 +118,7 @@ export default function ProfileScreen() {
   );
 
   const handleLogout = () => {
-    showStatus('warning', 'Logout', 'Are you sure you want to log out?', async () => {
+    showStatus('warning', t('logout'), t('logout_confirm'), async () => {
       hideStatus();
       try {
         // 1. Call API
@@ -141,7 +142,7 @@ export default function ProfileScreen() {
         // 5. Update Boot State (Force RootNavigator switch)
         dispatch(bootSuccess({ isAuthenticated: false }));
       }
-    }, 'Logout');
+    }, t('logout'));
   };
 
   const handleCopyMedId = async () => {
@@ -161,40 +162,42 @@ export default function ProfileScreen() {
     && !enabledServices.consultations
     && !enabledServices.labTests
     && !enabledServices.homeCare
+    && !enabledServices.hospitals
     && !enabledServices.bloodDonation
     && !enabledServices.ambulance;
 
   const accountItems: { icon: any; label: string; action: ActionKey }[] = [
-    { icon: BookOpen, label: 'Address Book', action: 'OPEN_ADDRESS_BOOK' },
-    { icon: Users, label: 'Family Members', action: 'OPEN_FAMILY_MEMBERS' },
+    { icon: BookOpen, label: t('address_book'), action: 'OPEN_ADDRESS_BOOK' },
+    { icon: Users, label: t('family_members'), action: 'OPEN_FAMILY_MEMBERS' },
     // Not tied to pharmacy/consultation/lab services, so unlike the items
     // below it, this stays visible in every mode including orders-only -
     // same reasoning as why Orders itself moves here in that mode.
-    { icon: HeartPulse, label: 'Health Assessments', action: 'OPEN_HEALTH_ASSESSMENTS' },
+    { icon: HeartPulse, label: t('health_assessments'), action: 'OPEN_HEALTH_ASSESSMENTS' },
+    { icon: Bell, label: t('notification_settings'), action: 'OPEN_NOTIFICATION_SETTINGS' },
   ];
   if (isOrdersOnlyMode) {
-    accountItems.push({ icon: Pill, label: 'Orders', action: 'OPEN_MY_MEDICINE_ORDERS' });
+    accountItems.push({ icon: Pill, label: t('orders'), action: 'OPEN_MY_MEDICINE_ORDERS' });
   }
 
   const activityItems: { icon: any; label: string; action: ActionKey }[] = isOrdersOnlyMode ? [] : [
-    ...(enabledServices.consultations ? [{ icon: Stethoscope, label: 'Consultations', action: 'OPEN_CONSULTATIONS' as ActionKey }] : []),
-    ...(enabledServices.pharmacy ? [{ icon: Pill, label: 'Medicine Orders', action: 'OPEN_MY_MEDICINE_ORDERS' as ActionKey }] : []),
-    ...(enabledServices.labTests ? [{ icon: FlaskConical, label: 'Lab Tests', action: 'OPEN_MY_LAB_TESTS' as ActionKey }] : []),
-    ...(enabledServices.bloodDonation ? [{ icon: Droplet, label: 'Blood Donation', action: 'OPEN_BLOOD_DONATION' as ActionKey }] : []),
+    ...(enabledServices.consultations ? [{ icon: Stethoscope, label: t('consultations'), action: 'OPEN_CONSULTATIONS' as ActionKey }] : []),
+    ...(enabledServices.pharmacy ? [{ icon: Pill, label: t('medicine_orders'), action: 'OPEN_MY_MEDICINE_ORDERS' as ActionKey }] : []),
+    ...(enabledServices.labTests ? [{ icon: FlaskConical, label: t('lab_tests'), action: 'OPEN_MY_LAB_TESTS' as ActionKey }] : []),
+    ...(enabledServices.bloodDonation ? [{ icon: Droplet, label: t('blood_donation'), action: 'OPEN_BLOOD_DONATION' as ActionKey }] : []),
   ];
 
   if (loading && !name) {
     return (
-      <View style={styles.container}>
-        <StatusBar style="dark" translucent backgroundColor="#F8F9FE" />
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <StatusBar style={isDark ? 'light' : 'dark'} translucent />
         <ProfileSkeleton />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" translucent backgroundColor="#F8F9FE" />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} translucent />
 
       <View style={{ paddingTop: insets.top + 16, paddingBottom: 8 }}>
         <ProfileHeader
@@ -206,12 +209,12 @@ export default function ProfileScreen() {
 
       {medId && (
       <View style={styles.medIdSection}>
-          <Text style={styles.medIdLabel}>Member ID: </Text>
-          <Text style={styles.medIdValue}>{medId}</Text>
+          <Text style={[styles.medIdLabel, { color: theme.textMuted }]}>{t('member_id')}: </Text>
+          <Text style={[styles.medIdValue, { color: theme.textSecondary }]}>{medId}</Text>
           <TouchableOpacity onPress={handleCopyMedId} style={styles.copyButton}>
-            <Copy size={16} color="#0FBBA1" />
+            <Copy size={16} color="#10B981" />
           </TouchableOpacity>
-          {copiedId && <Text style={styles.copiedText}>Copied</Text>}
+          {copiedId && <Text style={styles.copiedText}>{t('copied')}</Text>}
         </View>
       )}
 
@@ -221,7 +224,7 @@ export default function ProfileScreen() {
       >
 
         {/* Account Group */}
-        <GroupLayout title="Account">
+        <GroupLayout title={t('account')}>
           {accountItems.map((item, i) => (
             <MenuItem
               key={item.label}
@@ -236,7 +239,7 @@ export default function ProfileScreen() {
         {/* Activity & History Group - hidden entirely in single-service
             (pharmacy-only) mode, where Orders lives under Account instead. */}
         {activityItems.length > 0 && (
-          <GroupLayout title="Activity & History">
+          <GroupLayout title={t('activity_history')}>
             {activityItems.map((item, i) => (
               <MenuItem
                 key={item.label}
@@ -249,31 +252,64 @@ export default function ProfileScreen() {
           </GroupLayout>
         )}
 
+        {/* Appearance - one-line theme switcher: light / dark / system */}
+        <GroupLayout title={t('appearance')}>
+          <View style={[styles.menuItem, styles.menuItemLast]}>
+            <View style={styles.menuLeft}>
+              <View style={[styles.iconBox, { backgroundColor: theme.cardSecondary }]}>
+                <Moon size={20} color={theme.textSecondary} />
+              </View>
+              <Text style={[styles.menuLabel, { color: theme.text }]}>{t('theme')}</Text>
+            </View>
+            <View style={styles.themeRow}>
+              {([['light', Sun, 'theme_light'], ['dark', Moon, 'theme_dark'], ['system', Settings, 'theme_system']] as [ThemeMode, any, string][]).map(([mode, Icon, key]) => {
+                const selected = themeMode === mode;
+                return (
+                  <TouchableOpacity
+                    key={mode}
+                    activeOpacity={0.8}
+                    onPress={() => setThemeMode(mode)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(key)}
+                    accessibilityState={{ selected }}
+                    style={[
+                      styles.themeChip,
+                      { backgroundColor: selected ? theme.primary : theme.cardSecondary, borderColor: selected ? theme.primary : theme.border },
+                    ]}
+                  >
+                    <Icon size={18} color={selected ? '#FFFFFF' : theme.textSecondary} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </GroupLayout>
+
         {/* Support Group */}
-        <GroupLayout title="Support">
+        <GroupLayout title={t('support')}>
           <MenuItem
             icon={HelpCircle}
-            label="Help & Support"
+            label={t('help_support')}
             onPress={() => executeAction('OPEN_HELP')}
           />
           <MenuItem
             icon={FileText}
-            label="Terms of Service"
+            label={t('terms_of_service')}
             onPress={() => executeAction('OPEN_TERMS_OF_SERVICE')}
           />
           <MenuItem
             icon={Eye}
-            label="Privacy Policy"
+            label={t('privacy_policy')}
             onPress={() => executeAction('OPEN_PRIVACY_POLICY')}
           />
           <MenuItem
             icon={AlertCircle}
-            label="Medical Disclaimer"
+            label={t('medical_disclaimer')}
             onPress={() => executeAction('OPEN_MEDICAL_DISCLAIMER')}
           />
           <MenuItem
             icon={LogOut}
-            label="Logout"
+            label={t('logout')}
             onPress={handleLogout}
             isDestructive
             last
@@ -292,19 +328,19 @@ export default function ProfileScreen() {
               if (update.storeUrl) Linking.openURL(update.storeUrl).catch(() => {});
             }}
           >
-            <ArrowUpCircle size={22} color="#0FBBA1" />
+            <ArrowUpCircle size={22} color="#10B981" />
             <View style={styles.updateCardTextWrap}>
-              <Text style={styles.updateCardTitle}>Update Available</Text>
+              <Text style={styles.updateCardTitle}>{t('update_available')}</Text>
               <Text style={styles.updateCardSubtitle}>
-                A newer version of Medicoo is available{update.latestVersion ? ` (${update.latestVersion})` : ''}.
+                {t('update_available_msg')}{update.latestVersion ? ` (${update.latestVersion})` : ''}.
               </Text>
             </View>
-            <ChevronRight size={18} color="#0FBBA1" />
+            <ChevronRight size={18} color="#10B981" />
           </TouchableOpacity>
         )}
 
         <View style={styles.footer}>
-          <Text style={styles.versionText}>Version {APP_VERSION}</Text>
+          <Text style={[styles.versionText, { color: theme.textMuted }]}>{t('version')} {APP_VERSION}</Text>
         </View>
       </ScrollView>
 
@@ -327,31 +363,34 @@ export default function ProfileScreen() {
 // ------ Sub Components ------
 
 function GroupLayout({ title, children }: { title: string, children: React.ReactNode }) {
+  const { theme } = useTheme();
   return (
     <View style={styles.group}>
-      <Text style={styles.groupTitle}>{title}</Text>
-      <View style={styles.groupCard}>
+      <Text style={[styles.groupTitle, { color: theme.textSecondary }]}>{title}</Text>
+      <View style={[styles.groupCard, { backgroundColor: theme.card }]}>
         {children}
       </View>
     </View>
   );
 }
 
-function MenuItem({ icon: Icon, label, onPress, last, isDestructive, style }: any) {
+function MenuItem({ icon: Icon, label, value, onPress, last, isDestructive, style }: any) {
+  const { theme } = useTheme();
   return (
     <TouchableOpacity
-      style={[styles.menuItem, last && styles.menuItemLast, style]}
+      style={[styles.menuItem, { borderBottomColor: theme.borderLight }, last && styles.menuItemLast, style]}
       onPress={onPress}
     >
       <View style={styles.menuLeft}>
-        <View style={[styles.iconBox, isDestructive ? styles.destructiveIconBox : styles.normalIconBox]}>
-          <Icon size={20} color={isDestructive ? '#EF4444' : '#4B5563'} />
+        <View style={[styles.iconBox, { backgroundColor: isDestructive ? theme.errorBg : theme.cardSecondary }]}>
+          <Icon size={20} color={isDestructive ? theme.error : theme.textSecondary} />
         </View>
-        <Text style={[styles.menuLabel, isDestructive && styles.destructiveLabel]}>
+        <Text style={[styles.menuLabel, { color: isDestructive ? theme.error : theme.text }]}>
           {label}
         </Text>
       </View>
-      {!isDestructive && <ChevronRight size={18} color="#D1D5DB" />}
+      {value ? <Text style={[styles.menuValue, { color: theme.textMuted }]}>{value}</Text> : null}
+      {!isDestructive && !value && <ChevronRight size={18} color={theme.textMuted} />}
     </TouchableOpacity>
   );
 }
@@ -393,7 +432,7 @@ const styles = StyleSheet.create({
   copiedText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#0FBBA1',
+    color: '#10B981',
     marginLeft: 4,
   },
 
@@ -434,7 +473,7 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
   statValue: { fontSize: 18, fontWeight: '700', color: '#111827' },
   statSub: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
-  redeemText: { fontSize: 12, color: '#0FBBA1', fontWeight: '600', marginTop: 8 },
+  redeemText: { fontSize: 12, color: '#10B981', fontWeight: '600', marginTop: 8 },
 
   // Pending Requests
   pendingRequestCard: {
@@ -481,6 +520,10 @@ const styles = StyleSheet.create({
   iconBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   normalIconBox: { backgroundColor: '#F3F4F6' },
   destructiveIconBox: { backgroundColor: '#FEF2F2' },
+
+  menuValue: { fontSize: 13, fontWeight: '500' },
+  themeRow: { flexDirection: 'row', gap: 8 },
+  themeChip: { width: 40, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 
   menuLabel: { fontSize: 15, fontWeight: '500', color: '#374151' },
   destructiveLabel: { color: '#EF4444' },

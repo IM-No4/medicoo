@@ -23,6 +23,7 @@ import ComingSoonScreen from '../features/home/ComingSoonScreen';
 import ManageGoalsScreen from '../features/health/ManageGoalsScreen';
 import AddGoalScreen from '../features/health/AddGoalScreen';
 import FriendsScreen from '../features/health/FriendsScreen';
+import GoalComparisonScreen from '../features/health/GoalComparisonScreen';
 import ActivityHistoryScreen from '../features/health/ActivityHistoryScreen';
 import NotificationsScreen from '../features/notifications/NotificationsScreen';
 import VitalsHistoryScreen from '../features/health/VitalsHistoryScreen';
@@ -181,6 +182,11 @@ export default function MainStack({
       <Stack.Screen
         name="Friends"
         component={FriendsScreen}
+        options={{ presentation: 'card', headerShown: false }}
+      />
+      <Stack.Screen
+        name="GoalComparison"
+        component={GoalComparisonScreen}
         options={{ presentation: 'card', headerShown: false }}
       />
       <Stack.Screen

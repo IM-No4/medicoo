@@ -1,7 +1,11 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronRight } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { AuthImage } from '../../../components/AuthImage';
 
 interface ProfileHeaderProps {
     name: string | null;
@@ -10,6 +14,9 @@ interface ProfileHeaderProps {
 }
 
 export default function ProfileHeader({ name, profileImage, onEditPress }: ProfileHeaderProps) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     return (
         <TouchableOpacity
             style={styles.profileCard}
@@ -17,7 +24,7 @@ export default function ProfileHeader({ name, profileImage, onEditPress }: Profi
             onPress={onEditPress}
         >
             <LinearGradient
-                colors={['#0FBBA1', '#007C69']}
+                colors={['#10B981', '#007C69']}
                 start={Platform.select({ ios: { x: 0, y: 0 }, android: { x: 0.2, y: 0 } })}
                 end={Platform.select({ ios: { x: 1, y: 0.9 }, android: { x: 0.8, y: 1 } })}
                 style={StyleSheet.absoluteFill}
@@ -32,7 +39,7 @@ export default function ProfileHeader({ name, profileImage, onEditPress }: Profi
             <View style={styles.profileCardContent}>
                 <View style={styles.avatarContainer}>
                     {profileImage ? (
-                        <Image source={{ uri: profileImage }} style={styles.avatar} />
+                        <AuthImage uri={profileImage} style={styles.avatar} />
                     ) : (
                         <View style={styles.placeholderAvatar}>
                             <Text style={styles.initials}>{name ? name.charAt(0).toUpperCase() : 'U'}</Text>
@@ -41,7 +48,7 @@ export default function ProfileHeader({ name, profileImage, onEditPress }: Profi
                 </View>
                 <View style={styles.infoContainer}>
                     <Text style={styles.name}>{name || 'User'}</Text>
-                    <Text style={styles.viewProfileText}>View / Edit Profile</Text>
+                    <Text style={styles.viewProfileText}>{t('view_edit_profile')}</Text>
                 </View>
                 <ChevronRight size={20} color="rgba(255,255,255,0.8)" />
             </View>
@@ -49,7 +56,7 @@ export default function ProfileHeader({ name, profileImage, onEditPress }: Profi
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     profileCard: {
         marginHorizontal: 20,
         borderRadius: 24,

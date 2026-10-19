@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { BloodDonationAwarenessFeedItem } from '../feed.types';
 
 import { FeedAction } from '../feed.actions';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 interface Props {
     item: BloodDonationAwarenessFeedItem;
@@ -11,6 +14,9 @@ interface Props {
 }
 
 export default function BloodDonationAwarenessCard({ item, onAction }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const handlePrimary = () => {
         if (item.action && onAction) {
             onAction(item.action);
@@ -37,7 +43,7 @@ export default function BloodDonationAwarenessCard({ item, onAction }: Props) {
 
             <View style={styles.actions}>
                 <TouchableOpacity style={styles.secondaryButton} onPress={handleSecondary}>
-                    <Text style={styles.secondaryButtonText}>Learn More</Text>
+                    <Text style={styles.secondaryButtonText}>{t('learn_more')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.primaryButton} onPress={handlePrimary}>
                     <Text style={styles.primaryButtonText}>{item.ctaText}</Text>
@@ -48,15 +54,15 @@ export default function BloodDonationAwarenessCard({ item, onAction }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 16,
         padding: 16,
         marginBottom: 30,
         marginHorizontal: 24,
         borderWidth: 1,
-        borderColor: '#F1F5F9', // Subtle premium border
+        borderColor: c.borderLight, // Subtle premium border
         shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.02,
@@ -72,7 +78,7 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: '#FEF2F2', // Light red bg
+        backgroundColor: c.errorBg, // Light red bg
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,
@@ -83,12 +89,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 4,
     },
     subtitle: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         lineHeight: 20,
     },
     actions: {
@@ -97,7 +103,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
+        borderTopColor: c.borderLight,
     },
     primaryButton: {
         flexDirection: 'row',
@@ -117,6 +123,6 @@ const styles = StyleSheet.create({
     secondaryButtonText: {
         fontSize: 14,
         fontWeight: '500',
-        color: '#6B7280',
+        color: c.textSecondary,
     },
 });

@@ -1,7 +1,7 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../../components/ThemedStatusBar';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { ActivityIndicator, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
@@ -13,6 +13,9 @@ import {
     resetRespondStatus,
 } from '../../../redux/slices/bloodDonationSlice';
 import { AppDispatch, RootState } from '../../../redux/store';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 const URGENCY_COLORS: Record<string, string> = {
     NORMAL: '#3B82F6',
@@ -21,6 +24,9 @@ const URGENCY_COLORS: Record<string, string> = {
 };
 
 export default function BloodRequestDetailScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const insets = useSafeAreaInsets();
@@ -69,7 +75,7 @@ export default function BloodRequestDetailScreen() {
             <StatusBar style="dark" />
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{request.isRequester ? 'Your Blood Request' : 'Blood Request'}</Text>
                 <View style={{ width: 40 }} />
@@ -82,18 +88,18 @@ export default function BloodRequestDetailScreen() {
                 </View>
 
                 <View style={styles.card}>
-                    <Row label="Hospital" value={request.hospital} />
-                    <Row label="Location" value={request.location} />
-                    {request.unitsRequired ? <Row label="Units required" value={String(request.unitsRequired)} /> : null}
+                    <Row label={t('hospital')} value={request.hospital} />
+                    <Row label={t('location')} value={request.location} />
+                    {request.unitsRequired ? <Row label={t('units_required')} value={String(request.unitsRequired)} /> : null}
                     <Row
-                        label="Urgency"
+                        label={t('urgency')}
                         value={request.urgencyLevel}
                         valueColor={URGENCY_COLORS[request.urgencyLevel] || '#374151'}
                     />
                     {!request.isRequester && request.distanceKm !== null && (
-                        <Row label="Distance" value={`${request.distanceKm} km away`} />
+                        <Row label={t('distance')} value={`${request.distanceKm} km away`} />
                     )}
-                    <Row label="Status" value={request.status} valueColor={request.status === 'OPEN' ? '#0FBBA1' : '#6B7280'} />
+                    <Row label={t('status')} value={request.status} valueColor={request.status === 'OPEN' ? '#10B981' : '#6B7280'} />
                 </View>
 
                 {request.isRequester && request.contactNumber && (
@@ -101,7 +107,7 @@ export default function BloodRequestDetailScreen() {
                         style={styles.contactRow}
                         onPress={() => Linking.openURL(`tel:${request.contactNumber}`)}
                     >
-                        <AppIcon name="phone" size={16} color="#374151" />
+                        <AppIcon name="phone" size={16} color={theme.text} />
                         <Text style={styles.contactText}>Contact: {request.contactNumber}</Text>
                     </TouchableOpacity>
                 )}
@@ -119,13 +125,13 @@ export default function BloodRequestDetailScreen() {
 
                 {iAccepted && (
                     <View style={[styles.statusMessage, styles.statusMessageSuccess]}>
-                        <Text style={styles.statusMessageSuccessText}>You're confirmed for this donation. Thank you for helping!</Text>
+                        <Text style={styles.statusMessageSuccessText}>{t('you_re_confirmed_for_this_donation_tha')}</Text>
                     </View>
                 )}
 
                 {iWasTooLate && (
                     <View style={styles.statusMessage}>
-                        <Text style={styles.statusMessageText}>Another donor already accepted this request - thanks for being ready to help.</Text>
+                        <Text style={styles.statusMessageText}>{t('another_donor_already_accepted_this_re')}</Text>
                     </View>
                 )}
 
@@ -136,7 +142,7 @@ export default function BloodRequestDetailScreen() {
                             onPress={() => handleRespond('DECLINE')}
                             disabled={respondStatus === 'loading'}
                         >
-                            <Text style={styles.declineText}>Not Available</Text>
+                            <Text style={styles.declineText}>{t('not_available')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.acceptButton}
@@ -147,7 +153,7 @@ export default function BloodRequestDetailScreen() {
                                 <ActivityIndicator color="#FFFFFF" />
                             ) : (
                                 <>
-                                    <Text style={styles.acceptText}>I Can Donate</Text>
+                                    <Text style={styles.acceptText}>{t('can_donate')}</Text>
                                     <AppIcon name="arrow-right" size={16} color="#FFFFFF" />
                                 </>
                             )}
@@ -175,6 +181,8 @@ export default function BloodRequestDetailScreen() {
 }
 
 function Row({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     return (
         <View style={styles.row}>
             <Text style={styles.rowLabel}>{label}</Text>
@@ -183,8 +191,8 @@ function Row({ label, value, valueColor }: { label: string; value: string; value
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.card },
     centerState: { alignItems: 'center', justifyContent: 'center' },
     header: {
         flexDirection: 'row',
@@ -192,7 +200,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -205,7 +213,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginLeft: -8,
     },
-    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
     content: { padding: 24 },
     urgentBadge: {
         alignSelf: 'flex-start',
@@ -220,43 +228,43 @@ const styles = StyleSheet.create({
     },
     urgentBadgeText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
     card: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
         padding: 16,
         gap: 12,
         marginBottom: 20,
     },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    rowLabel: { fontSize: 14, color: '#6B7280', fontWeight: '500' },
-    rowValue: { fontSize: 14, color: '#111827', fontWeight: '700' },
+    rowLabel: { fontSize: 14, color: c.textSecondary, fontWeight: '500' },
+    rowValue: { fontSize: 14, color: c.text, fontWeight: '700' },
     contactRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
         marginBottom: 20,
     },
-    contactText: { fontSize: 14, color: '#374151', fontWeight: '600' },
+    contactText: { fontSize: 14, color: c.text, fontWeight: '600' },
     statusMessage: {
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         borderRadius: 12,
         padding: 14,
         marginBottom: 20,
     },
-    statusMessageText: { fontSize: 13, color: '#4B5563', lineHeight: 19 },
-    statusMessageSuccess: { backgroundColor: '#F0FDF4' },
-    statusMessageSuccessText: { fontSize: 13, color: '#166534', lineHeight: 19, fontWeight: '600' },
+    statusMessageText: { fontSize: 13, color: c.textSecondary, lineHeight: 19 },
+    statusMessageSuccess: { backgroundColor: c.successBg },
+    statusMessageSuccessText: { fontSize: 13, color: c.success, lineHeight: 19, fontWeight: '600' },
     actions: { flexDirection: 'row', gap: 12, marginTop: 4 },
     declineButton: {
         flex: 1,
         paddingVertical: 14,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         borderRadius: 12,
     },
-    declineText: { fontSize: 14, fontWeight: '600', color: '#4B5563' },
+    declineText: { fontSize: 14, fontWeight: '600', color: c.textSecondary },
     acceptButton: {
         flex: 2,
         paddingVertical: 14,

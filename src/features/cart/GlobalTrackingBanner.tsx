@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapPin, ChevronRight, Package } from 'lucide-react-native';
 import { RootState } from '../../redux/store';
 import { navigationRef } from '../../navigation/navigationRef';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 const STATUS_LABELS: Record<string, string> = {
   pending:        'Awaiting Confirmation',
@@ -49,7 +51,7 @@ const TERMINAL_STATUSES = ['delivered', 'rejected', 'cancelled'];
 // entire blood donation flow, and the Search flow - all top-level siblings
 // of "Tabs" in MainStack, so none of them are reachable via the tab-root
 // check below.
-const EXCLUDED_ROUTE_NAMES = ['Profile', 'DoctorStack', 'DoctorCall', 'DoctorChat', 'ConsultationDetail', 'BloodDonationStack', 'SearchStack'];
+const EXCLUDED_ROUTE_NAMES = ['Profile', 'DoctorStack', 'DoctorCall', 'DoctorChat', 'ConsultationDetail', 'BloodDonationStack', 'SearchStack', 'PaymentProcessing'];
 
 // Unlike the stacks above, Calendar/Records/Health are tabs *within* "Tabs"
 // itself (Home stays visible), so they're matched by route name directly
@@ -59,6 +61,8 @@ const EXCLUDED_ROUTE_NAMES = ['Profile', 'DoctorStack', 'DoctorCall', 'DoctorCha
 const EXCLUDED_TAB_ROOT_SCREENS = ['CalendarMain', 'Calendar', 'RecordsHome', 'Records', 'RecordsCategory', 'HealthMain', 'Health', 'RecordDetail'];
 
 export default function GlobalTrackingBanner() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const activeOrder = useSelector((state: RootState) => state.order.activeOrder);
 
@@ -240,14 +244,14 @@ export default function GlobalTrackingBanner() {
         {/* Right: amount + chevron */}
         <View style={styles.right}>
           <Text style={styles.amountText}>₹{activeOrder.amount.toLocaleString('en-IN')}</Text>
-          <ChevronRight size={18} color="#6B7280" />
+          <ChevronRight size={18} color={theme.textSecondary} />
         </View>
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   bannerWrapper: {
     position: 'absolute',
     left: 12,
@@ -263,12 +267,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
   },
   left: {
     flexDirection: 'row',
@@ -302,7 +306,7 @@ const styles = StyleSheet.create({
   },
   storeText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: c.textSecondary,
     marginTop: 1,
     fontWeight: '500',
   },
@@ -314,6 +318,6 @@ const styles = StyleSheet.create({
   amountText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: c.text,
   },
 });

@@ -1,17 +1,21 @@
 import { useNavigation } from '@react-navigation/native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch } from 'react-redux';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { dismissActivity } from '../../../../redux/slices/activitySlice';
 import { AppDispatch } from '../../../../redux/store';
 import { ContinueActivityFeedItem } from '../feed.types';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
 
 type Props = {
     data: ContinueActivityFeedItem;
 };
 
 function ContinueActivityCard({ data }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const dispatch = useDispatch<AppDispatch>();
 
@@ -45,62 +49,65 @@ function ContinueActivityCard({ data }: Props) {
                         <View style={[styles.progressBar, { width: `${data.progress * 100}%` }]} />
                     </View>
                 )}
-            </View>
 
-            <View style={styles.actions}>
-                <TouchableOpacity style={styles.actionBtn} onPress={handleResume} activeOpacity={0.7}>
+                <TouchableOpacity
+                    style={styles.actionBtn}
+                    onPress={handleResume}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
                     <Text style={styles.actionText}>{data.ctaText}</Text>
-                    <AppIcon name="chevron-right" size={14} color="#4F46E5" />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.dismissBtn} onPress={handleDismiss} activeOpacity={0.7}>
-                    <AppIcon name="x" size={14} color="#9CA3AF" />
+                    <AppIcon name="chevron-right" size={14} color={theme.primary} />
                 </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+                style={styles.dismissBtn}
+                onPress={handleDismiss}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+                <AppIcon name="x" size={14} color={theme.textMuted} />
+            </TouchableOpacity>
         </TouchableOpacity>
     );
 }
 
 export default React.memo(ContinueActivityCard);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     card: {
-        marginHorizontal: 20,
+        marginHorizontal: 24,
         // Matches every other feed card's marginBottom:28 - this was 20,
         // making the gap after this card noticeably tighter than the rest
         // of the feed's otherwise-uniform rhythm.
         marginBottom: 30,
-        backgroundColor: '#FFFBEB',
+        backgroundColor: c.card,
         borderRadius: 16,
-        padding: 16,
+        padding: 12,
         flexDirection: 'row',
         alignItems: 'center',
+        // Flat border-only look, same as the other feed cards
         borderWidth: 1,
-        borderColor: '#FEF3C7',
-        shadowColor: '#F59E0B',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
+        borderColor: c.borderLight,
     },
     iconBox: {
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         borderRadius: 12,
-        backgroundColor: '#FFF7ED',
+        backgroundColor: c.warningBg,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 12,
-        borderWidth: 1,
-        borderColor: '#FED7AA',
         flexShrink: 0,
     },
     content: {
         flex: 1,
+        paddingRight: 24,
     },
     subtitle: {
-        fontSize: 11,
-        color: '#92400E',
+        fontSize: 10,
+        color: c.warning,
         fontWeight: '600',
         marginBottom: 2,
         textTransform: 'uppercase',
@@ -109,14 +116,14 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#1F2937',
+        color: c.text,
         marginBottom: 6,
     },
     progressContainer: {
         height: 4,
-        backgroundColor: '#FDE68A',
+        backgroundColor: c.cardSecondary,
         borderRadius: 2,
-        width: '80%',
+        width: '100%',
         overflow: 'hidden',
     },
     progressBar: {
@@ -124,27 +131,27 @@ const styles = StyleSheet.create({
         backgroundColor: '#F59E0B',
         borderRadius: 2,
     },
-    actions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        flexShrink: 0,
-    },
     actionBtn: {
         flexDirection: 'row',
         alignItems: 'center',
+        alignSelf: 'flex-end',
         gap: 3,
+        marginTop: 10,
+        marginRight: -24,
     },
     actionText: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#4F46E5',
+        color: c.primary,
     },
     dismissBtn: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
         width: 24,
         height: 24,
         borderRadius: 12,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         alignItems: 'center',
         justifyContent: 'center',
     },

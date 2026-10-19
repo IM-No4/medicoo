@@ -15,9 +15,13 @@
  * FONT_FAMILY_NAME/WEIGHT_TO_SUFFIX to pick a family for every
  * <Text>/<TextInput> automatically (see that file for how), and App.tsx
  * just loads whatever FONT_MAP exports here.
+ *
+ * Kept in sync with medicoo-doctors/src/constants/fonts.ts, which uses the
+ * same Poppins (UI text) + MuseoModerno (brand logo) pairing via
+ * @expo-google-fonts/* packages instead of local .ttf files.
  */
 
-export const FONT_FAMILY_NAME = 'Inter';
+export const FONT_FAMILY_NAME = 'Poppins';
 
 // Custom fonts don't get RN's automatic bold/weight synthesis the way
 // system fonts do, especially on Android - each visual weight has to be
@@ -46,28 +50,47 @@ export function fontFamilyForWeight(weight?: string | number, italic = false): s
   return `${FONT_FAMILY_NAME}-${suffix}${italic ? 'Italic' : ''}`;
 }
 
-// Metro needs a static string literal to resolve/bundle each asset - it
-// can't statically analyze a template-literal/loop-built require() path -
-// so every font file is required explicitly rather than generated. Keys
-// match what fontFamilyForWeight/globalFont.ts's resolveFontFamily compute
-// (family name + weight suffix + "Italic").
+import {
+  MuseoModerno_400Regular,
+  MuseoModerno_500Medium,
+  MuseoModerno_600SemiBold,
+  MuseoModerno_700Bold,
+  MuseoModerno_800ExtraBold,
+  MuseoModerno_900Black,
+} from '@expo-google-fonts/museomoderno';
+
+import {
+  Poppins_100Thin,
+  Poppins_200ExtraLight,
+  Poppins_300Light,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+  Poppins_900Black,
+} from '@expo-google-fonts/poppins';
+
 export const FONT_MAP = {
-  'Inter-Thin': require('../assets/fonts/Inter-Thin.ttf'),
-  'Inter-ThinItalic': require('../assets/fonts/Inter-ThinItalic.ttf'),
-  'Inter-ExtraLight': require('../assets/fonts/Inter-ExtraLight.ttf'),
-  'Inter-ExtraLightItalic': require('../assets/fonts/Inter-ExtraLightItalic.ttf'),
-  'Inter-Light': require('../assets/fonts/Inter-Light.ttf'),
-  'Inter-LightItalic': require('../assets/fonts/Inter-LightItalic.ttf'),
-  'Inter-Regular': require('../assets/fonts/Inter-Regular.ttf'),
-  'Inter-RegularItalic': require('../assets/fonts/Inter-RegularItalic.ttf'),
-  'Inter-Medium': require('../assets/fonts/Inter-Medium.ttf'),
-  'Inter-MediumItalic': require('../assets/fonts/Inter-MediumItalic.ttf'),
-  'Inter-SemiBold': require('../assets/fonts/Inter-SemiBold.ttf'),
-  'Inter-SemiBoldItalic': require('../assets/fonts/Inter-SemiBoldItalic.ttf'),
-  'Inter-Bold': require('../assets/fonts/Inter-Bold.ttf'),
-  'Inter-BoldItalic': require('../assets/fonts/Inter-BoldItalic.ttf'),
-  'Inter-ExtraBold': require('../assets/fonts/Inter-ExtraBold.ttf'),
-  'Inter-ExtraBoldItalic': require('../assets/fonts/Inter-ExtraBoldItalic.ttf'),
-  'Inter-Black': require('../assets/fonts/Inter-Black.ttf'),
-  'Inter-BlackItalic': require('../assets/fonts/Inter-BlackItalic.ttf'),
+  // Poppins (Primary App Font for all text, headings, numbers, and UI)
+  'Poppins-Thin': Poppins_100Thin,
+  'Poppins-ExtraLight': Poppins_200ExtraLight,
+  'Poppins-Light': Poppins_300Light,
+  'Poppins-Regular': Poppins_400Regular,
+  'Poppins-Medium': Poppins_500Medium,
+  'Poppins-SemiBold': Poppins_600SemiBold,
+  'Poppins-Bold': Poppins_700Bold,
+  'Poppins-ExtraBold': Poppins_800ExtraBold,
+  'Poppins-Black': Poppins_900Black,
+
+  // MuseoModerno (Brand Logo)
+  MuseoModerno_400Regular,
+  MuseoModerno_500Medium,
+  MuseoModerno_600SemiBold,
+  MuseoModerno_700Bold,
+  MuseoModerno_800ExtraBold,
+  MuseoModerno_900Black,
+  'MuseoModerno-Bold': MuseoModerno_700Bold,
+  'MuseoModerno-SemiBold': MuseoModerno_600SemiBold,
+  'MuseoModerno-Regular': MuseoModerno_400Regular,
 };

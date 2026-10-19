@@ -17,6 +17,9 @@ import { saveRecentSearch } from '../utils/recentSearches';
 import DoctorResultCard from './DoctorResultCard';
 import LabTestListingCard from './LabTestListingCard';
 import PharmacyListingCard from './PharmacyListingCard';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 type Props = {
   results: SearchResult[];
@@ -24,6 +27,9 @@ type Props = {
 };
 
 export default function SearchResults({ results, activeTab }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const medicines = useMemo(
     () => results.filter((r) => r.domain === 'medicine'),
     [results]
@@ -185,7 +191,7 @@ export default function SearchResults({ results, activeTab }: Props) {
       {mergedPharmacyGroups.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeaderContainer}>
-            <Text style={styles.sectionFeaturedTitle}>FEATURED PHARMACIES</Text>
+            <Text style={styles.sectionFeaturedTitle}>{t('featured_pharmacies')}</Text>
             <View style={styles.headerLine} />
           </View>
           <View style={styles.pharmacyListContainer}>
@@ -222,7 +228,7 @@ export default function SearchResults({ results, activeTab }: Props) {
   const renderPharmacyTab = () => (
     <View style={styles.section}>
       <View style={styles.sectionHeaderContainer}>
-        <Text style={styles.sectionFeaturedTitle}>PHARMACIES NEAR YOU</Text>
+        <Text style={styles.sectionFeaturedTitle}>{t('pharmacies_near_you')}</Text>
         <View style={styles.headerLine} />
       </View>
 
@@ -274,7 +280,7 @@ export default function SearchResults({ results, activeTab }: Props) {
         <View style={styles.section}>
           {doctors.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>DOCTORS</Text>
+              <Text style={styles.sectionTitle}>{t('doctors')}</Text>
               {doctors.map((item) => {
                 if (!item.meta) return null;
                 const meta = item.meta;
@@ -297,7 +303,7 @@ export default function SearchResults({ results, activeTab }: Props) {
 
           {labTests.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>LAB TESTS</Text>
+              <Text style={styles.sectionTitle}>{t('lab_tests_2')}</Text>
               {labTests.map((item) => {
                 if (!item.meta) return null;
                 const meta = item.meta;
@@ -322,10 +328,10 @@ export default function SearchResults({ results, activeTab }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.background,
   },
   section: {
     marginTop: 8,
@@ -342,31 +348,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 12,
     fontWeight: '800',
-    color: '#6B7280',
+    color: c.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1.5,
   },
   headerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: c.cardSecondary,
   },
   sectionTitle: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 12,
     fontWeight: '800',
-    color: '#1F2937',
+    color: c.text,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   pharmacyListContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     marginHorizontal: 16,
     borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: c.borderLight,
     paddingTop: 8,
   },
   bottomSpacer: {

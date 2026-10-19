@@ -1,5 +1,5 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import React, {
   useCallback,
   useEffect,
@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { Bot } from 'lucide-react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTheme } from '../../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { executeAction as runGlobalAction } from '../../actions/ActionExecutor';
@@ -44,6 +45,7 @@ import { getLocalDateString } from '../../utils/dateUtils';
 import { useHomeFeed } from './hooks/useHomeFeed';
 import PrescriptionUploadModal from '../../components/modals/PrescriptionUploadModal';
 import { attemptSync } from '../../services/offlineSync';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 // Skeletons are still used for initial load
 const LoadingSkeletons = () => (
@@ -63,6 +65,7 @@ type Props = {
 };
 
 export default function HomeScreen({ onOpenCommandPalette }: Props) {
+  const { t } = useLanguage();
   const navigation = useNavigation<any>();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -127,11 +130,14 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
       } as any);
     }
 
-    // Upcoming appointments card - always inserted right after Services,
-    // regardless of whether the backend feed has anything there yet; the
-    // card itself renders nothing if there's nothing upcoming to show.
+    // Upcoming appointments card - inserted right after Services when the
+    // feed has one; otherwise (e.g. customers near a pharmacy, where Services
+    // isn't sent) right under the header at the top. It used to fall back to
+    // the END of the list, which put it below the footer. The card itself
+    // renders nothing if there's nothing upcoming to show.
     const servicesIndex = result.findIndex(item => item.type === 'SERVICES_SECTION');
-    result.splice(servicesIndex !== -1 ? servicesIndex + 1 : result.length, 0, {
+    const headerIndex = result.findIndex(item => item.type === 'DYNAMIC_HEADER');
+    result.splice(servicesIndex !== -1 ? servicesIndex + 1 : headerIndex + 1, 0, {
       id: 'virtual_upcoming_appointments',
       type: 'UPCOMING_APPOINTMENTS_CARD'
     } as any);
@@ -156,6 +162,7 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
   const contentFade = useRef(new Animated.Value(0)).current;
 
   const insets = useSafeAreaInsets();
+  const { theme, isDark } = useTheme();
   const dispatch = useDispatch<AppDispatch>();
 
   // The header's TRUE total on-screen height - collapsible content +
@@ -278,8 +285,8 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
     // contentContainerStyle's padding showed as a jarring white gap right
     // after that gray section. Painting the clearance itself in the same
     // gray keeps it reading as one continuous block instead of a seam.
-    return <View style={{ height: hasCartItems ? 100 : 24, backgroundColor: '#F9FAFB' }} />;
-  }, [feedLoading, isInitialLoading, hasCartItems]);
+    return <View style={{ height: hasCartItems ? 100 : 24, backgroundColor: theme.cardSecondary }} />;
+  }, [feedLoading, isInitialLoading, hasCartItems, theme]);
 
   // Manual isFocused tracking since useIsFocused is causing issues
   const [isFocused, setIsFocused] = useState(false);
@@ -357,8 +364,8 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
       setStatusModal({
         visible: true,
         status: 'error',
-        title: 'Location Error',
-        message: 'Location not found. Please ensure you have an address selected or location services enabled.',
+        title: t('location_error'),
+        message: t('location_not_found_please_ensure_you_h'),
       });
       return;
     }
@@ -383,14 +390,14 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
   // and MainTabs.tsx (hides the bottom tab bar for the same reason).
   if (!isOnline) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#F8F9FE' }}>
+      <View style={{ flex: 1, backgroundColor: theme.background }}>
         {isFocused && <StatusBar style="light" />}
         <OfflineHomeHeader />
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
           refreshControl={
-            <RefreshControl refreshing={offlineRefreshing} onRefresh={handleOfflineRefresh} tintColor="#0FBBA1" />
+            <RefreshControl refreshing={offlineRefreshing} onRefresh={handleOfflineRefresh} tintColor="#10B981" />
           }
         >
           <OfflineHomeContent />
@@ -400,11 +407,11 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+    <View style={{ flex: 1, backgroundColor: theme.card }}>
       {isFocused && (
         <StatusBar
           translucent
-          style={darkStatusBar ? 'dark' : 'light'}
+          style={darkStatusBar && !isDark ? 'dark' : 'light'}
           backgroundColor="transparent"
         />
       )}
@@ -418,7 +425,7 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
           left: 0,
           right: 0,
           height: insets.top,
-          backgroundColor: '#ffffff',
+          backgroundColor: theme.card,
           opacity: scrollY.interpolate({
             inputRange: [HEADER_HEIGHT - 30, HEADER_HEIGHT + 10],
             outputRange: [0, 1],
@@ -453,13 +460,13 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
         removeClippedSubviews={true}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingTop: HEADER_HEIGHT + 12,
+          paddingTop: HEADER_HEIGHT + 24,
           // Bottom clearance (for the floating MultiStoreCartBar, when
           // present) is now painted by renderFooter's own colored spacer
           // instead of here, so it can match the feed footer's gray
           // background instead of showing the screen's plain white.
         }}
-        scrollEventThrottle={8}
+        scrollEventThrottle={16}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
@@ -486,12 +493,12 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
           width: 56,
           height: 56,
           borderRadius: 28,
-          backgroundColor: '#0FBBA1',
+          backgroundColor: '#10B981',
           alignItems: 'center',
           justifyContent: 'center',
           ...Platform.select({
             ios: {
-              shadowColor: '#0FBBA1',
+              shadowColor: '#10B981',
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.3,
               shadowRadius: 8,

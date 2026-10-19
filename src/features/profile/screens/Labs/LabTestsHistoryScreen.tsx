@@ -7,7 +7,7 @@ import {
     FlaskConical,
     Search
 } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -21,6 +21,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { executeAction } from '../../../../actions/ActionExecutor';
 import { getMyLabTests } from '../../../../services/api';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 interface LabTest {
     _id: string;
@@ -33,6 +36,9 @@ interface LabTest {
 }
 
 export default function LabTestsHistoryScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const [loading, setLoading] = useState(true);
@@ -68,8 +74,8 @@ export default function LabTestsHistoryScreen() {
             case 'Completed': return { color: '#10B981', label: 'Report Ready' };
             case 'Processing': return { color: '#3B82F6', label: 'Analyzing Sample' };
             case 'Sample Collected': return { color: '#F59E0B', label: 'In Transit' };
-            case 'Scheduled': return { color: '#6B7280', label: 'Upcoming' };
-            default: return { color: '#6B7280', label: status };
+            case 'Scheduled': return { color: theme.textSecondary, label: 'Upcoming' };
+            default: return { color: theme.textSecondary, label: status };
         }
     };
 
@@ -96,7 +102,7 @@ export default function LabTestsHistoryScreen() {
                         <Text style={styles.testName}>{item.testName}</Text>
                         <Text style={styles.labName}>{item.labName}</Text>
                         <View style={styles.patientRow}>
-                            <Text style={styles.patientLabel}>Patient:</Text>
+                            <Text style={styles.patientLabel}>{t('patient_2')}</Text>
                             <Text style={styles.patientValue}>{item.patientName}</Text>
                         </View>
                     </View>
@@ -106,7 +112,7 @@ export default function LabTestsHistoryScreen() {
 
                 <View style={styles.cardFooter}>
                     <View style={styles.footerLeft}>
-                        <Clock size={14} color="#9CA3AF" />
+                        <Clock size={14} color={theme.textMuted} />
                         <Text style={styles.dateText}>{new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
                     </View>
                     <View style={styles.footerRight}>
@@ -127,11 +133,11 @@ export default function LabTestsHistoryScreen() {
         <View style={styles.container}>
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>My Lab Tests</Text>
+                <Text style={styles.headerTitle}>{t('my_lab_tests')}</Text>
                 <TouchableOpacity style={styles.searchButton}>
-                    <Search size={20} color="#1F2937" />
+                    <Search size={20} color={theme.text} />
                 </TouchableOpacity>
             </View>
 
@@ -141,20 +147,20 @@ export default function LabTestsHistoryScreen() {
                 keyExtractor={item => item._id}
                 contentContainerStyle={styles.listContent}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0FBBA1']} />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#10B981']} />
                 }
                 ListEmptyComponent={
                     !loading ? (
                         <View style={styles.emptyContainer}>
                             <View style={styles.emptyIconCircle}>
-                                <FlaskConical size={40} color="#9CA3AF" />
+                                <FlaskConical size={40} color={theme.textMuted} />
                             </View>
-                            <Text style={styles.emptyTitle}>No Test Results</Text>
-                            <Text style={styles.emptySubtitle}>Your lab test history and reports will appear here once you book a test.</Text>
+                            <Text style={styles.emptyTitle}>{t('no_test_results')}</Text>
+                            <Text style={styles.emptySubtitle}>{t('your_lab_test_history_and_reports_will')}</Text>
                         </View>
                     ) : (
                         <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color="#0FBBA1" />
+                            <ActivityIndicator size="large" color="#10B981" />
                         </View>
                     )
                 }
@@ -163,10 +169,10 @@ export default function LabTestsHistoryScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FE',
+        backgroundColor: c.background,
     },
     // Same header recipe as the rest of the Profile screens - white bar +
     // shadow, plain icon back button, fontSize 20/600/#111827 title.
@@ -176,7 +182,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -192,7 +198,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     searchButton: {
         padding: 8,
@@ -203,7 +209,7 @@ const styles = StyleSheet.create({
         gap: 16,
     },
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 24,
         padding: 16,
         shadowColor: '#000',
@@ -211,7 +217,7 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
         elevation: 3,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
     },
     cardMain: {
         flexDirection: 'row',
@@ -225,7 +231,7 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 20,
-        backgroundColor: '#EEF2FF',
+        backgroundColor: c.infoBg,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -249,7 +255,7 @@ const styles = StyleSheet.create({
     testName: {
         fontSize: 16,
         fontWeight: '800',
-        color: '#111827',
+        color: c.text,
     },
     labName: {
         fontSize: 13,
@@ -263,16 +269,16 @@ const styles = StyleSheet.create({
     },
     patientLabel: {
         fontSize: 12,
-        color: '#9CA3AF',
+        color: c.textMuted,
     },
     patientValue: {
         fontSize: 12,
-        color: '#4B5563',
+        color: c.textSecondary,
         fontWeight: '600',
     },
     divider: {
         height: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         marginVertical: 14,
     },
     cardFooter: {
@@ -287,7 +293,7 @@ const styles = StyleSheet.create({
     },
     dateText: {
         fontSize: 12,
-        color: '#9CA3AF',
+        color: c.textMuted,
         fontWeight: '600',
     },
     footerRight: {
@@ -305,7 +311,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     downloadSm: {
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         padding: 4,
         borderRadius: 6,
         marginLeft: 4,
@@ -318,7 +324,7 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 20,
@@ -326,12 +332,12 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#1F2937',
+        color: c.text,
         marginBottom: 8,
     },
     emptySubtitle: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         paddingHorizontal: 40,
     },

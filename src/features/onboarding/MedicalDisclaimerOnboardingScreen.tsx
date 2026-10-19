@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { ShieldAlert } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -9,6 +9,9 @@ import {
     MEDICAL_DISCLAIMER_FULL,
     MEDICAL_DISCLAIMER_TITLE,
 } from '../../constants/medicalDisclaimer';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 // Required first step of onboarding - added after Google Play rejected the
 // app under the Health Content and Services policy for not surfacing this
@@ -21,6 +24,9 @@ import {
 // comment for why), it's just a record that acknowledgment happened, kept
 // in case a future screen/support flow needs to check it.
 export default function MedicalDisclaimerOnboardingScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
 
@@ -41,7 +47,7 @@ export default function MedicalDisclaimerOnboardingScreen() {
                     <ShieldAlert size={32} color="#FFFFFF" />
                 </View>
                 <Text style={styles.title}>{MEDICAL_DISCLAIMER_TITLE}</Text>
-                <Text style={styles.subtitle}>Please read before continuing</Text>
+                <Text style={styles.subtitle}>{t('please_read_before_continuing')}</Text>
             </View>
 
             <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
@@ -50,17 +56,17 @@ export default function MedicalDisclaimerOnboardingScreen() {
 
             <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
                 <TouchableOpacity style={styles.button} activeOpacity={0.85} onPress={handleAcknowledge}>
-                    <Text style={styles.buttonText}>I Understand</Text>
+                    <Text style={styles.buttonText}>{t('i_understand')}</Text>
                 </TouchableOpacity>
             </View>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F9FAFB' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
     header: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         alignItems: 'center',
         paddingBottom: 28,
         paddingHorizontal: 24,
@@ -80,16 +86,16 @@ const styles = StyleSheet.create({
     subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.85)', marginTop: 4 },
     body: { flex: 1 },
     bodyContent: { padding: 24 },
-    disclaimerText: { fontSize: 15, lineHeight: 24, color: '#374151' },
+    disclaimerText: { fontSize: 15, lineHeight: 24, color: c.text },
     footer: {
         paddingHorizontal: 20,
         paddingTop: 12,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderTopWidth: 1,
-        borderTopColor: '#F1F5F9',
+        borderTopColor: c.borderLight,
     },
     button: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         borderRadius: 16,
         paddingVertical: 16,
         alignItems: 'center',

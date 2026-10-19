@@ -25,7 +25,8 @@ export type HomeFeedItemType =
   | 'HOME_FEED_FOOTER'
   | 'UPCOMING_APPOINTMENTS_CARD'
   | 'CATEGORY_ROW'
-  | 'NOT_SERVICEABLE_BANNER';
+  | 'NOT_SERVICEABLE_BANNER'
+  | 'HERO_BANNER';
 
 export interface SeasonalCollection {
   id: string;
@@ -134,6 +135,18 @@ export interface ServicesSectionFeedItem extends HomeFeedItemBase {
   type: 'SERVICES_SECTION';
   title: string;
   services: ServiceSectionItem[];
+  layout?: { columns: number };
+}
+
+// Admin-managed banner (App Configuration -> Hero banner), shown right under the
+// header. Built server-side only when it's switched on and has content.
+export interface HeroBannerFeedItem extends HomeFeedItemBase {
+  type: 'HERO_BANNER';
+  title: string;
+  subtitle?: string;
+  imageUrl?: string | null;
+  ctaText?: string;
+  gradient: string[];
 }
 
 export interface BloodDonationAwarenessFeedItem extends HomeFeedItemBase {
@@ -245,6 +258,7 @@ export interface TrustSignalFeedItem extends HomeFeedItemBase {
 // ... existing interfaces ...
 
 export type HomeFeedItem =
+  | HeroBannerFeedItem
   | PromoFeedItem
   | HealthTipFeedItem
   | ReminderFeedItem

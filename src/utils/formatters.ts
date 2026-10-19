@@ -80,7 +80,9 @@ export const formatDateForApi = (date: Date): string => {
  * inconsistent about whether the doctor typed "Dr." themselves at signup.
  */
 export const formatDoctorName = (name: string | null | undefined): string => {
-    if (!name) return '';
+    // No name on record (some doctors never entered one) -> a neutral label
+    // instead of an empty string, so callers never render a blank title.
+    if (!name || !name.trim()) return 'Doctor';
     const trimmed = name.trim();
     if (/^dr\.?\s/i.test(trimmed)) return trimmed;
     return `Dr. ${trimmed}`;

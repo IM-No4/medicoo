@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Animated,
-  Modal,
   PanResponder,
   ScrollView,
   StatusBar,
@@ -11,6 +10,11 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { AdaptiveStatusBar } from '../ThemedStatusBar';
+import { Modal } from '../ThemedModal';
 
 interface Props {
   visible: boolean;
@@ -25,6 +29,9 @@ export default function AddActionModal({
   onAddMedication,
   onAddGoal,
 }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const translateY = useState(new Animated.Value(0))[0];
 
@@ -80,7 +87,7 @@ export default function AddActionModal({
       transparent
       onRequestClose={onClose}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <AdaptiveStatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <View style={styles.backdrop}>
         <TouchableOpacity 
           style={styles.backdropTouchable} 
@@ -100,7 +107,7 @@ export default function AddActionModal({
           {/* Header */}
           <View style={styles.header} {...panResponder.panHandlers}>
             <View style={styles.dragIndicator} />
-            <Text style={styles.title}>Add</Text>
+            <Text style={styles.title}>{t('add')}</Text>
           </View>
 
           <View style={styles.content}>
@@ -110,7 +117,7 @@ export default function AddActionModal({
             >
               <Text style={styles.actionTitle}>💊 Add medication</Text>
               <Text style={styles.actionSubtitle}>
-                Track medicines and reminders
+                {t('track_medicines_and_reminders')}
               </Text>
             </TouchableOpacity>
 
@@ -120,7 +127,7 @@ export default function AddActionModal({
             >
               <Text style={styles.actionTitle}>🎯 Add goal</Text>
               <Text style={styles.actionSubtitle}>
-                Set health goals and habits
+                {t('set_health_goals_and_habits')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -130,7 +137,7 @@ export default function AddActionModal({
   );
 }
 
-export const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -140,7 +147,7 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: 20,
@@ -150,12 +157,12 @@ export const styles = StyleSheet.create({
     paddingBottom: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    borderBottomColor: c.borderLight,
   },
   dragIndicator: {
     width: 36,
     height: 4,
-    backgroundColor: '#D1D1D6',
+    backgroundColor: c.border,
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: 16,
@@ -163,7 +170,7 @@ export const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1C1C1E',
+    color: c.text,
     letterSpacing: 0.3,
   },
   content: {
@@ -171,7 +178,7 @@ export const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   actionCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
     padding: 16,
     borderRadius: 16,
     marginBottom: 12,
@@ -180,12 +187,12 @@ export const styles = StyleSheet.create({
   actionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: c.text,
     letterSpacing: 0.2,
   },
   actionSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: c.textSecondary,
     marginTop: 4,
     letterSpacing: 0.1,
   },

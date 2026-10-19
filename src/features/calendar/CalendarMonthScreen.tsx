@@ -1,11 +1,10 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { COLORS } from './styles';
 import MedicineCard from './components/MedicineCard';
 
 import EmptyState from '@/src/components/layout/EmptyState';
@@ -17,6 +16,9 @@ import { formatDoctorName } from '@/src/utils/formatters';
 import { getLocalDateString } from '@/src/utils/dateUtils';
 import AppointmentCard from './components/AppointmentCard';
 import { timeToMinutes } from './utils/scheduleSort';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 // Helper to get days in a month
 const getDaysInMonth = (month: any, year: any) => {
@@ -36,6 +38,9 @@ const getFirstDayOfMonth = (month: any, year: any) => {
 //     tapped, so the calendar screen that pushed this one can stay in sync
 //     with whatever date the user last picked here.
 export default function CalendarMonthScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
@@ -156,9 +161,9 @@ export default function CalendarMonthScreen() {
           plain icon back button, fontSize 20/600/#111827 title. */}
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Calendar</Text>
+        <Text style={styles.headerTitle}>{t('calendar')}</Text>
         <View style={{ width: 40 }} />
         </View>
 
@@ -233,7 +238,7 @@ export default function CalendarMonthScreen() {
 
           {/* Today's Plan Section */}
           <View style={styles.planSection}>
-            <Text style={styles.planTitle}>Today's plan</Text>
+            <Text style={styles.planTitle}>{t('today_s_plan')}</Text>
             {(() => {
               const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
 
@@ -243,7 +248,7 @@ export default function CalendarMonthScreen() {
               if (data?.date !== dateStr) {
                 return (
                   <View style={styles.planLoading}>
-                    <ActivityIndicator size="small" color={COLORS.primary} />
+                    <ActivityIndicator size="small" color={theme.primary} />
                   </View>
                 );
               }
@@ -258,8 +263,8 @@ export default function CalendarMonthScreen() {
               if (sortedAppointments.length === 0 && sortedMedicines.length === 0) {
                 return (
                   <EmptyState
-                    title="Nothing scheduled"
-                    message="No appointments or reminders for this date."
+                    title={t('nothing_scheduled')}
+                    message={t('no_appointments_or_reminders_for_this')}
                   />
                 );
               }
@@ -318,10 +323,10 @@ export default function CalendarMonthScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: c.background,
   },
   // Same header recipe as the rest of the app - white bar + shadow, plain
   // icon back button, fontSize 20/600/#111827 title.
@@ -331,7 +336,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     marginBottom: 20,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
@@ -348,12 +353,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
   },
 
   // Calendar Card
   calendarCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     marginHorizontal: 20,
     borderRadius: 24,
     padding: 20,
@@ -375,19 +380,19 @@ const styles = StyleSheet.create({
   monthTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: COLORS.text,
+    color: c.text,
   },
   navArrow: {
     width: 32,
     height: 32,
-    backgroundColor: '#F8F9FE',
+    backgroundColor: c.cardSecondary,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   navText: {
     fontSize: 18,
-    color: COLORS.text,
+    color: c.text,
     marginTop: -2,
   },
   weekRow: {
@@ -404,7 +409,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: c.textSecondary,
     fontWeight: '500',
   },
   weekGridRow: {
@@ -419,12 +424,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   selectedDayCell: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: c.primary,
   },
   dayText: {
     fontSize: 15,
     fontWeight: '500',
-    color: COLORS.text,
+    color: c.text,
   },
   selectedDayText: {
     color: '#FFFFFF',
@@ -442,7 +447,7 @@ const styles = StyleSheet.create({
     borderRadius: 2.5,
   },
   dotMedicine: {
-    backgroundColor: COLORS.primary, // green - medicine reminder
+    backgroundColor: c.primary, // green - medicine reminder
   },
   dotAppointment: {
     backgroundColor: '#3B82F6', // blue - doctor consultation
@@ -459,7 +464,7 @@ const styles = StyleSheet.create({
   planTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.text,
+    color: c.text,
     marginBottom: 16,
   },
   planLoading: {

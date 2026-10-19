@@ -5,6 +5,8 @@ import {
   deleteGoal as deleteGoalApi,
   fetchGoals,
   GoalDto,
+  setGoalSharing as setGoalSharingApi,
+  ShareMode,
   updateGoal as updateGoalApi,
 } from '../../services/api/goals.api';
 import { loadGoals as loadGoalsCacheFromDisk, saveGoals as saveGoalsCacheToDisk } from '../../services/storage/goalsStorage';
@@ -20,6 +22,8 @@ export interface Goal {
   enabled: boolean;
   frequency?: string;
   sharedWithFriends: boolean;
+  /** the friends it is shared with when not shared with everyone */
+  sharedWith: string[];
 }
 
 const mapDtoToGoal = (dto: GoalDto): Goal => ({
@@ -33,6 +37,7 @@ const mapDtoToGoal = (dto: GoalDto): Goal => ({
   enabled: dto.enabled,
   frequency: dto.frequency,
   sharedWithFriends: dto.sharedWithFriends,
+  sharedWith: dto.sharedWith ?? [],
 });
 
 interface GoalsState {
@@ -130,6 +135,18 @@ export const toggleGoalShared = createAsyncThunk<
   }
 });
 
+// Share a goal with everyone, only chosen friends, or nobody.
+export const setGoalSharing = createAsyncThunk<Goal, { id: string; mode: ShareMode; friendIds?: string[] }, { rejectValue: string }>(
+  'goals/setSharing',
+  async ({ id, mode, friendIds }, { rejectWithValue }) => {
+    try {
+      return mapDtoToGoal(await setGoalSharingApi(id, mode, friendIds ?? []));
+    } catch (err: any) {
+      return rejectWithValue(err?.message || 'Failed to update sharing');
+    }
+  }
+);
+
 // Tap-to-increment progress - applied optimistically (see .pending below) so
 // it feels instant; a failed sync is logged rather than rolled back, since a
 // missed +0.25 water increment isn't worth jarring the user over.
@@ -205,6 +222,12 @@ const goalsSlice = createSlice({
       .addCase(toggleGoalShared.fulfilled, (state, action) => {
         const goal = state.goals.find(g => g.id === action.payload.id);
         if (goal) goal.sharedWithFriends = action.payload.sharedWithFriends;
+      })
+
+      /* ---------- Share with everyone / some friends / nobody ---------- */
+      .addCase(setGoalSharing.fulfilled, (state, action) => {
+        const index = state.goals.findIndex(g => g.id === action.payload.id);
+        if (index !== -1) state.goals[index] = action.payload;
       })
 
       /* ---------- Update progress (optimistic) ---------- */

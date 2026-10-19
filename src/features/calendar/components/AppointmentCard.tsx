@@ -1,6 +1,9 @@
+import { useMemo } from 'react';
 import { ChevronRight, Clock, MessageCircle, Phone, Video } from 'lucide-react-native';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { COLORS } from '../styles';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 type ConsultationType = 'chat' | 'voice' | 'video';
 
@@ -35,6 +38,9 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string }> 
 };
 
 export default function AppointmentCard({ doctorName, specialty, time, status, consultationType, onPress }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const typeMeta = TYPE_META[consultationType || 'video'];
     const statusMeta = status ? STATUS_META[status] : undefined;
     const TypeIcon = typeMeta.Icon;
@@ -49,7 +55,7 @@ export default function AppointmentCard({ doctorName, specialty, time, status, c
                 <Text style={styles.name} numberOfLines={1}>{doctorName}</Text>
                 {!!specialty && <Text style={styles.specialty} numberOfLines={1}>{specialty}</Text>}
                 <View style={styles.metaRow}>
-                    <Clock size={12} color={COLORS.textSecondary} />
+                    <Clock size={12} color={theme.textSecondary} />
                     <Text style={styles.timeText}>{time}</Text>
                 </View>
             </View>
@@ -57,18 +63,18 @@ export default function AppointmentCard({ doctorName, specialty, time, status, c
             <View style={styles.rightCol}>
                 {statusMeta && (
                     <View style={[styles.statusBadge, { backgroundColor: statusMeta.bg }]}>
-                        <Text style={[styles.statusText, { color: statusMeta.color }]}>{statusMeta.label}</Text>
+                        <Text style={[styles.statusText, { color: statusMeta.color }]}>{t(statusMeta.label)}</Text>
                     </View>
                 )}
-                {onPress && <ChevronRight size={18} color="#D1D5DB" style={{ marginTop: 8 }} />}
+                {onPress && <ChevronRight size={18} color={theme.textMuted} style={{ marginTop: 8 }} />}
             </View>
         </TouchableOpacity>
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     card: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         borderRadius: 20,
         padding: 16,
         paddingVertical: 12,
@@ -76,7 +82,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
     },
     iconBox: {
         width: 48,
@@ -93,11 +99,11 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 14,
         fontWeight: '700',
-        color: COLORS.text,
+        color: c.text,
     },
     specialty: {
         fontSize: 12,
-        color: COLORS.textSecondary,
+        color: c.textSecondary,
         marginTop: 1,
     },
     metaRow: {
@@ -109,7 +115,7 @@ const styles = StyleSheet.create({
     timeText: {
         fontSize: 13,
         fontWeight: '600',
-        color: COLORS.textSecondary,
+        color: c.textSecondary,
     },
     rightCol: {
         alignItems: 'flex-end',

@@ -1,7 +1,7 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../../components/ThemedStatusBar';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     Animated,
@@ -23,22 +23,31 @@ import { ACCENT, BUCKET_COLOR } from './styles';
 import CategoryQuestionStep from './steps/CategoryQuestionStep';
 import IntroStep from './steps/IntroStep';
 import ResultsStep from './steps/ResultsStep';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 const TOTAL_CATEGORY_STEPS = ASSESSMENT_CATEGORIES.length;
 const RESULTS_STEP_INDEX = TOTAL_CATEGORY_STEPS + 1;
 
 function StatusBadge({ bucket }: { bucket: string }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { t } = useLanguage();
     const color = BUCKET_COLOR[bucket] ?? ACCENT;
     return (
         <View style={[styles.statusBadge, { backgroundColor: color + '1A' }]}>
             <Text style={[styles.statusBadgeText, { color }]} numberOfLines={1}>
-                {bucket}
+                {t(bucket)}
             </Text>
         </View>
     );
 }
 
 export default function HealthRiskAssessmentScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const insets = useSafeAreaInsets();
@@ -115,12 +124,12 @@ export default function HealthRiskAssessmentScreen() {
                 <StatusBar style="dark" />
                 <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn} activeOpacity={0.7}>
-                        <ChevronLeft size={22} color="#111827" />
+                        <ChevronLeft size={22} color={theme.text} />
                     </TouchableOpacity>
                     <View style={styles.headerCenter}>
-                        <Text style={styles.stepTitle}>Past Result</Text>
+                        <Text style={styles.stepTitle}>{t('past_result')}</Text>
                     </View>
-                    <StatusBadge bucket={viewResult.overallBucket} />
+                    <View style={styles.iconBtnSpacer} />
                 </View>
                 <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: 8 }}>
                     <ResultsStep result={viewResult} onDiscuss={handleDiscuss} onDone={() => navigation.goBack()} />
@@ -156,7 +165,7 @@ export default function HealthRiskAssessmentScreen() {
                     <View style={styles.iconBtnSpacer} />
                 ) : (
                     <TouchableOpacity onPress={goBack} style={styles.iconBtn} activeOpacity={0.7}>
-                        <ChevronLeft size={22} color="#111827" />
+                        <ChevronLeft size={22} color={theme.text} />
                     </TouchableOpacity>
                 )}
                 <View style={styles.headerCenter}>
@@ -199,7 +208,7 @@ export default function HealthRiskAssessmentScreen() {
                         {submitting ? (
                             <ActivityIndicator color="#FFF" />
                         ) : (
-                            <Text style={[styles.nextBtnText, isNextDisabled() && { color: '#94A3B8' }]}>
+                            <Text style={[styles.nextBtnText, isNextDisabled() && { color: theme.textMuted }]}>
                                 {stepIndex === 0 ? 'Start Assessment' : isLastCategoryStep ? 'See Results' : 'Next'}
                             </Text>
                         )}
@@ -210,8 +219,8 @@ export default function HealthRiskAssessmentScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.card },
     // Same header recipe as the Family Members / Address Book / Health
     // Assessments screens - white bar + shadow, plain icon back button,
     // fontSize 20/600/#111827 title.
@@ -220,7 +229,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -245,12 +254,12 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         maxWidth: 110,
     },
-    statusBadgeText: { fontSize: 11, fontWeight: '700' },
+    statusBadgeText: { fontSize: 11.5, fontWeight: '600' },
     headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
-    stepTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+    stepTitle: { fontSize: 18, fontWeight: '600', color: c.text },
     progressTrack: {
         height: 3,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: c.cardSecondary,
         marginHorizontal: 20,
         borderRadius: 2,
         overflow: 'hidden',
@@ -258,7 +267,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     progressFill: { height: '100%', borderRadius: 2 },
-    footer: { paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9', backgroundColor: '#FFFFFF' },
-    nextBtn: { borderRadius: 18, paddingVertical: 17, alignItems: 'center' },
-    nextBtnText: { fontSize: 16, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 },
+    footer: { paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 1, borderTopColor: c.borderLight, backgroundColor: c.card },
+    nextBtn: { borderRadius: 10, height: 48, alignItems: 'center', justifyContent: 'center' },
+    nextBtnText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.6 },
 });

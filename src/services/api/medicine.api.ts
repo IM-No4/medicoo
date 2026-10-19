@@ -20,6 +20,8 @@ export interface CreateMedicinePayload {
   medicineType?: string;
   familyVisible?: boolean;
   notes?: string;
+  /** Adding a medicine for a family member (their id in the family group) */
+  forMemberId?: string | null;
 }
 
 export const createMedicineSchedule = async (
@@ -66,6 +68,8 @@ export const markMedicineIntake = async (payload: {
   date: string;
   time: string;
   status: 'taken' | 'missed' | 'skipped';
+  /** Marking a dose for a family member */
+  forMemberId?: string | null;
 }) => {
   const response = await apiClient.post('/api/user/medicine/intake', payload);
   return response.data;

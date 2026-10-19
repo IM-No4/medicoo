@@ -1,6 +1,6 @@
 import { executeAction } from '@/src/actions/ActionExecutor';
 import AppIcon from '@/src/components/icons/AppIcon';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Image,
   StyleSheet,
@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 type Props = {
   medicine: {
@@ -39,6 +42,9 @@ export default function MedicineResultCard({
   medicine,
   onPress,
 }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { pharmacy } = medicine;
 
   return (
@@ -104,7 +110,7 @@ export default function MedicineResultCard({
               });
             }}
           >
-            <Text style={styles.addButtonText}>ADD</Text>
+            <Text style={styles.addButtonText}>{t('add_2')}</Text>
             <View style={styles.plusIcon}>
               <AppIcon name="plus" size={12} color="#10B981" />
             </View>
@@ -115,13 +121,13 @@ export default function MedicineResultCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: c.borderLight,
     justifyContent: 'space-between',
     minHeight: 140,
   },
@@ -136,7 +142,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   rxBadge: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: c.errorBg,
     paddingHorizontal: 4,
     paddingVertical: 1,
     borderRadius: 4,
@@ -150,13 +156,13 @@ const styles = StyleSheet.create({
   medicineName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1F2937',
+    color: c.text,
     flex: 1,
     lineHeight: 22,
   },
   formText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: c.textSecondary,
     marginBottom: 12,
   },
   priceContainer: {
@@ -168,11 +174,11 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: c.text,
   },
   oldPrice: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: c.textMuted,
     textDecorationLine: 'line-through',
   },
   pharmacyRow: {
@@ -183,7 +189,7 @@ const styles = StyleSheet.create({
   pharmacyName: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#4B5563',
+    color: c.textSecondary,
     maxWidth: '70%',
   },
   dot: {
@@ -216,22 +222,22 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 16,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
   },
   placeholderImage: {
     width: 120,
     height: 120,
     borderRadius: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
   },
   addButton: {
     position: 'absolute',
     bottom: -10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -239,7 +245,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,

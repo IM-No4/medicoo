@@ -1,9 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { Brain, Check, ChevronLeft, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface Question {
   question: string;
@@ -77,6 +80,9 @@ function randomIndex(exclude: number, length: number) {
 }
 
 export default function QuickQuizScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
@@ -107,9 +113,9 @@ export default function QuickQuizScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Quick Quiz</Text>
+        <Text style={styles.headerTitle}>{t('quick_quiz')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -159,7 +165,7 @@ export default function QuickQuizScreen() {
           <>
             <Text style={styles.explanation}>{question.explanation}</Text>
             <TouchableOpacity style={styles.nextButton} activeOpacity={0.85} onPress={handleNext}>
-              <Text style={styles.nextButtonText}>Next Question</Text>
+              <Text style={styles.nextButtonText}>{t('next_question')}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -168,22 +174,22 @@ export default function QuickQuizScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
     }),
   },
   backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
   content: { padding: 24, paddingBottom: 40 },
   scoreRow: {
     flexDirection: 'row',
@@ -195,7 +201,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: c.infoBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -207,7 +213,7 @@ const styles = StyleSheet.create({
   question: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: c.text,
     lineHeight: 26,
     marginBottom: 20,
   },
@@ -215,38 +221,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginBottom: 10,
   },
   optionCorrect: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: c.successBg,
     borderColor: '#A7F3D0',
   },
   optionWrong: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: c.errorBg,
     borderColor: '#FECACA',
   },
   optionText: {
     fontSize: 14.5,
     fontWeight: '600',
-    color: '#374151',
+    color: c.text,
     flex: 1,
   },
   optionTextCorrect: {
     color: '#047857',
   },
   optionTextWrong: {
-    color: '#B91C1C',
+    color: c.error,
   },
   explanation: {
     fontSize: 13,
     lineHeight: 20,
-    color: '#6B7280',
+    color: c.textSecondary,
     marginTop: 12,
     marginBottom: 20,
   },

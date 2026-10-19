@@ -1,5 +1,6 @@
 import React from 'react';
 import LegalPage, { LegalSection } from './LegalPage';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const LAST_UPDATED = '2026-01-29';
 
@@ -95,5 +96,6 @@ const SECTIONS: LegalSection[] = [
 ];
 
 export default function ContentPolicyScreen() {
-    return <LegalPage title="Content Policy" lastUpdated={LAST_UPDATED} sections={SECTIONS} />;
+  const { t } = useLanguage();
+    return <LegalPage title={t('content_policy')} lastUpdated={LAST_UPDATED} sections={SECTIONS} />;
 }

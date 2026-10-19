@@ -7,6 +7,7 @@ export interface EnabledServices {
   consultations: boolean;
   labTests: boolean;
   homeCare: boolean;
+  hospitals: boolean;
   bloodDonation: boolean;
   ambulance: boolean;
   doctorPrescriptions: boolean;
@@ -38,6 +39,8 @@ export interface MaintenanceInfo {
   };
 }
 
+export type PaymentGateway = 'razorpay' | 'cashfree';
+
 // GET /api/app/config - public, no auth required. Sends this app's own
 // identity/platform/installed version so the backend can compute `update`
 // (mandatory/optional-update status) - see getDoctorProfile's doctor-app
@@ -48,12 +51,15 @@ export const getAppConfig = async (): Promise<{
   enabledServices: EnabledServices;
   update: AppUpdateInfo | null;
   maintenance: MaintenanceInfo | null;
+  activePaymentGateway: PaymentGateway;
 }> => {
   const response = await apiClient.get('/api/app/config', {
     params: { app: 'consumer', platform: Platform.OS, appVersion: APP_VERSION },
     timeout: 8000,
   });
-  return response.data?.data ?? { enabledServices: null, update: null, maintenance: null };
+  // Same fail-safe default as the backend's own utils/paymentGateway.js -
+  // a failed/pending fetch must never be read as "Cashfree is active."
+  return response.data?.data ?? { enabledServices: null, update: null, maintenance: null, activePaymentGateway: 'razorpay' };
 };
 
 // Authenticated, dual-role endpoint (same JWT the rest of this app already

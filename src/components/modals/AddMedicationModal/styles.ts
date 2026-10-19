@@ -1,19 +1,24 @@
 import { Platform, StyleSheet } from 'react-native';
 
+import type { ThemeColors } from '../../../theme/colors';
+
 // A soft shadow on every single option card, input, and list group in an
 // 8-step wizard added up to a lot of visual noise at once - a plain 1px
 // border reads as the same "defined white surface on a light grey screen"
 // without the piled-up shadow weight, same idea as the offline home
 // screen's cards (also borders, no shadow).
-const CARD_BORDER = {
-  borderWidth: 1,
-  borderColor: '#E5E7EB',
-};
 
-export const styles = StyleSheet.create({
+
+export const createStyles = (c: ThemeColors) => {
+  const CARD_BORDER = {
+    borderWidth: 1,
+    borderColor: c.border,
+  };
+
+  return StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.background,
   },
   /* ---------- Layout ---------- */
   stepContainer: {
@@ -35,7 +40,7 @@ export const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#E0F2FE',
+    backgroundColor: c.infoBg,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -58,14 +63,14 @@ export const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: c.text,
     marginBottom: 8,
     textAlign: 'center',
   },
 
   stepSubtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: c.textSecondary,
     marginBottom: 32,
     textAlign: 'center',
     display: 'none',
@@ -78,31 +83,31 @@ export const styles = StyleSheet.create({
     gap: 14,
     padding: 16,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     marginBottom: 12,
     ...CARD_BORDER,
   },
 
   optionCardSelected: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: c.successBg,
     borderWidth: 1.5,
-    borderColor: '#0FBBA1',
+    borderColor: '#10B981',
   },
 
   optionText: {
     fontSize: 15,
-    color: '#1F2937',
+    color: c.text,
     flex: 1,
   },
 
   optionTextSelected: {
-    color: '#065F46',
+    color: c.success,
     fontWeight: '600',
   },
 
   optionHint: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: c.textMuted,
   },
 
   /* ---------- Inputs ---------- */
@@ -112,23 +117,23 @@ export const styles = StyleSheet.create({
 
   inputLabel: {
     fontSize: 12,
-    color: '#4B5563',
+    color: c.textSecondary,
     marginBottom: 6,
   },
 
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 16,
     fontSize: 15,
-    color: '#111827',
+    color: c.text,
     borderWidth: 1,
     // Slate, not the same flat gray as the cards/list groups - a slightly
     // cooler, more deliberate tone for the one element people actually type
     // into. Lighter shade (slate-200) than the first pass (slate-300) -
     // still visibly slate, just not as heavy an outline.
-    borderColor: '#E2E8F0',
+    borderColor: c.border,
   },
 
   /* ---------- Header - same recipe as the rest of the app: white bar +
@@ -139,7 +144,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -159,16 +164,16 @@ export const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: c.textSecondary,
     marginTop: 2,
   },
   progressTrack: {
     height: 3,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: c.cardSecondary,
     marginHorizontal: 20,
     borderRadius: 2,
     overflow: 'hidden',
@@ -178,7 +183,7 @@ export const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 2,
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
   },
   content: {
     flex: 1,
@@ -188,13 +193,13 @@ export const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: c.text,
     marginLeft: 4,
     marginBottom: 12,
     marginTop: 24,
   },
   listGroup: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 8,
@@ -208,19 +213,19 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   listItemPressed: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
   },
   listItemText: {
     fontSize: 15,
-    color: '#1F2937',
+    color: c.text,
   },
   listItemTextSelected: {
-    color: '#0FBBA1',
+    color: '#10B981',
     fontWeight: '600',
   },
   separator: {
     height: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
     marginLeft: 16,
   },
 
@@ -233,11 +238,11 @@ export const styles = StyleSheet.create({
   },
   simpleRowText: {
     fontSize: 15,
-    color: '#1F2937',
+    color: c.text,
   },
   linkText: {
     fontSize: 15,
-    color: '#0FBBA1',
+    color: '#10B981',
     fontWeight: '500',
   },
 
@@ -245,31 +250,31 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: c.cardSecondary,
   },
   timePill: {
-    backgroundColor: '#FFF',
+    backgroundColor: c.card,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
     marginRight: 'auto',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
   },
   timePillText: {
-    color: '#111827',
+    color: c.text,
     fontSize: 15,
     fontWeight: '600',
   },
   dosageText: {
-    color: '#6B7280',
+    color: c.textSecondary,
     fontSize: 15,
     marginLeft: 'auto',
   },
 
   helperText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: c.textSecondary,
     marginTop: 8,
     marginBottom: 24,
     marginLeft: 4,
@@ -285,14 +290,14 @@ export const styles = StyleSheet.create({
   },
   durationLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: c.textSecondary,
     marginBottom: 4,
     textTransform: 'uppercase',
     fontWeight: '600',
   },
   durationValue: {
     fontSize: 15,
-    color: '#1F2937',
+    color: c.text,
     fontWeight: '500',
   },
 
@@ -314,7 +319,7 @@ export const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -327,7 +332,7 @@ export const styles = StyleSheet.create({
   colorLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: c.text,
     marginBottom: 12,
     marginTop: 8,
   },
@@ -347,16 +352,16 @@ export const styles = StyleSheet.create({
   // in the app (LoginScreen, PaymentScreen, AIAssistantChatScreen's send
   // button), not the bevel-like outlined pill this used to be.
   primaryButton: {
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
     paddingVertical: 16,
     borderRadius: 30,
     alignItems: 'center',
   },
   primaryButtonActive: {
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
   },
   primaryButtonDisabled: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: c.cardSecondary,
   },
   primaryText: {
     color: '#FFFFFF',
@@ -369,7 +374,7 @@ export const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   skipButtonText: {
-    color: '#6B7280',
+    color: c.textSecondary,
     fontSize: 15,
     fontWeight: '500',
   },
@@ -394,7 +399,7 @@ export const styles = StyleSheet.create({
     // silhouette with its own drop shadow (config/shapes.tsx's
     // PILL_SHADOW), so it needs a contrasting backdrop to actually be
     // visible; on white it disappeared, leaving only its shadow showing.
-    backgroundColor: '#F3F4F6',
+    backgroundColor: c.cardSecondary,
     justifyContent: 'center',
     alignItems: 'center',
     ...CARD_BORDER,
@@ -407,12 +412,13 @@ export const styles = StyleSheet.create({
   // deselecting. The selection ring is a separate, shadow-less overlay
   // instead (shapeSelectedRing below).
   shapeCircleSelected: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: c.successBg,
   },
   shapeSelectedRing: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 32,
     borderWidth: 2,
-    borderColor: '#0FBBA1',
+    borderColor: '#10B981',
   },
 });
+};

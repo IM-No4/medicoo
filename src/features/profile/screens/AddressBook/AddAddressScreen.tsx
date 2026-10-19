@@ -2,7 +2,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Contacts from 'expo-contacts';
 import * as Location from 'expo-location';
 import { Briefcase, Check, ChevronLeft, Contact, Crosshair, Home, MapPin, Search, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     Animated,
@@ -23,6 +23,9 @@ import StatusModal, { StatusType } from '../../../../components/modals/StatusMod
 import { apiClient } from '../../../../services/api/client';
 import { addUserAddress, updateUserAddress } from '../../../../services/api/address.api';
 import { getProfileDetails } from '../../../../services/api/user.api';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 type FloatingLabelInputProps = {
     label: string;
@@ -38,6 +41,8 @@ function FloatingLabelInput({
     rightIcon,
     ...props
 }: FloatingLabelInputProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const [isFocused, setIsFocused] = useState(false);
     const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
 
@@ -62,14 +67,14 @@ function FloatingLabelInput({
         }),
         color: animatedValue.interpolate({
             inputRange: [0, 1],
-            outputRange: ['#6B7280', '#0FBBA1'],
+            outputRange: ['#6B7280', '#10B981'],
         }),
-        backgroundColor: '#fff',
+        backgroundColor: theme.card,
         paddingHorizontal: 4,
         zIndex: 1,
     };
 
-    const borderColor = isFocused ? '#0FBBA1' : '#E5E7EB';
+    const borderColor = isFocused ? '#10B981' : '#E5E7EB';
 
     return (
         <View style={{ paddingTop: 0, marginBottom: 20 }}>
@@ -92,6 +97,9 @@ function FloatingLabelInput({
 }
 
 export default function AddAddressScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation();
     const route = useRoute<any>();
     const insets = useSafeAreaInsets();
@@ -283,7 +291,7 @@ export default function AddAddressScreen() {
         try {
             const { status: locStatus } = await Location.requestForegroundPermissionsAsync();
             if (locStatus !== 'granted') {
-                showStatus('warning', 'Permission Denied', 'Please allow location access to automatically detect your address for faster checkout.');
+                showStatus('warning', t('permission_denied'), t('please_allow_location_access_to_automa'));
                 setLoadingLocation(false);
                 return;
             }
@@ -322,7 +330,7 @@ export default function AddAddressScreen() {
                 mapRef.current?.animateToRegion(newRegion, 1000);
             }
         } catch {
-            showStatus('error', 'Location Error', 'We couldn\'t fetch your current location. Please search for your address manually.');
+            showStatus('error', t('location_error'), t('we_couldn_t_fetch_your_current_locatio'));
         } finally {
             setLoadingLocation(false);
         }
@@ -351,10 +359,10 @@ export default function AddAddressScreen() {
                         receiverPhone: contact.phoneNumbers?.[0]?.number || ''
                     }));
                 } else {
-                    showStatus('info', 'No Contacts', 'We couldn\'t find any contacts on your device.');
+                    showStatus('info', t('no_contacts_2'), t('we_couldn_t_find_any_contacts_on_your'));
                 }
             } else {
-                showStatus('warning', 'Permission Denied', 'Contacts permission is required to pick a receiver from your address book.');
+                showStatus('warning', t('permission_denied'), t('contacts_permission_is_required_to_pic'));
             }
         } catch {
             // console.log(e);
@@ -363,7 +371,7 @@ export default function AddAddressScreen() {
 
     const handleNext = () => {
         if (!formData.fullAddress) {
-            showStatus('warning', 'Address Required', 'Please select a location on the map or search for an address before proceeding.');
+            showStatus('warning', t('address_required'), t('please_select_a_location_on_the_map_or'));
             return;
         }
         setStep(2);
@@ -371,11 +379,11 @@ export default function AddAddressScreen() {
 
     const handleSave = async () => {
         if (!formData.houseNo) {
-            showStatus('warning', 'Missing Details', 'Please enter your house or flat number to complete the address.');
+            showStatus('warning', t('missing_details'), t('please_enter_your_house_or_flat_number'));
             return;
         }
         if (!formData.isMyAddress && (!formData.receiverName || !formData.receiverPhone)) {
-            showStatus('warning', 'Receiver Info', 'Please provide the name and phone number of the person receiving this order.');
+            showStatus('warning', t('receiver_info'), t('please_provide_the_name_and_phone_numb'));
             return;
         }
 
@@ -404,13 +412,13 @@ export default function AddAddressScreen() {
             };
             if (route.params?.id || route.params?._id) {
                 await updateUserAddress(route.params.id || route.params._id, payload);
-                showStatus('success', 'Address Saved', 'Your delivery address has been updated successfully.');
+                showStatus('success', t('address_saved'), t('your_delivery_address_has_been_updated'));
             } else {
                 await addUserAddress(payload);
-                showStatus('success', 'Address Saved', 'Your new delivery address has been added successfully.');
+                showStatus('success', t('address_saved'), t('your_new_delivery_address_has_been_add'));
             }
         } catch {
-            showStatus('error', 'Error', 'Failed to save address. Please try again.');
+            showStatus('error', t('error'), t('failed_to_save_address_please_try_agai'));
         } finally {
             setSaving(false);
         }
@@ -460,17 +468,17 @@ export default function AddAddressScreen() {
                     XHR + manually-snapshotted auth header. */}
                 <View style={styles.searchContainerOverlay}>
                     <View style={styles.searchInputBox}>
-                        <Search size={18} color="#6B7280" />
+                        <Search size={18} color={theme.textSecondary} />
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Search for area, street name..."
-                            placeholderTextColor="#9CA3AF"
+                            placeholder={t('search_for_area_street_name')}
+                            placeholderTextColor={theme.textMuted}
                             value={searchQuery}
                             onChangeText={handleSearchChange}
                             onFocus={() => setShowSuggestions(true)}
                         />
                         {searchLoading ? (
-                            <ActivityIndicator size="small" color="#0FBBA1" />
+                            <ActivityIndicator size="small" color="#10B981" />
                         ) : searchQuery.length > 0 ? (
                             <TouchableOpacity
                                 onPress={() => {
@@ -479,7 +487,7 @@ export default function AddAddressScreen() {
                                 }}
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
-                                <X size={18} color="#9CA3AF" />
+                                <X size={18} color={theme.textMuted} />
                             </TouchableOpacity>
                         ) : null}
                     </View>
@@ -495,7 +503,7 @@ export default function AddAddressScreen() {
                                         style={styles.suggestionRow}
                                         onPress={() => handleSuggestionPress(item)}
                                     >
-                                        <MapPin size={16} color="#0FBBA1" />
+                                        <MapPin size={16} color="#10B981" />
                                         <Text style={styles.suggestionText} numberOfLines={2}>
                                             {item.description}
                                         </Text>
@@ -523,8 +531,8 @@ export default function AddAddressScreen() {
                 {/* Bottom Address Preview */}
                 <View style={[styles.addressPreviewCard, { bottom: footerHeight + 12 }]}>
                     <View style={styles.addressPreviewHeader}>
-                        <MapPin size={20} color="#0FBBA1" />
-                        <Text style={styles.addressPreviewTitle}>Selected Location</Text>
+                        <MapPin size={20} color="#10B981" />
+                        <Text style={styles.addressPreviewTitle}>{t('selected_location')}</Text>
                     </View>
                     <Text style={styles.addressPreviewText} numberOfLines={2}>
                         {formData.fullAddress || 'Search or pick a location on map'}
@@ -538,9 +546,9 @@ export default function AddAddressScreen() {
         <View style={styles.form}>
             {/* Address Details */}
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Selected Address</Text>
+                <Text style={styles.sectionTitle}>{t('selected_address')}</Text>
                 <View style={styles.selectedAddressBox}>
-                    <MapPin size={18} color="#0FBBA1" />
+                    <MapPin size={18} color="#10B981" />
                     <Text style={styles.selectedAddress}>{formData.fullAddress}</Text>
                 </View>
                 <TouchableOpacity onPress={() => setStep(1)}>
@@ -550,19 +558,19 @@ export default function AddAddressScreen() {
                 <View style={{ height: 20 }} />
 
                 <FloatingLabelInput
-                    label="House / Flat No."
+                    label={t('house_flat_no')}
                     value={formData.houseNo}
                     onChangeText={(t: string) => setFormData({ ...formData, houseNo: t })}
                 />
 
                 <FloatingLabelInput
-                    label="Landmark (Optional)"
+                    label={t('landmark_optional')}
                     value={formData.landmark}
                     onChangeText={(t: string) => setFormData({ ...formData, landmark: t })}
                 />
 
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Save As</Text>
+                    <Text style={styles.label}>{t('save_as')}</Text>
                     <View style={styles.tagContainer}>
                         {ADDRESS_TAGS.map(tag => {
                             const isActive = formData.tag === tag;
@@ -576,7 +584,7 @@ export default function AddAddressScreen() {
                                     ]}
                                     onPress={() => setFormData({ ...formData, tag })}
                                 >
-                                    <Icon size={16} color={isActive ? '#0FBBA1' : '#6B7280'} />
+                                    <Icon size={16} color={isActive ? '#10B981' : '#6B7280'} />
                                     <Text style={[
                                         styles.tagText,
                                         isActive && styles.tagTextActive
@@ -589,7 +597,7 @@ export default function AddAddressScreen() {
 
                 {formData.tag === 'Other' && (
                     <FloatingLabelInput
-                        label="Label Name"
+                        label={t('label_name')}
                         value={formData.customLabel}
                         onChangeText={(t: string) => setFormData({ ...formData, customLabel: t })}
                     />
@@ -598,7 +606,7 @@ export default function AddAddressScreen() {
 
             {/* Receiver Info */}
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Receiver Details</Text>
+                <Text style={styles.sectionTitle}>{t('receiver_details')}</Text>
 
                 <TouchableOpacity
                     style={styles.checkboxRow}
@@ -607,7 +615,7 @@ export default function AddAddressScreen() {
                     <View style={[styles.checkbox, formData.isMyAddress && styles.checkboxActive]}>
                         {formData.isMyAddress && <Check size={14} color="#fff" />}
                     </View>
-                    <Text style={styles.checkboxLabel}>I am the receiver</Text>
+                    <Text style={styles.checkboxLabel}>{t('i_am_the_receiver')}</Text>
                 </TouchableOpacity>
 
                 {formData.isMyAddress ? (
@@ -619,18 +627,18 @@ export default function AddAddressScreen() {
                 ) : (
                     <View style={{ marginTop: 16 }}>
                         <FloatingLabelInput
-                            label="Receiver Name"
+                            label={t('receiver_name')}
                             value={formData.receiverName}
                             onChangeText={(t: string) => setFormData({ ...formData, receiverName: t })}
                             rightIcon={
                                 <TouchableOpacity onPress={handleContactPick} style={styles.inputIconBox}>
-                                    <Contact size={20} color="#0FBBA1" />
+                                    <Contact size={20} color="#10B981" />
                                 </TouchableOpacity>
                             }
                         />
 
                         <FloatingLabelInput
-                            label="Phone Number"
+                            label={t('phone_number')}
                             value={formData.receiverPhone}
                             onChangeText={(t: string) => setFormData({ ...formData, receiverPhone: t })}
                             keyboardType="phone-pad"
@@ -655,7 +663,7 @@ export default function AddAddressScreen() {
         >
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => step === 1 ? navigation.goBack() : setStep(1)} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{step === 1 ? 'Select Location' : 'Address Details'}</Text>
                 <View style={{ width: 40 }} />
@@ -708,10 +716,10 @@ export default function AddAddressScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FE',
+        backgroundColor: c.background,
     },
     // Same header recipe as the Family Members / Address Book screens -
     // white bar + shadow, plain icon back button, fontSize 20/600/#111827
@@ -722,7 +730,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -738,7 +746,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     contentContainer: {
         flex: 1,
@@ -751,7 +759,7 @@ const styles = StyleSheet.create({
     mapContainer: {
         flex: 1,
         position: 'relative',
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
     },
     searchContainerOverlay: {
         position: 'absolute',
@@ -764,7 +772,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 12,
         paddingHorizontal: 14,
         height: 50,
@@ -778,13 +786,13 @@ const styles = StyleSheet.create({
         flex: 1,
         height: 50,
         fontSize: 16,
-        color: '#1F2937',
+        color: c.text,
     },
     suggestionsBox: {
         marginTop: 8,
         maxHeight: 260,
         borderRadius: 12,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -802,19 +810,19 @@ const styles = StyleSheet.create({
     suggestionText: {
         flex: 1,
         fontSize: 14,
-        color: '#1F2937',
+        color: c.text,
         lineHeight: 19,
     },
     suggestionSeparator: {
         height: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         marginLeft: 40,
     },
     fabLocation: {
         position: 'absolute',
         right: 20,
         bottom: 160, // Moved up
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         width: 48,
         height: 48,
         borderRadius: 24,
@@ -831,7 +839,7 @@ const styles = StyleSheet.create({
         bottom: 40, // Increased from 20 to avoid overlap
         left: 20,
         right: 20,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 16,
         padding: 16,
         shadowColor: "#000",
@@ -849,11 +857,11 @@ const styles = StyleSheet.create({
     addressPreviewTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#0FBBA1',
+        color: '#10B981',
     },
     addressPreviewText: {
         fontSize: 15,
-        color: '#1F2937',
+        color: c.text,
         lineHeight: 20,
     },
 
@@ -865,7 +873,7 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     section: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 18,
         padding: 20,
         marginBottom: 16,
@@ -878,14 +886,14 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 16,
     },
     selectedAddressBox: {
         flexDirection: 'row',
         alignItems: 'flex-start',
         gap: 10,
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         borderRadius: 14,
         padding: 14,
         marginBottom: 4,
@@ -894,12 +902,12 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 14,
         lineHeight: 21,
-        color: '#374151',
+        color: c.text,
     },
     changeLink: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#0FBBA1',
+        color: '#10B981',
         marginTop: 10,
         alignSelf: 'flex-start',
     },
@@ -909,18 +917,18 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#374151',
+        color: c.text,
         marginBottom: 8,
     },
     input: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 12,
         fontSize: 16,
-        color: '#1F2937',
+        color: c.text,
     },
     tagContainer: {
         flexDirection: 'row',
@@ -932,22 +940,22 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
         borderColor: 'transparent',
         gap: 6,
     },
     tagChipActive: {
-        backgroundColor: '#F0FDF4',
-        borderColor: '#0FBBA1',
+        backgroundColor: c.successBg,
+        borderColor: '#10B981',
     },
     tagText: {
         fontSize: 14,
         fontWeight: '500',
-        color: '#6B7280',
+        color: c.textSecondary,
     },
     tagTextActive: {
-        color: '#0FBBA1',
+        color: '#10B981',
         fontWeight: '600',
     },
     checkboxRow: {
@@ -960,23 +968,23 @@ const styles = StyleSheet.create({
         height: 20,
         borderRadius: 6,
         borderWidth: 2,
-        borderColor: '#D1D5DB',
+        borderColor: c.border,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 12,
     },
     checkboxActive: {
-        backgroundColor: '#0FBBA1',
-        borderColor: '#0FBBA1',
+        backgroundColor: '#10B981',
+        borderColor: '#10B981',
     },
     checkboxLabel: {
         fontSize: 15,
-        color: '#374151',
+        color: c.text,
     },
     myReceiverBox: {
-        backgroundColor: '#F8FAFC',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: c.borderLight,
         borderRadius: 12,
         paddingVertical: 12,
         paddingHorizontal: 14,
@@ -989,9 +997,9 @@ const styles = StyleSheet.create({
     inputWithIconContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 12,
         paddingRight: 12,
     },
@@ -1004,14 +1012,14 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 12,
         paddingRight: 12,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
     },
     floatingInput: {
         flex: 1,
         paddingHorizontal: 16,
         paddingVertical: 12,
         fontSize: 16,
-        color: '#1F2937',
+        color: c.text,
     },
 
     footer: {
@@ -1019,13 +1027,13 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         padding: 20,
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
+        borderTopColor: c.borderLight,
     },
     saveButton: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         paddingVertical: 16,
         borderRadius: 14,
         alignItems: 'center',

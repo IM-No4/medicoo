@@ -1,8 +1,13 @@
+import { useMemo } from 'react';
 import AppIcon from "@/src/components/icons/AppIcon";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 export default function PharmacyCard({ pharmacy, onPress }: any) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <TouchableOpacity
       style={styles.card}
@@ -25,7 +30,7 @@ export default function PharmacyCard({ pharmacy, onPress }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -34,14 +39,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 14,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: c.cardSecondary,
   },
 
   icon: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: c.successBg,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -53,13 +58,13 @@ const styles = StyleSheet.create({
 
   meta: {
     fontSize: 12,
-    color: "#6B7280",
+    color: c.textSecondary,
     marginTop: 2,
   },
 
   rating: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#374151",
+    color: c.text,
   },
 });

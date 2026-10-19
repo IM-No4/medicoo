@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft, Heart } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -15,6 +15,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getLocalDateString } from '../../utils/dateUtils';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const STORAGE_KEY_PREFIX = 'GRATITUDE_JOURNAL_';
 const PROMPTS = [
@@ -30,6 +33,9 @@ const PROMPTS = [
 // need one to be useful. Amber/gold for warmth and appreciation, distinct
 // from the other activities' cyan/emerald/violet/blue.
 export default function GratitudeJournalScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
     const todayStr = getLocalDateString();
@@ -79,9 +85,9 @@ export default function GratitudeJournalScreen() {
 
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Gratitude Journal</Text>
+                <Text style={styles.headerTitle}>{t('gratitude_journal')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -90,7 +96,7 @@ export default function GratitudeJournalScreen() {
                     <View style={styles.introIcon}>
                         <Heart size={22} color="#D97706" />
                     </View>
-                    <Text style={styles.intro}>What are three things you're grateful for today?</Text>
+                    <Text style={styles.intro}>{t('what_are_three_things_you_re_grateful')}</Text>
 
                     {entries.map((entry, index) => (
                         <View key={index} style={styles.inputRow}>
@@ -100,7 +106,7 @@ export default function GratitudeJournalScreen() {
                             <TextInput
                                 style={styles.input}
                                 placeholder={PROMPTS[index]}
-                                placeholderTextColor="#B45309"
+                                placeholderTextColor={theme.warning}
                                 value={entry}
                                 onChangeText={(value) => handleChange(index, value)}
                                 multiline
@@ -122,28 +128,28 @@ export default function GratitudeJournalScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.card },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
         }),
     },
     backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
-    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
     content: { padding: 24, paddingBottom: 40, alignItems: 'center' },
     introIcon: {
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#FFFBEB',
+        backgroundColor: c.warningBg,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 16,
@@ -151,7 +157,7 @@ const styles = StyleSheet.create({
     intro: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         textAlign: 'center',
         marginBottom: 24,
     },
@@ -166,7 +172,7 @@ const styles = StyleSheet.create({
         width: 28,
         height: 28,
         borderRadius: 14,
-        backgroundColor: '#FFFBEB',
+        backgroundColor: c.warningBg,
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 8,
@@ -178,7 +184,7 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        backgroundColor: '#FFFBEB',
+        backgroundColor: c.warningBg,
         borderRadius: 16,
         borderWidth: 1,
         borderColor: '#FDE68A',
@@ -196,7 +202,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 40,
     },
     saveButtonDisabled: {
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.cardSecondary,
     },
     saveButtonText: {
         color: '#FFFFFF',

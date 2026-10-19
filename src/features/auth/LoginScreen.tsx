@@ -23,6 +23,7 @@ import {
   View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { useDispatch } from 'react-redux';
 
 import { bootSuccess } from '../../bootstrap/boot.slice';
@@ -45,6 +46,7 @@ const HERO_HEIGHT = Dimensions.get('window').height * 0.38;
 export default function LoginScreen() {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const navigation = useNavigation<any>();
 
   const [phone, setPhone] = useState('');
@@ -170,13 +172,13 @@ export default function LoginScreen() {
                 position at all. */}
             {!keyboardVisible && (
               <Text style={styles.mainTitle}>
-                Your All-in-One{'\n'}Healthcare Companion
+                {t('login_title')}
               </Text>
             )}
 
             <View style={styles.dividerContainer}>
               <View style={styles.line} />
-              <Text style={styles.dividerText}>Log in or sign up</Text>
+              <Text style={styles.dividerText}>{t('login_or_signup')}</Text>
               <View style={styles.line} />
             </View>
 
@@ -189,7 +191,7 @@ export default function LoginScreen() {
                 </View>
                 <TextInput
                   style={styles.phoneInput}
-                  placeholder="+91 Enter Phone Number"
+                  placeholder={t('phone_placeholder')}
                   placeholderTextColor="#9CA3AF"
                   keyboardType="phone-pad"
                   value={phone}
@@ -206,14 +208,14 @@ export default function LoginScreen() {
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.continueButtonText}>Continue</Text>
+                  <Text style={styles.continueButtonText}>{t('continue')}</Text>
                 )}
               </TouchableOpacity>
 
               <View style={styles.whatsappNotice}>
                 <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
                 <Text style={styles.whatsappNoticeText}>
-                  We'll send your OTP via WhatsApp
+                  {t('whatsapp_notice')}
                 </Text>
               </View>
 
@@ -243,8 +245,8 @@ export default function LoginScreen() {
 
         <View style={[styles.termsContainer, { paddingBottom: insets.bottom + 10, paddingHorizontal: 24, backgroundColor: '#fff' }]}>
           <Text style={styles.termsText}>
-            By continuing, you agree to our{'\n'}
-            <Text onPress={() => navigation.navigate('TermsOfService')} style={styles.termLink}>Terms of Service</Text>  <Text onPress={() => navigation.navigate('PrivacyPolicy')} style={styles.termLink}>Privacy Policy</Text>  <Text onPress={() => navigation.navigate('ContentPolicy')} style={styles.termLink}>Content Policy</Text>
+            {t('terms_prefix')}{'\n'}
+            <Text onPress={() => navigation.navigate('TermsOfService')} style={styles.termLink}>{t('terms_of_service')}</Text>  <Text onPress={() => navigation.navigate('PrivacyPolicy')} style={styles.termLink}>{t('privacy_policy')}</Text>  <Text onPress={() => navigation.navigate('ContentPolicy')} style={styles.termLink}>{t('content_policy')}</Text>
           </Text>
         </View>
       </View>
@@ -355,7 +357,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   continueButton: {
-    backgroundColor: '#0FBBA1', // Medicoo Teal
+    backgroundColor: '#10B981', // Medicoo Teal
     borderRadius: 8,
     height: 50,
     alignItems: 'center',

@@ -5,6 +5,8 @@ import { useSelector } from 'react-redux';
 import AppIcon from '../../../components/icons/AppIcon';
 import { RootState } from '../../../redux/store';
 import { FeedAction } from '../feed/feed.actions';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 export interface QuickActionItem {
   id: string;
@@ -24,6 +26,8 @@ interface Props {
 }
 
 function QuickActions({ items, onAction }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const carts = useSelector((state: RootState) => state.cart);
 
   // Calculate cart count (number of stores with items) for medicines
@@ -91,7 +95,7 @@ function QuickActions({ items, onAction }: Props) {
 
 export default React.memo(QuickActions);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   row: {
     marginBottom: 30,
     overflow: 'visible',
@@ -117,12 +121,12 @@ const styles = StyleSheet.create({
     // convention some other feed cards use - any shadow here read as
     // heavier than the rest regardless of how much it was tuned down.
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: c.borderLight,
     overflow: 'visible',
   },
   label: {
     fontSize: 13,
-    color: '#151517',
+    color: c.text,
     opacity: 0.7,
     textAlign: 'center',
   },

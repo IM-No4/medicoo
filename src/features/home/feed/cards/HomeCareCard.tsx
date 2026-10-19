@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { HomeCareService, HomeCareShowcaseFeedItem } from '../feed.types';
 import SectionHeader from './SectionHeader';
 
 import { FeedAction } from '../feed.actions';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 type Props = {
     data: HomeCareShowcaseFeedItem;
@@ -12,6 +15,9 @@ type Props = {
 };
 
 function HomeCareCard({ data, onAction }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const handlePress = (item: HomeCareService) => {
         if (item.action && onAction) {
             onAction(item.action);
@@ -48,7 +54,7 @@ function HomeCareCard({ data, onAction }: Props) {
                 <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
 
                 <View style={styles.metaRow}>
-                    <AppIcon name="clock" size={12} color="#6B7280" />
+                    <AppIcon name="clock" size={12} color={theme.textSecondary} />
                     <Text style={styles.durationText}>{item.duration}</Text>
                     <View style={styles.dot} />
                     <AppIcon name="star" size={10} color="#F59E0B" />
@@ -72,7 +78,7 @@ function HomeCareCard({ data, onAction }: Props) {
                         style={styles.bookButton}
                         onPress={() => handlePress(item)}
                     >
-                        <Text style={styles.bookButtonText}>Book Now</Text>
+                        <Text style={styles.bookButtonText}>{t('book_now')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -101,7 +107,7 @@ function HomeCareCard({ data, onAction }: Props) {
 
 export default React.memo(HomeCareCard);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         marginBottom: 30,
     },
@@ -112,7 +118,7 @@ const styles = StyleSheet.create({
     card: {
         width: 200,
         marginHorizontal: 8,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 20,
         // Shadow
         shadowColor: "#000",
@@ -121,12 +127,12 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 2,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
         overflow: 'hidden'
     },
     imageContainer: {
         height: 110,
-        backgroundColor: '#FDF2F8',
+        backgroundColor: c.cardSecondary,
         position: 'relative'
     },
     image: {
@@ -158,7 +164,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 6,
         height: 38
     },
@@ -170,7 +176,7 @@ const styles = StyleSheet.create({
     },
     durationText: {
         fontSize: 11,
-        color: '#6B7280'
+        color: c.textSecondary
     },
     dot: {
         width: 3,
@@ -200,11 +206,11 @@ const styles = StyleSheet.create({
     },
     featureText: {
         fontSize: 11,
-        color: '#4B5563'
+        color: c.textSecondary
     },
     divider: {
         height: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         marginBottom: 10
     },
     priceRow: {
@@ -215,10 +221,10 @@ const styles = StyleSheet.create({
     price: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#111827'
+        color: c.text
     },
     bookButton: {
-        backgroundColor: '#FDF2F8',
+        backgroundColor: c.cardSecondary,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 8,

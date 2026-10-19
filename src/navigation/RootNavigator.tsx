@@ -12,6 +12,11 @@ import MandatoryUpdateScreen from '../features/update/MandatoryUpdateScreen';
 import MaintenanceScreen from '../features/maintenance/MaintenanceScreen';
 import MaintenanceRestrictedBanner from '../features/maintenance/MaintenanceRestrictedBanner';
 import OfflineGateScreen from '../features/offline/OfflineGateScreen';
+import ServerUnreachableScreen from '../features/offline/ServerUnreachableScreen';
+import { apiClient } from '../services/api/client';
+import { setServerUnreachable } from '../redux/slices/connectivitySlice';
+import { triggerStaleResume } from '../redux/slices/appLifecycleSlice';
+import { loadAppConfig } from '../redux/slices/appConfigSlice';
 import OnboardingStack from '../features/onboarding/OnboardingStack';
 import { AppDispatch, RootState } from '../redux/store';
 import AuthStack from './AuthStack';
@@ -25,6 +30,21 @@ export default function RootNavigator() {
   const dispatch = useDispatch<AppDispatch>();
   const boot = useSelector((state: RootState) => state.boot);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const serverUnreachable = useSelector((state: RootState) => state.connectivity.serverUnreachable);
+
+  // Any HTTP response at all (even an error status) proves the server is up.
+  // Success: hide the screen and make data screens refetch.
+  const retryServer = async (): Promise<boolean> => {
+    try {
+      await apiClient.get('/api/app/config', { timeout: 8000, skipReachability: true } as any);
+    } catch (error: any) {
+      if (!error?.response) return false;
+    }
+    dispatch(setServerUnreachable(false));
+    dispatch(triggerStaleResume());
+    dispatch(loadAppConfig());
+    return true;
+  };
 
   // The installed build is below the backend's minimumSupportedVersion
   // (BootCoordinator.ts) - no skip, blocks even a logged-out user, checked
@@ -129,6 +149,11 @@ export default function RootNavigator() {
           Not gated on auth - a logged-out user on the Login screen should
           still see this. */}
       <UpdateAvailableModal />
+
+      {/* 🔌 SERVER UNREACHABLE - device is online but our backend isn't
+          answering. Rendered over the navigator (not instead of it) so the
+          user's place in the app survives a retry. */}
+      {serverUnreachable && <ServerUnreachableScreen onRetry={retryServer} />}
     </>
   );
 }

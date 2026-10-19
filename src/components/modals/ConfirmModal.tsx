@@ -1,6 +1,9 @@
 import { AlertTriangle } from 'lucide-react-native';
-import React from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { Modal } from '../ThemedModal';
 
 interface ConfirmModalProps {
     visible: boolean;
@@ -23,6 +26,8 @@ export default function ConfirmModal({
     onCancel,
     confirmColor = '#EF4444', // Default to red for destructive actions
 }: ConfirmModalProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     if (!visible) return null;
 
     return (
@@ -62,7 +67,7 @@ export default function ConfirmModal({
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.6)',
@@ -73,7 +78,7 @@ const styles = StyleSheet.create({
     card: {
         width: '100%',
         maxWidth: 320,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 24,
         padding: 24,
         alignItems: 'center',
@@ -86,7 +91,7 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.errorBg,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 16,
@@ -94,13 +99,13 @@ const styles = StyleSheet.create({
     titleText: {
         fontSize: 20,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         textAlign: 'center',
         marginBottom: 8,
     },
     messageText: {
         fontSize: 15,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         marginBottom: 24,
         lineHeight: 22,
@@ -114,11 +119,11 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 12,
         borderRadius: 12,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         alignItems: 'center',
     },
     cancelButtonText: {
-        color: '#4B5563',
+        color: c.textSecondary,
         fontSize: 15,
         fontWeight: '600',
     },

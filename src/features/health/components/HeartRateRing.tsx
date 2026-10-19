@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
 
 const heartImage = require('../../../assets/images/heart.png');
 
@@ -34,6 +36,8 @@ export function isNormalHeartRate(heartRate: number): boolean {
 }
 
 export function HeartRateRing({ heartRate }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const hasReading = heartRate !== null && heartRate > 0;
   const isNormal = hasReading && isNormalHeartRate(heartRate!);
   const ringStroke = !hasReading ? '#E5E7EB' : isNormal ? `url(#${NORMAL_GRADIENT_ID})` : '#F59E0B';
@@ -88,7 +92,7 @@ export function HeartRateRing({ heartRate }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     width: RING_SIZE,
     height: RING_SIZE,

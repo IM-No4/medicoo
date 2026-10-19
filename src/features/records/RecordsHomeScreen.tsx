@@ -8,11 +8,10 @@ import {
   MediaTypeOptions,
   requestCameraPermissionsAsync
 } from 'expo-image-picker';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ArrowDownWideNarrow, ArrowUpWideNarrow, Eye, FolderOpen, FolderPlus, MoreVertical, Plus, Search, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  Modal,
   Platform,
   RefreshControl,
   ScrollView,
@@ -20,7 +19,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -30,6 +29,10 @@ import EditRecordModal from './components/EditRecordModal';
 import { DOCUMENT_TYPES, DocumentTypeMeta, DocumentTypeValue, getDocumentTypeMeta } from './documentTypes';
 import RecordsSkeleton from './RecordsSkeleton';
 import { RecordItem } from './types';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../../components/ThemedModal';
 
 type Menu =
   | { kind: 'folder'; meta: DocumentTypeMeta }
@@ -47,6 +50,9 @@ const formatBytes = (bytes: number): string => {
 };
 
 export default function RecordsHomeScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [isFocused, setIsFocused] = useState(false);
@@ -164,15 +170,15 @@ export default function RecordsHomeScreen() {
     setMenu(null);
     showStatus(
       'warning',
-      'Delete Document?',
-      'Are you sure you want to permanently remove this document? This action cannot be reversed.',
+      t('delete_document'),
+      t('are_you_sure_you_want_to_permanently_r'),
       async () => {
         hideStatus();
         try {
           await deleteDocument(item.id);
           await loadRecords();
         } catch (error) {
-          showStatus('error', 'Deletion Failed', 'We couldn\'t delete the document. Please check your connection and try again.');
+          showStatus('error', t('deletion_failed'), t('we_couldn_t_delete_the_document_please'));
         }
       },
       'Delete'
@@ -247,7 +253,7 @@ export default function RecordsHomeScreen() {
       {isFocused && <StatusBar style="dark" translucent backgroundColor="transparent" />}
 
       <View style={[styles.topBar, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
-        <Text style={styles.topBarTitle}>Medical Records</Text>
+        <Text style={styles.topBarTitle}>{t('medical_records')}</Text>
       </View>
 
       {loading ? (
@@ -261,11 +267,11 @@ export default function RecordsHomeScreen() {
           }
         >
           <View style={styles.searchBar}>
-            <Search size={18} color="#9CA3AF" />
+            <Search size={18} color={theme.textMuted} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search your file.."
-              placeholderTextColor="#9CA3AF"
+              placeholder={t('search_your_file')}
+              placeholderTextColor={theme.textMuted}
               value={search}
               onChangeText={setSearch}
             />
@@ -275,9 +281,9 @@ export default function RecordsHomeScreen() {
               onPress={() => setSortOrder(o => (o === 'newest' ? 'oldest' : 'newest'))}
             >
               {sortOrder === 'newest' ? (
-                <ArrowDownWideNarrow size={18} color="#374151" />
+                <ArrowDownWideNarrow size={18} color={theme.text} />
               ) : (
-                <ArrowUpWideNarrow size={18} color="#0FBBA1" />
+                <ArrowUpWideNarrow size={18} color="#10B981" />
               )}
             </TouchableOpacity>
           </View>
@@ -286,10 +292,10 @@ export default function RecordsHomeScreen() {
             searchResults.length === 0 ? (
               <EmptyState
                 icon={FolderOpen}
-                iconColor="#0FBBA1"
+                iconColor="#10B981"
                 iconBg="#EAFBF3"
-                title="No matches"
-                message="Try a different search term."
+                title={t('no_matches')}
+                message={t('try_a_different_search_term')}
               />
             ) : (
               <View style={styles.groupCard}>
@@ -317,7 +323,7 @@ export default function RecordsHomeScreen() {
                           setMenu({ kind: 'record', item });
                         }}
                       >
-                        <MoreVertical size={18} color="#9CA3AF" />
+                        <MoreVertical size={18} color={theme.textMuted} />
                       </TouchableOpacity>
                     </TouchableOpacity>
                   );
@@ -347,12 +353,12 @@ export default function RecordsHomeScreen() {
                             setMenu({ kind: 'folder', meta });
                           }}
                         >
-                          <MoreVertical size={18} color="#9CA3AF" />
+                          <MoreVertical size={18} color={theme.textMuted} />
                         </TouchableOpacity>
                       </View>
-                      <Text style={styles.folderTitle} numberOfLines={2}>{meta.folderLabel}</Text>
+                      <Text style={styles.folderTitle} numberOfLines={2}>{t(meta.folderLabel)}</Text>
                     </View>
-                    <View style={{ backgroundColor: '#fafafa', paddingVertical: 6, paddingHorizontal: 14, borderBottomRightRadius: 14, borderBottomLeftRadius: 14  }}>
+                    <View style={{ backgroundColor: theme.cardSecondary, paddingVertical: 6, paddingHorizontal: 14, borderBottomRightRadius: 14, borderBottomLeftRadius: 14  }}>
                       <Text style={styles.folderCount}>{count} {count === 1 ? 'file' : 'files'}</Text>
                       <Text style={styles.folderSize}>{formatBytes(totalSize)}</Text>
                     </View>
@@ -408,12 +414,12 @@ export default function RecordsHomeScreen() {
                     handleFolderPress(meta.value, meta.folderLabel);
                   }}
                 >
-                  <FolderOpen size={18} color="#374151" />
+                  <FolderOpen size={18} color={theme.text} />
                   <Text style={styles.menuRowText}>View All</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.menuRow} onPress={() => handleFolderAddPress(menu.meta)}>
-                  <FolderPlus size={18} color="#374151" />
-                  <Text style={styles.menuRowText}>Add Document</Text>
+                  <FolderPlus size={18} color={theme.text} />
+                  <Text style={styles.menuRowText}>{t('add_document')}</Text>
                 </TouchableOpacity>
               </>
             ) : menu?.kind === 'record' ? (
@@ -426,7 +432,7 @@ export default function RecordsHomeScreen() {
                     handleRecordPress(item);
                   }}
                 >
-                  <Eye size={18} color="#374151" />
+                  <Eye size={18} color={theme.text} />
                   <Text style={styles.menuRowText}>View Details</Text>
                 </TouchableOpacity>
                 {!menu.item.isSystem && (
@@ -454,16 +460,16 @@ export default function RecordsHomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F8FC',
+    backgroundColor: c.background,
   },
 
   topBar: {
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -472,7 +478,7 @@ const styles = StyleSheet.create({
   topBarTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
     // Matches the 40px icon-button row height on the Calendar/Health
     // headers, so this bar (which has no icon of its own) isn't shorter
     // than theirs. lineHeight (not minHeight/textAlignVertical, which
@@ -489,20 +495,20 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: c.card,
     borderRadius: 14,
     height: 54,
     paddingHorizontal: 16,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
   },
   searchInput: {
     flex: 1,
     marginLeft: 10,
     fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#FFF',
+    color: c.text,
+    backgroundColor: c.card,
   },
   filterIconBtn: {
     width: 36,
@@ -510,7 +516,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8F8FC',
+    backgroundColor: c.cardSecondary,
     marginLeft: 8,
   },
 
@@ -522,12 +528,12 @@ const styles = StyleSheet.create({
   },
   folderCard: {
     width: '48.5%',
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     borderRadius: 14,
     // padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
     // The grid's row-wrap stretches every card in a row to match the
     // tallest one (e.g. a 2-line title next to a 1-line one) - without
     // this, the shorter card's content doesn't grow to fill that extra
@@ -551,24 +557,24 @@ const styles = StyleSheet.create({
   folderTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
     marginBottom: 6,
     minHeight: 22,
   },
   folderCount: {
     fontSize: 12,
-    color: '#6B7280',
+    color: c.textSecondary,
     fontWeight: '500',
   },
   folderSize: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: c.textMuted,
     marginTop: 2,
   },
 
   // Search-result grouped card (reused row visuals from the category screen)
   groupCard: {
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     borderRadius: 14,
     overflow: 'hidden',
     ...Platform.select({
@@ -584,7 +590,7 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: c.borderLight,
   },
   iconAvatar: {
     width: 48,
@@ -601,11 +607,11 @@ const styles = StyleSheet.create({
   rowTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: c.text,
   },
   rowSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: c.textSecondary,
     marginTop: 3,
   },
 
@@ -615,10 +621,10 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0FBBA1',
+    shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
@@ -633,7 +639,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 24,
     width: 200,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     borderRadius: 16,
     paddingVertical: 6,
     ...Platform.select({
@@ -651,7 +657,7 @@ const styles = StyleSheet.create({
   menuRowText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
   },
   menuRowTextDanger: {
     color: '#EF4444',

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import AppIcon from "@/src/components/icons/AppIcon";
 import {
   addFavoritePharmacy,
@@ -16,6 +17,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 const DEALS = [
   {
@@ -51,6 +55,9 @@ export default function PharmacyHeader({
   children?: React.ReactNode;
   onLayout?: (event: any) => void;
 }) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const isOpen = pharmacy?.status === "online";
   const rating = Number(pharmacy?.rating) || 0;
@@ -124,14 +131,14 @@ export default function PharmacyHeader({
       {/* Dark Green Header Background (fully contains the info card) */}
       <View style={[styles.darkHeader, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <LinearGradient
-          colors={["#FFF", "#FFF"]}
+          colors={[theme.card, theme.card]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.headerBar}>
           <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
-            <AppIcon name="chevron-left" size={22} color="#111827" />
+            <AppIcon name="chevron-left" size={22} color={theme.text} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleToggleFavorite}
@@ -139,12 +146,12 @@ export default function PharmacyHeader({
             style={styles.favoriteButton}
           >
             {isFavoriteLoading ? (
-              <ActivityIndicator size="small" color="#1c1c1e" />
+              <ActivityIndicator size="small" color={theme.text} />
             ) : (
               <AppIcon
                 name="heart"
                 size={24}
-                color={isFavorite ? "#EF4444" : "#828282ff"}
+                color={isFavorite ? "#EF4444" : theme.textMuted}
                 fill={isFavorite ? "#EF4444" : "none"}
               />
             )}
@@ -159,7 +166,7 @@ export default function PharmacyHeader({
                 {pharmacy?.storeName || "Pharmacy Name"}
               </Text>
               <Text style={styles.categoriesText}>
-                Medicines, Healthcare, Wellness Products
+                {t('medicines_healthcare_wellness_products')}
               </Text>
             </View>
 
@@ -169,7 +176,7 @@ export default function PharmacyHeader({
                 <Text style={styles.ratingText}>
                   {rating > 0 ? rating.toFixed(1) : "0.0"}
                 </Text>
-                <AppIcon name="star" size={12} color="#4B5563" />
+                <AppIcon name="star" size={12} color={theme.textSecondary} />
               </View>
               <Text style={styles.reviewCountText}>
                 {reviewCount}K+ ratings
@@ -179,10 +186,10 @@ export default function PharmacyHeader({
 
           {/* Time and Distance */}
           <View style={styles.detailsRow}>
-            <AppIcon name="clock" size={14} color="#6B7280" />
+            <AppIcon name="clock" size={14} color={theme.textSecondary} />
             <Text style={styles.detailsText}>{deliveryTime}</Text>
             <Text style={styles.bullet}>•</Text>
-            <AppIcon name="map-pin" size={14} color="#6B7280" />
+            <AppIcon name="map-pin" size={14} color={theme.textSecondary} />
             <Text style={styles.detailsText}>{distance} km</Text>
           </View>
 
@@ -191,12 +198,12 @@ export default function PharmacyHeader({
           {/* Status / Offers */}
           {!isOpen ? (
             <View style={styles.offlineBadge}>
-              <AppIcon name="alarm-clock-off" size={14} color="#6B7280" />
-              <Text style={styles.offlineBadgeText}>Currently Unavailable</Text>
+              <AppIcon name="alarm-clock-off" size={14} color={theme.textSecondary} />
+              <Text style={styles.offlineBadgeText}>{t('currently_unavailable')}</Text>
             </View>
           ) : (
             <View style={styles.dealBanner}>
-              <AppIcon name="percent" size={16} color="#007C69" />
+              <AppIcon name="percent" size={16} color={theme.primary} />
               <Text style={styles.dealBannerText} numberOfLines={1}>
                 {DEALS[activeIndex].title}: {DEALS[activeIndex].discount} |{" "}
                 {DEALS[activeIndex].description}
@@ -212,9 +219,9 @@ export default function PharmacyHeader({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
-    backgroundColor: "#F6F7F9",
+    backgroundColor: c.background,
     marginBottom: 12,
   },
   darkHeader: {
@@ -223,7 +230,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: c.border,
   },
   headerBar: {
     flexDirection: "row",
@@ -252,7 +259,8 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   infoCard: {
-    backgroundColor: "#ffffff",
+    // No surface of its own: the header is already the card, so a second
+    // filled/bordered panel inside it read as a card-in-a-card.
     borderRadius: 20,
     marginHorizontal: 16,
     paddingHorizontal: 16,
@@ -271,14 +279,14 @@ const styles = StyleSheet.create({
   storeName: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1C1C1E",
+    color: c.text,
     marginBottom: 4,
     letterSpacing: 0.3,
   },
   categoriesText: {
     fontSize: 12,
     fontWeight: "500",
-    color: "#6B7280",
+    color: c.textSecondary,
     marginBottom: 8,
   },
   ratingBadgeContainer: {
@@ -287,7 +295,7 @@ const styles = StyleSheet.create({
   ratingBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F6F7F9",
+    backgroundColor: c.cardSecondary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -296,12 +304,12 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#4B5563",
+    color: c.textSecondary,
   },
   reviewCountText: {
     fontSize: 11,
     fontWeight: "500",
-    color: "#6B7280",
+    color: c.textSecondary,
     marginTop: 4,
   },
   detailsRow: {
@@ -313,16 +321,16 @@ const styles = StyleSheet.create({
   detailsText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#4B5563",
+    color: c.textSecondary,
   },
   bullet: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#9CA3AF",
+    color: c.textMuted,
   },
   divider: {
     borderTopWidth: 1,
-    borderTopColor: "#F2F2F7",
+    borderTopColor: c.borderLight,
     marginVertical: 12,
   },
   offlineBadge: {
@@ -332,13 +340,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: c.cardSecondary,
     gap: 6,
   },
   offlineBadgeText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#6B7280",
+    color: c.textSecondary,
     letterSpacing: 0.2,
   },
   dealBanner: {
@@ -349,13 +357,13 @@ const styles = StyleSheet.create({
   dealBannerText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#4B5563",
+    color: c.textSecondary,
     flex: 1,
   },
   cardChildrenContainer: {
     marginTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#F2F2F7",
+    borderTopColor: c.borderLight,
     paddingTop: 12,
   },
   // The search bar rendered as `children` sits below the dark header/white

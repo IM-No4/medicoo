@@ -1,20 +1,26 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import AppIcon from '@/src/components/icons/AppIcon';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../theme/colors';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 export default function SearchResultSkeleton() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
         <AppIcon name="search" size={48} color="#10B981" />
       </View>
-      <Text style={styles.title}>Searching nearby...</Text>
-      <Text style={styles.subtitle}>Looking for medicines, pharmacies, and tests</Text>
+      <Text style={styles.title}>{t('searching_nearby')}</Text>
+      <Text style={styles.subtitle}>{t('looking_for_medicines_pharmacies_and_t')}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
@@ -40,12 +46,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1F2937',
+    color: c.text,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: c.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },

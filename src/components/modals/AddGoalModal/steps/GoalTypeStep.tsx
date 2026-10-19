@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     View,
     Text,
@@ -15,6 +15,9 @@ import {
     Heart,
     Brain,
 } from 'lucide-react-native';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 // Each goal type has a vivid, meaningful color baked in permanently.
 // Custom goals let the user pick their own color in step 3.
@@ -115,10 +118,13 @@ interface Props {
 }
 
 export default function GoalTypeStep({ data, onChange }: Props) {
+  const { t } = useLanguage();
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     return (
         <View style={styles.container}>
-            <Text style={styles.heading}>What would you like to track?</Text>
-            <Text style={styles.subheading}>Choose a category to get started</Text>
+            <Text style={styles.heading}>{t('what_would_you_like_to_track')}</Text>
+            <Text style={styles.subheading}>{t('choose_a_category_to_get_started')}</Text>
 
             <View style={styles.grid}>
                 {GOAL_TYPES.map((type) => {
@@ -129,7 +135,7 @@ export default function GoalTypeStep({ data, onChange }: Props) {
                             key={type.id}
                             style={[
                                 styles.card,
-                                { backgroundColor: type.bg },
+                                { backgroundColor: isDark ? type.color + '26' : type.bg },
                                 isSelected && {
                                     borderColor: type.color,
                                 },
@@ -165,10 +171,10 @@ export default function GoalTypeStep({ data, onChange }: Props) {
                                 styles.cardTitle,
                                 isSelected && { color: type.color },
                             ]}>
-                                {type.title}
+                                {t(type.title)}
                             </Text>
                             <Text style={styles.cardDesc} numberOfLines={2}>
-                                {type.description}
+                                {t(type.description)}
                             </Text>
                         </TouchableOpacity>
                     );
@@ -178,7 +184,7 @@ export default function GoalTypeStep({ data, onChange }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         paddingHorizontal: 20,
         paddingBottom: 100,
@@ -186,12 +192,12 @@ const styles = StyleSheet.create({
     heading: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         marginBottom: 6,
     },
     subheading: {
         fontSize: 14,
-        color: '#64748B',
+        color: c.textSecondary,
         marginBottom: 24,
         fontWeight: '500',
     },
@@ -225,7 +231,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 13,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.card,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,
@@ -233,12 +239,12 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#0F172A',
+        color: c.text,
         marginBottom: 4,
     },
     cardDesc: {
         fontSize: 11,
-        color: '#64748B',
+        color: c.textSecondary,
         lineHeight: 15,
         fontWeight: '500',
     },

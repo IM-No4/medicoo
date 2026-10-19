@@ -1,7 +1,7 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { Activity, Bell, Flame, Thermometer } from 'lucide-react-native';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useMemo } from 'react';
 import {
   Platform,
   RefreshControl,
@@ -20,6 +20,8 @@ import { loadVitalRecords } from '../../redux/slices/vitalsSlice';
 import { AppDispatch, RootState } from '../../redux/store';
 import { watchLiveSteps } from '../../services/health/stepsService';
 import { DeviceConnectCard } from './components/DeviceConnectCard';
+import { FriendInvitesCard } from './components/FriendInvitesCard';
+import { askForStepsAccessOnce } from './stepsAccess';
 import { GoalsCard } from './components/GoalsCard';
 import { HealthHighlights } from './components/HealthHighlights';
 import { HeartRateRing, isNormalHeartRate } from './components/HeartRateRing';
@@ -27,8 +29,14 @@ import { MedicationsSummary } from './components/MedicationsSummary';
 import { RelaxCard } from './components/RelaxCard';
 import { VitalsSnapshot } from './components/VitalsSnapshot';
 import { WeeklyActivityCard } from './components/WeeklyActivityCard';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export default function HealthScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const dispatch = useDispatch<AppDispatch>();
@@ -66,7 +74,8 @@ export default function HealthScreen() {
   useFocusEffect(
     useCallback(() => {
       setIsFocused(true);
-      dispatch(loadOnDeviceSteps());
+      // First time the Health screen shows up: explain and ask for step access (once). Not from a button in Manage Goals.
+      askForStepsAccessOnce().then((asked) => { if (!asked) dispatch(loadOnDeviceSteps()); });
       dispatch(loadVitalRecords());
 
       let cancelled = false;
@@ -113,8 +122,8 @@ export default function HealthScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <View style={{ flex: 1 }}>
-          {/* <Text style={styles.greeting}>Daily Check-in</Text> */}
-          <Text style={styles.headerTitle}>My Health</Text>
+          {/* <Text style={styles.greeting}>{t('daily_check_in')}</Text> */}
+          <Text style={styles.headerTitle}>{t('my_health')}</Text>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity
@@ -122,7 +131,7 @@ export default function HealthScreen() {
             activeOpacity={0.7}
             onPress={() => executeAction('OPEN_NOTIFICATIONS')}
           >
-            <Bell size={22} color="#1F2937" />
+            <Bell size={22} color={theme.text} />
             {unreadNotificationCount > 0 && <View style={styles.notificationBadge} />}
           </TouchableOpacity>
         </View>
@@ -135,6 +144,9 @@ export default function HealthScreen() {
           <RefreshControl refreshing={isManualRefreshing} onRefresh={onRefresh} />
         }
       >
+        {/* Friends waiting for an answer (renders nothing when there are none) */}
+        <FriendInvitesCard />
+
         {/* Heart Rate Ring */}
         <TouchableOpacity
           style={styles.heartRateSection}
@@ -143,7 +155,7 @@ export default function HealthScreen() {
         >
           <HeartRateRing heartRate={hasHeartRateData ? heartRateNumeric : null} />
           <View style={styles.heartRateInfo}>
-            <Text style={styles.heartRateLabel}>Heart Rate</Text>
+            <Text style={styles.heartRateLabel}>{t('heart_rate')}</Text>
             <Text style={styles.heartRateValue}>
               {hasHeartRateData ? `${heartRateNumeric} bpm` : '--'}
             </Text>
@@ -157,13 +169,13 @@ export default function HealthScreen() {
                 <View
                   style={[
                     styles.heartRateStatusDot,
-                    { backgroundColor: isNormalHeartRate(heartRateNumeric!) ? '#0FBBA1' : '#F59E0B' },
+                    { backgroundColor: isNormalHeartRate(heartRateNumeric!) ? '#10B981' : '#F59E0B' },
                   ]}
                 />
                 <Text
                   style={[
                     styles.heartRateStatusText,
-                    { color: isNormalHeartRate(heartRateNumeric!) ? '#0FBBA1' : '#B45309' },
+                    { color: isNormalHeartRate(heartRateNumeric!) ? '#10B981' : '#B45309' },
                   ]}
                 >
                   {isNormalHeartRate(heartRateNumeric!) ? 'Normal' : 'Outside normal range'}
@@ -179,11 +191,11 @@ export default function HealthScreen() {
             icon={<Flame size={18} color="#EF4444" />}
             value={calories}
             unit="kcal"
-            label="Calories"
+            label={t('calories')}
             color="#FEF2F2"
           />
           <SummaryCard
-            icon={<Activity size={18} color="#0FBBA1" />}
+            icon={<Activity size={18} color="#10B981" />}
             value={steps}
             unit="steps"
             label={stepsLabel}
@@ -193,7 +205,7 @@ export default function HealthScreen() {
             icon={<Thermometer size={18} color="#0EA5E9" />}
             value={temperature}
             unit="°F"
-            label="Temperature"
+            label={t('temperature')}
             color="#F0F9FF"
             onPress={() => navigation.navigate('VitalsHistory', { metric: 'temperature' })}
           />
@@ -215,6 +227,8 @@ export default function HealthScreen() {
 }
 
 function SummaryCard({ icon, value, unit, label, color, onPress }: any) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const Container = onPress ? TouchableOpacity : View;
   return (
     <Container style={[styles.summaryCard]} onPress={onPress} activeOpacity={0.7}>
@@ -230,8 +244,8 @@ function SummaryCard({ icon, value, unit, label, color, onPress }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FE' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
 
   // Same white bar + shadow recipe as the Calendar and Records screen
   // headers, so all three read as one consistent header style.
@@ -241,14 +255,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
     }),
   },
-  greeting: { fontSize: 13, fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 1 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+  greeting: { fontSize: 13, fontWeight: '600', color: c.textSecondary, textTransform: 'uppercase', letterSpacing: 1 },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
   headerActions: { flexDirection: 'row', gap: 12 },
   // Same size/shape/shadow as the icon buttons in the Calendar header, so
   // the icon chips read as one consistent style across screens.
@@ -256,7 +270,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -274,7 +288,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#EF4444',
     borderWidth: 2,
-    borderColor: '#F9FAFB'
+    borderColor: c.borderLight
   },
 
   heartRateSection: {
@@ -291,12 +305,12 @@ const styles = StyleSheet.create({
   heartRateLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: c.textSecondary,
   },
   heartRateValue: {
     fontSize: 26,
     fontWeight: '800',
-    color: '#111827',
+    color: c.text,
   },
   heartRateStatusPill: {
     flexDirection: 'row',
@@ -330,18 +344,18 @@ const styles = StyleSheet.create({
     gap: 12,
     borderWidth: 1,
     borderColor: '#e5e7eb76',
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
   },
   summaryIcon: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center'
   },
   summaryRow: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
-  summaryValue: { fontSize: 18, fontWeight: '800', color: '#111827' },
-  summaryUnit: { fontSize: 10, color: '#6B7280', fontWeight: '600' },
-  summaryLabel: { fontSize: 11, color: '#6B7280', fontWeight: '500', marginTop: 2 }
+  summaryValue: { fontSize: 18, fontWeight: '800', color: c.text },
+  summaryUnit: { fontSize: 10, color: c.textSecondary, fontWeight: '600' },
+  summaryLabel: { fontSize: 11, color: c.textSecondary, fontWeight: '500', marginTop: 2 }
 });

@@ -1,9 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft, Lightbulb, RefreshCw } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 // A light, passive "flip card" activity - tap through a bundled deck of
 // fun facts. Deliberately not fetched from the backend's HealthTip
@@ -42,6 +45,9 @@ function randomIndex(exclude: number, length: number) {
 }
 
 export default function FunFactScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(() => Math.floor(Math.random() * FACTS.length));
@@ -56,9 +62,9 @@ export default function FunFactScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Fun Fact</Text>
+        <Text style={styles.headerTitle}>{t('fun_fact')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -72,29 +78,29 @@ export default function FunFactScreen() {
 
         <TouchableOpacity style={styles.nextButton} activeOpacity={0.85} onPress={handleNext}>
           <RefreshCw size={18} color="#FFFFFF" />
-          <Text style={styles.nextButtonText}>Another One</Text>
+          <Text style={styles.nextButtonText}>{t('another_one')}</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
     }),
   },
   backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
   content: {
     flex: 1,
     alignItems: 'center',
@@ -102,7 +108,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
   },
   card: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: c.warningBg,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: '#FED7AA',
@@ -116,7 +122,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 18,

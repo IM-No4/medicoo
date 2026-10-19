@@ -1,8 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { ActivityIndicator, Image, Platform, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export default function SplashScreen() {
+  const { t } = useLanguage();
   const gradientStart = Platform.select({
     ios: { x: 0, y: 0 },
     android: { x: 0.2, y: 0 },
@@ -15,11 +17,11 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0FBBA1" />
+      <StatusBar barStyle="light-content" backgroundColor="#10B981" />
 
       {/* Gradient Background */}
       <LinearGradient
-        colors={['#0FBBA1', '#007C69']}
+        colors={['#10B981', '#007C69']}
         start={gradientStart}
         end={gradientEnd}
         style={StyleSheet.absoluteFill}
@@ -35,7 +37,7 @@ export default function SplashScreen() {
             resizeMode="contain"
           />
         </View>
-        <Text style={styles.tagline}>Your Health, Our Priority</Text>
+        <Text style={styles.tagline}>{t('your_health_our_priority')}</Text>
 
         {/* Loading Indicator */}
         <View style={styles.loaderContainer}>
@@ -49,7 +51,7 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
   },
   content: {
     flex: 1,

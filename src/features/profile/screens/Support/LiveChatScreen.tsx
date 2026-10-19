@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useNavigation } from "@react-navigation/native";
 import { Check, ChevronLeft, ChevronRight, Send, Sparkles } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
@@ -18,10 +19,15 @@ import {
     LiveChatMessage,
     closeLiveChat,
     getActiveLiveChat,
+    getLiveChatIntro,
+    LiveChatIntro,
     sendLiveChatMessage,
     startLiveChat,
 } from "../../../../services/api/liveChat.api";
 import { emitLiveChatMessage, onLiveChatAgentJoined, onLiveChatClosed, onLiveChatMessage } from "../../../../services/socketService";
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 const CATEGORIES = [
     { value: "delivery", label: "Order & Delivery" },
@@ -32,6 +38,9 @@ const CATEGORIES = [
 ];
 
 export default function LiveChatScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const flatListRef = useRef<FlatList>(null);
@@ -39,6 +48,16 @@ export default function LiveChatScreen() {
     const [loading, setLoading] = useState(true);
     const [chat, setChat] = useState<LiveChat | null>(null);
     const [starting, setStarting] = useState(false);
+    // Before the first message there is no session: the chosen topic and the message being sent live here only.
+    const [selectedCategory, setSelectedCategory] = useState<{ value: string; label: string } | null>(null);
+    const [draft, setDraft] = useState<LiveChatMessage[]>([]);
+    const [sendError, setSendError] = useState("");
+    // The welcome and the topics come from the server; these are only what shows if it cannot be reached.
+    const [intro, setIntro] = useState<LiveChatIntro | null>(null);
+    useEffect(() => {
+        getLiveChatIntro().then(setIntro).catch(() => undefined);
+    }, []);
+    const topics = intro?.categories?.length ? intro.categories : CATEGORIES;
     const [inputText, setInputText] = useState("");
     const chatRef = useRef<LiveChat | null>(null);
     chatRef.current = chat;
@@ -107,25 +126,37 @@ export default function LiveChatScreen() {
         };
     }, []);
 
-    // Tapping a category is the whole "start chat" action now - one tap,
-    // no separate subject field to fill in first. The category label
-    // itself is used as the chat's subject line.
-    const handleSelectCategory = async (cat: { value: string; label: string }) => {
+    // Choosing a topic only marks it - nothing is created until the customer sends a message.
+    const handleSelectCategory = (cat: { value: string; label: string }) => {
         if (starting) return;
-        setStarting(true);
-        try {
-            const newChat = await startLiveChat(cat.label, cat.value);
-            setChat(newChat);
-        } catch (err) {
-            console.error("Error starting live chat:", err);
-        } finally {
-            setStarting(false);
-        }
+        setSelectedCategory((prev) => (prev?.value === cat.value ? null : cat));
     };
 
     const handleSend = async () => {
         const text = inputText.trim();
-        if (!text || !chat || chat.status === "closed") return;
+        if (!text || starting) return;
+
+        // No active session yet (first message, or the last chat ended): sending the message is what starts one.
+        if (!chat || chat.status === "closed") {
+            const topic = selectedCategory || { value: "general", label: "Something else" };
+            setDraft([{ _id: `local-${Date.now()}`, sender: "user", text, timestamp: new Date().toISOString() }]);
+            setInputText("");
+            setSendError("");
+            setStarting(true);
+            try {
+                const newChat = await startLiveChat(topic.label, topic.value, text);
+                setChat(newChat);
+                setDraft([]);
+            } catch (err) {
+                console.error("Error starting live chat:", err);
+                setDraft([]);
+                setInputText(text);
+                setSendError("We couldn't send your message. Please try again.");
+            } finally {
+                setStarting(false);
+            }
+            return;
+        }
 
         const optimistic: LiveChatMessage = {
             _id: `local-${Date.now()}`,
@@ -194,7 +225,7 @@ export default function LiveChatScreen() {
     if (loading) {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color="#0FBBA1" />
+                <ActivityIndicator size="large" color="#10B981" />
             </View>
         );
     }
@@ -211,24 +242,24 @@ export default function LiveChatScreen() {
         <View style={styles.container}>
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
                 <View style={styles.headerInfo}>
-                    <Text style={styles.headerTitle}>Chat</Text>
+                    <Text style={styles.headerTitle}>{t('chat')}</Text>
                     <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
                 </View>
                 {!pickerLocked ? (
                     <View style={{ width: 40 }} />
                 ) : (
                     <TouchableOpacity onPress={handleEndChat} style={styles.endButton}>
-                        <Text style={styles.endButtonText}>End Chat</Text>
+                        <Text style={styles.endButtonText}>{t('end_chat')}</Text>
                     </TouchableOpacity>
                 )}
             </View>
 
             <FlatList
                 ref={flatListRef}
-                data={chat ? chat.messages : []}
+                data={[...(chat ? chat.messages : []), ...draft]}
                 renderItem={renderMessage}
                 keyExtractor={(item) => item._id}
                 contentContainerStyle={styles.chatContent}
@@ -242,7 +273,7 @@ export default function LiveChatScreen() {
                             </View>
                             <View style={[styles.bubble, styles.botBubble]}>
                                 <Text style={[styles.messageText, styles.botText]}>
-                                    Hi! I'm your Medicoo Assistant 👋
+                                    {intro?.greeting || "Hi! I'm your Medicoo Assistant 👋"}
                                 </Text>
                             </View>
                         </View>
@@ -251,16 +282,16 @@ export default function LiveChatScreen() {
                             <View style={styles.botAvatarSpacer} />
                             <View style={[styles.bubble, styles.botBubble, styles.categoryListBubble]}>
                                 <Text style={[styles.messageText, styles.botText, { marginBottom: 10 }]}>
-                                    What do you need help with?
+                                    {intro?.prompt || t('what_do_you_need_help_with')}
                                 </Text>
-                                {CATEGORIES.map((c, index) => {
-                                    const isSelected = pickerLocked && chat?.category === c.value;
+                                {topics.map((c, index) => {
+                                    const isSelected = pickerLocked ? chat?.category === c.value : selectedCategory?.value === c.value;
                                     return (
                                         <TouchableOpacity
                                             key={c.value}
                                             style={[
                                                 styles.categoryCard,
-                                                index === CATEGORIES.length - 1 && styles.categoryCardLast,
+                                                index === topics.length - 1 && styles.categoryCardLast,
                                                 pickerLocked && styles.categoryCardLocked,
                                                 isSelected && styles.categoryCardSelected,
                                             ]}
@@ -274,7 +305,7 @@ export default function LiveChatScreen() {
                                                     isSelected && styles.categoryCardTextSelected,
                                                 ]}
                                             >
-                                                {c.label}
+                                                {t(c.label)}
                                             </Text>
                                             {isSelected ? (
                                                 <Check size={16} color="#3B82F6" />
@@ -286,23 +317,23 @@ export default function LiveChatScreen() {
                                 })}
                             </View>
                         </View>
-                        {starting && <ActivityIndicator color="#0FBBA1" style={{ marginTop: 12 }} />}
+                        {!!sendError && <Text style={[styles.waitingText, { color: "#DC2626" }]}>{sendError}</Text>}
 
                         {chat?.status === "closed" && (
                             <View style={styles.closedNotice}>
-                                <Text style={styles.closedNoticeText}>Your last chat was closed. Start a new one below.</Text>
+                                <Text style={styles.closedNoticeText}>{t('your_last_chat_was_closed_start_a_new')}</Text>
                             </View>
                         )}
                     </View>
                 }
                 ListEmptyComponent={
                     chat?.status === "waiting" ? (
-                        <Text style={styles.waitingText}>A support executive will join shortly.</Text>
+                        <Text style={styles.waitingText}>{t('a_support_executive_will_join_shortly')}</Text>
                     ) : null
                 }
             />
 
-            {pickerLocked && (
+            {(
                 <View
                     style={[
                         styles.footer,
@@ -319,15 +350,16 @@ export default function LiveChatScreen() {
                 >
                     <TextInput
                         style={styles.input}
-                        placeholder="Type your message here..."
-                        placeholderTextColor="#9CA3AF"
+                        editable={!starting}
+                        placeholder={t('type_your_message_here')}
+                        placeholderTextColor={theme.textMuted}
                         value={inputText}
                         onChangeText={setInputText}
                         onSubmitEditing={handleSend}
                         returnKeyType="send"
                     />
-                    <TouchableOpacity style={styles.sendBtn} onPress={handleSend}>
-                        <Send size={18} color="#FFFFFF" />
+                    <TouchableOpacity style={[styles.sendBtn, starting && { opacity: 0.5 }]} onPress={handleSend} disabled={starting}>
+                        {starting ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Send size={18} color="#FFFFFF" />}
                     </TouchableOpacity>
                 </View>
             )}
@@ -335,9 +367,9 @@ export default function LiveChatScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#F8F9FE" },
-    center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FFFFFF" },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: c.card },
     // Same header bar recipe as the rest of the Profile screens - white bar
     // + shadow instead of a hard border. The title+subtitle+End-Chat layout
     // here is intentionally different content, not part of that unification.
@@ -347,7 +379,7 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -355,8 +387,8 @@ const styles = StyleSheet.create({
     },
     backButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center", marginLeft: -8 },
     headerInfo: { alignItems: "center" },
-    headerTitle: { fontSize: 16, fontWeight: "800", color: "#1F2937" },
-    headerSubtitle: { fontSize: 11, color: "#6B7280", marginTop: 1 },
+    headerTitle: { fontSize: 16, fontWeight: "800", color: c.text },
+    headerSubtitle: { fontSize: 11, color: c.textSecondary, marginTop: 1 },
     endButton: {
         paddingHorizontal: 16,
         paddingVertical: 8,
@@ -370,8 +402,8 @@ const styles = StyleSheet.create({
     },
     endButtonText: { fontSize: 13, fontWeight: "800", color: "#FFFFFF" },
     chatContent: { padding: 16, paddingBottom: 24, flexGrow: 1 },
-    waitingText: { textAlign: "center", color: "#9CA3AF", fontSize: 13, marginTop: 24 },
-    messageRow: { marginBottom: 12, maxWidth: "80%" },
+    waitingText: { textAlign: "center", color: c.textMuted, fontSize: 13, marginTop: 24 },
+    messageRow: { marginBottom: 8, maxWidth: "80%" },
     agentRow: { alignSelf: "flex-start", alignItems: "flex-start" },
     userRow: { alignSelf: "flex-end", alignItems: "flex-end" },
     messageContentRow: { flexDirection: "row", alignItems: "flex-end", gap: 6, alignSelf: "flex-start" },
@@ -384,9 +416,9 @@ const styles = StyleSheet.create({
             android: { elevation: 1 },
         }),
     },
-    agentBubble: { backgroundColor: "#FFFFFF", borderTopLeftRadius: 4, borderWidth: 1, borderColor: "#E5E7EB" },
-    userBubble: { backgroundColor: "#0FBBA1", borderTopRightRadius: 4 },
-    botBubble: { backgroundColor: "#EFF6FF", borderTopLeftRadius: 4, borderWidth: 1, borderColor: "#DBEAFE" },
+    agentBubble: { backgroundColor: c.card, borderTopLeftRadius: 4, borderWidth: 1, borderColor: c.border },
+    userBubble: { backgroundColor: "#475569", borderTopRightRadius: 4 },
+    botBubble: { backgroundColor: c.infoBg, borderTopLeftRadius: 4, borderWidth: 1, borderColor: c.isDark ? c.border : "#DBEAFE" },
     botAvatar: {
         width: 24,
         height: 24,
@@ -396,27 +428,27 @@ const styles = StyleSheet.create({
         justifyContent: "center",
     },
     botAvatarSpacer: { width: 24 },
-    messageText: { fontSize: 14, lineHeight: 20 },
-    agentText: { color: "#1F2937" },
+    messageText: { fontSize: 13, lineHeight: 18 },
+    agentText: { color: c.text },
     userText: { color: "#FFFFFF" },
-    botText: { color: "#1E40AF" },
-    timeText: { fontSize: 10, color: "#9CA3AF", marginTop: 4, marginHorizontal: 4 },
+    botText: { color: c.info },
+    timeText: { fontSize: 10, color: c.textMuted, marginTop: 4, marginHorizontal: 4 },
     footer: {
         flexDirection: "row",
         alignItems: "center",
         paddingHorizontal: 16,
         paddingTop: 12,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: c.card,
         gap: 12,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -1 }, shadowOpacity: 0.03, shadowRadius: 4 },
             android: { elevation: 3 },
         }),
     },
-    input: { flex: 1, height: 40, backgroundColor: "#F3F4F6", borderRadius: 20, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, color: "#1F2937", fontSize: 14 },
-    sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#0FBBA1", alignItems: "center", justifyContent: "center" },
-    closedNotice: { backgroundColor: "#F0FDF4", borderRadius: 12, padding: 12, marginBottom: 16 },
-    closedNoticeText: { fontSize: 12, color: "#166534", fontWeight: "600" },
+    input: { flex: 1, height: 40, backgroundColor: c.cardSecondary, borderRadius: 20, borderWidth: 1, borderColor: c.border, paddingHorizontal: 16, color: c.text, fontSize: 14 },
+    sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#10B981", alignItems: "center", justifyContent: "center" },
+    closedNotice: { backgroundColor: c.successBg, borderRadius: 12, padding: 12, marginBottom: 16 },
+    closedNoticeText: { fontSize: 12, color: c.success, fontWeight: "600" },
     categoryPickerBox: { paddingTop: 12, marginBottom: 12 },
     categoryListBubble: { maxWidth: "85%", paddingVertical: 12 },
     categoryCard: {
@@ -425,15 +457,15 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         paddingVertical: 12,
         paddingHorizontal: 12,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: c.card,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: "#E5E7EB",
+        borderColor: c.border,
         marginBottom: 8,
     },
     categoryCardLast: { marginBottom: 0 },
     categoryCardLocked: { opacity: 0.5 },
-    categoryCardSelected: { opacity: 1, borderColor: "#3B82F6", backgroundColor: "#EFF6FF" },
-    categoryCardText: { fontSize: 13, fontWeight: "600", color: "#374151" },
-    categoryCardTextSelected: { color: "#1E40AF" },
+    categoryCardSelected: { opacity: 1, borderColor: "#3B82F6", backgroundColor: c.infoBg },
+    categoryCardText: { fontSize: 13, fontWeight: "600", color: c.text },
+    categoryCardTextSelected: { color: c.info },
 });

@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { Article, HealthArticleShowcaseFeedItem } from '../feed.types';
 import SectionHeader from './SectionHeader';
 
 import { FeedAction } from '../feed.actions';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
 
 type Props = {
     data: HealthArticleShowcaseFeedItem;
@@ -12,6 +14,8 @@ type Props = {
 };
 
 function HealthArticleCard({ data, onAction }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const handlePress = (item: Article) => {
         if (item.action && onAction) {
             onAction(item.action);
@@ -36,7 +40,7 @@ function HealthArticleCard({ data, onAction }: Props) {
                     <Image source={{ uri: item.imageUrl }} style={styles.image} resizeMode="cover" />
                 ) : (
                     <View style={styles.placeholderImage}>
-                        <AppIcon name="file-text" size={32} color="#9CA3AF" />
+                        <AppIcon name="file-text" size={32} color={theme.textMuted} />
                     </View>
                 )}
                 <View style={styles.categoryBadge}>
@@ -78,7 +82,7 @@ function HealthArticleCard({ data, onAction }: Props) {
 
 export default React.memo(HealthArticleCard);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         marginBottom: 30,
     },
@@ -89,15 +93,15 @@ const styles = StyleSheet.create({
     card: {
         width: 240,
         marginHorizontal: 8,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
         overflow: 'hidden'
     },
     imageContainer: {
         height: 140,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         position: 'relative'
     },
     image: {
@@ -113,7 +117,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 12,
         left: 12,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 99
@@ -121,7 +125,7 @@ const styles = StyleSheet.create({
     categoryText: {
         fontSize: 11,
         fontWeight: '700',
-        color: '#111827'
+        color: c.text
     },
     content: {
         padding: 16
@@ -129,7 +133,7 @@ const styles = StyleSheet.create({
     articleTitle: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 8,
         lineHeight: 22
     },
@@ -140,7 +144,7 @@ const styles = StyleSheet.create({
     },
     metaText: {
         fontSize: 11,
-        color: '#6B7280',
+        color: c.textSecondary,
         fontWeight: '500'
     },
     dot: {

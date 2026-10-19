@@ -1,17 +1,20 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
-    ActivityIndicator,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Clock } from 'lucide-react-native';
+import { useTheme } from '../../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../../theme/colors';
+import { useLanguage } from '../../../../../i18n/LanguageContext';
+import { Modal } from '../../../../../components/ThemedModal';
 
 interface Props {
     visible: boolean;
@@ -20,6 +23,9 @@ interface Props {
 }
 
 export default function RescheduleRequestModal({ visible, onClose, onSubmit }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
     const [dates, setDates] = useState<{ id: string; day: string; dateNum: number; fullDate: Date }[]>([]);
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -72,10 +78,10 @@ export default function RescheduleRequestModal({ visible, onClose, onSubmit }: P
             <View style={styles.overlay}>
                 <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
                 <View style={[styles.content, { paddingBottom: insets.bottom + 20 }]}>
-                    <Text style={styles.title}>Propose a New Time</Text>
-                    <Text style={styles.subtitle}>Your doctor will need to confirm this before it's locked in.</Text>
+                    <Text style={styles.title}>{t('propose_a_new_time')}</Text>
+                    <Text style={styles.subtitle}>{t('your_doctor_will_need_to_confirm_this')}</Text>
 
-                    <Text style={styles.sectionLabel}>Date</Text>
+                    <Text style={styles.sectionLabel}>{t('date_2')}</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
                         {dates.map(d => {
                             const active = d.fullDate.toDateString() === selectedDate.toDateString();
@@ -92,9 +98,9 @@ export default function RescheduleRequestModal({ visible, onClose, onSubmit }: P
                         })}
                     </ScrollView>
 
-                    <Text style={styles.sectionLabel}>Time</Text>
+                    <Text style={styles.sectionLabel}>{t('time')}</Text>
                     <TouchableOpacity style={styles.timeButton} onPress={() => setShowTimePicker(true)}>
-                        <Clock size={16} color="#0FBBA1" />
+                        <Clock size={16} color="#10B981" />
                         <Text style={styles.timeButtonText}>
                             {selectedTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                         </Text>
@@ -110,10 +116,10 @@ export default function RescheduleRequestModal({ visible, onClose, onSubmit }: P
                     )}
 
                     <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={submitting}>
-                        {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Send Request</Text>}
+                        {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>{t('send_request')}</Text>}
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                        <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -121,39 +127,39 @@ export default function RescheduleRequestModal({ visible, onClose, onSubmit }: P
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     overlay: { flex: 1, justifyContent: 'flex-end' },
     backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
     content: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 20,
     },
-    title: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 4 },
-    subtitle: { fontSize: 13, color: '#6B7280', marginBottom: 20, lineHeight: 18 },
-    sectionLabel: { fontSize: 12, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', marginBottom: 10 },
+    title: { fontSize: 18, fontWeight: '700', color: c.text, marginBottom: 4 },
+    subtitle: { fontSize: 13, color: c.textSecondary, marginBottom: 20, lineHeight: 18 },
+    sectionLabel: { fontSize: 12, fontWeight: '700', color: c.textMuted, textTransform: 'uppercase', marginBottom: 10 },
     dateRow: { gap: 10, paddingBottom: 20 },
     dateChip: {
         width: 52,
         height: 64,
         borderRadius: 14,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.cardSecondary,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         alignItems: 'center',
         justifyContent: 'center',
         gap: 4,
     },
-    dateChipActive: { backgroundColor: '#0FBBA1', borderColor: '#0FBBA1' },
-    dateChipDay: { fontSize: 11, color: '#6B7280', fontWeight: '600' },
-    dateChipNum: { fontSize: 16, color: '#111827', fontWeight: '700' },
+    dateChipActive: { backgroundColor: '#10B981', borderColor: '#10B981' },
+    dateChipDay: { fontSize: 11, color: c.textSecondary, fontWeight: '600' },
+    dateChipNum: { fontSize: 16, color: c.text, fontWeight: '700' },
     dateChipTextActive: { color: '#fff' },
     timeButton: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         borderWidth: 1,
         borderColor: '#DCFCE7',
         borderRadius: 14,
@@ -161,9 +167,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         marginBottom: 24,
     },
-    timeButtonText: { fontSize: 15, fontWeight: '700', color: '#111827' },
+    timeButtonText: { fontSize: 15, fontWeight: '700', color: c.text },
     submitButton: {
-        backgroundColor: '#0FBBA1',
+        backgroundColor: '#10B981',
         borderRadius: 16,
         paddingVertical: 16,
         alignItems: 'center',
@@ -171,5 +177,5 @@ const styles = StyleSheet.create({
     },
     submitButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
     cancelButton: { alignItems: 'center', paddingVertical: 10 },
-    cancelButtonText: { color: '#6B7280', fontSize: 14, fontWeight: '600' },
+    cancelButtonText: { color: c.textSecondary, fontSize: 14, fontWeight: '600' },
 });

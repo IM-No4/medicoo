@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '../../../../components/icons/AppIcon';
 import { FeedAction } from '../feed.actions';
 import { FamilyOverviewFeedItem } from '../feed.types';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 type Props = {
     data: FamilyOverviewFeedItem;
@@ -10,6 +13,9 @@ type Props = {
 };
 
 function FamilyOverviewCard({ data, onAction }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
     const handleManage = () => {
         onAction?.({
@@ -39,7 +45,7 @@ function FamilyOverviewCard({ data, onAction }: Props) {
             <View style={styles.header}>
                 <Text style={styles.title}>{data.title}</Text>
                 <TouchableOpacity onPress={handleManage}>
-                    <Text style={styles.manageText}>Manage</Text>
+                    <Text style={styles.manageText}>{t('manage')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -81,9 +87,9 @@ function FamilyOverviewCard({ data, onAction }: Props) {
                     onPress={handleAddMember}
                 >
                     <View style={styles.addIconBox}>
-                        <AppIcon name="plus" size={20} color="#4B5563" />
+                        <AppIcon name="plus" size={20} color={theme.textSecondary} />
                     </View>
-                    <Text style={styles.addText}>Add New</Text>
+                    <Text style={styles.addText}>{t('add_new')}</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -92,7 +98,7 @@ function FamilyOverviewCard({ data, onAction }: Props) {
 
 export default React.memo(FamilyOverviewCard);
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         marginHorizontal: 20,
         marginBottom: 30,
@@ -106,7 +112,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     manageText: {
         fontSize: 12,
@@ -130,7 +136,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         // Ring for active feel
         borderWidth: 2,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         padding: 2
     },
     avatar: {
@@ -142,7 +148,7 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: 28,
-        backgroundColor: '#EFF6FF',
+        backgroundColor: c.infoBg,
         alignItems: 'center',
         justifyContent: 'center'
     },
@@ -172,12 +178,12 @@ const styles = StyleSheet.create({
     memberName: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#1F2937',
+        color: c.text,
         marginBottom: 2
     },
     relationText: {
         fontSize: 10,
-        color: '#9CA3AF'
+        color: c.textMuted
     },
     statusText: {
         fontSize: 10,
@@ -193,7 +199,7 @@ const styles = StyleSheet.create({
         height: 56,
         borderRadius: 28,
         borderWidth: 1,
-        borderColor: '#D1D5DB',
+        borderColor: c.border,
         borderStyle: 'dashed',
         alignItems: 'center',
         justifyContent: 'center',
@@ -201,7 +207,7 @@ const styles = StyleSheet.create({
     },
     addText: {
         fontSize: 11,
-        color: '#6B7280',
+        color: c.textSecondary,
         fontWeight: '500'
     }
 });

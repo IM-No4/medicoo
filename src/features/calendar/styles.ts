@@ -1,22 +1,15 @@
 import { StyleSheet } from 'react-native';
 
-export const COLORS = {
-  primary: '#0FBBA1',
-  background: '#F8F9FE',
-  card: '#FFFFFF',
-  text: '#1D1D21',
-  textSecondary: '#8F9BB3',
-  success: '#0FBBA1',
-  danger: '#FF4D4D',
-  lightTeal: '#F0FDF4',
-};
+import type { ThemeColors } from '../../theme/colors';
 
-export const styles = StyleSheet.create({
+// Shared by the Calendar screens/sections. Built from the active theme so the
+// screen background, text and cards follow Light/Dark.
+export const createStyles = (c: ThemeColors) => StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: c.background,
     // No top padding here - CalendarHeader carries its own safe-area top
-    // inset as part of its white header bar, same as the Records/Health
+    // inset as part of its header bar, same as the Records/Health
     // screen headers, so the bar itself extends flush under the status bar.
     paddingBottom: 60,
   },
@@ -33,14 +26,14 @@ export const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#6B7280',
+    color: c.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1
   },
   seeAllText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text,
+    color: c.text,
   },
 
   // Small inline "Manage" button used next to a section title (e.g.
@@ -51,12 +44,12 @@ export const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 6,
-    backgroundColor: COLORS.lightTeal,
+    backgroundColor: c.primaryBg,
   },
   manageBtnText: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLORS.primary,
+    color: c.primary,
   },
 
   // Helper for small text headers like "Morning"
@@ -69,7 +62,7 @@ export const styles = StyleSheet.create({
   },
   subSectionTitle: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: c.textSecondary,
     marginLeft: 8,
   }
 });

@@ -1,8 +1,11 @@
-import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useRef } from 'react';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { Animated, Dimensions, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '../../components/icons/AppIcon';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const { width, height } = Dimensions.get('window');
 const PARTICLE_COUNT = 25;
@@ -61,7 +64,12 @@ const Particle = () => {
 };
 
 export default function BookingSuccessScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const forName: string | null = route.params?.forName || null;
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -105,24 +113,29 @@ export default function BookingSuccessScreen() {
         </Animated.View>
 
         <Animated.View style={{ opacity: fadeAnim, alignItems: 'center' }}>
-          <Text style={styles.title}>Request Sent!</Text>
+          <Text style={styles.title}>{t('request_sent')}</Text>
           <Text style={styles.subtitle}>
-            Your appointment request has been sent to the doctor. You'll be notified as soon as they respond.
+            {t('your_appointment_request_has_been_sent')}
           </Text>
+          {forName ? (
+            <View style={styles.forPill}>
+              <Text style={styles.forPillText}>Booked by you for {forName}</Text>
+            </View>
+          ) : null}
         </Animated.View>
       </View>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity style={styles.button} onPress={handleHome}>
-          <Text style={styles.buttonText}>Back to Home</Text>
+          <Text style={styles.buttonText}>{t('back_to_home')}</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0FBBA1', justifyContent: 'center', alignItems: 'center' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#10B981', justifyContent: 'center', alignItems: 'center' },
   content: { alignItems: 'center', paddingHorizontal: 40 },
   iconContainer: {
     width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.2)',
@@ -131,9 +144,11 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 28, fontWeight: '700', color: '#fff', marginBottom: 12, textAlign: 'center' },
   subtitle: { fontSize: 16, color: 'rgba(255,255,255,0.9)', textAlign: 'center', lineHeight: 24 },
+  forPill: { marginTop: 16, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)' },
+  forPillText: { fontSize: 14, fontWeight: '700', color: '#fff' },
   footer: { position: 'absolute', bottom: 50, left: 20, right: 20 },
   button: {
-    backgroundColor: '#fff', paddingVertical: 16, borderRadius: 24, alignItems: 'center',
+    backgroundColor: c.card, paddingVertical: 16, borderRadius: 24, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8,
     elevation: 4,
   },

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -12,20 +12,21 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
-import { ChevronLeft, Trash2, Droplets, Footprints, Moon, Activity, Target, Plus, Salad, Brain, Heart, Users, RefreshCw, WifiOff } from 'lucide-react-native';
+import { ChevronLeft, Trash2, Droplets, Footprints, Moon, Activity, Target, Plus, Salad, Brain, Heart, Users, WifiOff } from 'lucide-react-native';
 import { AppDispatch, RootState } from '../../redux/store';
-import { deleteGoal, toggleGoalEnabled, toggleGoalShared } from '../../redux/slices/goalsSlice';
-import { loadOnDeviceSteps } from '../../redux/slices/deviceSlice';
+import { deleteGoal, setGoalSharing, toggleGoalEnabled } from '../../redux/slices/goalsSlice';
+import type { ShareMode } from '../../services/api/goals.api';
+import ShareGoalSheet from './components/ShareGoalSheet';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
-import { StatusBar } from 'expo-status-bar';
-import {
-  enableStepsTracking,
-  isHealthConnectSupported,
-  isStepsTrackingEnabled,
-  openHealthConnectInPlayStore,
-} from '../../services/health/healthConnectStepsService';
+import { StatusBar } from '../../components/ThemedStatusBar';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export default function ManageGoalsScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation();
   const dispatch = useDispatch<AppDispatch>();
   const insets = useSafeAreaInsets();
@@ -51,44 +52,6 @@ export default function ManageGoalsScreen() {
   };
   const hideStatus = () => setStatus(prev => ({ ...prev, visible: false }));
 
-  // Whether the app's own Health Connect read-tracking opt-in flag is set -
-  // this can go stale if the user granted permission from inside the Health
-  // Connect app itself (or after dismissing the one-time enable prompt
-  // shown right after creating the steps goal) instead of through Medicoo,
-  // in which case steps/calories stay stuck with no obvious way to fix it.
-  // This is a top-level sync (not scoped to any one goal card) since it
-  // covers every Health Connect-sourced datapoint - steps, calories, and
-  // whatever else gets added later - not just the steps goal.
-  const [healthDataSynced, setHealthDataSynced] = useState(false);
-  useEffect(() => {
-    isStepsTrackingEnabled().then(setHealthDataSynced);
-  }, []);
-
-  const handleSyncHealthData = async () => {
-    const result = await enableStepsTracking();
-    if (result.success) {
-      setHealthDataSynced(true);
-      dispatch(loadOnDeviceSteps());
-      showStatus('success', 'Health Data Synced', 'Your step count and calorie estimate have been refreshed from Health Connect and will keep updating automatically.');
-      return;
-    }
-
-    if (result.reason === 'not_installed' || result.reason === 'update_required') {
-      showStatus(
-        'warning',
-        result.reason === 'not_installed' ? 'Health Connect Required' : 'Health Connect Update Required',
-        result.reason === 'not_installed'
-          ? 'Automatic step tracking needs the Health Connect app, which isn\'t installed on this device yet.'
-          : 'Your Health Connect app needs an update before Medicoo can read step data from it.',
-        openHealthConnectInPlayStore,
-        'Get Health Connect'
-      );
-      return;
-    }
-
-    showStatus('error', 'Could Not Enable Tracking', 'Permission wasn\'t granted in Health Connect. Open Health Connect\'s app settings and allow Medicoo to read Steps, then try again here.');
-  };
-
   const getGoalIcon = (type: string) => {
     switch (type) {
       case 'hydration': return Droplets;
@@ -110,41 +73,48 @@ export default function ManageGoalsScreen() {
     if (!isOnline) {
       showStatus(
         'warning',
-        'You\'re Offline',
-        'Comparing progress with friends needs an internet connection. Reconnect and try again.'
+        t('you_re_offline'),
+        t('comparing_progress_with_friends_needs')
       );
       return;
     }
     navigation.navigate('Friends' as never);
   };
 
-  const handleToggleShared = async (id: string) => {
-    // Same reasoning as "Compare with Friends" - sharing needs the backend
-    // to actually be reachable, so check up front rather than letting the
-    // request fail and leaving the tap looking like it did nothing.
+  // Sharing: choose everyone, some friends, or nobody
+  const [sharingGoalId, setSharingGoalId] = useState<string | null>(null);
+  const [savingShare, setSavingShare] = useState(false);
+  const sharingGoal = goals.find((g) => g.id === sharingGoalId) || null;
+
+  const handleOpenShare = (id: string) => {
+    // Sharing needs the backend to actually be reachable, so check up front rather than letting the request fail.
     if (!isOnline) {
-      showStatus(
-        'warning',
-        'You\'re Offline',
-        'Sharing a goal with friends needs an internet connection. Reconnect and try again.'
-      );
+      showStatus('warning', t('you_re_offline'), t('sharing_a_goal_with_friends_needs_an_i'));
       return;
     }
+    setSharingGoalId(id);
+  };
 
+  const handleSaveShare = async (mode: ShareMode, friendIds: string[]) => {
+    if (!sharingGoalId) return;
+    setSavingShare(true);
     try {
-      await dispatch(toggleGoalShared(id)).unwrap();
+      await dispatch(setGoalSharing({ id: sharingGoalId, mode, friendIds })).unwrap();
+      setSharingGoalId(null);
     } catch {
-      // toggleGoalShared has no optimistic update and no .rejected reducer
-      // case, so a failed request previously left the tap with zero
-      // feedback at all - the switch/icon just silently didn't change.
-      showStatus('error', 'Could Not Update', 'Something went wrong while updating this goal. Please try again.');
+      showStatus('error', t('could_not_update'), t('something_went_wrong_while_updating_th'));
+    } finally {
+      setSavingShare(false);
     }
   };
+
+  const shareLabel = (goal: { sharedWithFriends: boolean; sharedWith: string[] }) =>
+    goal.sharedWithFriends ? 'Shared with all' : goal.sharedWith.length > 0 ? `Shared with ${goal.sharedWith.length}` : t('share');
 
   const handleDelete = (id: string, name: string) => {
     showStatus(
       'warning',
-      'Delete Goal',
+      t('delete_goal'),
       `Are you sure you want to delete your ${name} goal? This action cannot be undone.`,
       () => { hideStatus(); dispatch(deleteGoal(id)); },
       'Delete'
@@ -163,15 +133,15 @@ export default function ManageGoalsScreen() {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <ChevronLeft size={22} color="#111827" />
+          <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Manage Goals</Text>
+        <Text style={styles.headerTitle}>{t('manage_goals')}</Text>
         <TouchableOpacity
           style={styles.addHeaderBtn}
           onPress={() => navigation.navigate('AddGoal' as never)}
           activeOpacity={0.7}
         >
-          <Plus size={22} color="#0FBBA1" />
+          <Plus size={22} color="#10B981" />
         </TouchableOpacity>
       </View>
 
@@ -185,7 +155,7 @@ export default function ManageGoalsScreen() {
             {isOnline ? <Users size={22} color="#FFFFFF" /> : <WifiOff size={22} color="#FFFFFF" />}
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.friendsCardTitle}>Compare with Friends</Text>
+            <Text style={styles.friendsCardTitle}>{t('compare_friends')}</Text>
             <Text style={styles.friendsCardSubtitle}>
               {isOnline ? 'Share goals and see how you stack up' : 'Needs an internet connection'}
             </Text>
@@ -193,26 +163,14 @@ export default function ManageGoalsScreen() {
           <ChevronLeft size={18} color="#FFFFFF" style={{ transform: [{ rotate: '180deg' }] }} />
         </TouchableOpacity>
 
-        <View style={styles.sectionHeaderRow}>
-          {/* Not scoped to any one goal card - covers every Health
-              Connect-sourced datapoint (steps, calories, and whatever
-              else gets added later) in one sync. */}
-          {isHealthConnectSupported && (
-            <TouchableOpacity onPress={handleSyncHealthData} style={styles.syncLink} activeOpacity={0.7}>
-              <RefreshCw size={13} color={healthDataSynced ? '#0FBBA1' : '#94A3B8'} />
-              <Text style={[styles.syncLinkText, healthDataSynced && styles.syncLinkTextActive]}>Sync</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
         {goals.length === 0 ? (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconBox}>
-              <Target size={36} color="#0FBBA1" />
+              <Target size={36} color="#10B981" />
             </View>
-            <Text style={styles.emptyTitle}>No Goals Configured</Text>
+            <Text style={styles.emptyTitle}>{t('no_goals_configured')}</Text>
             <Text style={styles.emptySubtitleText}>
-              Set daily goals for step counts, hydration targets, or sleep to start tracking progress.
+              {t('set_daily_goals_for_step_counts_hydrat')}
             </Text>
             <TouchableOpacity 
               style={styles.emptyBtn} 
@@ -220,7 +178,7 @@ export default function ManageGoalsScreen() {
               activeOpacity={0.8}
             >
               <Plus size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.emptyBtnText}>Create First Goal</Text>
+              <Text style={styles.emptyBtnText}>{t('create_first_goal')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -231,7 +189,7 @@ export default function ManageGoalsScreen() {
                 <View key={goal.id} style={[styles.goalCard, !goal.enabled && styles.disabledGoalCard]}>
                   <View style={styles.goalTopRow}>
                     <View style={[styles.goalIconWrapper, { backgroundColor: goal.enabled ? goal.color + '18' : '#F1F5F9' }]}>
-                      <Icon size={24} color={goal.enabled ? goal.color : '#94A3B8'} />
+                      <Icon size={24} color={goal.enabled ? goal.color : theme.textMuted} />
                     </View>
 
                     <View style={styles.goalMeta}>
@@ -257,10 +215,10 @@ export default function ManageGoalsScreen() {
                   </View>
 
                   <View style={styles.actionsToolbar}>
-                    <TouchableOpacity style={styles.actionCol} onPress={() => handleToggleShared(goal.id)} activeOpacity={0.7}>
-                      <Users size={17} color={goal.sharedWithFriends ? '#0FBBA1' : '#94A3B8'} />
-                      <Text style={[styles.actionColText, goal.sharedWithFriends && styles.actionColTextActive]}>
-                        Share
+                    <TouchableOpacity style={styles.actionCol} onPress={() => handleOpenShare(goal.id)} activeOpacity={0.7}>
+                      <Users size={17} color={goal.sharedWithFriends || goal.sharedWith.length > 0 ? '#10B981' : '#94A3B8'} />
+                      <Text style={[styles.actionColText, (goal.sharedWithFriends || goal.sharedWith.length > 0) && styles.actionColTextActive]}>
+                        {shareLabel(goal)}
                       </Text>
                     </TouchableOpacity>
 
@@ -268,7 +226,7 @@ export default function ManageGoalsScreen() {
 
                     <TouchableOpacity style={styles.actionCol} onPress={() => handleDelete(goal.id, goal.title)} activeOpacity={0.7}>
                       <Trash2 size={17} color="#EF4444" />
-                      <Text style={[styles.actionColText, styles.actionColTextDanger]}>Delete</Text>
+                      <Text style={[styles.actionColText, styles.actionColTextDanger]}>{t('delete')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -277,6 +235,16 @@ export default function ManageGoalsScreen() {
           </View>
         )}
       </ScrollView>
+
+      <ShareGoalSheet
+        visible={!!sharingGoal}
+        goalTitle={sharingGoal?.title || ''}
+        initialMode={sharingGoal?.sharedWithFriends ? 'all' : (sharingGoal?.sharedWith.length ?? 0) > 0 ? 'selected' : 'none'}
+        initialFriendIds={sharingGoal?.sharedWith ?? []}
+        busy={savingShare}
+        onSave={handleSaveShare}
+        onClose={() => setSharingGoalId(null)}
+      />
 
       <StatusModal
         visible={status.visible}
@@ -291,10 +259,10 @@ export default function ManageGoalsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC', // Slate background
+    backgroundColor: c.background, // Slate background
   },
   header: {
     flexDirection: 'row',
@@ -302,7 +270,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 2 },
@@ -318,12 +286,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: c.text,
   },
   addHeaderBtn: {
     padding: 8,
     marginRight: -8,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: c.successBg,
     borderRadius: 12,
   },
   scrollContent: {
@@ -334,7 +302,7 @@ const styles = StyleSheet.create({
   friendsCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
     borderRadius: 20,
     padding: 16,
     marginBottom: 24,
@@ -377,24 +345,24 @@ const styles = StyleSheet.create({
   syncLinkText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#94A3B8',
+    color: c.textMuted,
   },
   syncLinkTextActive: {
-    color: '#0FBBA1',
+    color: '#10B981',
   },
   list: {
     gap: 14,
   },
   goalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 22,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
   },
   disabledGoalCard: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
+    backgroundColor: c.cardSecondary,
+    borderColor: c.border,
   },
   goalTopRow: {
     flexDirection: 'row',
@@ -416,15 +384,15 @@ const styles = StyleSheet.create({
   goalTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#0F172A',
+    color: c.text,
   },
   disabledText: {
-    color: '#94A3B8',
+    color: c.textMuted,
     textDecorationLine: 'line-through',
   },
   goalTargetText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: c.textMuted,
     fontWeight: '600',
   },
   goalTargetValue: {
@@ -435,8 +403,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'stretch',
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    backgroundColor: '#FAFBFC',
+    borderTopColor: c.borderLight,
+    backgroundColor: c.cardSecondary,
   },
   actionCol: {
     flex: 1,
@@ -448,35 +416,35 @@ const styles = StyleSheet.create({
   },
   actionDivider: {
     width: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: c.cardSecondary,
   },
   actionColText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: c.textMuted,
   },
   actionColTextActive: {
-    color: '#0FBBA1',
+    color: '#10B981',
   },
   actionColTextDanger: {
     color: '#EF4444',
   },
   /* Empty state */
   emptyContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.card,
     borderRadius: 24,
     paddingVertical: 48,
     paddingHorizontal: 20,
     alignItems: 'center',
     marginTop: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: c.border,
   },
   emptyIconBox: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: c.successBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -484,12 +452,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0F172A',
+    color: c.text,
     marginBottom: 6,
   },
   emptySubtitleText: {
     fontSize: 13,
-    color: '#64748B',
+    color: c.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
@@ -498,7 +466,7 @@ const styles = StyleSheet.create({
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0FBBA1',
+    backgroundColor: '#10B981',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 14,

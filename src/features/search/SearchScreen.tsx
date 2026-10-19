@@ -1,6 +1,6 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useRef, useState } from 'react';
+import { StatusBar } from '../../components/ThemedStatusBar';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   Keyboard,
   ScrollView,
@@ -25,7 +25,6 @@ import {
 import { SearchResult } from '@/src/search/search.types';
 
 import RecentSearches from './components/RecentSearches';
-import SearchCategories from './components/SearchCategories';
 import SearchEmptyState from './components/SearchEmptyState';
 import SearchErrorState from './components/SearchErrorState';
 import SearchHeader from './components/SearchHeader';
@@ -33,10 +32,16 @@ import SearchResults from './components/SearchResults';
 import SearchResultSkeleton from './components/SearchResultSkeleton';
 import SearchSuggestions from './components/SearchSuggestions';
 import { clearRecentSearches, getRecentSearches } from './utils/recentSearches';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export type SearchTab = 'Medicines' | 'Pharmacies';
 
 export default function SearchScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch<AppDispatch>();
   const navigation = useNavigation<any>();
@@ -55,10 +60,16 @@ export default function SearchScreen() {
     (state: RootState) => state.search
   );
 
+  // The screen switches views off hasSearchedRef (a ref, which doesn't re-render
+  // by itself) - this nudge guarantees the results view shows on the first tap
+  // instead of waiting for some other state change to repaint it.
+  const [, forceRender] = useState(0);
+
   const handleManualSearch = (q: string) => {
     Keyboard.dismiss();
-    dispatch(setQuery(q));
     hasSearchedRef.current = true;
+    dispatch(setQuery(q));
+    forceRender((n) => n + 1);
     lastDispatchedQueryRef.current = q;
     dispatch(executeGlobalSearch({ query: q }));
   };
@@ -66,17 +77,6 @@ export default function SearchScreen() {
   const handleClearRecent = async () => {
     await clearRecentSearches();
     setRecentSearches([]);
-  };
-
-  const handleCategorySelect = (title: string, tags: string[]) => {
-    Keyboard.dismiss();
-    dispatch(setQuery(title));
-    hasSearchedRef.current = true;
-    lastDispatchedQueryRef.current = title;
-    // Category taps aren't a user-typed search term - same reasoning as
-    // the tags-driven params.query handling below, don't pollute recent
-    // searches with it.
-    dispatch(executeGlobalSearch({ query: title, tags, recordRecent: false }));
   };
 
   useEffect(() => {
@@ -167,17 +167,17 @@ export default function SearchScreen() {
       contentContainerStyle={styles.filterContainer}
     >
       <TouchableOpacity style={styles.filterChip}>
-        <Text style={styles.filterText}>Sort By</Text>
-        <AppIcon name="chevron-down" size={14} color="#374151" />
+        <Text style={styles.filterText}>{t('sort_by_2')}</Text>
+        <AppIcon name="chevron-down" size={14} color={theme.text} />
       </TouchableOpacity>
       <TouchableOpacity style={styles.filterChip}>
-        <Text style={styles.filterText}>Fast Delivery</Text>
+        <Text style={styles.filterText}>{t('fast_delivery')}</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.filterChip}>
-        <Text style={styles.filterText}>Ratings 4.0+</Text>
+        <Text style={styles.filterText}>{t('ratings_4_0')}</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.filterChip}>
-        <Text style={styles.filterText}>Offers</Text>
+        <Text style={styles.filterText}>{t('offers')}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -220,7 +220,6 @@ export default function SearchScreen() {
             onSelect={handleManualSearch}
             onClear={handleClearRecent}
           />
-          <SearchCategories onSelectCategory={handleCategorySelect} />
         </ScrollView>
       ) : !hasSearchedRef.current && query.trim().length > 0 ? (
         <ScrollView style={styles.flex} keyboardShouldPersistTaps="handled">
@@ -250,7 +249,7 @@ export default function SearchScreen() {
           <SearchEmptyState query={query} />
         </View>
       ) : activeTab ? (
-        <View style={[styles.flex, { backgroundColor: '#F9FAFB' }]}>
+        <View style={[styles.flex, { backgroundColor: theme.cardSecondary }]}>
           {renderFilters()}
           <SearchResults results={results} activeTab={activeTab!} />
         </View>
@@ -261,16 +260,16 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   flex: { flex: 1 },
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.background,
   },
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.card,
     height: 48,
   },
   tab: {
@@ -285,10 +284,10 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#6B7280',
+    color: c.textSecondary,
   },
   activeTabText: {
-    color: '#111827',
+    color: c.text,
     fontWeight: '900',
   },
   activeIndicator: {
@@ -302,13 +301,13 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 3,
   },
   headerContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.card,
     zIndex: 10,
   },
   headerExtension: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: c.borderLight,
   },
   filterContainer: {
     marginTop: 0,
@@ -324,7 +323,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.card,
     borderWidth: 1,
     borderColor: '#ecececff',
     height: 34, // Very compact chips
@@ -332,6 +331,6 @@ const styles = StyleSheet.create({
   filterText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#374151',
+    color: c.text,
   },
 });

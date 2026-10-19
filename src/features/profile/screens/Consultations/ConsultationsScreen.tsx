@@ -19,6 +19,10 @@ import { getMyAppointmentRequests } from '../../../../services/api';
 import { getMyDoctorReview } from '../../../../services/api/doctor.api';
 import { API_BASE_URL } from '../../../../services/api/client';
 import { formatDoctorName } from '../../../../utils/formatters';
+import BookingBadge, { BookingInfo } from '../../../doctor/components/BookingBadge';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { ThemeColors } from '../../../../theme/colors';
+import { useLanguage } from '../../../../i18n/LanguageContext';
 
 interface Consultation {
     requestId: string;
@@ -28,6 +32,8 @@ interface Consultation {
     doctorImage?: string;
     preferredDate: string;
     preferredTime: string;
+    booking?: BookingInfo | null;
+    myRole?: 'booker' | 'patient' | null;
     status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'completed' | 'expired' | 'no_show';
 }
 
@@ -53,6 +59,9 @@ const FILTER_OPTIONS: { key: 'all' | Consultation['status']; label: string }[] =
 ];
 
 export default function ConsultationsScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const [loading, setLoading] = useState(true);
@@ -146,7 +155,7 @@ export default function ConsultationsScreen() {
                             />
                         ) : (
                             <View style={[styles.avatar, styles.placeholderAvatar]}>
-                                <Stethoscope size={24} color="#0FBBA1" />
+                                <Stethoscope size={24} color="#10B981" />
                             </View>
                         )}
                         <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
@@ -154,6 +163,7 @@ export default function ConsultationsScreen() {
                     <View style={styles.textDetails}>
                         <Text style={styles.doctorName}>{formatDoctorName(item.doctorName)}</Text>
                         <Text style={styles.specialtyText}>{item.doctorSpecialization}</Text>
+                        <BookingBadge booking={item.booking} myRole={item.myRole} />
                     </View>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '15' }]}>
@@ -165,11 +175,11 @@ export default function ConsultationsScreen() {
 
             <View style={styles.cardFooter}>
                 <View style={styles.infoRow}>
-                    <Calendar size={14} color="#6B7280" />
+                    <Calendar size={14} color={theme.textSecondary} />
                     <Text style={styles.infoLabel}>{new Date(item.preferredDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
                 </View>
                 <View style={styles.infoRow}>
-                    <Clock size={14} color="#6B7280" />
+                    <Clock size={14} color={theme.textSecondary} />
                     <Text style={styles.infoLabel}>{item.preferredTime}</Text>
                 </View>
             </View>
@@ -187,8 +197,8 @@ export default function ConsultationsScreen() {
                         },
                     })}
                 >
-                    <Text style={styles.feedbackText}>Share your experience. Rate the doctor</Text>
-                    <ChevronRight size={16} color="#0FBBA1" />
+                    <Text style={styles.feedbackText}>{t('share_your_experience_rate_the_doctor')}</Text>
+                    <ChevronRight size={16} color="#10B981" />
                 </TouchableOpacity>
             )}
         </TouchableOpacity>
@@ -198,9 +208,9 @@ export default function ConsultationsScreen() {
         <View style={styles.container}>
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>My Consultations</Text>
+                <Text style={styles.headerTitle}>{t('my_consultations')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -213,7 +223,7 @@ export default function ConsultationsScreen() {
                             onPress={() => setStatusFilter(option.key)}
                         >
                             <Text style={[styles.filterChipText, statusFilter === option.key && styles.filterChipTextSelected]}>
-                                {option.label}
+                                {t(option.label)}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -226,13 +236,13 @@ export default function ConsultationsScreen() {
                 keyExtractor={item => item.requestId}
                 contentContainerStyle={styles.listContent}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0FBBA1']} />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#10B981']} />
                 }
                 ListEmptyComponent={
                     !loading ? (
                         <View style={styles.emptyContainer}>
                             <View style={styles.emptyIconCircle}>
-                                <Calendar size={40} color="#9CA3AF" />
+                                <Calendar size={40} color={theme.textMuted} />
                             </View>
                             <Text style={styles.emptyTitle}>
                                 {statusFilter === 'all' ? 'No Consultations Yet' : `No ${STATUS_LABELS[statusFilter]} Consultations`}
@@ -245,7 +255,7 @@ export default function ConsultationsScreen() {
                         </View>
                     ) : (
                         <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color="#0FBBA1" />
+                            <ActivityIndicator size="large" color="#10B981" />
                         </View>
                     )
                 }
@@ -254,10 +264,10 @@ export default function ConsultationsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FE',
+        backgroundColor: c.background,
     },
     // Same header recipe as the rest of the Profile screens - white bar +
     // shadow, plain icon back button, fontSize 20/600/#111827 title.
@@ -267,7 +277,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
@@ -283,13 +293,13 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     filterBar: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderLight,
     },
     filterRow: {
         paddingHorizontal: 20,
@@ -300,17 +310,17 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
-        backgroundColor: '#fff',
+        borderColor: c.border,
+        backgroundColor: c.card,
     },
     filterChipSelected: {
-        backgroundColor: '#0FBBA1',
-        borderColor: '#0FBBA1',
+        backgroundColor: '#10B981',
+        borderColor: '#10B981',
     },
     filterChipText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#4B5563',
+        color: c.textSecondary,
     },
     filterChipTextSelected: {
         color: '#fff',
@@ -320,11 +330,11 @@ const styles = StyleSheet.create({
         paddingBottom: 84,
     },
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         padding: 16,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderLight,
         marginHorizontal: 16,
         marginBottom: 12,
     },
@@ -348,7 +358,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
     },
     placeholderAvatar: {
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
@@ -370,11 +380,11 @@ const styles = StyleSheet.create({
     doctorName: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#1F2937',
+        color: c.text,
     },
     specialtyText: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
     },
     statusBadge: {
         paddingHorizontal: 10,
@@ -387,7 +397,7 @@ const styles = StyleSheet.create({
     },
     divider: {
         height: 0,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         marginVertical: 4,
     },
     cardFooter: {
@@ -402,7 +412,7 @@ const styles = StyleSheet.create({
     },
     infoLabel: {
         fontSize: 13,
-        color: '#4B5563',
+        color: c.textSecondary,
         fontWeight: '500',
     },
     feeContainer: {
@@ -411,11 +421,11 @@ const styles = StyleSheet.create({
     feeText: {
         fontSize: 16,
         fontWeight: '800',
-        color: '#111827',
+        color: c.text,
     },
     feedbackBanner: {
         marginTop: 16,
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.successBg,
         padding: 12,
         borderRadius: 12,
         flexDirection: 'row',
@@ -426,7 +436,7 @@ const styles = StyleSheet.create({
     },
     feedbackText: {
         fontSize: 13,
-        color: '#166534',
+        color: c.success,
         fontWeight: '600',
     },
     emptyContainer: {
@@ -437,7 +447,7 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.cardSecondary,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 20,
@@ -445,12 +455,12 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#1F2937',
+        color: c.text,
         marginBottom: 8,
     },
     emptySubtitle: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         paddingHorizontal: 40,
     },

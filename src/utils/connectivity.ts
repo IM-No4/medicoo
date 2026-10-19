@@ -1,18 +1,21 @@
-import { API_BASE_URL } from '../services/api/client';
-
 // No @react-native-community/netinfo in this project (couldn't be installed
-// - see offlineSync.ts's comment), so connectivity is checked the way
-// NetInfo itself does under a custom `reachabilityUrl`: actually try to
-// reach the backend, on a short timeout, rather than just asking the OS
-// whether a radio is on. Any response at all - even a 404 - proves the
-// network path works; only a real network-level failure (DNS, timeout,
-// connection refused) throws here.
-async function probeOnce(timeoutMs: number): Promise<boolean> {
+// - see offlineSync.ts's comment), so connectivity is checked by actually
+// trying to reach the internet on a short timeout. The probe targets
+// well-known public endpoints, NOT our own backend: a stopped/unreachable
+// backend with a working network must never be reported as "no internet".
+// Any response at all - even a 404 - proves the network path works; only a
+// real network-level failure (DNS, timeout, connection refused) throws.
+const PROBE_URLS = [
+    'https://clients3.google.com/generate_204',
+    'https://www.cloudflare.com/cdn-cgi/trace',
+];
+
+async function probeUrl(url: string, timeoutMs: number): Promise<boolean> {
     try {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         try {
-            await fetch(API_BASE_URL, { method: 'GET', signal: controller.signal });
+            await fetch(url, { method: 'GET', signal: controller.signal });
             return true;
         } finally {
             clearTimeout(timer);
@@ -20,6 +23,11 @@ async function probeOnce(timeoutMs: number): Promise<boolean> {
     } catch {
         return false;
     }
+}
+
+async function probeOnce(timeoutMs: number): Promise<boolean> {
+    const results = await Promise.all(PROBE_URLS.map(url => probeUrl(url, timeoutMs)));
+    return results.some(Boolean);
 }
 
 // A single failed probe used to be trusted outright - fine for the 45s

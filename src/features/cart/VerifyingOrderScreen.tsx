@@ -10,16 +10,18 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { ChevronLeft, Check, AlertCircle } from 'lucide-react-native';
-import { StatusBar } from 'expo-status-bar';
+import { ChevronLeft, Check, Info } from 'lucide-react-native';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { apiClient } from '../../services/api/client';
 import { getDocumentViewUrl } from '../../services/api/document.api';
 import { clearCart } from '../../services/api/cart.api';
-import { createCashfreeOrder } from '../../services/api/cashfree.api';
 import { clearStoreCartLocal } from '../../redux/slices/cartSlice';
 import { dismissActivity } from '../../redux/slices/activitySlice';
 import { setActiveOrder } from '../../redux/slices/orderSlice';
 import { RootState } from '../../redux/store';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 // Same live, uncached checks as before (see PaymentScreen.tsx's earlier
 // history) - just now hosted on their own screen instead of a modal
@@ -55,6 +57,9 @@ type Phase = 'verifying' | 'gateway' | 'confirming' | 'success' | 'error';
 // which owns the actual custom payment UI - all behind one calm,
 // Swiggy/Zomato-style "hang on" screen instead of a spinner modal.
 export default function VerifyingOrderScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -63,12 +68,13 @@ export default function VerifyingOrderScreen() {
   const {
     storeId,
     amount,
-    deliveryFee = amount > 500 ? 0 : 40,
-    subtotal = amount - (amount > 500 ? 0 : 40) - (amount * 0.18),
-    taxes = amount * 0.18,
+    deliveryFee = 0,
+    subtotal = amount,
+    taxes = 0,
     couponDiscount = 0,
-    platformFee = 5,
-    otherCharges = 2,
+    couponCode,
+    platformFee = 0,
+    otherCharges = 0,
     prescriptionMode,
     prescriptionDocumentId,
     prescriptionId,
@@ -117,10 +123,12 @@ export default function VerifyingOrderScreen() {
       batchId: item.batchId || String(item.medicineId),
       expiryDate: item.expiryDate || null,
     })),
+    couponCode,
     billDetails: {
       itemsCost: subtotal,
       deliveryCost: deliveryFee,
       taxes: taxes,
+      feeGst: taxes, // GST on the platform and delivery fees only
       couponDiscount: couponDiscount,
       platformFee: platformFee,
       packagingCharges: otherCharges,
@@ -188,6 +196,7 @@ export default function VerifyingOrderScreen() {
           itemsCost: subtotal,
           deliveryCost: deliveryFee,
           taxes: taxes,
+          feeGst: taxes, // GST on the platform and delivery fees only
           couponDiscount: couponDiscount,
           platformFee: platformFee,
           packagingCharges: otherCharges,
@@ -247,48 +256,6 @@ export default function VerifyingOrderScreen() {
       return;
     }
 
-    // Online - creating the Cashfree order here doubles as the "is the
-    // payment gateway actually reachable right now" check the whole point
-    // of this screen is to surface before the user is looking at a payment
-    // screen that's about to fail anyway. The actual payment UI (custom
-    // UPI Collect, etc.) lives on CashfreePaymentScreen.tsx, not here.
-    setPhase('gateway');
-    let cashfreeOrderId: string, paymentSessionId: string;
-    try {
-      const created = await createCashfreeOrder(amount);
-      cashfreeOrderId = created.orderId;
-      paymentSessionId = created.paymentSessionId;
-    } catch (error: any) {
-      if (!cancelledRef.current) {
-        releaseCheckoutHold(holdId, 'payment_failed');
-        setErrorMessage('Could not connect to the payment gateway. Please try again.');
-        setPhase('error');
-      }
-      return;
-    }
-
-    if (cancelledRef.current) {
-      releaseCheckoutHold(holdId, 'cancelled');
-      return;
-    }
-
-    navigation.replace('CashfreePayment', {
-      storeId,
-      amount,
-      deliveryFee,
-      subtotal,
-      taxes,
-      couponDiscount,
-      platformFee,
-      otherCharges,
-      prescriptionMode,
-      prescriptionDocumentId,
-      prescriptionId,
-      prescriptionRequired,
-      holdId,
-      cashfreeOrderId,
-      paymentSessionId,
-    });
   };
 
   useEffect(() => {
@@ -347,7 +314,7 @@ export default function VerifyingOrderScreen() {
       <View style={styles.centerContent}>
         {(phase === 'verifying' || phase === 'gateway' || phase === 'confirming') && (
           <>
-            <ActivityIndicator size="large" color="#089643" />
+            <ActivityIndicator size="large" color="#10B981" />
             <Text style={styles.title}>{messages[phase].title}</Text>
             <Text style={styles.subtitle}>{messages[phase].subtitle}</Text>
           </>
@@ -360,18 +327,18 @@ export default function VerifyingOrderScreen() {
                 <Check size={40} color="#FFFFFF" strokeWidth={3} />
               </View>
             </View>
-            <Text style={styles.title}>Order Placed Successfully!</Text>
+            <Text style={styles.title}>{t('order_placed_successfully')}</Text>
             <Text style={styles.subtitle}>
               Your medicine order from {pharmacyName} has been accepted and is being processed.
             </Text>
 
             <View style={styles.receiptContainer}>
               <View style={styles.receiptRow}>
-                <Text style={styles.receiptLabel}>Order ID</Text>
+                <Text style={styles.receiptLabel}>{t('order_id')}</Text>
                 <Text style={styles.receiptValue}>{orderNumber}</Text>
               </View>
               <View style={styles.receiptRow}>
-                <Text style={styles.receiptLabel}>Paid Amount</Text>
+                <Text style={styles.receiptLabel}>{t('paid_amount')}</Text>
                 <Text style={styles.receiptValue}>₹{formatPrice(amount)}</Text>
               </View>
             </View>
@@ -381,7 +348,7 @@ export default function VerifyingOrderScreen() {
               onPress={() => navigation.replace('LiveTracking')}
               activeOpacity={0.8}
             >
-              <Text style={styles.primaryBtnText}>Track Order Live</Text>
+              <Text style={styles.primaryBtnText}>{t('track_order_live')}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -389,13 +356,13 @@ export default function VerifyingOrderScreen() {
         {phase === 'error' && (
           <>
             <View style={styles.errorIconOuter}>
-              <AlertCircle size={40} color="#DC2626" />
+              <Info size={40} color="#D97706" />
             </View>
-            <Text style={styles.title}>Something went wrong</Text>
+            <Text style={styles.title}>We couldn't place your order</Text>
             <Text style={styles.subtitle}>{errorMessage}</Text>
 
             <TouchableOpacity style={styles.primaryBtn} onPress={handleRetry} activeOpacity={0.8}>
-              <Text style={styles.primaryBtnText}>Try Again</Text>
+              <Text style={styles.primaryBtnText}>{t('try_again')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.secondaryBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
               <Text style={styles.secondaryBtnText}>Go Back</Text>
@@ -407,10 +374,10 @@ export default function VerifyingOrderScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.background,
   },
   header: {
     flexDirection: 'row',
@@ -437,13 +404,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: c.text,
     marginTop: 20,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 13.5,
-    color: '#6B7280',
+    color: c.textSecondary,
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 20,
@@ -452,7 +419,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: c.successBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -460,7 +427,7 @@ const styles = StyleSheet.create({
     width: 66,
     height: 66,
     borderRadius: 33,
-    backgroundColor: '#089643',
+    backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -468,14 +435,14 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: c.warningBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   receiptContainer: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: c.cardSecondary,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: c.border,
     borderRadius: 16,
     padding: 16,
     width: '100%',
@@ -487,19 +454,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: c.borderLight,
   },
   receiptLabel: {
     fontSize: 13,
-    color: '#64748B',
+    color: c.textSecondary,
   },
   receiptValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1F2937',
+    color: c.text,
   },
   primaryBtn: {
-    backgroundColor: '#089643',
+    backgroundColor: '#10B981',
     borderRadius: 14,
     paddingVertical: 16,
     width: '100%',
@@ -518,7 +485,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   secondaryBtnText: {
-    color: '#6B7280',
+    color: c.textSecondary,
     fontSize: 14,
     fontWeight: '700',
   },

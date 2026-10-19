@@ -1,9 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from '../../components/ThemedStatusBar';
 import { ChevronLeft, Eye, Pause, Play, RotateCcw } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { BackHandler, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 // The 20-20-20 rule (every 20 minutes of screen time, look at something 20
 // feet away for 20 seconds) - same self-contained, zero-network pattern as
@@ -13,6 +16,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const SESSION_SECONDS = 20;
 
 export default function EyeRestScreen() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
 
@@ -77,9 +83,9 @@ export default function EyeRestScreen() {
 
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-                    <ChevronLeft size={22} color="#111827" />
+                    <ChevronLeft size={22} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Eye Rest</Text>
+                <Text style={styles.headerTitle}>{t('eye_rest')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -87,13 +93,13 @@ export default function EyeRestScreen() {
                 {completed ? (
                     <>
                         <Text style={styles.doneEmoji}>👁️</Text>
-                        <Text style={styles.doneTitle}>Nice work!</Text>
-                        <Text style={styles.intro}>Your eyes thank you for the break.</Text>
+                        <Text style={styles.doneTitle}>{t('nice_work')}</Text>
+                        <Text style={styles.intro}>{t('your_eyes_thank_you_for_the_break')}</Text>
                     </>
                 ) : (
                     <>
                         <Text style={styles.intro}>
-                            The 20-20-20 rule: every 20 minutes of screen time, look at something 20 feet away for 20 seconds.
+                            {t('the_20_20_20_rule_every_20_minutes_of')}
                         </Text>
 
                         <View style={styles.circleArea}>
@@ -114,7 +120,7 @@ export default function EyeRestScreen() {
                     {completed ? (
                         <>
                             <RotateCcw size={20} color="#FFFFFF" />
-                            <Text style={styles.playButtonText}>Do It Again</Text>
+                            <Text style={styles.playButtonText}>{t('do_it_again')}</Text>
                         </>
                     ) : (
                         <>
@@ -128,22 +134,22 @@ export default function EyeRestScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.card },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.card,
         ...Platform.select({
             ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
             android: { elevation: 2 },
         }),
     },
     backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
-    headerTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
     content: {
         flex: 1,
         alignItems: 'center',
@@ -153,7 +159,7 @@ const styles = StyleSheet.create({
     intro: {
         fontSize: 13.5,
         lineHeight: 20,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         marginBottom: 32,
     },
@@ -178,7 +184,7 @@ const styles = StyleSheet.create({
         width: 180,
         height: 180,
         borderRadius: 90,
-        backgroundColor: '#EFF6FF',
+        backgroundColor: c.infoBg,
         borderWidth: 2,
         borderColor: '#2563EB',
     },
@@ -198,7 +204,7 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 14,
         lineHeight: 20,
-        color: '#374151',
+        color: c.text,
         textAlign: 'center',
     },
     playButton: {

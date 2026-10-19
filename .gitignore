@@ -50,3 +50,6 @@ app-example
 modules/*/android/build/
 modules/*/android/.cxx/
 modules/*/ios/build/
+
+# local environment values - never commit
+.env

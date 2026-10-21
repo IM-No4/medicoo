@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { insertRecords, StepsRecord } from 'react-native-health-connect';
+import { initialize, insertRecords, StepsRecord } from 'react-native-health-connect';
 import { readRawStepCounter } from '@/modules/medicoo-step-counter/src';
 import { loadConnectedDevice } from '../storage/deviceStorage';
 import { isStepsTrackingEnabled, isNativeStepsWriteEnabled } from './stepsTrackingFlags';
@@ -117,6 +117,15 @@ export async function runNativeStepsSync(): Promise<NativeStepsSyncResult> {
         const start = new Date(prev.lastWriteTime);
         if (now.getTime() > start.getTime()) {
             try {
+                // The Health Connect client must be initialised in THIS process before it is used. A background run (or the first run after
+                // the app process was recreated) has not been through the screens that initialise it, and insertRecords then throws
+                // "client is not initialized". Initialising again is harmless. Nothing is recorded as synced if it cannot be set up, so the
+                // same steps are written on the next run.
+                const ready = await initialize();
+                if (!ready) {
+                    console.warn('[nativeStepsSyncService] Health Connect is not available; steps will be written on a later run');
+                    return 'failed';
+                }
                 await insertRecords(splitAtLocalMidnight(start, now, delta));
             } catch (error) {
                 console.warn('[nativeStepsSyncService] Failed to write steps to Health Connect', error);

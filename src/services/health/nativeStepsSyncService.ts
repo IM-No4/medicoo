@@ -1,11 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { initialize, insertRecords, StepsRecord } from 'react-native-health-connect';
+import { deleteRecordsByUuids, getGrantedPermissions, initialize, insertRecords, readRecords, StepsRecord } from 'react-native-health-connect';
 import { readRawStepCounter } from '@/modules/medicoo-step-counter/src';
 import { loadConnectedDevice } from '../storage/deviceStorage';
 import { isStepsTrackingEnabled, isNativeStepsWriteEnabled } from './stepsTrackingFlags';
 
 const SYNC_STATE_KEY = '@medicoo_native_step_sync_state';
+const REPAIR_FLAG_KEY = '@medicoo_steps_hourly_repair_v1';
+const APP_PACKAGE = 'com.medicootech.medicoo'; // the data origin of the records this app writes
+const HOUR_MS = 60 * 60 * 1000;
 
 interface SyncState {
     // Raw TYPE_STEP_COUNTER value (cumulative since last device boot) as of
@@ -35,23 +38,23 @@ async function setSyncState(state: SyncState): Promise<void> {
     }
 }
 
-// Health Connect's aggregate SUMS every record overlapping a time range - inserting one record whose interval straddles local midnight
-// would let its whole step count bleed into "today" even if most of those steps actually happened yesterday (or vice versa). So the
-// steps are split proportionally by elapsed time at EVERY local midnight in the range (a phone that was not synced for a few days has
-// several), which keeps each day's share close to what really happened.
-function splitAtLocalMidnight(start: Date, end: Date, totalDelta: number): StepsRecord[] {
+// Health Connect's aggregate SUMS every record overlapping a time range - a record whose interval covers several hours counts IN FULL in every
+// bucket it touches. One record from the last sync to now (hours, if the phone slept) made the history screen show the same number in every
+// 3-hour block of the day, and let a record straddling midnight bleed into the wrong day. So the steps are split proportionally by elapsed
+// time at EVERY local hour boundary in the range: no record is longer than one clock hour, so each bucket gets its own share. (The sensor only
+// gives a running total, so within a gap the steps are spread evenly; that is the most that can be known.)
+export function splitAtLocalHours(start: Date, end: Date, totalDelta: number): StepsRecord[] {
     const totalMs = end.getTime() - start.getTime();
     if (totalMs <= 0) return [];
 
-    // Day boundaries inside (start, end)
+    // Hour boundaries inside (start, end)
     const edges: number[] = [start.getTime()];
-    const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+    const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate(), start.getHours() + 1);
     while (cursor.getTime() < end.getTime()) {
         edges.push(cursor.getTime());
-        cursor.setDate(cursor.getDate() + 1);
+        cursor.setHours(cursor.getHours() + 1);
     }
     edges.push(end.getTime());
-
     const records: StepsRecord[] = [];
     let assigned = 0;
     for (let i = 0; i < edges.length - 1; i += 1) {
@@ -68,6 +71,63 @@ function splitAtLocalMidnight(start: Date, end: Date, totalDelta: number): Steps
         }
     }
     return records;
+}
+
+/**
+ * One-time repair: records this app wrote earlier can span many hours (see splitAtLocalHours), which makes the history screen repeat the
+ * same figure in every block they touch. Each such record of the last 35 days is replaced by hourly pieces carrying the same total. A new record is
+ * written BEFORE the old one is deleted (and removed again if the delete fails), so steps are never lost and never doubled. Does nothing, and
+ * tries again next time, when Health Connect or its permissions are not there yet.
+ */
+export async function repairLongStepRecordsOnce(): Promise<void> {
+    if (Platform.OS !== 'android') return;
+    try {
+        if (await AsyncStorage.getItem(REPAIR_FLAG_KEY)) return;
+        if (!(await initialize())) return;
+        const granted = await getGrantedPermissions();
+        const can = (accessType: string) => granted.some((p: any) => p.recordType === 'Steps' && p.accessType === accessType);
+        if (!can('read') || !can('write')) return;
+
+        const now = new Date();
+        const since = new Date(now.getTime() - 35 * 24 * HOUR_MS);
+        const long: { id: string; start: Date; end: Date; count: number }[] = [];
+        let pageToken: string | undefined;
+        do {
+            const page: any = await readRecords('Steps', {
+                timeRangeFilter: { operator: 'between', startTime: since.toISOString(), endTime: now.toISOString() },
+                dataOriginFilter: [APP_PACKAGE],
+                ascendingOrder: true,
+                pageSize: 500,
+                pageToken,
+            });
+            (page.records || []).forEach((r: any) => {
+                const start = new Date(r.startTime);
+                const end = new Date(r.endTime);
+                const id = r.metadata && r.metadata.id;
+                if (id && r.count > 0 && end.getTime() - start.getTime() > HOUR_MS + 5 * 60 * 1000) long.push({ id, start, end, count: Number(r.count) });
+            });
+            pageToken = page.pageToken || undefined;
+        } while (pageToken);
+
+        for (const record of long) {
+            const pieces = splitAtLocalHours(record.start, record.end, record.count);
+            if (pieces.length < 2) continue;
+            // eslint-disable-next-line no-await-in-loop
+            const newIds = await insertRecords(pieces);
+            try {
+                // eslint-disable-next-line no-await-in-loop
+                await deleteRecordsByUuids('Steps', [record.id], []);
+            } catch (error) {
+                // could not remove the original: take the new pieces back out rather than count the steps twice
+                // eslint-disable-next-line no-await-in-loop
+                await deleteRecordsByUuids('Steps', newIds, []).catch(() => undefined);
+                throw error;
+            }
+        }
+        await AsyncStorage.setItem(REPAIR_FLAG_KEY, new Date().toISOString());
+    } catch (error) {
+        console.warn('[nativeStepsSyncService] Step history repair did not finish; it will be tried again', error);
+    }
 }
 
 export type NativeStepsSyncResult = 'success' | 'skipped' | 'failed';
@@ -87,6 +147,8 @@ export async function runNativeStepsSync(): Promise<NativeStepsSyncResult> {
 
     const connectedDevice = await loadConnectedDevice();
     if (connectedDevice) return 'skipped';
+
+    await repairLongStepRecordsOnce();
 
     const rawNow = await readRawStepCounter();
     if (rawNow == null) {
@@ -126,7 +188,7 @@ export async function runNativeStepsSync(): Promise<NativeStepsSyncResult> {
                     console.warn('[nativeStepsSyncService] Health Connect is not available; steps will be written on a later run');
                     return 'failed';
                 }
-                await insertRecords(splitAtLocalMidnight(start, now, delta));
+                await insertRecords(splitAtLocalHours(start, now, delta));
             } catch (error) {
                 console.warn('[nativeStepsSyncService] Failed to write steps to Health Connect', error);
                 return 'failed';

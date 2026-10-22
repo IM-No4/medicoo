@@ -171,12 +171,12 @@ export default function HelpSupportScreen() {
                             <Text style={styles.noResultsText}>No results for "{searchQuery}"</Text>
                         </View>
                     )}
-                    {filteredFaqs.map((faq) => {
+                    {filteredFaqs.map((faq, index) => {
                         const isExpanded = expandedFaq === faq.id;
                         return (
                             <TouchableOpacity
                                 key={faq.id}
-                                style={[styles.faqItem, isExpanded && styles.faqItemExpanded]}
+                                style={[styles.faqItem, index > 0 && styles.faqItemDivider]}
                                 onPress={() => toggleFaq(faq.id)}
                                 activeOpacity={0.7}
                             >
@@ -333,30 +333,27 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         color: c.textMuted,
         fontWeight: '600',
     },
-    noResultsBox: {
-        backgroundColor: c.card,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: c.borderLight,
-    },
+    noResultsBox: {},
     noResultsText: {
         fontSize: 14,
         color: c.textMuted,
         textAlign: 'center',
         paddingVertical: 20,
     },
+    // one card holding every question, a hairline between them
     faqList: {
-        gap: 10,
-    },
-    faqItem: {
         backgroundColor: c.card,
-        borderRadius: 18,
-        padding: 16,
+        borderRadius: 20,
+        overflow: 'hidden',
         borderWidth: 1,
         borderColor: c.borderLight,
     },
-    faqItemExpanded: {
-        borderColor: '#DCFCE7',
+    faqItem: {
+        padding: 16,
+    },
+    faqItemDivider: {
+        borderTopWidth: 1,
+        borderTopColor: c.cardSecondary,
     },
     faqHeader: {
         flexDirection: 'row',

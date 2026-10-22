@@ -14,7 +14,7 @@ import MaintenanceRestrictedBanner from '../features/maintenance/MaintenanceRest
 import OfflineGateScreen from '../features/offline/OfflineGateScreen';
 import ServerUnreachableScreen from '../features/offline/ServerUnreachableScreen';
 import { apiClient } from '../services/api/client';
-import { setServerUnreachable } from '../redux/slices/connectivitySlice';
+import { setOnlineStatus, setServerUnreachable } from '../redux/slices/connectivitySlice';
 import { triggerStaleResume } from '../redux/slices/appLifecycleSlice';
 import { loadAppConfig } from '../redux/slices/appConfigSlice';
 import OnboardingStack from '../features/onboarding/OnboardingStack';
@@ -44,6 +44,13 @@ export default function RootNavigator() {
     dispatch(triggerStaleResume());
     dispatch(loadAppConfig());
     return true;
+  };
+
+  // "Use in Offline Mode" from the no-connection overlay: same as the launch gate's button, mid-session. Marking the app offline also
+  // stops the overlay from coming straight back on the next failed request.
+  const useOfflineMode = () => {
+    dispatch(setOnlineStatus(false));
+    dispatch(setServerUnreachable(false));
   };
 
   // The installed build is below the backend's minimumSupportedVersion
@@ -153,7 +160,7 @@ export default function RootNavigator() {
       {/* 🔌 SERVER UNREACHABLE - device is online but our backend isn't
           answering. Rendered over the navigator (not instead of it) so the
           user's place in the app survives a retry. */}
-      {serverUnreachable && <ServerUnreachableScreen onRetry={retryServer} />}
+      {serverUnreachable && <ServerUnreachableScreen onRetry={retryServer} onUseOffline={useOfflineMode} />}
     </>
   );
 }

@@ -13,11 +13,13 @@ interface Props {
     // Resolves true when the server answered (screen should go away), false
     // when it still can't be reached.
     onRetry: () => Promise<boolean>;
+    // Offered when the device itself has no connection: carries on in offline mode instead of waiting here.
+    onUseOffline?: () => void;
 }
 
 // Shown over the app when requests are not getting through. If the device itself has no connection (Wi-Fi/data off) it says so;
 // only when the device is connected does it blame our servers (down / restarting / blocked).
-export default function ServerUnreachableScreen({ onRetry }: Props) {
+export default function ServerUnreachableScreen({ onRetry, onUseOffline }: Props) {
     const { t } = useLanguage();
     const { theme } = useTheme();
     const styles = useMemo(() => createStyles(theme), [theme]);
@@ -85,6 +87,12 @@ export default function ServerUnreachableScreen({ onRetry }: Props) {
                     </>
                 )}
             </TouchableOpacity>
+
+            {deviceOffline && onUseOffline ? (
+                <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.7} onPress={onUseOffline} disabled={retrying}>
+                    <Text style={styles.secondaryButtonText}>{t('use_in_offline_mode')}</Text>
+                </TouchableOpacity>
+            ) : null}
         </View>
     );
 }
@@ -146,6 +154,16 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         justifyContent: 'center',
         gap: 10,
         paddingHorizontal: 24,
+    },
+    secondaryButton: {
+        paddingVertical: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    secondaryButtonText: {
+        color: c.textSecondary,
+        fontSize: 15,
+        fontWeight: '600',
     },
     buttonText: {
         color: '#FFFFFF',

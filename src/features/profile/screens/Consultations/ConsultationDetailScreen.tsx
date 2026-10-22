@@ -573,10 +573,10 @@ export default function ConsultationDetailScreen() {
                     <TouchableOpacity
                         onPress={handleDownloadInvoice}
                         activeOpacity={0.8}
-                        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.card, paddingVertical: 12, borderRadius: 8, marginBottom: 12 }}
+                        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderColor: '#10B981', backgroundColor: theme.successBg, paddingVertical: 14, borderRadius: 14, marginBottom: 14 }}
                     >
-                        <Download size={14} color={theme.textSecondary} />
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: theme.text }}>Download invoice</Text>
+                        <Download size={16} color="#10B981" />
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#10B981' }}>Download invoice</Text>
                     </TouchableOpacity>
                 )}
 
@@ -843,12 +843,12 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         flex: 1,
     },
     doctorName: {
-        fontSize: 17,
+        fontSize: 15,
         fontWeight: '800',
         color: c.text,
     },
     specialtyText: {
-        fontSize: 13,
+        fontSize: 12,
         color: c.textSecondary,
         fontWeight: '500',
         marginTop: 2,
@@ -873,7 +873,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     },
     messageButtonText: {
         color: '#10B981',
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '700',
     },
     callButton: {
@@ -889,7 +889,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     },
     callButtonText: {
         color: '#fff',
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '700',
     },
     callButtonDisabled: {
@@ -948,9 +948,11 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         marginBottom: 12,
     },
     sectionTitle: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: c.text,
+        fontSize: 11,
+        fontWeight: '800',
+        color: c.textMuted,
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
     },
     diagnosisTitle: {
         fontSize: 12,
@@ -960,9 +962,9 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         marginBottom: 6,
     },
     detailText: {
-        fontSize: 14.5,
+        fontSize: 13,
         color: c.textSecondary,
-        lineHeight: 21,
+        lineHeight: 19,
     },
     innerDivider: {
         height: 1,
@@ -1020,15 +1022,15 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         marginBottom: 3,
     },
     timelineTitle: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '700',
         color: c.text,
         marginBottom: 2,
     },
     timelineSubtitle: {
-        fontSize: 13,
+        fontSize: 12,
         color: c.textSecondary,
-        lineHeight: 18,
+        lineHeight: 17,
     },
     payCard: {
         backgroundColor: c.warningBg,
@@ -1170,7 +1172,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         fontWeight: '700',
     },
     feedbackSection: {
-        marginTop: 2,
+        marginBottom: 14,
     },
     cancelButton: {
         alignItems: 'center',
@@ -1193,16 +1195,16 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         textAlign: 'center',
     },
     promptTitle: {
-        fontSize: 17,
+        fontSize: 15,
         fontWeight: '800',
         color: c.text,
         marginBottom: 8,
     },
     promptText: {
-        fontSize: 14,
+        fontSize: 12.5,
         color: c.textSecondary,
         textAlign: 'center',
-        lineHeight: 20,
+        lineHeight: 18,
         marginBottom: 18,
     },
     reviewButton: {
@@ -1214,6 +1216,6 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     reviewButtonText: {
         color: '#fff',
         fontWeight: '700',
-        fontSize: 15,
+        fontSize: 14,
     },
 });

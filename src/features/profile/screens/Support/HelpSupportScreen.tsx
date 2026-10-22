@@ -162,11 +162,6 @@ export default function HelpSupportScreen() {
                         <Text style={styles.contactSub} numberOfLines={1}>{helpline ? helpline.availability : t('coming_soon')}</Text>
                     </TouchableOpacity>
                 </View>
-                {helpline ? (
-                    <Text style={{ fontSize: 12, color: theme.textMuted, marginTop: 10, lineHeight: 17 }}>
-                        Call {helpline.ivrNumber} for any complaint - whoever on our team is free takes your call. We acknowledge every complaint within {helpline.acknowledgeWithinHours} hours and resolve it within {helpline.resolveWithinDays} days.
-                    </Text>
-                ) : null}
 
                 {/* FAQs */}
                 <Text style={[styles.sectionLabel, { marginTop: 28 }]}>{t('frequently_asked_questions')}</Text>

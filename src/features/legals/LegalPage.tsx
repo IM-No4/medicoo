@@ -60,7 +60,7 @@ export default function LegalPage({ title, lastUpdated, sections }: LegalPagePro
                 )}
 
                 {sections.map((section, index) => (
-                    <View key={index} style={styles.section}>
+                    <View key={index} style={styles.card}>
                         {section.heading && (
                             <Text style={styles.sectionHeading}>{section.heading}</Text>
                         )}
@@ -76,7 +76,7 @@ export default function LegalPage({ title, lastUpdated, sections }: LegalPagePro
                 means it can't be scrolled past - a plain content padding
                 only leaves a gap at the very end of the list, but content
                 still passes behind the transparent nav bar while scrolling. */}
-            <View style={{ height: Math.max(insets.bottom, 16), backgroundColor: theme.card }} />
+            <View style={{ height: Math.max(insets.bottom, 16), backgroundColor: theme.background }} />
         </View>
     );
 }
@@ -94,7 +94,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         // genuinely unpainted. Sizing against the root instead of flexing
         // against its immediate parent closes that gap.
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: c.card,
+        backgroundColor: c.background,
     },
     header: {
         backgroundColor: c.card,
@@ -124,16 +124,22 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         flex: 1,
     },
     contentContainer: {
-        padding: 24,
+        padding: 16,
     },
     lastUpdated: {
         fontSize: 12,
         color: c.textSecondary,
-        marginBottom: 24,
+        marginBottom: 12,
+        marginLeft: 4,
         fontStyle: 'italic',
     },
-    section: {
-        marginBottom: 24,
+    card: {
+        backgroundColor: c.card,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: c.borderLight,
+        padding: 16,
+        marginBottom: 12,
     },
     sectionHeading: {
         fontSize: 16,
@@ -144,8 +150,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     },
     sectionBody: {
         fontSize: 14,
-        lineHeight: 24,
+        lineHeight: 22,
         color: c.textSecondary,
-        textAlign: 'justify',
     },
 });

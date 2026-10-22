@@ -462,12 +462,6 @@ export default function OrderSupportScreen() {
               {supportMessage || "Chat support for this order has ended."}
             </Text>
           </View>
-          <View style={[styles.footer, { paddingHorizontal: 0, opacity: 0.45 }]}>
-            <TextInput style={styles.input} editable={false} placeholder="Chat support for this order has ended" placeholderTextColor={theme.textMuted} />
-            <View style={[styles.sendBtn, { backgroundColor: theme.textMuted }]}>
-              <Send size={18} color="#FFFFFF" />
-            </View>
-          </View>
         </View>
       ) : chatStatus === "closed" ? (
         <View style={[styles.closedBanner, { paddingBottom: Math.max(insets.bottom, 16) }]}>

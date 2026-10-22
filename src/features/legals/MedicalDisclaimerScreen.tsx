@@ -8,13 +8,9 @@ import { useTheme } from '../../theme/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { AdaptiveStatusBar } from '../../components/ThemedStatusBar';
 
-// Deliberately not the bare LegalPage component Terms/Privacy use - that's
-// just a header + one block of justified text, which reads fine for those
-// two (several headed sections break up the read) but looked like a bare
-// wall of text for this one, single-paragraph disclaimer. Every card below
-// is still the exact verbatim wording from constants/medicalDisclaimer.ts's
-// MEDICAL_DISCLAIMER_FULL - just split at its own sentence boundaries and
-// given a heading/icon each, not paraphrased.
+// Same look as the Terms and Privacy pages (flat, headed sections on the page itself, no cards), with a small icon beside each heading.
+// Every section is still the exact verbatim wording from constants/medicalDisclaimer.ts's MEDICAL_DISCLAIMER_FULL, split at its own
+// sentence boundaries - not paraphrased.
 const POINTS: { icon: any; iconBg: string; iconColor: string; heading: string; body: string }[] = [
     {
         icon: ShieldAlert,
@@ -73,14 +69,12 @@ export default function MedicalDisclaimerScreen() {
                 {POINTS.map((point) => {
                     const Icon = point.icon;
                     return (
-                        <View key={point.heading} style={styles.card}>
-                            <View style={[styles.iconCircle, { backgroundColor: point.iconBg }]}>
-                                <Icon size={20} color={point.iconColor} />
+                        <View key={point.heading} style={styles.section}>
+                            <View style={styles.headingRow}>
+                                <Icon size={18} color={point.iconColor} />
+                                <Text style={styles.sectionHeading}>{point.heading}</Text>
                             </View>
-                            <View style={styles.cardText}>
-                                <Text style={styles.cardHeading}>{point.heading}</Text>
-                                <Text style={styles.cardBody}>{point.body}</Text>
-                            </View>
+                            <Text style={styles.sectionBody}>{point.body}</Text>
                         </View>
                     );
                 })}
@@ -115,28 +109,9 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
     headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
     scroll: { flex: 1 },
-    content: { padding: 20 },
-    card: {
-        flexDirection: 'row',
-        gap: 14,
-        backgroundColor: c.card,
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    iconCircle: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    cardText: { flex: 1 },
-    cardHeading: { fontSize: 15, fontWeight: '700', color: c.text, marginBottom: 4 },
-    cardBody: { fontSize: 14, lineHeight: 21, color: c.textSecondary },
+    content: { padding: 24 },
+    section: { marginBottom: 24 },
+    headingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+    sectionHeading: { fontSize: 16, fontWeight: '700', color: c.text, letterSpacing: 0.5 },
+    sectionBody: { fontSize: 14, lineHeight: 24, color: c.textSecondary },
 });

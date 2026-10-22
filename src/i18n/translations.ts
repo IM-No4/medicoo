@@ -1220,6 +1220,7 @@ export const translations: Record<SupportedLanguage, Record<string, string>> = {
     wellness_snapshot_disclaimer: 'This is a general wellness snapshot, not a medical diagnosis. For anything you\'re concerned about, please see a doctor.',
     server_unreachable_title: 'Can\'t reach our servers',
     server_unreachable_message: 'We\'re having trouble connecting right now. This is usually temporary - please try again in a moment.',
+    no_internet_message: 'You\'re not connected to the internet. Please check your Wi-Fi or mobile data and try again.',
     applying_theme: 'Applying theme...',
   },
   hi: {

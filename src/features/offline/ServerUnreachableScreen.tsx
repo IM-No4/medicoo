@@ -1,4 +1,5 @@
-import { CloudOff, RefreshCw } from 'lucide-react-native';
+import NetInfo from '@react-native-community/netinfo';
+import { CloudOff, RefreshCw, WifiOff } from 'lucide-react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,16 +15,23 @@ interface Props {
     onRetry: () => Promise<boolean>;
 }
 
-// Shown over the app when the device has internet but our own backend can't
-// be reached (server down / restarting / blocked). Distinct from
-// OfflineGateScreen, which is for "this device has no internet at all".
+// Shown over the app when requests are not getting through. If the device itself has no connection (Wi-Fi/data off) it says so;
+// only when the device is connected does it blame our servers (down / restarting / blocked).
 export default function ServerUnreachableScreen({ onRetry }: Props) {
     const { t } = useLanguage();
     const { theme } = useTheme();
     const styles = useMemo(() => createStyles(theme), [theme]);
     const insets = useSafeAreaInsets();
     const [retrying, setRetrying] = useState(false);
+    const [deviceOffline, setDeviceOffline] = useState(false);
     const pulse = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const apply = (s: { isConnected: boolean | null; isInternetReachable: boolean | null }) =>
+            setDeviceOffline(s.isConnected === false || s.isInternetReachable === false);
+        NetInfo.fetch().then(apply).catch(() => undefined);
+        return NetInfo.addEventListener(apply);
+    }, []);
 
     useEffect(() => {
         const loop = Animated.loop(
@@ -57,12 +65,12 @@ export default function ServerUnreachableScreen({ onRetry }: Props) {
             <View style={styles.illustration}>
                 <Animated.View style={[styles.pulseRing, ringStyle]} />
                 <View style={styles.iconCircle}>
-                    <CloudOff size={40} color={theme.primary} />
+                    {deviceOffline ? <WifiOff size={40} color={theme.primary} /> : <CloudOff size={40} color={theme.primary} />}
                 </View>
             </View>
 
-            <Text style={styles.title}>{t('server_unreachable_title')}</Text>
-            <Text style={styles.message}>{t('server_unreachable_message')}</Text>
+            <Text style={styles.title}>{deviceOffline ? t('no_internet_connection') : t('server_unreachable_title')}</Text>
+            <Text style={styles.message}>{deviceOffline ? t('no_internet_message') : t('server_unreachable_message')}</Text>
 
             <TouchableOpacity style={styles.button} activeOpacity={0.85} onPress={handleRetry} disabled={retrying}>
                 {retrying ? (

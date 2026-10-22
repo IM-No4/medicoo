@@ -8,7 +8,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { AdaptiveStatusBar } from '../../components/ThemedStatusBar';
 
-// Same look as the Terms and Privacy pages (flat, headed sections on the page itself, no cards), with a small icon beside each heading.
+// Profile-screen look: the page background with a flat white card per point (a hairline border, no shadow).
 // Every section is still the exact verbatim wording from constants/medicalDisclaimer.ts's MEDICAL_DISCLAIMER_FULL, split at its own
 // sentence boundaries - not paraphrased.
 const POINTS: { icon: any; iconBg: string; iconColor: string; heading: string; body: string }[] = [
@@ -69,9 +69,11 @@ export default function MedicalDisclaimerScreen() {
                 {POINTS.map((point) => {
                     const Icon = point.icon;
                     return (
-                        <View key={point.heading} style={styles.section}>
+                        <View key={point.heading} style={styles.card}>
                             <View style={styles.headingRow}>
-                                <Icon size={18} color={point.iconColor} />
+                                <View style={[styles.iconBox, { backgroundColor: point.iconBg }]}>
+                                    <Icon size={16} color={point.iconColor} />
+                                </View>
                                 <Text style={styles.sectionHeading}>{point.heading}</Text>
                             </View>
                             <Text style={styles.sectionBody}>{point.body}</Text>
@@ -83,7 +85,7 @@ export default function MedicalDisclaimerScreen() {
             {/* Fixed (non-scrolling) safe-area footer - see LegalPage.tsx's
                 matching footer comment: guarantees this strip is always
                 solid white and never has a card scrolled into it. */}
-            <View style={{ height: Math.max(insets.bottom, 16), backgroundColor: theme.card }} />
+            <View style={{ height: Math.max(insets.bottom, 16), backgroundColor: theme.background }} />
         </View>
     );
 }
@@ -93,7 +95,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     // LegalPage.tsx's container comment for the full reasoning (nav bar
     // forced fully transparent app-wide, and a flex: 1 root on this nested
     // route was coming up short of the true screen bottom).
-    container: { ...StyleSheet.absoluteFillObject, backgroundColor: c.card },
+    container: { ...StyleSheet.absoluteFillObject, backgroundColor: c.background },
     header: {
         backgroundColor: c.card,
         flexDirection: 'row',
@@ -109,9 +111,10 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
     headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
     scroll: { flex: 1 },
-    content: { padding: 24 },
-    section: { marginBottom: 24 },
-    headingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+    content: { padding: 16 },
+    card: { backgroundColor: c.card, borderRadius: 16, borderWidth: 1, borderColor: c.borderLight, padding: 16, marginBottom: 12 },
+    iconBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    headingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
     sectionHeading: { fontSize: 16, fontWeight: '700', color: c.text, letterSpacing: 0.5 },
-    sectionBody: { fontSize: 14, lineHeight: 24, color: c.textSecondary },
+    sectionBody: { fontSize: 14, lineHeight: 22, color: c.textSecondary },
 });

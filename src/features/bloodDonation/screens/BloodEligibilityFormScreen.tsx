@@ -372,7 +372,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         marginLeft: -8,
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '600',
         color: c.text,
     },
@@ -380,7 +380,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         padding: 24,
     },
     label: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '600',
         color: c.text,
         marginBottom: 8,
@@ -391,7 +391,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         borderColor: c.border,
         borderRadius: 12,
         padding: 16,
-        fontSize: 16,
+        fontSize: 14,
         color: c.text,
         marginBottom: 24,
     },
@@ -406,7 +406,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         paddingRight: 16,
     },
     switchLabel: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '600',
         color: c.text,
     },
@@ -427,7 +427,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         marginBottom: 24,
     },
     pickerValue: {
-        fontSize: 16,
+        fontSize: 14,
         color: c.text,
     },
     placeholder: {
@@ -449,7 +449,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         opacity: 0.6,
     },
     submitButtonText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '700',
         color: '#FFFFFF',
     },
@@ -477,7 +477,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         marginBottom: 16,
     },
     sheetTitle: {
-        fontSize: 18,
+        fontSize: 15,
         fontWeight: '700',
         color: c.text,
         marginBottom: 20,
@@ -490,17 +490,17 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         marginBottom: 8,
     },
     sheetHeaderTitle: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '700',
         color: c.text,
     },
     sheetCancelText: {
-        fontSize: 15,
+        fontSize: 13,
         color: c.textSecondary,
         fontWeight: '500',
     },
     sheetDoneText: {
-        fontSize: 15,
+        fontSize: 13,
         color: '#EF4444',
         fontWeight: '700',
     },
@@ -519,7 +519,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         borderBottomWidth: 0,
     },
     groupRowText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '500',
         color: c.text,
     },

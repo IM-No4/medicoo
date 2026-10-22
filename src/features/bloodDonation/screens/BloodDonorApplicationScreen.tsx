@@ -259,7 +259,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         marginLeft: -8,
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '600',
         color: c.text,
     },
@@ -278,7 +278,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         borderColor: c.border,
         borderRadius: 12,
         padding: 16,
-        fontSize: 16,
+        fontSize: 14,
         color: c.text,
         marginBottom: 24,
     },
@@ -294,7 +294,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         marginBottom: 24,
     },
     pickerValue: {
-        fontSize: 16,
+        fontSize: 14,
         color: c.text,
     },
     placeholder: {
@@ -324,7 +324,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         flex: 1,
     },
     checkboxLabel: {
-        fontSize: 15,
+        fontSize: 13,
         fontWeight: '600',
         color: c.text,
     },
@@ -349,7 +349,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         opacity: 0.6,
     },
     submitButtonText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '700',
         color: '#FFFFFF',
     },
@@ -365,7 +365,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         padding: 24,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: 16,
         fontWeight: '700',
         color: c.text,
         marginBottom: 20,
@@ -391,7 +391,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         borderColor: '#EF4444',
     },
     groupText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '700',
         color: c.textSecondary,
     },
@@ -404,7 +404,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         alignItems: 'center',
     },
     closeButtonText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
         color: '#3B82F6',
     },

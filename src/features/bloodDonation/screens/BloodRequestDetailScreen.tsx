@@ -213,7 +213,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         justifyContent: 'center',
         marginLeft: -8,
     },
-    headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
+    headerTitle: { fontSize: 16, fontWeight: '600', color: c.text },
     content: { padding: 24 },
     urgentBadge: {
         alignSelf: 'flex-start',

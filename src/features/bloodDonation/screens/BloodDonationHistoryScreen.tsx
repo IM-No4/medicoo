@@ -139,7 +139,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         marginLeft: -8,
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '600',
         color: c.text,
     },
@@ -216,7 +216,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         padding: 40,
     },
     emptyTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '700',
         color: c.textSecondary,
         marginTop: 16,

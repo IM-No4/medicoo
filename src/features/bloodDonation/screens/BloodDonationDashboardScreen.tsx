@@ -255,7 +255,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         marginLeft: -8,
     },
     topHeaderTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '600',
         color: c.text,
     },
@@ -339,7 +339,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.15)',
     },
     heroStatValue: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '700',
         color: '#FFFFFF',
     },
@@ -349,7 +349,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         marginTop: 2,
     },
     heroTitle: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: '700',
         color: '#FFFFFF',
         marginTop: 14,
@@ -371,13 +371,13 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         paddingVertical: 14,
     },
     heroButtonText: {
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '700',
         color: c.error,
     },
 
     sectionTitle: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '700',
         color: c.text,
         marginBottom: 12,
@@ -423,7 +423,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         flex: 1,
     },
     stepTitle: {
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '700',
         color: c.text,
         marginBottom: 3,

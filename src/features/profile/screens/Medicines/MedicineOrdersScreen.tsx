@@ -312,7 +312,7 @@ export default function MedicineOrdersScreen() {
         data={filteredOrders}
         renderItem={renderItem}
         keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: 32 + insets.bottom + 24 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

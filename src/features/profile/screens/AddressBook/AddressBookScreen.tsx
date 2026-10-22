@@ -591,12 +591,12 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     gap: 6,
   },
   typeText: {
-    fontSize: 13.5,
+    fontSize: 14.5,
     fontWeight: "700",
     color: c.text,
   },
   distanceText: {
-    fontSize: 11.5,
+    fontSize: 12.5,
     fontWeight: "600",
     color: "#10B981",
   },
@@ -614,7 +614,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     alignSelf: "flex-start",
   },
   defaultText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "800",
     color: c.success,
     textTransform: "uppercase",
@@ -640,18 +640,18 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     marginTop: 0,
   },
   flatText: {
-    fontSize: 12.5,
+    fontSize: 13.5,
     fontWeight: "600",
     color: c.text,
     marginBottom: 2,
   },
   addressText: {
-    fontSize: 12,
+    fontSize: 13,
     color: c.textSecondary,
     lineHeight: 17,
   },
   receiverText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
     color: c.text,
     lineHeight: 17,
@@ -677,7 +677,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     marginBottom: 6,
   },
   emptyText: {
-    fontSize: 13,
+    fontSize: 14,
     color: c.textSecondary,
     textAlign: "center",
     lineHeight: 19,
@@ -703,7 +703,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     gap: 8,
   },
   addButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "800",
     letterSpacing: 0.6,
     color: "#fff",
@@ -726,7 +726,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   },
   selectAddressBtnText: {
     color: "#10B981",
-    fontSize: 12.5,
+    fontSize: 13.5,
     fontWeight: "800",
     letterSpacing: 0.6,
   },
@@ -739,7 +739,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   },
   selectedIndicatorText: {
     color: "#10B981",
-    fontSize: 12.5,
+    fontSize: 13.5,
     fontWeight: "800",
   },
 });

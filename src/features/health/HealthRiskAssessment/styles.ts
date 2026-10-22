@@ -22,14 +22,14 @@ export const createStyles = (c: ThemeColors) => StyleSheet.create({
         marginBottom: 6,
     },
     subheading: {
-        fontSize: 13,
+        fontSize: 14,
         lineHeight: 19,
         color: c.textSecondary,
         marginBottom: 24,
         fontWeight: '500',
     },
     sectionLabel: {
-        fontSize: 10,
+        fontSize: 11,
         fontWeight: '700',
         color: c.textMuted,
         letterSpacing: 1.5,
@@ -55,7 +55,7 @@ export const createStyles = (c: ThemeColors) => StyleSheet.create({
     },
     optionLabel: {
         flex: 1,
-        fontSize: 13.5,
+        fontSize: 14.5,
         fontWeight: '700',
         color: c.text,
     },
@@ -82,7 +82,7 @@ export const createStyles = (c: ThemeColors) => StyleSheet.create({
         backgroundColor: c.card,
     },
     hint: {
-        fontSize: 12,
+        fontSize: 13,
         color: c.textMuted,
         textAlign: 'center',
         lineHeight: 17,

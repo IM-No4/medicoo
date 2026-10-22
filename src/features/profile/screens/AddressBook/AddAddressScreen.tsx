@@ -785,7 +785,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     searchInput: {
         flex: 1,
         height: 50,
-        fontSize: 16,
+        fontSize: 14,
         color: c.text,
     },
     suggestionsBox: {
@@ -860,7 +860,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         color: '#10B981',
     },
     addressPreviewText: {
-        fontSize: 15,
+        fontSize: 13,
         color: c.text,
         lineHeight: 20,
     },
@@ -884,7 +884,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         elevation: 2,
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '700',
         color: c.text,
         marginBottom: 16,
@@ -927,7 +927,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 12,
-        fontSize: 16,
+        fontSize: 14,
         color: c.text,
     },
     tagContainer: {
@@ -978,7 +978,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         borderColor: '#10B981',
     },
     checkboxLabel: {
-        fontSize: 15,
+        fontSize: 13,
         color: c.text,
     },
     myReceiverBox: {
@@ -1018,7 +1018,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         flex: 1,
         paddingHorizontal: 16,
         paddingVertical: 12,
-        fontSize: 16,
+        fontSize: 14,
         color: c.text,
     },
 
@@ -1039,7 +1039,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         alignItems: 'center',
     },
     saveButtonText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
         color: '#fff',
     },

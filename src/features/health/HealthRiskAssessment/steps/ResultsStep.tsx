@@ -82,10 +82,10 @@ const createLocalStyles = (c: ThemeColors) => StyleSheet.create({
         justifyContent: 'space-between',
         marginBottom: 6,
     },
-    categoryLabel: { fontSize: 13.5, fontWeight: '700', color: c.text },
+    categoryLabel: { fontSize: 14.5, fontWeight: '700', color: c.text },
     bucketPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-    bucketPillText: { fontSize: 11, fontWeight: '700' },
-    categoryTip: { fontSize: 12, color: c.textSecondary, lineHeight: 17 },
+    bucketPillText: { fontSize: 12, fontWeight: '700' },
+    categoryTip: { fontSize: 13, color: c.textSecondary, lineHeight: 17 },
     discussBtn: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -97,7 +97,7 @@ const createLocalStyles = (c: ThemeColors) => StyleSheet.create({
         height: 48,
         marginTop: 16,
     },
-    discussBtnText: { fontSize: 13, fontWeight: '800', color: ACCENT, letterSpacing: 0.6 },
+    discussBtnText: { fontSize: 14, fontWeight: '800', color: ACCENT, letterSpacing: 0.6 },
     doneBtn: {
         backgroundColor: ACCENT,
         borderRadius: 10,
@@ -106,5 +106,5 @@ const createLocalStyles = (c: ThemeColors) => StyleSheet.create({
         justifyContent: 'center',
         marginTop: 12,
     },
-    doneBtnText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.6 },
+    doneBtnText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.6 },
 });

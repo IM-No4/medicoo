@@ -254,7 +254,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         borderRadius: 20,
         maxWidth: 110,
     },
-    statusBadgeText: { fontSize: 11.5, fontWeight: '600' },
+    statusBadgeText: { fontSize: 12.5, fontWeight: '600' },
     headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
     stepTitle: { fontSize: 18, fontWeight: '600', color: c.text },
     progressTrack: {
@@ -269,5 +269,5 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     progressFill: { height: '100%', borderRadius: 2 },
     footer: { paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 1, borderTopColor: c.borderLight, backgroundColor: c.card },
     nextBtn: { borderRadius: 10, height: 48, alignItems: 'center', justifyContent: 'center' },
-    nextBtnText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.6 },
+    nextBtnText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.6 },
 });

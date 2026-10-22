@@ -53,10 +53,10 @@ export default function IntroStep({ lastResult }: Props) {
                         marginTop: 8,
                     }}
                 >
-                    <Text style={{ fontSize: 11.5, fontWeight: '700', color: theme.textMuted, marginBottom: 4 }}>
+                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: theme.textMuted, marginBottom: 4 }}>
                         {t('last_check_in')}
                     </Text>
-                    <Text style={{ fontSize: 12.5, color: theme.textSecondary, fontWeight: '500' }}>
+                    <Text style={{ fontSize: 13.5, color: theme.textSecondary, fontWeight: '500' }}>
                         {formatDate(lastResult.createdAt)} - overall {lastResult.overallBucket}
                     </Text>
                 </View>

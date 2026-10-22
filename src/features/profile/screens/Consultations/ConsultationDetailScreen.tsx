@@ -568,18 +568,6 @@ export default function ConsultationDetailScreen() {
                     )
                 )}
 
-                {/* Invoice for a completed, paid consultation */}
-                {consultation.status === 'completed' && consultation.paymentStatus === 'paid' && (
-                    <TouchableOpacity
-                        onPress={handleDownloadInvoice}
-                        activeOpacity={0.8}
-                        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderColor: '#10B981', backgroundColor: theme.successBg, paddingVertical: 14, borderRadius: 14, marginBottom: 14 }}
-                    >
-                        <Download size={16} color="#10B981" />
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#10B981' }}>Download invoice</Text>
-                    </TouchableOpacity>
-                )}
-
                 {/* Refund */}
                 {consultation.paymentStatus === 'refunded' && consultation.refundDetails && (
                     <View style={styles.refundCard}>
@@ -710,6 +698,17 @@ export default function ConsultationDetailScreen() {
                         ) : (
                             <Text style={styles.cancelButtonText}>{t('cancel_appointment')}</Text>
                         )}
+                    </TouchableOpacity>
+                )}
+                {/* Invoice for a completed, paid consultation - last, like the order screen */}
+                {consultation.status === 'completed' && consultation.paymentStatus === 'paid' && (
+                    <TouchableOpacity
+                        onPress={handleDownloadInvoice}
+                        activeOpacity={0.8}
+                        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.card, paddingVertical: 12, borderRadius: 8 }}
+                    >
+                        <Download size={14} color={theme.textSecondary} />
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: theme.text }}>Download invoice</Text>
                     </TouchableOpacity>
                 )}
             </ScrollView>

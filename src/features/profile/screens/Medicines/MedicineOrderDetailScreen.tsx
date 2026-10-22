@@ -324,7 +324,17 @@ export default function MedicineOrderDetailScreen() {
 
         {/* Bill Details Section */}
         <View style={styles.billDetailsSection}>
-          <Text style={styles.billDetailsHeading}>{t('bill_details')}</Text>
+          <View style={styles.billDetailsHeaderRow}>
+            <Text style={styles.billDetailsHeading}>{t('bill_details')}</Text>
+            <TouchableOpacity
+              onPress={handleDownloadSummary}
+              disabled={downloadingSummary}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel="Download order summary"
+            >
+              {downloadingSummary ? <ActivityIndicator size="small" color={theme.textSecondary} /> : <Download size={18} color={theme.textSecondary} />}
+            </TouchableOpacity>
+          </View>
 
           {/* Items List */}
           <View style={styles.itemsListContainer}>
@@ -464,15 +474,6 @@ export default function MedicineOrderDetailScreen() {
               <Text style={styles.cancelButtonTextSwiggy}>{t('cancel_order')}</Text>
             </TouchableOpacity>
           ) : null}
-
-          <TouchableOpacity
-            style={[styles.downloadInvoiceBtn, order.status === "Delivered" && { marginBottom: 8 }]}
-            onPress={handleDownloadSummary}
-            disabled={downloadingSummary}
-          >
-            {downloadingSummary ? <ActivityIndicator size="small" color={theme.textSecondary} /> : <Download size={14} color={theme.textSecondary} />}
-            <Text style={styles.downloadInvoiceBtnText}>Download order summary</Text>
-          </TouchableOpacity>
 
           {order.status === "Delivered" ? (
             <TouchableOpacity
@@ -685,12 +686,17 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.card,
     padding: 16,
   },
+  billDetailsHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
   billDetailsHeading: {
     fontSize: 11,
     fontWeight: "800",
     color: c.textMuted,
     letterSpacing: 0.8,
-    marginBottom: 16,
   },
   itemsListContainer: {
     gap: 16,

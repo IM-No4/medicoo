@@ -165,6 +165,25 @@ export default function MedicineOrderDetailScreen() {
     }
   };
 
+  // The order summary (a receipt) is available for every order, not only delivered ones.
+  const [downloadingSummary, setDownloadingSummary] = useState(false);
+  const handleDownloadSummary = async () => {
+    if (!order || downloadingSummary) return;
+    setDownloadingSummary(true);
+    try {
+      const res = await apiClient.get(`/api/user/orders/${order._id}/summary`);
+      const { uri } = await Print.printToFileAsync({ html: res.data.html });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle: `Order summary ${res.data.orderNumber || ""}`.trim() });
+      }
+    } catch (error: any) {
+      console.error("Failed to build order summary:", error);
+      showStatus("error", t('download_failed'), error?.response?.data?.message || "Could not generate the order summary right now.");
+    } finally {
+      setDownloadingSummary(false);
+    }
+  };
+
   const [ratingVisible, setRatingVisible] = useState(false);
 
 
@@ -450,6 +469,15 @@ export default function MedicineOrderDetailScreen() {
               <Text style={styles.cancelButtonTextSwiggy}>{t('cancel_order')}</Text>
             </TouchableOpacity>
           ) : null}
+
+          <TouchableOpacity
+            style={[styles.downloadInvoiceBtn, order.status === "Delivered" && { marginBottom: 8 }]}
+            onPress={handleDownloadSummary}
+            disabled={downloadingSummary}
+          >
+            {downloadingSummary ? <ActivityIndicator size="small" color={theme.textSecondary} /> : <Download size={14} color={theme.textSecondary} />}
+            <Text style={styles.downloadInvoiceBtnText}>Download order summary</Text>
+          </TouchableOpacity>
 
           {order.status === "Delivered" ? (
             <TouchableOpacity

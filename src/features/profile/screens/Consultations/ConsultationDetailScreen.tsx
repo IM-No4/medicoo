@@ -1,4 +1,6 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import BookingBadge from '../../../doctor/components/BookingBadge';
 import {
     AlertTriangle,
@@ -9,6 +11,7 @@ import {
     ChevronRight,
     Clock,
     CreditCard,
+    Download,
     FilePlus,
     FileText,
     History,
@@ -40,7 +43,7 @@ import ConsultationDetailsCard from '../../../../components/consultation/Consult
 import PaymentMethodsModal from '../../../../components/modals/PaymentMethodsModal';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
 import { getMyAppointmentRequestDetail } from '../../../../services/api';
-import { API_BASE_URL } from '../../../../services/api/client';
+import { API_BASE_URL, apiClient } from '../../../../services/api/client';
 import { cancelAppointmentRequest, getMyConsultationHistoryWithDoctor, PastConsultationSummary, requestNoShowRefund, requestReschedule, verifyAppointmentPayment } from '../../../../services/api/doctor.api';
 import { formatDoctorName } from '../../../../utils/formatters';
 import RescheduleRequestModal from './components/RescheduleRequestModal';
@@ -249,6 +252,19 @@ export default function ConsultationDetailScreen() {
         setPaymentOpen(true);
     };
 
+    // The invoice is built by the server; the app only turns it into a PDF.
+    const handleDownloadInvoice = async () => {
+        try {
+            const res = await apiClient.get(`/api/user/consultations/${requestId}/invoice`);
+            const { uri } = await Print.printToFileAsync({ html: res.data.html });
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Invoice ${res.data.invoiceNumber || ''}`.trim() });
+            }
+        } catch (error: any) {
+            showPaymentStatus('error', 'Download failed', error?.response?.data?.message || 'Could not generate the invoice right now.');
+        }
+    };
+
     const handlePaid = async () => {
         setPaymentOpen(false);
         await fetchDetail();
@@ -335,6 +351,7 @@ export default function ConsultationDetailScreen() {
     // Closes the menu first so the action's own navigation/alert isn't layered under it.
     const menuActions: { key: string; label: string; Icon: typeof User; danger?: boolean; run: () => void }[] = [
         ...(canBookAgain ? [{ key: 'again', label: 'Book again', Icon: RefreshCw, run: () => executeAction('OPEN_DOCTOR_DETAIL', { doctorId: detailDoctorId, intent: 'BOOK' }) }] : []),
+        ...(consultation.status === 'completed' && consultation.paymentStatus === 'paid' ? [{ key: 'invoice', label: 'Download invoice', Icon: Download, run: handleDownloadInvoice }] : []),
         ...(detailDoctorId ? [{ key: 'doctor', label: 'View doctor profile', Icon: User, run: () => executeAction('OPEN_DOCTOR_DETAIL', { doctorId: detailDoctorId }) }] : []),
         ...(consultation.canCancel ? [{ key: 'cancel', label: 'Cancel appointment', Icon: XCircle, danger: true, run: handleCancel }] : []),
         { key: 'help', label: 'Help & support', Icon: HelpCircle, run: () => executeAction('OPEN_HELP') },
@@ -549,6 +566,18 @@ export default function ConsultationDetailScreen() {
                             </View>
                         </View>
                     )
+                )}
+
+                {/* Invoice for a completed, paid consultation */}
+                {consultation.status === 'completed' && consultation.paymentStatus === 'paid' && (
+                    <TouchableOpacity
+                        onPress={handleDownloadInvoice}
+                        activeOpacity={0.8}
+                        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.card, paddingVertical: 12, borderRadius: 8, marginBottom: 12 }}
+                    >
+                        <Download size={14} color={theme.textSecondary} />
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: theme.text }}>Download invoice</Text>
+                    </TouchableOpacity>
                 )}
 
                 {/* Refund */}

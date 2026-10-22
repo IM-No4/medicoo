@@ -397,7 +397,7 @@ export default function ConsultationDetailScreen() {
                 </TouchableOpacity>
             </Modal>
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 40 + insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
                 {/* Doctor + schedule card */}
                 <View style={styles.card}>
                     <View style={styles.doctorRow}>

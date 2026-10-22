@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Clock,
   Package,
+  Store,
   Search,
   ShoppingBag,
   Star,
@@ -178,7 +179,7 @@ export default function MedicineOrdersScreen() {
           ) : isDeliveryPhase ? (
             <Truck size={20} color={statusStyle.text} />
           ) : (
-            <Package size={20} color={statusStyle.text} />
+            <Store size={20} color={statusStyle.text} />
           )}
         </View>
 

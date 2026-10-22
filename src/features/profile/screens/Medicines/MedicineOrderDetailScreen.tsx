@@ -348,11 +348,6 @@ export default function MedicineOrderDetailScreen() {
                         Expiry: {item.expiry || "Assigned at dispatch"}  •  HSN: {item.hsnCode || "3004"}
                       </Text>
                     </View>
-                    {item.discountAmount > 0 && (
-                      <Text style={styles.itemDiscountText}>
-                        Discount: -₹{formatAmount(item.discountAmount)}
-                      </Text>
-                    )}
                   </View>
                 </View>
                 <View style={styles.priceContainer}>

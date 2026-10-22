@@ -687,7 +687,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 12,
-        fontSize: 16,
+        fontSize: 14,
         color: c.text,
     },
     dateInput: {
@@ -741,11 +741,11 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         fontWeight: '600',
     },
     dropdownText: {
-        fontSize: 16,
+        fontSize: 14,
         color: c.text,
     },
     dateText: {
-        fontSize: 16,
+        fontSize: 14,
         color: c.text,
     },
     placeholderText: {
@@ -767,7 +767,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         alignItems: 'center',
     },
     saveButtonText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
         color: '#fff',
     },
@@ -789,7 +789,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         marginBottom: 20,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: 16,
         fontWeight: '700',
         color: c.text,
     },
@@ -802,7 +802,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         borderBottomColor: c.borderLight,
     },
     optionText: {
-        fontSize: 16,
+        fontSize: 14,
         color: c.textSecondary,
     },
     selectedOptionText: {

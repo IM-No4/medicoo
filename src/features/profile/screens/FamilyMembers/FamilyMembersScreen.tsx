@@ -719,7 +719,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     paddingBottom: 120,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
     color: c.textSecondary,
     marginBottom: 12,
@@ -734,7 +734,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     borderColor: c.isDark ? "rgba(16,185,129,0.25)" : "#DCFCE7",
   },
   infoText: {
-    fontSize: 12.5,
+    fontSize: 13.5,
     color: c.success,
     lineHeight: 18,
   },
@@ -786,16 +786,16 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: "#10B981",
   },
   respondButtonText: {
-    fontSize: 12.5,
+    fontSize: 13.5,
     fontWeight: "800",
   },
   activityOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" },
   activitySheet: { backgroundColor: c.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
   activityTitle: { fontSize: 16, fontWeight: "700", color: c.text, marginBottom: 10 },
-  activityEmpty: { fontSize: 13, color: c.textSecondary, paddingVertical: 20, textAlign: "center" },
+  activityEmpty: { fontSize: 14, color: c.textSecondary, paddingVertical: 20, textAlign: "center" },
   activityRow: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
-  activityText: { fontSize: 13, color: c.text, lineHeight: 18 },
-  activityTime: { fontSize: 11, color: c.textMuted, marginTop: 2 },
+  activityText: { fontSize: 14, color: c.text, lineHeight: 18 },
+  activityTime: { fontSize: 12, color: c.textMuted, marginTop: 2 },
   membershipFooter: {
     flexDirection: "row",
     alignItems: "center",
@@ -808,7 +808,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   },
   shareLabel: {
     flex: 1,
-    fontSize: 11.5,
+    fontSize: 12.5,
     color: c.textSecondary,
     fontWeight: "600",
   },
@@ -844,7 +844,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     marginBottom: 4,
   },
   memberName: {
-    fontSize: 13.5,
+    fontSize: 14.5,
     fontWeight: "700",
     color: c.text,
   },
@@ -858,7 +858,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.cardSecondary,
   },
   relationText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "800",
     color: c.textSecondary,
   },
@@ -866,17 +866,17 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     marginBottom: 4,
   },
   medIdText: {
-    fontSize: 11.5,
+    fontSize: 12.5,
     color: "#10B981",
     fontWeight: "600",
   },
   memberSubText: {
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 17,
     color: c.textSecondary,
   },
   statusText: {
-    fontSize: 11.5,
+    fontSize: 12.5,
     color: c.textSecondary,
     marginTop: 2,
     fontStyle: "italic",
@@ -893,7 +893,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     alignItems: "center",
   },
   actionText: {
-    fontSize: 12.5,
+    fontSize: 13.5,
     fontWeight: "700",
     color: c.textSecondary,
   },
@@ -922,7 +922,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     marginBottom: 8,
   },
   emptyText: {
-    fontSize: 13,
+    fontSize: 14,
     color: c.textSecondary,
     textAlign: "center",
     lineHeight: 19,
@@ -947,7 +947,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     gap: 8,
   },
   addButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "800",
     letterSpacing: 0.6,
     color: "#fff",
@@ -960,7 +960,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 13,
+    fontSize: 14,
     color: c.textSecondary,
     fontWeight: "500",
   },

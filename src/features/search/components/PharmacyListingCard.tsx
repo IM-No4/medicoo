@@ -250,8 +250,6 @@ export default function PharmacyListingCard({
               </Text>
             </View>
 
-            {!pharmacy.isOpen && <Text style={styles.closedText}>{getUnavailableText()}</Text>}
-
             <View style={styles.metaRow}>
               <View style={styles.ratingBox}>
                 <AppIcon name="star" size={14} color="#10B981" />
@@ -272,6 +270,8 @@ export default function PharmacyListingCard({
                 </>
               )}
             </View>
+
+            {!pharmacy.isOpen && <Text style={[styles.closedText, { marginTop: 6, marginBottom: 0 }]}>{getUnavailableText()}</Text>}
           </View>
 
         </TouchableOpacity>

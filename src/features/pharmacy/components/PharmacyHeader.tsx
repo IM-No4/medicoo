@@ -198,8 +198,8 @@ export default function PharmacyHeader({
           {/* Status / Offers */}
           {!isOpen ? (
             <View style={styles.offlineBadge}>
-              <AppIcon name="alarm-clock-off" size={14} color={theme.textSecondary} />
-              <Text style={styles.offlineBadgeText}>{t('currently_unavailable')}</Text>
+              <AppIcon name="alarm-clock-off" size={14} color="#DC2626" />
+              <Text style={styles.offlineBadgeText}>Store is offline</Text>
             </View>
           ) : (
             <View style={styles.dealBanner}>
@@ -345,8 +345,8 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   },
   offlineBadgeText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: c.textSecondary,
+    fontWeight: "700",
+    color: "#DC2626",
     letterSpacing: 0.2,
   },
   dealBanner: {

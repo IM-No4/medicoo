@@ -2,6 +2,7 @@
   "expo": {
     "name": "Medicoo",
     "slug": "Medicoo",
+    "owner": "medicootech-private-limited",
     "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./src/assets/images/icon.png",

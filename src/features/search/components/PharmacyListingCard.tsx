@@ -94,7 +94,7 @@ export default function PharmacyListingCard({
         // Fallback to default return
       }
     }
-    return 'Store is offline';
+    return 'Pharmacy is currently offline';
   };
 
   const renderMedicineCard = ({ item }: { item: MedicineItem }) => {
@@ -574,17 +574,30 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     color: '#007C69',
     marginTop: 1,
   },
+  // a light red pill, so a closed pharmacy stands out without covering the card
   closedText: {
+    alignSelf: 'flex-start',
     fontSize: 12,
     fontWeight: '700',
     color: '#DC2626',
+    backgroundColor: 'rgba(220, 38, 38, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    overflow: 'hidden',
     marginBottom: 6,
   },
   closedTextHero: {
+    alignSelf: 'flex-start',
     fontSize: 12,
     fontWeight: '700',
-    color: '#FCA5A5',
-    marginTop: 2,
+    color: '#B91C1C',
+    backgroundColor: 'rgba(254, 226, 226, 0.95)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    overflow: 'hidden',
+    marginTop: 4,
   },
 });
 

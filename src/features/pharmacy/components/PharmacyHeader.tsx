@@ -199,7 +199,7 @@ export default function PharmacyHeader({
           {!isOpen ? (
             <View style={styles.offlineBadge}>
               <AppIcon name="alarm-clock-off" size={14} color="#DC2626" />
-              <Text style={styles.offlineBadgeText}>Store is offline</Text>
+              <Text style={styles.offlineBadgeText}>Pharmacy is currently offline</Text>
             </View>
           ) : (
             <View style={styles.dealBanner}>
@@ -340,7 +340,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: c.cardSecondary,
+    backgroundColor: "rgba(220, 38, 38, 0.12)",
     gap: 6,
   },
   offlineBadgeText: {

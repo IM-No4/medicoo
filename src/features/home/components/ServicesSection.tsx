@@ -90,12 +90,27 @@ function ServicesSection({ title, services, layout, onAction }: Props) {
       </View>
     ) : null;
 
-    // 1-2 services: roomy gradient cards with the label beside the icon.
+    // 1-2 services: roomy cards filled with the service's own gradient. Icon in a soft white tile, label and arrow lined up on
+    // the same row (one service) or along the bottom (two across).
     if (cardMode) {
-      // 1-2 services: calm surface cards (same family as the rest of the feed's
-      // cards) with the service's gradient only on the icon tile. A full gradient
-      // card behind white text looked heavy once there were only a couple.
       const wide = columns === 1;
+      const icon = (
+        <View style={styles.cardIcon}>
+          <AppIcon name={item.icon as any} size={26} color={item.accentColor} />
+          {badge}
+        </View>
+      );
+      const label = (
+        <View style={styles.cardText}>
+          <Text style={styles.cardLabel} numberOfLines={2}>{item.title}</Text>
+          {disabled && <Text style={styles.cardSub}>{t('coming_soon')}</Text>}
+        </View>
+      );
+      const arrow = (
+        <View style={styles.cardArrow}>
+          <AppIcon name="arrow-right" size={14} color="#0F172A" />
+        </View>
+      );
       return (
         <TouchableOpacity
           key={item.id}
@@ -107,20 +122,23 @@ function ServicesSection({ title, services, layout, onAction }: Props) {
             colors={[item.background.start, item.background.end]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.cardIcon}
-          >
-            <AppIcon name={item.icon as any} size={26} color={item.accentColor} />
-            {badge}
-          </LinearGradient>
-
-          <View style={wide ? styles.cardTextWide : styles.cardTextHalf}>
-            <Text style={styles.cardLabel} numberOfLines={2}>{item.title}</Text>
-            {disabled && <Text style={styles.cardSub}>{t('coming_soon')}</Text>}
-          </View>
-
-          <View style={[styles.cardArrow, !wide && styles.cardArrowHalf]}>
-            <AppIcon name="arrow-right" size={14} color={theme.textSecondary} />
-          </View>
+            style={StyleSheet.absoluteFill}
+          />
+          {wide ? (
+            <>
+              {icon}
+              {label}
+              {arrow}
+            </>
+          ) : (
+            <>
+              {icon}
+              <View style={styles.cardBottomRow}>
+                {label}
+                {arrow}
+              </View>
+            </>
+          )}
         </TouchableOpacity>
       );
     }
@@ -180,20 +198,17 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     overflow: 'visible',
   },
   card: {
-    backgroundColor: c.card,
-    // Flat border-only look, same as the other feed cards
+    // filled with the service's gradient (an absolutely placed LinearGradient is the first child)
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: c.borderLight,
     padding: 14,
-    overflow: 'visible',
+    overflow: 'hidden',
   },
-  // two across: icon on top, label under it, arrow chip bottom-right
+  // two across: icon on top, label and arrow along the bottom
   cardHalf: {
     minHeight: 124,
     justifyContent: 'space-between',
   },
-  // one service: a single row
+  // one service: a single row, everything centred vertically
   cardWide: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -204,40 +219,39 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.65)',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'visible',
   },
-  cardTextHalf: {
+  cardBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginTop: 14,
-    paddingRight: 30,
   },
-  cardTextWide: {
+  cardText: {
     flex: 1,
+    justifyContent: 'center',
   },
   cardLabel: {
     fontSize: 14,
     fontWeight: '700',
-    color: c.text,
+    color: '#0F172A',
   },
   cardSub: {
     fontSize: 11,
     fontWeight: '600',
-    color: c.textSecondary,
+    color: '#475569',
     marginTop: 2,
   },
   cardArrow: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: c.cardSecondary,
+    backgroundColor: 'rgba(255,255,255,0.65)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  cardArrowHalf: {
-    position: 'absolute',
-    right: 14,
-    bottom: 14,
   },
   item: {
     alignItems: 'center',

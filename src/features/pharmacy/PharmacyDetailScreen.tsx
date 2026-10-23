@@ -27,7 +27,7 @@ import { useSelector } from "react-redux";
 import MedicineDetailBottomSheet from "@/src/components/modals/MedicineDetailBottomSheet";
 import StatusModal, { StatusType } from "@/src/components/modals/StatusModal";
 import CartItemsHorizontalScroll from "./components/CartItemsHorizontalScroll";
-import FilterChips from "./components/FilterChips";
+import FilterChips, { matchesMedicineFilter, MedicineFilterId } from "./components/FilterChips";
 import MedicineRow from "./components/MedicineRow";
 import PharmacyHeader from "./components/PharmacyHeader";
 import { useTheme } from '../../theme/ThemeContext';
@@ -48,6 +48,7 @@ export default function PharmacyDetailScreen() {
   const [medicines, setMedicines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [medicineFilter, setMedicineFilter] = useState<MedicineFilterId>("all");
   const [isSearchSticky, setIsSearchSticky] = useState(false);
   const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
   const searchModalInputRef = useRef<TextInput>(null);
@@ -138,14 +139,15 @@ export default function PharmacyDetailScreen() {
   /* ------------------ LOCAL SEARCH ------------------ */
 
   const filteredMedicines = useMemo(() => {
-    if (!query.trim()) return medicines;
+    const byChip = medicines.filter((m) => matchesMedicineFilter(m, medicineFilter));
+    if (!query.trim()) return byChip;
     const q = query.toLowerCase();
 
-    return medicines.filter(
+    return byChip.filter(
       (m) =>
         m.name?.toLowerCase().includes(q) || m.brand?.toLowerCase().includes(q),
     );
-  }, [query, medicines]);
+  }, [query, medicines, medicineFilter]);
 
   /* ------------------ SCROLL HANDLING ------------------ */
 
@@ -339,7 +341,7 @@ export default function PharmacyDetailScreen() {
             </PharmacyHeader>
 
             {/* FILTERS */}
-            <FilterChips />
+            <FilterChips selected={medicineFilter} onChange={setMedicineFilter} />
             {/* CART ITEMS HORIZONTAL SCROLL */}
             <CartItemsHorizontalScroll
               storeId={pharmacyId}

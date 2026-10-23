@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import AppIcon from "@/src/components/icons/AppIcon";
-import React, { useState } from "react";
+import React from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -12,19 +12,34 @@ import { useTheme } from '../../../theme/ThemeContext';
 import type { ThemeColors } from '../../../theme/colors';
 import { useLanguage } from '../../../i18n/LanguageContext';
 
-const FILTERS = [
+export type MedicineFilterId = "all" | "prescription" | "otc" | "offer";
+
+const FILTERS: { id: MedicineFilterId; label: string; icon?: string }[] = [
   { id: "all", label: "All" },
   { id: "prescription", label: "Prescription", icon: "file-text" },
   { id: "otc", label: "OTC", icon: "package" },
-  { id: "bestseller", label: "Bestseller", icon: "trending-up" },
   { id: "offer", label: "Offers", icon: "tag" },
 ];
 
-export default function FilterChips() {
+// Whether a medicine of the store's list belongs under a chip. Prescription = needs one; OTC = does not; Offers = carries a discount.
+export const matchesMedicineFilter = (m: any, filter: MedicineFilterId): boolean => {
+  if (filter === "all") return true;
+  const needsPrescription = !!(m?.isPrescriptionRequired || m?.prescriptionRequired);
+  if (filter === "prescription") return needsPrescription;
+  if (filter === "otc") return !needsPrescription;
+  return Number(m?.discountPrice) > 0 && Number(m?.price) > 0;
+};
+
+export default function FilterChips({
+  selected,
+  onChange,
+}: {
+  selected: MedicineFilterId;
+  onChange: (filter: MedicineFilterId) => void;
+}) {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const [selected, setSelected] = useState<string>("all");
 
   return (
     <View style={styles.container}>
@@ -39,7 +54,7 @@ export default function FilterChips() {
             <TouchableOpacity
               key={filter.id}
               style={[styles.chip, isSelected && styles.chipSelected]}
-              onPress={() => setSelected(filter.id)}
+              onPress={() => onChange(filter.id)}
             >
               {filter.icon && (
                 <AppIcon

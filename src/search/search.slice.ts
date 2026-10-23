@@ -3,8 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 import { RootState } from '@/src/redux/store';
-import { SearchResult } from './search.types';
-import { globalSearch, globalSearchPage } from './SearchService';
+import { SearchExtra, SearchResult, SearchSuggestion } from './search.types';
+import { fetchSuggestions, globalSearchPage } from './SearchService';
 
 const STORAGE_KEY = 'SEARCH_STATE_V1';
 
@@ -14,13 +14,14 @@ interface SearchState {
   results: SearchResult[];
   error?: string;
   activeRequestId?: string;
-  suggestions: SearchResult[];
+  suggestions: SearchSuggestion[];
   loadingSuggestions: boolean;
   // medicine results arrive a page of pharmacies at a time: where we are and whether the server has more
   page: number;
   hasMore: boolean;
   loadingMore: boolean;
   lastTags?: string[];
+  lastExtra?: SearchExtra;
 }
 
 const initialState: SearchState = {
@@ -41,9 +42,9 @@ const initialState: SearchState = {
  */
 export const executeGlobalSearch = createAsyncThunk<
   { results: SearchResult[]; hasMore: boolean },
-  { query: string; category?: string; type?: string; tags?: string[]; recordRecent?: boolean },
+  { query: string; category?: string; type?: string; tags?: string[]; recordRecent?: boolean } & SearchExtra,
   { state: RootState, rejectValue: string }
->('search/execute', async ({ query, category, type, tags, recordRecent = true }, { getState, rejectWithValue }) => {
+>('search/execute', async ({ query, category, type, tags, recordRecent = true, scope, field, medicineId }, { getState, rejectWithValue }) => {
   try {
     if (!query || query.trim().length < 2) {
       return { results: [], hasMore: false };
@@ -56,7 +57,7 @@ export const executeGlobalSearch = createAsyncThunk<
     const lat = selectedAddress?.latitude || currentLocation?.latitude;
     const lng = selectedAddress?.longitude || currentLocation?.longitude;
 
-    const { results, hasMore } = await globalSearchPage(query.trim(), category, type, tags, lat, lng, 1);
+    const { results, hasMore } = await globalSearchPage(query.trim(), category, type, tags, lat, lng, 1, { scope, field, medicineId });
 
     if (recordRecent) {
       await saveRecentSearch(query.trim());
@@ -87,13 +88,13 @@ export const loadMoreSearchResults = createAsyncThunk<
   'search/loadMore',
   async (_, { getState }) => {
     const state = getState();
-    const { query, page, lastTags } = state.search;
+    const { query, page, lastTags, lastExtra } = state.search;
     const { selectedAddress } = state.address;
     const { currentLocation } = state.location;
     const lat = selectedAddress?.latitude || currentLocation?.latitude;
     const lng = selectedAddress?.longitude || currentLocation?.longitude;
     const next = page + 1;
-    const { results, hasMore } = await globalSearchPage(query.trim(), undefined, undefined, lastTags, lat, lng, next);
+    const { results, hasMore } = await globalSearchPage(query.trim(), undefined, undefined, lastTags, lat, lng, next, lastExtra);
     return { results: results.filter((r) => r.domain === 'medicine'), hasMore, page: next };
   },
   {
@@ -105,7 +106,7 @@ export const loadMoreSearchResults = createAsyncThunk<
 );
 
 export const fetchSearchSuggestions = createAsyncThunk<
-  SearchResult[],
+  SearchSuggestion[],
   { query: string },
   { state: RootState, rejectValue: string }
 >('search/fetchSuggestions', async ({ query }, { getState, rejectWithValue }) => {
@@ -121,8 +122,7 @@ export const fetchSearchSuggestions = createAsyncThunk<
     const lat = selectedAddress?.latitude || currentLocation?.latitude;
     const lng = selectedAddress?.longitude || currentLocation?.longitude;
 
-    const results = await globalSearch(query.trim(), undefined, undefined, undefined, lat, lng);
-    return results.slice(0, 6);
+    return await fetchSuggestions(query.trim(), lat, lng);
   } catch (err: any) {
     return rejectWithValue(err?.message || 'Failed to fetch suggestions');
   }
@@ -164,6 +164,8 @@ const searchSlice = createSlice({
         state.error = undefined;
         state.activeRequestId = action.meta.requestId;
         state.lastTags = action.meta.arg.tags;
+        const { scope, field, medicineId } = action.meta.arg;
+        state.lastExtra = { scope, field, medicineId };
       })
       .addCase(executeGlobalSearch.fulfilled, (state, action) => {
         if (state.activeRequestId !== action.meta.requestId) return;

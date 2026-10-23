@@ -16,6 +16,21 @@ export type DoctorSearchMeta = {
   specialty: string;
 };
 
+// One line of the search box's suggestions. Choosing it runs a search for exactly that kind of thing.
+export type SearchSuggestion = {
+  kind: 'medicine' | 'pharmacy' | 'composition' | 'manufacturer';
+  id?: string;
+  title: string;
+  subtitle?: string;
+};
+
+// How a search was started, beyond its words: a home screen medicine card (`medicineId`), or a chosen suggestion (`scope`, `field`).
+export type SearchExtra = {
+  scope?: 'pharmacy' | 'medicine';
+  field?: 'name' | 'composition' | 'manufacturer';
+  medicineId?: string;
+};
+
 export type MedicineSearchMeta = {
   id: string;
   name: string;

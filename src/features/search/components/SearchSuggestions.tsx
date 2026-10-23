@@ -1,13 +1,13 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIcon from '@/src/components/icons/AppIcon';
-import { SearchResult } from '@/src/search/search.types';
+import { SearchSuggestion } from '@/src/search/search.types';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { ThemeColors } from '../../../theme/colors';
 
 type Props = {
-  suggestions: SearchResult[];
-  onSelect: (item: SearchResult) => void;
+  suggestions: SearchSuggestion[];
+  onSelect: (item: SearchSuggestion) => void;
 };
 
 const getDomainDesign = (domain: string) => {
@@ -16,8 +16,10 @@ const getDomainDesign = (domain: string) => {
       return { icon: 'pill', bg: '#ECFDF5', text: '#059669', label: 'Medicine' };
     case 'pharmacy':
       return { icon: 'store', bg: '#FEF3C7', text: '#D97706', label: 'Pharmacy' };
-    case 'doctor':
-      return { icon: 'stethoscope', bg: '#EFF6FF', text: '#2563EB', label: 'Doctor' };
+    case 'composition':
+      return { icon: 'flask-conical', bg: '#EFF6FF', text: '#2563EB', label: 'Composition' };
+    case 'manufacturer':
+      return { icon: 'briefcase', bg: '#F5F3FF', text: '#7C3AED', label: 'Manufacturer' };
     default:
       return { icon: 'search', bg: '#F3F4F6', text: '#6B7280', label: 'Other' };
   }
@@ -31,10 +33,10 @@ export default function SearchSuggestions({ suggestions, onSelect }: Props) {
   return (
     <View style={styles.container}>
       {suggestions.map((item, index) => {
-        const design = getDomainDesign(item.domain as string);
+        const design = getDomainDesign(item.kind);
         return (
           <TouchableOpacity
-            key={item.id + index}
+            key={`${item.kind}-${item.id || item.title}-${index}`}
             style={styles.suggestionRow}
             onPress={() => onSelect(item)}
           >

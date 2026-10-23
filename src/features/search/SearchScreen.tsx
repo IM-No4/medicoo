@@ -23,7 +23,7 @@ import {
   loadMoreSearchResults,
   setQuery,
 } from '@/src/search/search.slice';
-import { SearchResult } from '@/src/search/search.types';
+import { SearchResult, SearchSuggestion } from '@/src/search/search.types';
 
 import RecentSearches from './components/RecentSearches';
 import SearchEmptyState from './components/SearchEmptyState';
@@ -77,6 +77,23 @@ export default function SearchScreen() {
     dispatch(executeGlobalSearch({ query: q }));
   };
 
+  // A suggestion was chosen: search for exactly that kind of thing (a pharmacy -> pharmacies only; a medicine -> that medicine and its
+  // alternatives; a composition / manufacturer -> medicines by it).
+  const handleSuggestionSelect = (item: SearchSuggestion) => {
+    Keyboard.dismiss();
+    hasSearchedRef.current = true;
+    dispatch(setQuery(item.title));
+    forceRender((n) => n + 1);
+    lastDispatchedQueryRef.current = item.title;
+    if (item.kind === 'pharmacy') {
+      dispatch(executeGlobalSearch({ query: item.title, scope: 'pharmacy' }));
+    } else if (item.kind === 'medicine') {
+      dispatch(executeGlobalSearch({ query: item.title, scope: 'medicine', medicineId: item.id }));
+    } else {
+      dispatch(executeGlobalSearch({ query: item.title, scope: 'medicine', field: item.kind }));
+    }
+  };
+
   const handleClearRecent = async () => {
     await clearRecentSearches();
     setRecentSearches([]);
@@ -96,7 +113,9 @@ export default function SearchScreen() {
         category: params.category,
         type: params.type,
         tags: params.tags,
-        recordRecent: !isFromTags
+        // a home screen medicine card: exactly that medicine and its alternatives
+        medicineId: params.medicineId,
+        recordRecent: !isFromTags && !params.medicineId
       }));
     } else {
       setTimeout(() => inputRef.current?.focus(), 300);
@@ -229,7 +248,9 @@ export default function SearchScreen() {
           navigation.goBack();
         }}
         onSubmit={() => {
-          Keyboard.dismiss();
+          // searching what was typed: medicines if any match, else pharmacies
+          if (query.trim().length >= 2) handleManualSearch(query.trim());
+          else Keyboard.dismiss();
         }}
       />
 
@@ -252,7 +273,7 @@ export default function SearchScreen() {
         <ScrollView style={styles.flex} keyboardShouldPersistTaps="handled">
           <SearchSuggestions
             suggestions={suggestions}
-            onSelect={(item) => handleManualSearch(item.title)}
+            onSelect={handleSuggestionSelect}
           />
           <RecentSearches
             items={recentSearches}

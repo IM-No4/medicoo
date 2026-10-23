@@ -46,6 +46,19 @@ export type SearchApiResponse = {
   }>;
 };
 
+export type SuggestionApiResponse = {
+  suggestions?: Array<{ kind: 'medicine' | 'pharmacy' | 'composition' | 'manufacturer'; id?: string; title: string; subtitle?: string }>;
+};
+
+export async function fetchSuggestionList(query: string, pincodeLat?: number, pincodeLng?: number) {
+  if (!query || query.trim().length < 2) return [];
+  const params: any = { q: query.trim() };
+  if (pincodeLat) params.pincodeLat = pincodeLat;
+  if (pincodeLng) params.pincodeLng = pincodeLng;
+  const res = await apiClient.get<SuggestionApiResponse>("/api/user/search/suggestions", { params });
+  return res.data.suggestions || [];
+}
+
 export async function searchGlobal(
   query: string,
   category?: string,
@@ -54,6 +67,7 @@ export async function searchGlobal(
   pincodeLat?: number,
   pincodeLng?: number,
   page?: number,
+  extra?: { scope?: string; field?: string; medicineId?: string },
 ) {
   if (!query || query.length < 2) {
     return {
@@ -70,6 +84,9 @@ export async function searchGlobal(
   if (pincodeLat) params.pincodeLat = pincodeLat;
   if (pincodeLng) params.pincodeLng = pincodeLng;
   if (page && page > 1) params.page = page;
+  if (extra?.scope) params.scope = extra.scope;
+  if (extra?.field) params.field = extra.field;
+  if (extra?.medicineId) params.medicineId = extra.medicineId;
 
   const res = await apiClient.get<SearchApiResponse>("/api/user/search", {
     params,

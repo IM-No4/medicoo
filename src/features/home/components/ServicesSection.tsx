@@ -54,7 +54,7 @@ const GAP = 12;
 
 function ServicesSection({ title, services, layout, onAction }: Props) {
   const { t } = useLanguage();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const carts = useSelector((state: RootState) => state.cart);
@@ -104,8 +104,10 @@ function ServicesSection({ title, services, layout, onAction }: Props) {
     // the same row (one service) or along the bottom (two across).
     if (cardMode) {
       const wide = columns === 1;
+      // Light mode: the full gradient, text by its brightness. Dark mode: the dark surface with only a soft wash of the gradient (a full
+      // bright gradient is glaring on a dark screen), and the theme's own text colours.
       const darkCard = (brightness(item.background.start) + brightness(item.background.end)) / 2 < 0.55;
-      const textColor = darkCard ? '#FFFFFF' : '#0F172A';
+      const textColor = isDark ? theme.text : darkCard ? '#FFFFFF' : '#0F172A';
       const icon = (
         <View style={styles.cardIcon}>
           <AppIcon name={item.icon as any} size={32} color={item.accentColor} />
@@ -122,7 +124,7 @@ function ServicesSection({ title, services, layout, onAction }: Props) {
       return (
         <TouchableOpacity
           key={item.id}
-          style={[styles.card, wide ? styles.cardWide : styles.cardHalf, { width: tileWidth }, disabled && styles.disabledCard]}
+          style={[styles.card, wide ? styles.cardWide : styles.cardHalf, { width: tileWidth }, isDark && styles.cardDark, disabled && styles.disabledCard]}
           activeOpacity={disabled ? 1 : 0.8}
           onPress={() => onPressService(item)}
         >
@@ -130,7 +132,7 @@ function ServicesSection({ title, services, layout, onAction }: Props) {
             colors={[item.background.start, item.background.end]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
+            style={[StyleSheet.absoluteFill, isDark && styles.darkWash]}
           />
           {wide ? (
             <>
@@ -210,6 +212,14 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     overflow: 'hidden',
+  },
+  cardDark: {
+    backgroundColor: c.card,
+    borderWidth: 1,
+    borderColor: c.borderLight,
+  },
+  darkWash: {
+    opacity: 0.22,
   },
   // two across: icon on top, label and arrow along the bottom
   cardHalf: {

@@ -32,6 +32,7 @@ import SearchResults from './components/SearchResults';
 import SearchResultSkeleton from './components/SearchResultSkeleton';
 import SearchSuggestions from './components/SearchSuggestions';
 import { clearRecentSearches, getRecentSearches } from './utils/recentSearches';
+import { DEFAULT_SEARCH_FILTERS, NEXT_SORT, SearchFilters, SORT_LABEL } from './searchFilters';
 import { useTheme } from '../../theme/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -55,6 +56,7 @@ export default function SearchScreen() {
   const lastDispatchedQueryRef = useRef<string>('');
   const [activeTab, setActiveTab] = useState<SearchTab | null>(null);
   const [isPrescriptionOnly, setIsPrescriptionOnly] = useState(false);
+  const [filters, setFilters] = useState<SearchFilters>(DEFAULT_SEARCH_FILTERS);
 
   const { query, results, loading, error, suggestions, loadingSuggestions } = useSelector(
     (state: RootState) => state.search
@@ -166,18 +168,32 @@ export default function SearchScreen() {
       style={{ flexGrow: 0 }}
       contentContainerStyle={styles.filterContainer}
     >
-      <TouchableOpacity style={styles.filterChip}>
-        <Text style={styles.filterText}>{t('sort_by_2')}</Text>
-        <AppIcon name="chevron-down" size={14} color={theme.text} />
+      <TouchableOpacity
+        style={[styles.filterChip, filters.sort !== 'relevance' && styles.filterChipActive]}
+        onPress={() => setFilters((f) => ({ ...f, sort: NEXT_SORT[f.sort] }))}
+      >
+        <Text style={[styles.filterText, filters.sort !== 'relevance' && styles.filterTextActive]}>
+          {filters.sort === 'relevance' ? t('sort_by_2') : SORT_LABEL[filters.sort]}
+        </Text>
+        <AppIcon name="chevron-down" size={14} color={filters.sort !== 'relevance' ? '#007C69' : theme.text} />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.filterChip}>
-        <Text style={styles.filterText}>{t('fast_delivery')}</Text>
+      <TouchableOpacity
+        style={[styles.filterChip, filters.fastDelivery && styles.filterChipActive]}
+        onPress={() => setFilters((f) => ({ ...f, fastDelivery: !f.fastDelivery }))}
+      >
+        <Text style={[styles.filterText, filters.fastDelivery && styles.filterTextActive]}>{t('fast_delivery')}</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.filterChip}>
-        <Text style={styles.filterText}>{t('ratings_4_0')}</Text>
+      <TouchableOpacity
+        style={[styles.filterChip, filters.topRated && styles.filterChipActive]}
+        onPress={() => setFilters((f) => ({ ...f, topRated: !f.topRated }))}
+      >
+        <Text style={[styles.filterText, filters.topRated && styles.filterTextActive]}>{t('ratings_4_0')}</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.filterChip}>
-        <Text style={styles.filterText}>{t('offers')}</Text>
+      <TouchableOpacity
+        style={[styles.filterChip, filters.offers && styles.filterChipActive]}
+        onPress={() => setFilters((f) => ({ ...f, offers: !f.offers }))}
+      >
+        <Text style={[styles.filterText, filters.offers && styles.filterTextActive]}>{t('offers')}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -251,7 +267,7 @@ export default function SearchScreen() {
       ) : activeTab ? (
         <View style={[styles.flex, { backgroundColor: theme.cardSecondary }]}>
           {renderFilters()}
-          <SearchResults results={results} activeTab={activeTab!} />
+          <SearchResults results={results} activeTab={activeTab!} filters={filters} onClearFilters={() => setFilters(DEFAULT_SEARCH_FILTERS)} />
         </View>
       ) : null}
 
@@ -328,9 +344,17 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     borderColor: '#ecececff',
     height: 34, // Very compact chips
   },
+  filterChipActive: {
+    backgroundColor: '#E6F4F1',
+    borderColor: '#007C69',
+  },
   filterText: {
     fontSize: 12,
     fontWeight: '600',
     color: c.text,
+  },
+  filterTextActive: {
+    color: '#007C69',
+    fontWeight: '700',
   },
 });

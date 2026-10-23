@@ -7,10 +7,12 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { SearchTab } from '../SearchScreen';
+import { anyFilterOn, FAST_DELIVERY_MINS, SearchFilters, TOP_RATED_MIN } from '../searchFilters';
 import { groupMedicinesByPharmacy } from '../utils/groupMedicinesByPharmacy';
 import { saveRecentSearch } from '../utils/recentSearches';
 
@@ -24,9 +26,13 @@ import { useLanguage } from '../../../i18n/LanguageContext';
 type Props = {
   results: SearchResult[];
   activeTab: SearchTab;
+  filters?: SearchFilters;
+  onClearFilters?: () => void;
 };
 
-export default function SearchResults({ results, activeTab }: Props) {
+const NO_FILTERS: SearchFilters = { sort: 'relevance', fastDelivery: false, topRated: false, offers: false };
+
+export default function SearchResults({ results, activeTab, filters = NO_FILTERS, onClearFilters }: Props) {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -186,16 +192,52 @@ export default function SearchResults({ results, activeTab }: Props) {
     };
   }, [visiblePharmacyIds, lat, long]);
 
+  // The chips: which pharmacies stay, in what order. Delivery time and distance come from storeLiveInfo (loaded per store); a store whose
+  // figures have not arrived yet is not dropped by the delivery filter. "Offers" keeps only medicines with a discount, and only the
+  // pharmacies that have one (a pharmacy found by name alone has no medicines to judge, so the offers chip does not filter it).
+  const hasOffer = (m: SearchResult) => Number((m.meta as any)?.discountPrice) > 0 && Number((m.meta as any)?.price) > 0;
+  const passes = (id: string, rating: number) => {
+    const live = storeLiveInfo[id];
+    if (filters.topRated && !(Number(rating) >= TOP_RATED_MIN)) return false;
+    if (filters.fastDelivery && live && live.deliveryEtaMins > FAST_DELIVERY_MINS) return false;
+    return true;
+  };
+  const sortRows = <T extends { id: string; rating: number }>(rows: T[]): T[] => {
+    if (filters.sort === 'relevance') return rows;
+    const copy = [...rows];
+    if (filters.sort === 'rating') return copy.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
+    const distance = (id: string) => storeLiveInfo[id]?.distanceKm ?? Number.POSITIVE_INFINITY;
+    return copy.sort((a, b) => distance(a.id) - distance(b.id));
+  };
+
+  const shownGroups = useMemo(() => {
+    const kept = mergedPharmacyGroups
+      .map((g) => ({ original: g, shown: filters.offers && g.medicines.length > 0 ? { ...g, medicines: g.medicines.filter(hasOffer) } : g }))
+      .filter(({ original, shown }) => !(filters.offers && original.medicines.length > 0 && shown.medicines.length === 0))
+      .map(({ shown }) => shown)
+      .filter((g) => passes(g.pharmacyId, g.rating));
+    return sortRows(kept.map((g) => ({ ...g, id: g.pharmacyId })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mergedPharmacyGroups, filters, storeLiveInfo]);
+
+  const shownPharmacies = useMemo(() => {
+    const kept = pharmacies.filter((p) => passes(p.id, (p.meta as any)?.rating ?? 4.2));
+    return sortRows(kept.map((p) => ({ ...p, rating: (p.meta as any)?.rating ?? 4.2 })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pharmacies, filters, storeLiveInfo]);
+
+  const nothingMatches = anyFilterOn(filters) && (activeTab === 'Medicines' ? shownGroups.length === 0 : shownPharmacies.length === 0);
+
   const renderMedicineTab = () => (
     <>
-      {mergedPharmacyGroups.length > 0 && (
+      {shownGroups.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeaderContainer}>
             <Text style={styles.sectionFeaturedTitle}>{t('featured_pharmacies')}</Text>
             <View style={styles.headerLine} />
           </View>
           <View style={styles.pharmacyListContainer}>
-            {mergedPharmacyGroups.map((group, index) => {
+            {shownGroups.map((group, index) => {
               const live = storeLiveInfo[group.pharmacyId];
               return (
                 <PharmacyListingCard
@@ -215,7 +257,7 @@ export default function SearchResults({ results, activeTab }: Props) {
                   }}
                   onPress={() => handlePharmacyPress(group.pharmacyId)}
                   onMedicinePress={handleMedicinePress}
-                  isLast={index === mergedPharmacyGroups.length - 1}
+                  isLast={index === shownGroups.length - 1}
                 />
               );
             })}
@@ -233,7 +275,7 @@ export default function SearchResults({ results, activeTab }: Props) {
       </View>
 
       <View>
-        {pharmacies.map((item, index) => {
+        {shownPharmacies.map((item, index) => {
           if (item.domain !== 'pharmacy') return null;
           const meta = item.meta;
           const live = storeLiveInfo[item.id];
@@ -258,7 +300,7 @@ export default function SearchResults({ results, activeTab }: Props) {
               }
               onMedicinePress={handleMedicinePress}
               variant="hero"
-              isLast={index === pharmacies.length - 1}
+              isLast={index === shownPharmacies.length - 1}
             />
           );
         })}
@@ -273,7 +315,16 @@ export default function SearchResults({ results, activeTab }: Props) {
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
     >
-      {activeTab === 'Medicines' ? renderMedicineTab() : renderPharmacyTab()}
+      {nothingMatches ? (
+        <View style={styles.noMatch}>
+          <Text style={styles.noMatchTitle}>No results match these filters</Text>
+          {onClearFilters ? (
+            <TouchableOpacity onPress={onClearFilters} activeOpacity={0.7}>
+              <Text style={styles.noMatchAction}>Clear filters</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : activeTab === 'Medicines' ? renderMedicineTab() : renderPharmacyTab()}
 
       {/* Others Section (Doctors/Labs) if applicable */}
       {(doctors.length > 0 || labTests.length > 0) && (
@@ -374,6 +425,21 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: c.borderLight,
     paddingTop: 8,
+  },
+  noMatch: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    gap: 10,
+  },
+  noMatchTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: c.textSecondary,
+  },
+  noMatchAction: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#007C69',
   },
   bottomSpacer: {
     // Tall enough to clear the floating MultiStoreCartBar (SearchScreen.tsx)

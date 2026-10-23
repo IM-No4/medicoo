@@ -167,8 +167,12 @@ export default function SearchScreen() {
       showsHorizontalScrollIndicator={false}
       style={{ flexGrow: 0 }}
       contentContainerStyle={styles.filterContainer}
+      // with the keyboard up, the first tap would otherwise only dismiss it instead of reaching the chip
+      keyboardShouldPersistTaps="handled"
     >
       <TouchableOpacity
+        activeOpacity={0.7}
+        hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
         style={[styles.filterChip, filters.sort !== 'relevance' && styles.filterChipActive]}
         onPress={() => setFilters((f) => ({ ...f, sort: NEXT_SORT[f.sort] }))}
       >
@@ -178,18 +182,24 @@ export default function SearchScreen() {
         <AppIcon name="chevron-down" size={14} color={filters.sort !== 'relevance' ? '#007C69' : theme.text} />
       </TouchableOpacity>
       <TouchableOpacity
+        activeOpacity={0.7}
+        hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
         style={[styles.filterChip, filters.fastDelivery && styles.filterChipActive]}
         onPress={() => setFilters((f) => ({ ...f, fastDelivery: !f.fastDelivery }))}
       >
         <Text style={[styles.filterText, filters.fastDelivery && styles.filterTextActive]}>{t('fast_delivery')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
+        activeOpacity={0.7}
+        hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
         style={[styles.filterChip, filters.topRated && styles.filterChipActive]}
         onPress={() => setFilters((f) => ({ ...f, topRated: !f.topRated }))}
       >
         <Text style={[styles.filterText, filters.topRated && styles.filterTextActive]}>{t('ratings_4_0')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
+        activeOpacity={0.7}
+        hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
         style={[styles.filterChip, filters.offers && styles.filterChipActive]}
         onPress={() => setFilters((f) => ({ ...f, offers: !f.offers }))}
       >
@@ -337,12 +347,12 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
     backgroundColor: c.card,
     borderWidth: 1,
     borderColor: '#ecececff',
-    height: 34, // Very compact chips
+    height: 38,
   },
   filterChipActive: {
     backgroundColor: '#E6F4F1',

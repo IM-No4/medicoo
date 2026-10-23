@@ -27,18 +27,20 @@ type Props = {
   results: SearchResult[];
   activeTab: SearchTab;
   filters?: SearchFilters;
+  // the Rx switch in the search bar: only medicines that need a prescription
+  prescriptionOnly?: boolean;
   onClearFilters?: () => void;
 };
 
 const NO_FILTERS: SearchFilters = { sort: 'relevance', fastDelivery: false, topRated: false, offers: false };
 
-export default function SearchResults({ results, activeTab, filters = NO_FILTERS, onClearFilters }: Props) {
+export default function SearchResults({ results, activeTab, filters = NO_FILTERS, prescriptionOnly = false, onClearFilters }: Props) {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const medicines = useMemo(
-    () => results.filter((r) => r.domain === 'medicine'),
-    [results]
+    () => results.filter((r) => r.domain === 'medicine' && (!prescriptionOnly || !!(r.meta as any)?.prescriptionRequired)),
+    [results, prescriptionOnly]
   );
   const doctors = useMemo(
     () => results.filter((r) => r.domain === 'doctor'),
@@ -215,10 +217,12 @@ export default function SearchResults({ results, activeTab, filters = NO_FILTERS
       .map((g) => ({ original: g, shown: filters.offers && g.medicines.length > 0 ? { ...g, medicines: g.medicines.filter(hasOffer) } : g }))
       .filter(({ original, shown }) => !(filters.offers && original.medicines.length > 0 && shown.medicines.length === 0))
       .map(({ shown }) => shown)
+      // with Rx on, a pharmacy matched only by its name has no prescription medicine to show
+      .filter((g) => !(prescriptionOnly && g.medicines.length === 0))
       .filter((g) => passes(g.pharmacyId, g.rating));
     return sortRows(kept.map((g) => ({ ...g, id: g.pharmacyId })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mergedPharmacyGroups, filters, storeLiveInfo]);
+  }, [mergedPharmacyGroups, filters, storeLiveInfo, prescriptionOnly]);
 
   const shownPharmacies = useMemo(() => {
     const kept = pharmacies.filter((p) => passes(p.id, (p.meta as any)?.rating ?? 4.2));
@@ -226,7 +230,7 @@ export default function SearchResults({ results, activeTab, filters = NO_FILTERS
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pharmacies, filters, storeLiveInfo]);
 
-  const nothingMatches = anyFilterOn(filters) && (activeTab === 'Medicines' ? shownGroups.length === 0 : shownPharmacies.length === 0);
+  const nothingMatches = (anyFilterOn(filters) || prescriptionOnly) && (activeTab === 'Medicines' ? shownGroups.length === 0 : shownPharmacies.length === 0);
 
   const renderMedicineTab = () => (
     <>

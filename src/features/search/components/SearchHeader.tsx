@@ -50,12 +50,6 @@ const SearchHeader = forwardRef<TextInput, Props>(
             <AppIcon name="x" size={18} color={theme.textSecondary} />
           </TouchableOpacity>
         ) : null}
-
-        <View style={styles.divider} />
-
-        <TouchableOpacity style={styles.icon}>
-          <AppIcon name="mic" size={20} color="#EB6E25" />
-        </TouchableOpacity>
       </View>
     );
 

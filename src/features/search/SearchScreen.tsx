@@ -277,7 +277,7 @@ export default function SearchScreen() {
       ) : activeTab ? (
         <View style={[styles.flex, { backgroundColor: theme.cardSecondary }]}>
           {renderFilters()}
-          <SearchResults results={results} activeTab={activeTab!} filters={filters} onClearFilters={() => setFilters(DEFAULT_SEARCH_FILTERS)} />
+          <SearchResults results={results} activeTab={activeTab!} filters={filters} prescriptionOnly={isPrescriptionOnly} onClearFilters={() => { setFilters(DEFAULT_SEARCH_FILTERS); setIsPrescriptionOnly(false); }} />
         </View>
       ) : null}
 

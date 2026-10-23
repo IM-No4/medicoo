@@ -285,18 +285,20 @@ export default function PharmacyDetailScreen() {
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconCircle}>
                 <AppIcon
-                  name={query.trim() ? "search" : "pill"}
+                  name={query.trim() || medicineFilter !== "all" ? "search" : "pill"}
                   size={40}
                   color={theme.textMuted}
                 />
               </View>
               <Text style={styles.emptyTitle}>
-                {query.trim() ? "No Medicines Found" : "No Medicines Available"}
+                {query.trim() || medicineFilter !== "all" ? "No Medicines Found" : "No Medicines Available"}
               </Text>
               <Text style={styles.emptySubtitle}>
                 {query.trim()
                   ? `We couldn't find any medicines matching "${query}". Try searching for something else.`
-                  : "This pharmacy doesn't have any medicines listed yet."}
+                  : medicineFilter !== "all"
+                    ? "This pharmacy has no medicines under this filter. Tap All to see everything."
+                    : "This pharmacy doesn't have any medicines listed yet."}
               </Text>
             </View>
           ) : null
@@ -436,7 +438,7 @@ export default function PharmacyDetailScreen() {
               <View style={styles.emptyContainer}>
                 <View style={styles.emptyIconCircle}>
                   <AppIcon
-                    name={query.trim() ? "search" : "pill"}
+                    name={query.trim() || medicineFilter !== "all" ? "search" : "pill"}
                     size={40}
                     color={theme.textMuted}
                   />

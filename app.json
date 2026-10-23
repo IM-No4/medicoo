@@ -144,6 +144,15 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "expo-navigation-bar": {
+        "backgroundColor": "#00000000"
+      },
+      "eas": {
+        "projectId": "ed4f8f34-4884-497a-bc6d-3951d6bef5c5"
+      }
     }
   }
 }

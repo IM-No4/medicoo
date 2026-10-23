@@ -125,7 +125,25 @@
           "android": {
             "compileSdkVersion": 36,
             "targetSdkVersion": 36,
-            "minSdkVersion": 26
+            "minSdkVersion": 26,
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "# Native SDKs that find their own classes by name (reflection / JNI) - kept as they are when the app is shrunk (R8)
+-keep class io.agora.** { *; }
+-dontwarn io.agora.**
+-keep class com.cashfree.** { *; }
+-keep class com.gocashfree.** { *; }
+-dontwarn com.cashfree.**
+-dontwarn com.gocashfree.**
+-keep class dev.matinzd.healthconnect.** { *; }
+-keep class androidx.health.connect.client.** { *; }
+-keep class app.notifee.** { *; }
+-keep class com.swmansion.reanimated.** { *; }
+-keep class com.facebook.react.turbomodule.** { *; }
+-keep class com.facebook.hermes.unicode.** { *; }
+-keep class com.facebook.jni.** { *; }
+-keep class com.medicootech.** { *; }
+-keep class expo.modules.** { *; }"
           }
         }
       ],

@@ -169,7 +169,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         flex: 1,
     },
     productName: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: '600',
         color: c.text,
         marginBottom: 0,

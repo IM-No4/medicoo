@@ -39,6 +39,16 @@ interface Props {
   onAction: (action: FeedAction) => void;
 }
 
+// Text on a gradient card: white on a dark gradient, near-black on a light one (by the gradient's own brightness).
+const brightness = (hex: string): number => {
+  const m = /^#?([0-9a-f]{6})$/i.exec((hex || '').trim()) || /^#?([0-9a-f]{3})$/i.exec((hex || '').trim());
+  if (!m) return 0;
+  let h = m[1];
+  if (h.length === 3) h = h.split('').map((ch) => ch + ch).join('');
+  const n = parseInt(h, 16);
+  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+};
+
 const H_PADDING = 24;
 const GAP = 12;
 
@@ -94,23 +104,21 @@ function ServicesSection({ title, services, layout, onAction }: Props) {
     // the same row (one service) or along the bottom (two across).
     if (cardMode) {
       const wide = columns === 1;
+      const darkCard = (brightness(item.background.start) + brightness(item.background.end)) / 2 < 0.55;
+      const textColor = darkCard ? '#FFFFFF' : '#0F172A';
       const icon = (
         <View style={styles.cardIcon}>
-          <AppIcon name={item.icon as any} size={26} color={item.accentColor} />
+          <AppIcon name={item.icon as any} size={32} color={item.accentColor} />
           {badge}
         </View>
       );
       const label = (
         <View style={styles.cardText}>
-          <Text style={styles.cardLabel} numberOfLines={2}>{item.title}</Text>
-          {disabled && <Text style={styles.cardSub}>{t('coming_soon')}</Text>}
+          <Text style={[styles.cardLabel, { color: textColor }]} numberOfLines={2}>{item.title}</Text>
+          {disabled && <Text style={[styles.cardSub, { color: textColor, opacity: 0.7 }]}>{t('coming_soon')}</Text>}
         </View>
       );
-      const arrow = (
-        <View style={styles.cardArrow}>
-          <AppIcon name="arrow-right" size={14} color="#0F172A" />
-        </View>
-      );
+      const arrow = <AppIcon name="arrow-right" size={18} color={textColor} />;
       return (
         <TouchableOpacity
           key={item.id}
@@ -216,11 +224,9 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     minHeight: 84,
   },
   cardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.65)',
-    alignItems: 'center',
+    width: 40,
+    height: 40,
+    alignItems: 'flex-start',
     justifyContent: 'center',
     overflow: 'visible',
   },
@@ -237,21 +243,11 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   cardLabel: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0F172A',
   },
   cardSub: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#475569',
     marginTop: 2,
-  },
-  cardArrow: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.65)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   item: {
     alignItems: 'center',

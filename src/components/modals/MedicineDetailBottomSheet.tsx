@@ -1,4 +1,5 @@
 import AppIcon from "@/src/components/icons/AppIcon";
+import { LinearGradient } from "expo-linear-gradient";
 import QuantityControl from "@/src/features/pharmacy/components/QuantityControl";
 import { addItemLocal } from "@/src/redux/slices/cartSlice";
 import { RootState } from "@/src/redux/store";
@@ -86,7 +87,7 @@ export default function MedicineDetailBottomSheet({
   onClose,
 }: Props) {
   const { t } = useLanguage();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
@@ -327,9 +328,17 @@ export default function MedicineDetailBottomSheet({
                   )}
                 />
               ) : (
-                <View style={styles.placeholderImage}>
-                  <AppIcon name="pill" size={80} color="#E5E7EB" />
-                </View>
+                // no photo: a soft gradient fills the image area, with the pill mark sitting quietly on it
+                <LinearGradient
+                  colors={isDark ? ['#12453A', '#16222F'] : ['#ECFDF5', '#E0F2FE']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.placeholderImage}
+                >
+                  <View style={{ opacity: 0.35 }}>
+                    <AppIcon name="pill" size={72} color={isDark ? '#34D399' : '#10B981'} />
+                  </View>
+                </LinearGradient>
               )}
 
               {images.length > 1 && (

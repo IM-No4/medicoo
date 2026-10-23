@@ -2,8 +2,9 @@ import { executeAction } from '@/src/actions/ActionExecutor';
 import { RootState } from '@/src/redux/store';
 import { getStoreDetails } from '@/src/services/api/pharmacy.api';
 import { SearchResult } from '@/src/search/search.types';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -29,15 +30,20 @@ type Props = {
   filters?: SearchFilters;
   // the Rx switch in the search bar: only medicines that need a prescription
   prescriptionOnly?: boolean;
+  // more pharmacies are loaded as the list is scrolled
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
   onClearFilters?: () => void;
 };
 
 const NO_FILTERS: SearchFilters = { sort: 'relevance', fastDelivery: false, topRated: false, offers: false };
 
-export default function SearchResults({ results, activeTab, filters = NO_FILTERS, prescriptionOnly = false, onClearFilters }: Props) {
+export default function SearchResults({ results, activeTab, filters = NO_FILTERS, prescriptionOnly = false, hasMore = false, loadingMore = false, onLoadMore, onClearFilters }: Props) {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const viewportHeight = useRef(0);
   const medicines = useMemo(
     () => results.filter((r) => r.domain === 'medicine' && (!prescriptionOnly || !!(r.meta as any)?.prescriptionRequired)),
     [results, prescriptionOnly]
@@ -90,6 +96,7 @@ export default function SearchResults({ results, activeTab, filters = NO_FILTERS
       images: meta.images,
       composition: meta.composition,
       prescriptionRequired: meta.prescriptionRequired,
+      isAlternative: meta.isAlternative,
       batchNum: meta.batchNum,
       expiryDate: meta.expiryDate,
       manufacturer: meta.manufacturer,
@@ -318,6 +325,16 @@ export default function SearchResults({ results, activeTab, filters = NO_FILTERS
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
+      scrollEventThrottle={200}
+      onLayout={(e) => { viewportHeight.current = e.nativeEvent.layout.height; }}
+      onScroll={({ nativeEvent }) => {
+        const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+        if (hasMore && !loadingMore && layoutMeasurement.height + contentOffset.y >= contentSize.height - 500) onLoadMore?.();
+      }}
+      // when the filters leave less than a screenful, ask for the next page without waiting for a scroll that cannot happen
+      onContentSizeChange={(_, height) => {
+        if (hasMore && !loadingMore && viewportHeight.current > 0 && height < viewportHeight.current) onLoadMore?.();
+      }}
     >
       {nothingMatches ? (
         <View style={styles.noMatch}>
@@ -377,6 +394,8 @@ export default function SearchResults({ results, activeTab, filters = NO_FILTERS
           )}
         </View>
       )}
+
+      {loadingMore ? <ActivityIndicator style={{ marginVertical: 16 }} color={theme.textMuted} /> : null}
 
       <View style={styles.bottomSpacer} />
     </ScrollView>

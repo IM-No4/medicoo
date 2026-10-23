@@ -20,6 +20,7 @@ import {
   clearSearch,
   executeGlobalSearch,
   fetchSearchSuggestions,
+  loadMoreSearchResults,
   setQuery,
 } from '@/src/search/search.slice';
 import { SearchResult } from '@/src/search/search.types';
@@ -58,7 +59,7 @@ export default function SearchScreen() {
   const [isPrescriptionOnly, setIsPrescriptionOnly] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>(DEFAULT_SEARCH_FILTERS);
 
-  const { query, results, loading, error, suggestions, loadingSuggestions } = useSelector(
+  const { query, results, loading, error, suggestions, loadingSuggestions, hasMore, loadingMore } = useSelector(
     (state: RootState) => state.search
   );
 
@@ -277,7 +278,7 @@ export default function SearchScreen() {
       ) : activeTab ? (
         <View style={[styles.flex, { backgroundColor: theme.cardSecondary }]}>
           {renderFilters()}
-          <SearchResults results={results} activeTab={activeTab!} filters={filters} prescriptionOnly={isPrescriptionOnly} onClearFilters={() => { setFilters(DEFAULT_SEARCH_FILTERS); setIsPrescriptionOnly(false); }} />
+          <SearchResults results={results} activeTab={activeTab!} filters={filters} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={() => dispatch(loadMoreSearchResults())} prescriptionOnly={isPrescriptionOnly} onClearFilters={() => { setFilters(DEFAULT_SEARCH_FILTERS); setIsPrescriptionOnly(false); }} />
         </View>
       ) : null}
 

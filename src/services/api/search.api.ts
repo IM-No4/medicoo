@@ -23,9 +23,13 @@ export type SearchApiResponse = {
     images?: string[];
     composition?: string;
     prescriptionStatus?: boolean;
+    // true when this is not the medicine searched for but another with the same composition
+    isAlternative?: boolean;
     batchNum?: string[] | string | number;
     expiryDate?: string[] | string;
   }>;
+  // medicine results come a page of pharmacies at a time
+  pagination?: { page: number; hasMore: boolean };
   pharmacies?: Array<{
     id: string;
     name: string;
@@ -49,6 +53,7 @@ export async function searchGlobal(
   tags?: string[],
   pincodeLat?: number,
   pincodeLng?: number,
+  page?: number,
 ) {
   if (!query || query.length < 2) {
     return {
@@ -64,6 +69,7 @@ export async function searchGlobal(
   if (tags && tags.length > 0) params.tags = tags.join(",");
   if (pincodeLat) params.pincodeLat = pincodeLat;
   if (pincodeLng) params.pincodeLng = pincodeLng;
+  if (page && page > 1) params.page = page;
 
   const res = await apiClient.get<SearchApiResponse>("/api/user/search", {
     params,

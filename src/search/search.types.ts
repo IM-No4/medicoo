@@ -33,6 +33,8 @@ export type MedicineSearchMeta = {
   images?: string[];
   composition?: string;
   prescriptionRequired?: boolean;
+  // another medicine with the same composition as the one searched for
+  isAlternative?: boolean;
   batchNum?: string[] | string | number;
   expiryDate?: string[] | string;
 };

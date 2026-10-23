@@ -4,7 +4,7 @@ import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 import { RootState } from '@/src/redux/store';
 import { SearchResult } from './search.types';
-import { globalSearch } from './SearchService';
+import { globalSearch, globalSearchPage } from './SearchService';
 
 const STORAGE_KEY = 'SEARCH_STATE_V1';
 
@@ -16,6 +16,11 @@ interface SearchState {
   activeRequestId?: string;
   suggestions: SearchResult[];
   loadingSuggestions: boolean;
+  // medicine results arrive a page of pharmacies at a time: where we are and whether the server has more
+  page: number;
+  hasMore: boolean;
+  loadingMore: boolean;
+  lastTags?: string[];
 }
 
 const initialState: SearchState = {
@@ -24,6 +29,9 @@ const initialState: SearchState = {
   results: [],
   suggestions: [],
   loadingSuggestions: false,
+  page: 1,
+  hasMore: false,
+  loadingMore: false,
 };
 
 /**
@@ -32,13 +40,13 @@ const initialState: SearchState = {
  * - Abort handled in SearchService
  */
 export const executeGlobalSearch = createAsyncThunk<
-  SearchResult[],
+  { results: SearchResult[]; hasMore: boolean },
   { query: string; category?: string; type?: string; tags?: string[]; recordRecent?: boolean },
   { state: RootState, rejectValue: string }
 >('search/execute', async ({ query, category, type, tags, recordRecent = true }, { getState, rejectWithValue }) => {
   try {
     if (!query || query.trim().length < 2) {
-      return [];
+      return { results: [], hasMore: false };
     }
 
     const state = getState();
@@ -48,7 +56,7 @@ export const executeGlobalSearch = createAsyncThunk<
     const lat = selectedAddress?.latitude || currentLocation?.latitude;
     const lng = selectedAddress?.longitude || currentLocation?.longitude;
 
-    const results = await globalSearch(query.trim(), category, type, tags, lat, lng);
+    const { results, hasMore } = await globalSearchPage(query.trim(), category, type, tags, lat, lng, 1);
 
     if (recordRecent) {
       await saveRecentSearch(query.trim());
@@ -63,11 +71,38 @@ export const executeGlobalSearch = createAsyncThunk<
       );
     }
 
-    return results;
+    return { results, hasMore };
   } catch (err: any) {
     return rejectWithValue(err?.message || 'Search failed');
   }
 });
+
+// The next page of pharmacies for the current search, added to what is already listed (medicine results only: the doctors and the
+// pharmacies matched by name came with the first page).
+export const loadMoreSearchResults = createAsyncThunk<
+  { results: SearchResult[]; hasMore: boolean; page: number },
+  void,
+  { state: RootState }
+>(
+  'search/loadMore',
+  async (_, { getState }) => {
+    const state = getState();
+    const { query, page, lastTags } = state.search;
+    const { selectedAddress } = state.address;
+    const { currentLocation } = state.location;
+    const lat = selectedAddress?.latitude || currentLocation?.latitude;
+    const lng = selectedAddress?.longitude || currentLocation?.longitude;
+    const next = page + 1;
+    const { results, hasMore } = await globalSearchPage(query.trim(), undefined, undefined, lastTags, lat, lng, next);
+    return { results: results.filter((r) => r.domain === 'medicine'), hasMore, page: next };
+  },
+  {
+    condition: (_, { getState }) => {
+      const s = getState().search;
+      return s.hasMore && !s.loadingMore && !s.loading && s.query.trim().length >= 2;
+    },
+  }
+);
 
 export const fetchSearchSuggestions = createAsyncThunk<
   SearchResult[],
@@ -111,6 +146,9 @@ const searchSlice = createSlice({
     clearSearch(state) {
       state.query = '';
       state.results = [];
+      state.hasMore = false;
+      state.page = 1;
+      state.loadingMore = false;
       state.loading = false;
       state.suggestions = [];
       state.loadingSuggestions = false;
@@ -125,12 +163,29 @@ const searchSlice = createSlice({
         state.loading = true;
         state.error = undefined;
         state.activeRequestId = action.meta.requestId;
+        state.lastTags = action.meta.arg.tags;
       })
       .addCase(executeGlobalSearch.fulfilled, (state, action) => {
         if (state.activeRequestId !== action.meta.requestId) return;
 
         state.loading = false;
-        state.results = action.payload;
+        state.results = action.payload.results;
+        state.hasMore = action.payload.hasMore;
+        state.page = 1;
+        state.loadingMore = false;
+      })
+      .addCase(loadMoreSearchResults.pending, (state) => {
+        state.loadingMore = true;
+      })
+      .addCase(loadMoreSearchResults.fulfilled, (state, action) => {
+        const have = new Set(state.results.map((r) => r.id));
+        state.results = [...state.results, ...action.payload.results.filter((r) => !have.has(r.id))];
+        state.hasMore = action.payload.hasMore;
+        state.page = action.payload.page;
+        state.loadingMore = false;
+      })
+      .addCase(loadMoreSearchResults.rejected, (state) => {
+        state.loadingMore = false;
       })
       .addCase(executeGlobalSearch.rejected, (state, action) => {
         if (state.activeRequestId !== action.meta.requestId) {
@@ -143,6 +198,8 @@ const searchSlice = createSlice({
         if (!action.payload) return;
         state.query = action.payload.query;
         state.results = action.payload.results;
+        state.hasMore = false;
+        state.page = 1;
         state.loading = false;
         state.error = undefined;
       })

@@ -49,6 +49,7 @@ export function normalizeSearchResponse(
         images: m.images,
         composition: m.composition,
         prescriptionRequired: m.prescriptionStatus,
+        isAlternative: m.isAlternative,
         batchNum: m.batchNum,
         expiryDate: m.expiryDate,
       },

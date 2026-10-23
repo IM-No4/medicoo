@@ -26,6 +26,7 @@ type MedicineItem = {
   images?: string[];
   composition?: string;
   prescriptionRequired?: boolean;
+  isAlternative?: boolean;
   batchNum?: any;
   expiryDate?: any;
   manufacturer?: string;
@@ -137,6 +138,7 @@ export default function PharmacyListingCard({
           <Text style={styles.medicineName} numberOfLines={1}>
             {item.name}
           </Text>
+          {item.isAlternative ? <Text style={styles.alternativeTag}>Alternative</Text> : null}
 
           <View style={styles.medicineFooterRow}>
             <View style={styles.medicinePriceRow}>
@@ -566,6 +568,12 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     marginHorizontal: 2,
   },
   // shown under the store's name when it is closed or offline (instead of an overlay across the card)
+  alternativeTag: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#007C69',
+    marginTop: 1,
+  },
   closedText: {
     fontSize: 12,
     fontWeight: '700',

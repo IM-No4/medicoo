@@ -93,7 +93,7 @@ export default function PharmacyListingCard({
         // Fallback to default return
       }
     }
-    return 'Currently Unavailable';
+    return 'Store is offline';
   };
 
   const renderMedicineCard = ({ item }: { item: MedicineItem }) => {
@@ -208,6 +208,7 @@ export default function PharmacyListingCard({
 
             <View style={styles.heroContent}>
               <Text style={styles.heroName}>{pharmacy.name}</Text>
+              {!pharmacy.isOpen && <Text style={styles.closedTextHero}>{getUnavailableText()}</Text>}
               <View style={styles.heroMeta}>
                 <AppIcon name="star" size={14} color="#FFFFFF" />
                 <Text style={styles.heroMetaText}>
@@ -221,16 +222,6 @@ export default function PharmacyListingCard({
             </View>
           </View>
 
-          {/* Closed Overlay hero variant */}
-          {!pharmacy.isOpen && (
-            <View style={styles.closedOverlayHero}>
-              <View style={styles.closedBadge}>
-                <Text style={styles.closedBadgeText}>
-                  {getUnavailableText()}
-                </Text>
-              </View>
-            </View>
-          )}
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
@@ -259,6 +250,8 @@ export default function PharmacyListingCard({
               </Text>
             </View>
 
+            {!pharmacy.isOpen && <Text style={styles.closedText}>{getUnavailableText()}</Text>}
+
             <View style={styles.metaRow}>
               <View style={styles.ratingBox}>
                 <AppIcon name="star" size={14} color="#10B981" />
@@ -281,16 +274,6 @@ export default function PharmacyListingCard({
             </View>
           </View>
 
-          {/* Closed Overlay list variant */}
-          {!pharmacy.isOpen && (
-            <View style={styles.closedOverlayList}>
-              <View style={styles.closedBadge}>
-                <Text style={styles.closedBadgeText}>
-                  {getUnavailableText()}
-                </Text>
-              </View>
-            </View>
-          )}
         </TouchableOpacity>
       )}
 
@@ -582,45 +565,18 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.6)',
     marginHorizontal: 2,
   },
-  closedOverlayHero: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 24,
+  // shown under the store's name when it is closed or offline (instead of an overlay across the card)
+  closedText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#DC2626',
+    marginBottom: 6,
   },
-  closedOverlayList: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closedBadge: {
-    backgroundColor: '#1F2937',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  closedBadgeText: {
-    color: '#F9FAFB',
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+  closedTextHero: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FCA5A5',
+    marginTop: 2,
   },
 });
 

@@ -9,9 +9,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useSelector } from 'react-redux';
 import AppIcon from '../../../components/icons/AppIcon';
-import { RootState } from '../../../redux/store';
 
 import { FeedAction } from '../feed/feed.actions';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -57,7 +55,6 @@ function ServicesSection({ title, services, layout, onAction }: Props) {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
-  const carts = useSelector((state: RootState) => state.cart);
   const { width } = useWindowDimensions();
 
   // Dynamic grid: columns follow how many services are enabled
@@ -65,15 +62,6 @@ function ServicesSection({ title, services, layout, onAction }: Props) {
   const columns = Math.min(4, Math.max(1, layout?.columns ?? services.length));
   const cardMode = columns <= 2;
   const tileWidth = Math.floor((width - H_PADDING * 2 - GAP * (columns - 1)) / columns);
-
-  // Calculate cart count (number of stores with items) for pharmacy
-  const pharmacyCartCount = useMemo(() => {
-    const pharmacyCarts = Object.values(carts);
-    // Count number of carts (stores) that have items
-    return pharmacyCarts.filter((storeCart: any) =>
-      Object.keys(storeCart.items).length > 0
-    ).length;
-  }, [carts]);
 
   const onPressService = useCallback(
     (item: ServiceItem) => {
@@ -83,22 +71,8 @@ function ServicesSection({ title, services, layout, onAction }: Props) {
     [onAction]
   );
 
-  const isPharmacyItem = (item: ServiceItem) =>
-    item.id === 'pharmacy' ||
-    item.id === 'medicines' ||
-    (item.action?.type === 'NAVIGATE' && (item.action.stack === 'PharmacyStack' || item.action.screen === 'PharmacyList'));
-
   const renderItem = (item: ServiceItem) => {
-    const showCartBadge = isPharmacyItem(item) && pharmacyCartCount > 0;
     const disabled = item.enabled === false;
-
-    const badge = showCartBadge ? (
-      <View style={styles.cartBadge}>
-        <Text style={styles.cartBadgeText} numberOfLines={1}>
-          {pharmacyCartCount > 99 ? '99+' : String(pharmacyCartCount)}
-        </Text>
-      </View>
-    ) : null;
 
     // 1-2 services: roomy cards filled with the service's own gradient. Icon in a soft white tile, label and arrow lined up on
     // the same row (one service) or along the bottom (two across).
@@ -111,7 +85,6 @@ function ServicesSection({ title, services, layout, onAction }: Props) {
       const icon = (
         <View style={styles.cardIcon}>
           <AppIcon name={item.icon as any} size={32} color={item.accentColor} />
-          {badge}
         </View>
       );
       const label = (
@@ -175,7 +148,6 @@ function ServicesSection({ title, services, layout, onAction }: Props) {
           style={[styles.iconContainer, { width: tileWidth, height: tileWidth }, disabled && styles.disabledCard]}
         >
           <AppIcon name={item.icon as any} size={Math.round(tileWidth * 0.42)} color={item.accentColor} />
-          {badge}
         </LinearGradient>
 
         <Text style={[styles.label, disabled && styles.disabledText]} numberOfLines={2}>
@@ -306,25 +278,5 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: c.textSecondary,
-  },
-  cartBadge: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    backgroundColor: '#EF4444',
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    borderWidth: 2,
-    borderColor: c.card,
-    zIndex: 10,
-  },
-  cartBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
   },
 });

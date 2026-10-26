@@ -19,7 +19,9 @@ import {
   ChevronRight,
   Clock,
   CreditCard,
+  Camera,
   FileText,
+  Image as ImageIcon,
   Info,
   MapPin,
   Plus,
@@ -121,6 +123,8 @@ export default function CartScreen() {
   const [selectSheetStoreId, setSelectSheetStoreId] = useState<string | null>(
     null,
   );
+  // the sheet that offers: pick one of my prescriptions, take a photo, or choose from the gallery
+  const [rxOptionsStoreId, setRxOptionsStoreId] = useState<string | null>(null);
 
   const handleUploadNewPrescription = (storeId: string) => {
     Alert.alert(
@@ -620,52 +624,31 @@ export default function CartScreen() {
 
           </View>
 
-          {/* Prescription Requirement */}
+          {/* Prescription Requirement: one line; adding or changing it opens a sheet with the options */}
           {needsPrescription && (
-            <View style={styles.prescriptionSection}>
-              <View style={styles.prescriptionWarningRow}>
-                <ShieldAlert size={16} color={theme.warning} />
-                <Text style={styles.prescriptionWarningText}>
-                  {t('some_items_in_this_order_need_a_valid')}
-                </Text>
-              </View>
-
+            <View style={styles.rxRow}>
               {attachedPrescription ? (
-                <View style={styles.prescriptionAttachedCard}>
-                  <FileText size={18} color="#10B981" />
-                  <Text style={styles.prescriptionAttachedLabel} numberOfLines={1}>
-                    {attachedPrescription.label}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setSelectSheetStoreId(storeCart.storeId)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.receiverChangeBtnText}>{t('change')}</Text>
-                  </TouchableOpacity>
-                </View>
+                <FileText size={18} color="#10B981" />
               ) : (
-                <View style={styles.prescriptionOptionsRow}>
-                  <TouchableOpacity
-                    style={styles.prescriptionOptionBtn}
-                    onPress={() => setSelectSheetStoreId(storeCart.storeId)}
-                    activeOpacity={0.8}
-                  >
-                    <FileText size={16} color="#10B981" />
-                    <Text style={styles.prescriptionOptionText}>{t('select_existing')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.prescriptionOptionBtn}
-                    onPress={() => handleUploadNewPrescription(storeCart.storeId)}
-                    disabled={isUploadingForThisStore}
-                    activeOpacity={0.8}
-                  >
-                    <Upload size={16} color="#10B981" />
-                    <Text style={styles.prescriptionOptionText}>
-                      {isUploadingForThisStore ? "Uploading..." : "Upload New"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                <ShieldAlert size={18} color={theme.textSecondary} />
               )}
+              <Text style={styles.rxRowText} numberOfLines={1}>
+                {attachedPrescription ? attachedPrescription.label : "Prescription required"}
+              </Text>
+              <TouchableOpacity
+                style={attachedPrescription ? styles.rxChangeBtn : styles.rxAddBtn}
+                onPress={() => setRxOptionsStoreId(storeCart.storeId)}
+                disabled={isUploadingForThisStore}
+                activeOpacity={0.8}
+              >
+                {isUploadingForThisStore ? (
+                  <ActivityIndicator size="small" color={attachedPrescription ? "#10B981" : "#FFFFFF"} />
+                ) : (
+                  <Text style={attachedPrescription ? styles.rxChangeText : styles.rxAddText}>
+                    {attachedPrescription ? t("change") : "Add"}
+                  </Text>
+                )}
+              </TouchableOpacity>
             </View>
           )}
 
@@ -1249,6 +1232,53 @@ export default function CartScreen() {
         </TouchableOpacity>
       </Modal>
 
+      {/* Add prescription: the options */}
+      <Modal
+        visible={!!rxOptionsStoreId}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setRxOptionsStoreId(null)}
+      >
+        <TouchableOpacity style={styles.bottomSheetOverlay} activeOpacity={1} onPress={() => setRxOptionsStoreId(null)}>
+          <TouchableOpacity style={[styles.bottomSheetContent, { paddingBottom: insets.bottom + 16 }]} activeOpacity={1}>
+            <View style={styles.dragHandle} />
+            <Text style={styles.modalTitle}>Add prescription</Text>
+            <Text style={styles.rxSheetSub}>Some items in this order need a valid prescription.</Text>
+
+            {[
+              { key: "select", icon: FileText, title: "Select from my prescriptions", sub: "Uploaded documents and doctor prescriptions" },
+              { key: "camera", icon: Camera, title: "Take a photo", sub: "Use your camera" },
+              { key: "gallery", icon: ImageIcon, title: "Upload from gallery", sub: "Choose a photo or scan" },
+            ].map((option) => (
+              <TouchableOpacity
+                key={option.key}
+                style={styles.rxSheetRow}
+                activeOpacity={0.8}
+                onPress={() => {
+                  const storeId = rxOptionsStoreId;
+                  setRxOptionsStoreId(null);
+                  if (!storeId) return;
+                  // the sheet is closing: let it finish before the next screen or picker opens
+                  setTimeout(() => {
+                    if (option.key === "select") setSelectSheetStoreId(storeId);
+                    else pickPrescriptionImage(storeId, option.key === "camera" ? "camera" : "gallery");
+                  }, 250);
+                }}
+              >
+                <View style={styles.rxSheetIcon}>
+                  <option.icon size={20} color="#10B981" />
+                </View>
+                <View style={styles.rxSheetTextCol}>
+                  <Text style={styles.rxSheetTitle}>{option.title}</Text>
+                  <Text style={styles.rxSheetRowSub}>{option.sub}</Text>
+                </View>
+                <ChevronRight size={18} color={theme.textMuted} />
+              </TouchableOpacity>
+            ))}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Prescription Selection Bottom Sheet */}
       <SelectPrescriptionSheet
         visible={!!selectSheetStoreId}
@@ -1505,70 +1535,87 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  prescriptionSection: {
+  // one line: icon, what it says, and the button
+  rxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
     marginHorizontal: 16,
     marginBottom: 12,
-    padding: 16,
-    gap: 12,
+    paddingVertical: 10,
+    paddingLeft: 14,
+    paddingRight: 10,
     backgroundColor: c.card,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: c.borderLight,
   },
-  prescriptionWarningRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: c.warningBg,
-    borderWidth: 1,
-    borderColor: "#FDE68A",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  prescriptionWarningText: {
+  rxRowText: {
     flex: 1,
     fontSize: 13,
     fontWeight: "600",
-    color: c.warning,
+    color: c.text,
   },
-  prescriptionOptionsRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  prescriptionOptionBtn: {
-    flex: 1,
-    flexDirection: "row",
+  rxAddBtn: {
+    minWidth: 64,
+    height: 32,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    backgroundColor: "#10B981",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    backgroundColor: c.successBg,
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
-    borderRadius: 10,
-    paddingVertical: 12,
   },
-  prescriptionOptionText: {
+  rxAddText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  rxChangeBtn: {
+    minWidth: 64,
+    height: 32,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rxChangeText: {
     fontSize: 13,
     fontWeight: "700",
     color: "#10B981",
   },
-  prescriptionAttachedCard: {
+  rxSheetSub: {
+    fontSize: 13,
+    color: c.textSecondary,
+    marginTop: -6,
+    marginBottom: 14,
+  },
+  rxSheetRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: c.successBg,
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    gap: 12,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: c.borderLight,
   },
-  prescriptionAttachedLabel: {
+  rxSheetIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: c.successBg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rxSheetTextCol: {
     flex: 1,
-    fontSize: 13,
-    fontWeight: "600",
-    color: c.success,
+  },
+  rxSheetTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: c.text,
+  },
+  rxSheetRowSub: {
+    fontSize: 12,
+    color: c.textSecondary,
+    marginTop: 2,
   },
   instructionButton: {
     flexDirection: "row",

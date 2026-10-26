@@ -11,6 +11,7 @@ import {
   Animated,
   RefreshControl,
   ScrollView,
+  Text,
   View,
   Platform,
   TouchableOpacity,
@@ -46,10 +47,28 @@ import { useHomeFeed } from './hooks/useHomeFeed';
 import PrescriptionUploadModal from '../../components/modals/PrescriptionUploadModal';
 import { attemptSync } from '../../services/offlineSync';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { setHomeInitialLoading } from '../../redux/slices/appSlice';
+
+// A friendly line that appears only when the first load is taking a while
+const SlowLoadNote = () => {
+  const { theme } = useTheme();
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShow(true), 2500);
+    return () => clearTimeout(timer);
+  }, []);
+  if (!show) return null;
+  return (
+    <Text style={{ textAlign: 'center', fontSize: 13, fontWeight: '600', color: theme.textSecondary, marginBottom: 12, paddingHorizontal: 24 }}>
+      Please hold on, we're getting everything ready for you
+    </Text>
+  );
+};
 
 // Skeletons are still used for initial load
 const LoadingSkeletons = () => (
   <View>
+    <SlowLoadNote />
     <QuickActionsSkeleton />
     <ServicesSkeleton />
     <UpcomingSkeleton />
@@ -215,6 +234,12 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
   useEffect(() => {
     Animated.timing(headerReveal, { toValue: isInitialLoading ? 0 : 1, duration: isInitialLoading ? 0 : 150, useNativeDriver: true }).start();
   }, [isInitialLoading, headerReveal]);
+
+  // The bottom tab bar (MainTabs) waits for the same moment; it must never be left hidden when this screen goes away
+  useEffect(() => {
+    dispatch(setHomeInitialLoading(isInitialLoading));
+  }, [isInitialLoading, dispatch]);
+  useEffect(() => () => { dispatch(setHomeInitialLoading(false)); }, [dispatch]);
 
   useFocusEffect(
     useCallback(() => {
@@ -497,6 +522,11 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
       {/* The tab bar is always visible and already reserves its own bottom
           safe-area padding right below this - adding the real inset here
           too would double up as a visible gap. */}
+      {/* the cart bar and the assistant button come in together with the header and the feed */}
+      <Animated.View
+        pointerEvents={isInitialLoading ? 'none' : 'box-none'}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: headerReveal }}
+      >
       <MultiStoreCartBar bottomInset={0} />
 
       <TouchableOpacity
@@ -525,6 +555,7 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
       >
         <Bot size={24} color="#FFFFFF" />
       </TouchableOpacity>
+      </Animated.View>
 
       <PrescriptionUploadModal
         visible={isPrescriptionModalVisible}

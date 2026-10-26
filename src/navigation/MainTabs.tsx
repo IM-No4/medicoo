@@ -45,6 +45,8 @@ export default function MainTabs({ onOpenCommandPalette }: Props) {
   // matter. Hiding the bar removes a set of destinations that would mostly
   // just show their own "couldn't load" states right now.
   const isOnline = useSelector((state: RootState) => state.connectivity.isOnline);
+  // The home tab's bar comes in together with the home screen's content (see HomeScreen), not before it
+  const homeInitialLoading = useSelector((state: RootState) => state.app.homeInitialLoading);
   const friendInviteCount = useSelector((state: RootState) => state.friends.incomingRequests.length);
 
   const baseTabBarStyle = {
@@ -68,7 +70,11 @@ export default function MainTabs({ onOpenCommandPalette }: Props) {
         // Only the tab's own root screen keeps the bar - anything pushed on
         // top within a nested stack (e.g. Profile's sub-screens) hides it,
         // since those are drill-down detail views, not tab destinations.
-        tabBarStyle: (!isOnline || isNestedStackOnSubScreen(route)) ? { display: 'none' } : baseTabBarStyle,
+        tabBarStyle: (!isOnline || isNestedStackOnSubScreen(route))
+          ? { display: 'none' }
+          : route.name === 'Home' && homeInitialLoading
+            ? { ...baseTabBarStyle, opacity: 0 }
+            : baseTabBarStyle,
         // With app.json's edgeToEdgeEnabled, Android's system nav bar is
         // fully transparent and the app draws behind it - tabBarStyle's own
         // backgroundColor doesn't reliably survive that on every device

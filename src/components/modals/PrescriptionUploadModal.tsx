@@ -28,6 +28,8 @@ interface Prescription {
   // an uploaded document (a photo or scan) rather than a doctor's prescription: shown by its name and date only
   kind?: 'doctor' | 'document';
   title?: string;
+  // the small tag on a document card: 'UPLOADED' for the customer's own upload, 'FROM CONSULTATION' for one made after a consultation
+  badge?: string;
 }
 
 interface Props {
@@ -265,7 +267,7 @@ export default function PrescriptionUploadModal({
                         <View style={styles.prescriptionHeader}>
                           <View style={styles.prescriptionIdContainer}>
                             <Text style={styles.prescriptionId}>
-                              {prescription.kind === 'document' ? 'UPLOADED' : `#${prescription.id}`}
+                              {prescription.kind === 'document' ? (prescription.badge || 'UPLOADED') : `#${prescription.id}`}
                             </Text>
                           </View>
                           <View

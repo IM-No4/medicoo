@@ -66,7 +66,15 @@ const formatPrice = (amount: number): string => {
 // Within this distance of the drop point the rider counts as arriving.
 const ARRIVING_RADIUS_METERS = 50;
 
-const getHeaderMessages = (status: string, partnerName?: string) => {
+// When it arrives, as the server works it out: the packing time the pharmacy set + the travel + a buffer, counting down (services/orderEta.js)
+type Eta = { minutesLeft: number; packingMinutes: number; travelMinutes: number; totalMinutes: number };
+const etaLabel = (eta: Eta | null | undefined): string | null => {
+  if (!eta) return null;
+  if (eta.minutesLeft <= 0) return "Running a little late";
+  return `Arriving in ${eta.minutesLeft} min${eta.minutesLeft === 1 ? "" : "s"}`;
+};
+
+const getHeaderMessages = (status: string, partnerName?: string, eta?: Eta | null) => {
   switch (status) {
     case "pending":
       return {
@@ -78,7 +86,7 @@ const getHeaderMessages = (status: string, partnerName?: string) => {
     case "preparing":
       return {
         title: "Preparing your order",
-        subtitle: "15 mins • On time",
+        subtitle: etaLabel(eta) || "Being packed",
         alert: "Pharmacist is packaging your items with care.",
       };
     case "readyForPickup":
@@ -91,7 +99,7 @@ const getHeaderMessages = (status: string, partnerName?: string) => {
     case "dispatched":
       return {
         title: "Order is on the way 🛵",
-        subtitle: "Arriving in 8 mins",
+        subtitle: etaLabel(eta) || "On the way",
         alert: `${partnerName || "Your delivery partner"} is carrying your package to your location.`,
       };
     case "delivered":
@@ -275,6 +283,7 @@ export default function LiveTrackingScreen() {
   // why a rejected order was turned down, and how the order is paid for ('cod' = paid at the door)
   const [rejectionRemarks, setRejectionRemarks] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [eta, setEta] = useState<Eta | null>(null);
   // The code the delivery person will ask for at the door. The server shows it only once the order is on its way.
   const [deliveryCode, setDeliveryCode] = useState<string | null>(null);
 
@@ -425,6 +434,7 @@ export default function LiveTrackingScreen() {
           }
           if (res.data.deliveryMode) setDeliveryMode(res.data.deliveryMode);
           setRejectionRemarks(res.data.rejectionRemarks || null);
+          setEta(res.data.eta || null);
           if (res.data.paymentMethod) setPaymentMethod(res.data.paymentMethod);
           setDeliveryCode(res.data.deliveryCode || null);
           if (res.data.storePhone) setStorePhone(res.data.storePhone);
@@ -550,7 +560,7 @@ export default function LiveTrackingScreen() {
         subtitle: "Your delivery partner is almost there",
         alert: "Your delivery partner is within 50 metres of you.",
       }
-    : getHeaderMessages(activeOrder.status, deliveryPartner?.name);
+    : getHeaderMessages(activeOrder.status, deliveryPartner?.name, eta);
 
   // An order that has ended has no journey to follow: no map, and a clear panel (and colour) saying what happened instead
   const orderEnded = ["rejected", "cancelled", "delivered"].includes(activeOrder.status);

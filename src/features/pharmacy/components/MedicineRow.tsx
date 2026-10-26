@@ -356,10 +356,13 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    height: 20,
+    height: 22,
     paddingHorizontal: 8,
-    borderRadius: 10,
-    backgroundColor: c.errorBg,
+    borderRadius: 11,
+    // a plain card-coloured pill with a light red outline: red text on red is hard to read
+    backgroundColor: c.card,
+    borderWidth: 1,
+    borderColor: "#FECACA",
   },
   prescriptionBadgeText: {
     fontSize: 10,

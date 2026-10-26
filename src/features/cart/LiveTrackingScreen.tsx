@@ -556,6 +556,8 @@ export default function LiveTrackingScreen() {
   const orderEnded = ["rejected", "cancelled", "delivered"].includes(activeOrder.status);
   const outcomeColour =
     activeOrder.status === "rejected" ? "#DC2626" : activeOrder.status === "cancelled" ? "#6B7280" : null;
+  const outcomeGradient: [string, string] =
+    activeOrder.status === "rejected" ? ["#EF4444", "#B91C1C"] : activeOrder.status === "cancelled" ? ["#6B7280", "#4B5563"] : ["#10B981", "#007C69"];
   const isCod = paymentMethod === "cod";
   // COD is paid at the door: until then nothing has been paid, and an order that ended without delivery never is
   const totalLabel = isCod
@@ -593,7 +595,7 @@ export default function LiveTrackingScreen() {
 
       {/* Header - same surface as the rest of the app */}
       <View style={[styles.headerOverlay, { paddingTop: insets.top + 10 }, outcomeColour ? { backgroundColor: outcomeColour } : null]}>
-        <LinearGradient colors={["#10B981", "#007C69"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={outcomeGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
         <View style={styles.headerTopRow}>
           <TouchableOpacity
             style={styles.headerBackBtn}
@@ -616,21 +618,31 @@ export default function LiveTrackingScreen() {
 
         <View style={styles.headerPillRow}>
           <View style={styles.headerTimePill}>
-            <Clock size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
+            {orderEnded ? (
+              <XCircle size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
+            ) : (
+              <Clock size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
+            )}
             <Text style={styles.headerTimePillText}>
-              {headerMsg.subtitle}
+              {activeOrder.status === "rejected"
+                ? "Rejected by the pharmacy"
+                : activeOrder.status === "cancelled"
+                  ? "No longer going ahead"
+                  : headerMsg.subtitle}
             </Text>
           </View>
-          <TouchableOpacity
-            style={styles.headerSyncBtn}
-            onPress={syncStatus}
-            disabled={syncing}
-            activeOpacity={0.7}
-          >
-            <Animated.View style={syncing ? spinStyle : undefined}>
-              <RefreshCw size={11} color="#FFFFFF" />
-            </Animated.View>
-          </TouchableOpacity>
+          {!orderEnded && (
+            <TouchableOpacity
+              style={styles.headerSyncBtn}
+              onPress={syncStatus}
+              disabled={syncing}
+              activeOpacity={0.7}
+            >
+              <Animated.View style={syncing ? spinStyle : undefined}>
+                <RefreshCw size={11} color="#FFFFFF" />
+              </Animated.View>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -671,7 +683,7 @@ export default function LiveTrackingScreen() {
       {/* Map Segment / Visual Route Simulator */}
       <View style={styles.mapContainer}>
         {orderEnded ? (
-          <View style={[styles.endedPanel, { paddingTop: insets.top + 190 }]}>
+          <View style={[styles.endedPanel, { paddingTop: insets.top + 150 }]}>
             {activeOrder.status === "delivered" ? (
               <View style={[styles.endedCard, { borderColor: "#BBF7D0", backgroundColor: theme.successBg }]}>
                 <ShieldCheck size={28} color="#16A34A" />
@@ -687,6 +699,13 @@ export default function LiveTrackingScreen() {
                 <Text style={styles.endedHint}>
                   {isCod ? "Nothing has been charged. You haven't paid for this order." : "If you paid online, contact support if the refund does not reach you."}
                 </Text>
+                <TouchableOpacity
+                  style={styles.endedHelpBtn}
+                  activeOpacity={0.8}
+                  onPress={() => navigation.navigate("Tabs", { screen: "Profile", params: { screen: "OrderSupport", params: { orderId: activeOrder.orderId, orderStatus: activeOrder.status } } })}
+                >
+                  <Text style={styles.endedHelpBtnText}>Need help with this order?</Text>
+                </TouchableOpacity>
               </View>
             ) : (
               <View style={[styles.endedCard, { borderColor: theme.border, backgroundColor: theme.cardSecondary }]}>
@@ -931,7 +950,7 @@ export default function LiveTrackingScreen() {
               </Text>
             </View>
           </View>
-        ) : (
+        ) : orderEnded ? null : (
           <View style={styles.waitingRiderCard}>
             <Clock size={16} color={theme.textSecondary} />
             <Text style={styles.waitingRiderText}>
@@ -942,12 +961,14 @@ export default function LiveTrackingScreen() {
         )}
 
         {/* Hygiene Instruction Box */}
-        <View style={styles.zomatoInstructionBox}>
-          <ShieldCheck size={14} color={theme.textSecondary} />
-          <Text style={styles.zomatoInstructionText}>
-            {t('we_ve_asked_the_pharmacy_to_seal_your')}
-          </Text>
-        </View>
+        {!orderEnded && (
+          <View style={styles.zomatoInstructionBox}>
+            <ShieldCheck size={14} color={theme.textSecondary} />
+            <Text style={styles.zomatoInstructionText}>
+              {t('we_ve_asked_the_pharmacy_to_seal_your')}
+            </Text>
+          </View>
+        )}
 
         {/* Collapsible Order Receipt / Details Accordion */}
         <TouchableOpacity
@@ -1227,6 +1248,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   },
   endedPanel: {
     flex: 1,
+    justifyContent: "center",
     paddingHorizontal: 20,
     paddingBottom: 20,
     backgroundColor: c.background,
@@ -1256,6 +1278,20 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     lineHeight: 20,
     textAlign: "center",
     color: c.text,
+  },
+  endedHelpBtn: {
+    marginTop: 12,
+    alignSelf: "stretch",
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#DC2626",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  endedHelpBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   endedHint: {
     marginTop: 4,

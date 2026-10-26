@@ -440,12 +440,11 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  // edge to edge: no side gap between the screen and the pharmacy list
   pharmacyListContainer: {
     backgroundColor: c.card,
-    marginHorizontal: 16,
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
     borderColor: c.borderLight,
     paddingTop: 8,
   },

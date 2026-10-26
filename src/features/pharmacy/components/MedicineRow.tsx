@@ -162,14 +162,6 @@ export default function MedicineRow({
           {/* Badges / Favorite Row */}
           <View style={styles.badgesRow}>
             <View style={styles.badges}>
-              {(medicine.isPrescriptionRequired ||
-                medicine.prescriptionRequired ||
-                medicine.prescriptionStatus) && (
-                <View style={styles.prescriptionBadge}>
-                  <AppIcon name="file-text" size={11} color="#EF4444" />
-                  <Text style={styles.prescriptionBadgeText}>Prescription required</Text>
-                </View>
-              )}
               {medicine.isVeg && (
                 <View style={[styles.badge, styles.vegBadge]}>
                   <View style={styles.vegDot} />
@@ -195,6 +187,16 @@ export default function MedicineRow({
               </Text>
             )}
           </TouchableOpacity>
+
+          {/* Prescription label, after the manufacturer line */}
+          {(medicine.isPrescriptionRequired ||
+            medicine.prescriptionRequired ||
+            medicine.prescriptionStatus) && (
+            <View style={[styles.prescriptionBadge, { alignSelf: "flex-start", marginTop: 6 }]}>
+              <AppIcon name="file-text" size={11} color="#EF4444" />
+              <Text style={styles.prescriptionBadgeText}>Prescription required</Text>
+            </View>
+          )}
         </View>
       </View>
 

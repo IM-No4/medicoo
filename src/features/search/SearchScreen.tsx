@@ -254,6 +254,11 @@ export default function SearchScreen() {
         }}
       />
 
+      {/* The filter chips belong to the top card, with the search bar */}
+      {hasSearchedRef.current && !loading && !error && results.length > 0 && !!activeTab && (
+        <View style={styles.filtersBar}>{renderFilters()}</View>
+      )}
+
       {/* {hasSearchedRef.current && query.trim().length > 0 && activeTab && (
         <View style={styles.headerExtension}>
           {renderTabs()}
@@ -297,8 +302,7 @@ export default function SearchScreen() {
           <SearchEmptyState query={query} />
         </View>
       ) : activeTab ? (
-        <View style={[styles.flex, { backgroundColor: theme.cardSecondary }]}>
-          {renderFilters()}
+        <View style={[styles.flex, { backgroundColor: theme.card }]}>
           <SearchResults results={results} activeTab={activeTab!} filters={filters} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={() => dispatch(loadMoreSearchResults())} prescriptionOnly={isPrescriptionOnly} onClearFilters={() => { setFilters(DEFAULT_SEARCH_FILTERS); setIsPrescriptionOnly(false); }} />
         </View>
       ) : null}
@@ -357,10 +361,15 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: c.borderLight,
   },
+  // same background as the search header above it, so the two read as one card
+  filtersBar: {
+    backgroundColor: c.background,
+  },
   filterContainer: {
     marginTop: 0,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 4,
+    paddingBottom: 12,
     gap: 8,
     alignItems: 'center',
     backgroundColor: 'transparent',

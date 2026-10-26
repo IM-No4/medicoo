@@ -245,8 +245,7 @@ export default function SearchResults({ results, activeTab, filters = NO_FILTERS
         <View style={styles.section}>
           <View style={styles.sectionHeaderContainer}>
             <Text style={styles.sectionFeaturedTitle}>{t('featured_pharmacies')}</Text>
-            <View style={styles.headerLine} />
-          </View>
+              </View>
           <View style={styles.pharmacyListContainer}>
             {shownGroups.map((group, index) => {
               const live = storeLiveInfo[group.pharmacyId];
@@ -282,7 +281,6 @@ export default function SearchResults({ results, activeTab, filters = NO_FILTERS
     <View style={styles.section}>
       <View style={styles.sectionHeaderContainer}>
         <Text style={styles.sectionFeaturedTitle}>{t('pharmacies_near_you')}</Text>
-        <View style={styles.headerLine} />
       </View>
 
       <View>
@@ -448,8 +446,6 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   // edge to edge: no side gap between the screen and the pharmacy list
   pharmacyListContainer: {
     backgroundColor: c.card,
-    borderTopWidth: 1,
-    borderColor: c.borderLight,
     paddingTop: 8,
   },
   noMatch: {

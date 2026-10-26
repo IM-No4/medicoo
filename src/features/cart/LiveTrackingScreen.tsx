@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   X,
+  XCircle,
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -171,7 +172,7 @@ const cleanMapStyle = [
 
 export default function LiveTrackingScreen() {
   const { t } = useLanguage();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -271,6 +272,9 @@ export default function LiveTrackingScreen() {
   // 'self': the pharmacy's own person delivers, so there is no separate rider - the pharmacy is the contact.
   const [deliveryMode, setDeliveryMode] = useState<'self' | 'partner'>('partner');
   const [storePhone, setStorePhone] = useState<string | null>(null);
+  // why a rejected order was turned down, and how the order is paid for ('cod' = paid at the door)
+  const [rejectionRemarks, setRejectionRemarks] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   // The code the delivery person will ask for at the door. The server shows it only once the order is on its way.
   const [deliveryCode, setDeliveryCode] = useState<string | null>(null);
 
@@ -420,6 +424,8 @@ export default function LiveTrackingScreen() {
             setDeliveryPartner(res.data.deliveryPartner);
           }
           if (res.data.deliveryMode) setDeliveryMode(res.data.deliveryMode);
+          setRejectionRemarks(res.data.rejectionRemarks || null);
+          if (res.data.paymentMethod) setPaymentMethod(res.data.paymentMethod);
           setDeliveryCode(res.data.deliveryCode || null);
           if (res.data.storePhone) setStorePhone(res.data.storePhone);
           if (res.data.storeLocation || res.data.dropLocation) {
@@ -546,6 +552,22 @@ export default function LiveTrackingScreen() {
       }
     : getHeaderMessages(activeOrder.status, deliveryPartner?.name);
 
+  // An order that has ended has no journey to follow: no map, and a clear panel (and colour) saying what happened instead
+  const orderEnded = ["rejected", "cancelled", "delivered"].includes(activeOrder.status);
+  const outcomeColour =
+    activeOrder.status === "rejected" ? "#DC2626" : activeOrder.status === "cancelled" ? "#6B7280" : null;
+  const isCod = paymentMethod === "cod";
+  // COD is paid at the door: until then nothing has been paid, and an order that ended without delivery never is
+  const totalLabel = isCod
+    ? activeOrder.status === "delivered"
+      ? "Total paid"
+      : ["rejected", "cancelled"].includes(activeOrder.status)
+        ? "Order total"
+        : "To pay on delivery"
+    : paymentMethod
+      ? t("total_paid")
+      : "Order total";
+
   const renderMarkerIcon = (
     markerId: string,
     fallbackIcon: React.ReactNode,
@@ -570,7 +592,7 @@ export default function LiveTrackingScreen() {
       <AdaptiveStatusBar barStyle="light-content" />
 
       {/* Header - same surface as the rest of the app */}
-      <View style={[styles.headerOverlay, { paddingTop: insets.top + 10 }]}>
+      <View style={[styles.headerOverlay, { paddingTop: insets.top + 10 }, outcomeColour ? { backgroundColor: outcomeColour } : null]}>
         <LinearGradient colors={["#10B981", "#007C69"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
         <View style={styles.headerTopRow}>
           <TouchableOpacity
@@ -648,7 +670,35 @@ export default function LiveTrackingScreen() {
 
       {/* Map Segment / Visual Route Simulator */}
       <View style={styles.mapContainer}>
-        {!hasMapError ? (
+        {orderEnded ? (
+          <View style={[styles.endedPanel, { paddingTop: insets.top + 190 }]}>
+            {activeOrder.status === "delivered" ? (
+              <View style={[styles.endedCard, { borderColor: "#BBF7D0", backgroundColor: theme.successBg }]}>
+                <ShieldCheck size={28} color="#16A34A" />
+                <Text style={[styles.endedTitle, { color: "#16A34A" }]}>Delivered</Text>
+                <Text style={styles.endedText}>Your medicines have been handed over.</Text>
+              </View>
+            ) : activeOrder.status === "rejected" ? (
+              <View style={[styles.endedCard, { borderColor: "#FECACA", backgroundColor: isDark ? "rgba(248,113,113,0.12)" : "#FEF2F2" }]}>
+                <XCircle size={28} color="#DC2626" />
+                <Text style={[styles.endedTitle, { color: "#DC2626" }]}>The pharmacy could not accept this order</Text>
+                <Text style={styles.endedReasonLabel}>Reason</Text>
+                <Text style={styles.endedText}>{rejectionRemarks || "The pharmacy did not give a reason. Please contact support if you need help."}</Text>
+                <Text style={styles.endedHint}>
+                  {isCod ? "Nothing has been charged. You haven't paid for this order." : "If you paid online, contact support if the refund does not reach you."}
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.endedCard, { borderColor: theme.border, backgroundColor: theme.cardSecondary }]}>
+                <XCircle size={28} color="#6B7280" />
+                <Text style={[styles.endedTitle, { color: theme.text }]}>This order was cancelled</Text>
+                <Text style={styles.endedHint}>
+                  {isCod ? "Nothing has been charged." : "If you paid online, your payment will be handled as per the cancellation policy."}
+                </Text>
+              </View>
+            )}
+          </View>
+        ) : !hasMapError ? (
           <MapView
             key={`${userLat}-${userLng}-${pharmacyLat}-${pharmacyLng}`}
             ref={mapRef}
@@ -1034,7 +1084,7 @@ export default function LiveTrackingScreen() {
                         { fontWeight: "700", color: theme.text },
                       ]}
                     >
-                      {t('total_paid')}
+                      {totalLabel}
                     </Text>
                     <Text style={styles.zomatoBillValBold}>
                       ₹{formatPrice(finalTotal)}
@@ -1174,6 +1224,45 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+  },
+  endedPanel: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    backgroundColor: c.background,
+  },
+  endedCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 18,
+    alignItems: "center",
+    gap: 8,
+  },
+  endedTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  endedReasonLabel: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    color: c.textMuted,
+  },
+  endedText: {
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+    color: c.text,
+  },
+  endedHint: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: "center",
+    color: c.textSecondary,
   },
   customPin: {
     width: 32,

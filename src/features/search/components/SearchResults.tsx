@@ -404,18 +404,18 @@ export default function SearchResults({ results, activeTab, filters = NO_FILTERS
 }
 
 const createStyles = (c: ThemeColors) => StyleSheet.create({
-  // white below the results (the empty space under the last pharmacy); the results themselves keep their own background
+  // one white surface from the first pharmacy to the bottom of the screen
   container: {
     flex: 1,
     backgroundColor: c.card,
   },
   content: {
-    backgroundColor: c.background,
+    backgroundColor: c.card,
   },
   section: {
     marginTop: 8,
     backgroundColor: 'transparent',
-    marginBottom: 16,
+    marginBottom: 0,
   },
   sectionHeaderContainer: {
     flexDirection: 'row',
@@ -449,7 +449,6 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   pharmacyListContainer: {
     backgroundColor: c.card,
     borderTopWidth: 1,
-    borderBottomWidth: 1,
     borderColor: c.borderLight,
     paddingTop: 8,
   },

@@ -69,7 +69,10 @@ export default function PharmacyListingCard({
   variant = 'list',
 }: Props) {
   const { t } = useLanguage();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  const offlineTone = isDark
+    ? { bg: 'rgba(248, 113, 113, 0.14)', text: '#FCA5A5' }
+    : { bg: 'rgba(220, 38, 38, 0.12)', text: '#DC2626' };
   const styles = useMemo(() => createStyles(theme), [theme]);
   const carts = useSelector((state: RootState) => state.cart);
 
@@ -273,7 +276,7 @@ export default function PharmacyListingCard({
               )}
             </View>
 
-            {!pharmacy.isOpen && <Text style={[styles.closedText, { marginTop: 6, marginBottom: 0 }]}>{getUnavailableText()}</Text>}
+            {!pharmacy.isOpen && <Text style={[styles.closedText, { marginTop: 6, marginBottom: 0, backgroundColor: offlineTone.bg, color: offlineTone.text }]}>{getUnavailableText()}</Text>}
           </View>
 
         </TouchableOpacity>

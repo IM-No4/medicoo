@@ -56,7 +56,10 @@ export default function PharmacyHeader({
   onLayout?: (event: any) => void;
 }) {
   const { t } = useLanguage();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  const offlineTone = isDark
+    ? { bg: 'rgba(248, 113, 113, 0.14)', text: '#FCA5A5' }
+    : { bg: 'rgba(220, 38, 38, 0.12)', text: '#DC2626' };
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const isOpen = pharmacy?.status === "online";
@@ -197,9 +200,9 @@ export default function PharmacyHeader({
 
           {/* Status / Offers */}
           {!isOpen ? (
-            <View style={styles.offlineBadge}>
-              <AppIcon name="alarm-clock-off" size={14} color="#DC2626" />
-              <Text style={styles.offlineBadgeText}>Pharmacy is currently offline</Text>
+            <View style={[styles.offlineBadge, { backgroundColor: offlineTone.bg }]}>
+              <AppIcon name="alarm-clock-off" size={14} color={offlineTone.text} />
+              <Text style={[styles.offlineBadgeText, { color: offlineTone.text }]}>Pharmacy is currently offline</Text>
             </View>
           ) : (
             <View style={styles.dealBanner}>

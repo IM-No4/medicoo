@@ -30,7 +30,10 @@ export default function MedicineRow({
   onPress,
 }: Props) {
   const { t } = useLanguage();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  const rx = isDark
+    ? { bg: 'rgba(248, 113, 113, 0.14)', border: 'rgba(248, 113, 113, 0.35)', text: '#FCA5A5' }
+    : { bg: '#FEF2F2', border: '#FECACA', text: '#DC2626' };
   const styles = useMemo(() => createStyles(theme), [theme]);
   const dispatch = useDispatch();
   const carts = useSelector((state: RootState) => state.cart);
@@ -192,9 +195,9 @@ export default function MedicineRow({
           {(medicine.isPrescriptionRequired ||
             medicine.prescriptionRequired ||
             medicine.prescriptionStatus) && (
-            <View style={[styles.prescriptionBadge, { alignSelf: "flex-start", marginTop: 6 }]}>
-              <AppIcon name="file-text" size={11} color="#EF4444" />
-              <Text style={styles.prescriptionBadgeText}>Prescription required</Text>
+            <View style={[styles.prescriptionBadge, { alignSelf: "flex-start", marginTop: 6, backgroundColor: rx.bg, borderColor: rx.border }]}>
+              <AppIcon name="file-text" size={11} color={rx.text} />
+              <Text style={[styles.prescriptionBadgeText, { color: rx.text }]}>Prescription required</Text>
             </View>
           )}
         </View>

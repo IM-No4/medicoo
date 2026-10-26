@@ -314,9 +314,9 @@ export default function MedicineDetailBottomSheet({
               {(medicine.isPrescriptionRequired ||
                 medicine.prescriptionRequired ||
                 medicine.prescriptionStatus) && (
-                <View style={styles.rxOverlay}>
-                  <AppIcon name="file-text" size={14} color="#DC2626" />
-                  <Text style={styles.rxOverlayText}>{t('prescription_required')}</Text>
+                <View style={[styles.rxOverlay, isDark && { backgroundColor: 'rgba(15, 23, 42, 0.88)', borderColor: 'rgba(248, 113, 113, 0.4)' }]}>
+                  <AppIcon name="file-text" size={14} color={isDark ? '#FCA5A5' : '#DC2626'} />
+                  <Text style={[styles.rxOverlayText, isDark && { color: '#FCA5A5' }]}>{t('prescription_required')}</Text>
                 </View>
               )}
               {images.length > 0 ? (

@@ -126,7 +126,7 @@ export default function CartScreen() {
   // what the shared prescription modal lists (uploaded documents and the doctor's prescriptions of the last 3 months), and how each maps to an
   // attachment on the cart
   const doctorRxEnabled = useSelector((state: RootState) => state.appConfig.enabledServices.doctorPrescriptions);
-  const [rxChoices, setRxChoices] = useState<Array<{ id: string; kind: "doctor" | "document"; doctorName: string; prescriptionDate: string; items: number; title?: string; badge?: string }>>([]);
+  const [rxChoices, setRxChoices] = useState<Array<{ id: string; kind: "doctor" | "document"; doctorName: string; prescriptionDate: string; items: number; title?: string; badge?: string; mimeType?: string }>>([]);
   const rxAttachmentById = React.useRef<Record<string, AttachedPrescription>>({});
   React.useEffect(() => {
     if (!selectSheetStoreId) return;
@@ -139,7 +139,7 @@ export default function CartScreen() {
         const docs = await fetchDocuments();
         docs.filter((d) => d.documentType === "prescription" && recent(d.createdAt)).forEach((d) => {
           // a prescription made after a consultation is saved as a document too: say where it came from
-          choices.push({ id: d._id, kind: "document", doctorName: "", prescriptionDate: d.createdAt, items: 0, title: d.name, badge: d.sourceType === "system_generated" ? "FROM CONSULTATION" : "UPLOADED" });
+          choices.push({ id: d._id, kind: "document", doctorName: "", prescriptionDate: d.createdAt, items: 0, title: d.name, badge: d.sourceType === "system_generated" ? "FROM CONSULTATION" : "UPLOADED", mimeType: d.mimeType });
           map[d._id] = { mode: "document", documentId: d._id, label: d.name };
         });
       } catch (e) {

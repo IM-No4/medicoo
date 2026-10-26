@@ -1,10 +1,15 @@
 import AppIcon from '@/src/components/icons/AppIcon';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
+import * as Sharing from 'expo-sharing';
+import { getDocumentViewUrl } from '@/src/services/api/document.api';
+import { getToken } from '@/src/utils/tokenManagement';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Image,
   PanResponder,
   ScrollView,
   StyleSheet,
@@ -30,6 +35,8 @@ interface Prescription {
   title?: string;
   // the small tag on a document card: 'UPLOADED' for the customer's own upload, 'FROM CONSULTATION' for one made after a consultation
   badge?: string;
+  // for a document: its file type, so "View" knows whether to show a picture or open a PDF
+  mimeType?: string;
 }
 
 interface Props {
@@ -55,6 +62,29 @@ export default function PrescriptionUploadModal({
   const [selectedPrescription, setSelectedPrescription] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
   const translateY = useState(new Animated.Value(0))[0];
+
+  // "View" on a saved document: a picture opens over the modal, a PDF is fetched and handed to the phone's viewer
+  const [preview, setPreview] = useState<{ id: string; title: string; token: string } | null>(null);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const handleView = async (prescription: Prescription) => {
+    try {
+      setOpeningId(prescription.id);
+      const token = (await getToken('access_token')) || '';
+      const isPdf = (prescription.mimeType || '').includes('pdf');
+      if (!isPdf) {
+        setPreview({ id: prescription.id, title: prescription.title || 'Prescription', token });
+        return;
+      }
+      const target = `${FileSystem.cacheDirectory || ''}prescription-${prescription.id}.pdf`;
+      const res = await FileSystem.downloadAsync(getDocumentViewUrl(prescription.id), target, { headers: { Authorization: `Bearer ${token}` } });
+      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(res.uri, { mimeType: 'application/pdf', dialogTitle: prescription.title || 'Prescription' });
+    } catch (error) {
+      console.warn('Could not open the prescription', error);
+      alert('Could not open this prescription right now. Please try again.');
+    } finally {
+      setOpeningId(null);
+    }
+  };
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -270,6 +300,20 @@ export default function PrescriptionUploadModal({
                               {prescription.kind === 'document' ? (prescription.badge || 'UPLOADED') : `#${prescription.id}`}
                             </Text>
                           </View>
+                          {prescription.kind === 'document' && (
+                            <TouchableOpacity
+                              onPress={() => handleView(prescription)}
+                              disabled={openingId === prescription.id}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                              style={styles.viewButton}
+                            >
+                              {openingId === prescription.id ? (
+                                <ActivityIndicator size="small" color="#10B981" />
+                              ) : (
+                                <Text style={styles.viewButtonText}>View</Text>
+                              )}
+                            </TouchableOpacity>
+                          )}
                           <View
                             style={[
                               styles.radioButton,
@@ -368,6 +412,21 @@ export default function PrescriptionUploadModal({
               </TouchableOpacity>
             </View>
           )}
+          {preview && (
+            <View style={styles.previewOverlay}>
+              <View style={[styles.previewBar, { paddingTop: 12 }]}>
+                <Text style={styles.previewTitle} numberOfLines={1}>{preview.title}</Text>
+                <TouchableOpacity onPress={() => setPreview(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <AppIcon name="x" size={22} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+              <Image
+                source={{ uri: getDocumentViewUrl(preview.id), headers: { Authorization: `Bearer ${preview.token}` } }}
+                style={styles.previewImage}
+                resizeMode="contain"
+              />
+            </View>
+          )}
         </Animated.View>
       </View>
     </Modal>
@@ -375,6 +434,46 @@ export default function PrescriptionUploadModal({
 }
 
 const createStyles = (c: ThemeColors) => StyleSheet.create({
+  viewButton: {
+    marginLeft: 'auto',
+    marginRight: 12,
+    minWidth: 40,
+    alignItems: 'center',
+  },
+  viewButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  previewOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.94)',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    zIndex: 20,
+  },
+  previewBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  previewTitle: {
+    flex: 1,
+    marginRight: 12,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  previewImage: {
+    flex: 1,
+    width: '100%',
+  },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

@@ -1,5 +1,7 @@
 import AppIcon from "@/src/components/icons/AppIcon";
-import SelectPrescriptionSheet from "@/src/components/modals/SelectPrescriptionSheet";
+import PrescriptionUploadModal from "@/src/components/modals/PrescriptionUploadModal";
+import { fetchDocuments } from "@/src/services/api/document.api";
+import { getMedicinePrescriptions } from "@/src/services/api/prescription.api";
 import QuantityControl from "@/src/features/pharmacy/components/QuantityControl";
 import { AttachedPrescription, CartItem, StoreCart } from "@/src/redux/slices/cart.types";
 import { RootState } from "@/src/redux/store";
@@ -19,9 +21,7 @@ import {
   ChevronRight,
   Clock,
   CreditCard,
-  Camera,
   FileText,
-  Image as ImageIcon,
   Info,
   MapPin,
   Plus,
@@ -123,42 +123,49 @@ export default function CartScreen() {
   const [selectSheetStoreId, setSelectSheetStoreId] = useState<string | null>(
     null,
   );
-  // the sheet that offers: pick one of my prescriptions, take a photo, or choose from the gallery
-  const [rxOptionsStoreId, setRxOptionsStoreId] = useState<string | null>(null);
-
-  const handleUploadNewPrescription = (storeId: string) => {
-    Alert.alert(
-      t('add_prescription'),
-      t('choose_how_you_d_like_to_add_your_pres'),
-      [
-        { text: "Take Photo", onPress: () => pickPrescriptionImage(storeId, "camera") },
-        { text: "Choose from Gallery", onPress: () => pickPrescriptionImage(storeId, "gallery") },
-        { text: "Cancel", style: "cancel" },
-      ],
-    );
-  };
-
-  const pickPrescriptionImage = async (
-    storeId: string,
-    source: "camera" | "gallery",
-  ) => {
-    try {
-      const permission =
-        source === "camera"
-          ? await ImagePicker.requestCameraPermissionsAsync()
-          : await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (permission.status !== "granted") {
-        alert("Permission is required to add a prescription this way.");
-        return;
+  // what the shared prescription modal lists (uploaded documents and the doctor's prescriptions of the last 3 months), and how each maps to an
+  // attachment on the cart
+  const doctorRxEnabled = useSelector((state: RootState) => state.appConfig.enabledServices.doctorPrescriptions);
+  const [rxChoices, setRxChoices] = useState<Array<{ id: string; kind: "doctor" | "document"; doctorName: string; prescriptionDate: string; items: number; title?: string }>>([]);
+  const rxAttachmentById = React.useRef<Record<string, AttachedPrescription>>({});
+  React.useEffect(() => {
+    if (!selectSheetStoreId) return;
+    const recent = (d: string) => Date.now() - new Date(d).getTime() <= 90 * 24 * 60 * 60 * 1000;
+    let active = true;
+    (async () => {
+      const choices: typeof rxChoices = [];
+      const map: Record<string, AttachedPrescription> = {};
+      try {
+        const docs = await fetchDocuments();
+        docs.filter((d) => d.documentType === "prescription" && recent(d.createdAt)).forEach((d) => {
+          choices.push({ id: d._id, kind: "document", doctorName: "", prescriptionDate: d.createdAt, items: 0, title: d.name });
+          map[d._id] = { mode: "document", documentId: d._id, label: d.name };
+        });
+      } catch (e) {
+        console.warn("Failed to fetch prescription documents", e);
       }
+      if (doctorRxEnabled) {
+        try {
+          const list = await getMedicinePrescriptions();
+          list.filter((rx: any) => recent(rx.createdAt)).forEach((rx: any) => {
+            choices.push({ id: rx._id, kind: "doctor", doctorName: rx.doctorName || "Doctor", prescriptionDate: rx.createdAt, items: rx.prescribedMedicines?.length || 0 });
+            map[rx._id] = { mode: "doctor", prescriptionId: rx._id, label: `Dr. ${rx.doctorName || "Prescription"} - ${new Date(rx.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` };
+          });
+        } catch (e) {
+          console.warn("Failed to fetch doctor prescriptions", e);
+        }
+      }
+      if (!active) return;
+      rxAttachmentById.current = map;
+      setRxChoices(choices);
+    })();
+    return () => { active = false; };
+  }, [selectSheetStoreId, doctorRxEnabled]);
 
-      const result =
-        source === "camera"
-          ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8 })
-          : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
-      if (result.canceled) return;
-
-      const asset = result.assets[0];
+  // The shared prescription modal hands back the picture the customer took or chose; it is stored as a document (so it is reusable) and
+  // attached to this store's cart.
+  const uploadPrescriptionAsset = async (storeId: string, asset: { uri: string }) => {
+    try {
       setUploadingPrescriptionFor(storeId);
 
       const formData = new FormData();
@@ -637,7 +644,7 @@ export default function CartScreen() {
               </Text>
               <TouchableOpacity
                 style={attachedPrescription ? styles.rxChangeBtn : styles.rxAddBtn}
-                onPress={() => setRxOptionsStoreId(storeCart.storeId)}
+                onPress={() => setSelectSheetStoreId(storeCart.storeId)}
                 disabled={isUploadingForThisStore}
                 activeOpacity={0.8}
               >
@@ -1232,58 +1239,20 @@ export default function CartScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Add prescription: the options */}
-      <Modal
-        visible={!!rxOptionsStoreId}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setRxOptionsStoreId(null)}
-      >
-        <TouchableOpacity style={styles.bottomSheetOverlay} activeOpacity={1} onPress={() => setRxOptionsStoreId(null)}>
-          <TouchableOpacity style={[styles.bottomSheetContent, { paddingBottom: insets.bottom + 16 }]} activeOpacity={1}>
-            <View style={styles.dragHandle} />
-            <Text style={styles.modalTitle}>Add prescription</Text>
-            <Text style={styles.rxSheetSub}>Some items in this order need a valid prescription.</Text>
-
-            {[
-              { key: "select", icon: FileText, title: "Select from my prescriptions", sub: "Uploaded documents and doctor prescriptions" },
-              { key: "camera", icon: Camera, title: "Take a photo", sub: "Use your camera" },
-              { key: "gallery", icon: ImageIcon, title: "Upload from gallery", sub: "Choose a photo or scan" },
-            ].map((option) => (
-              <TouchableOpacity
-                key={option.key}
-                style={styles.rxSheetRow}
-                activeOpacity={0.8}
-                onPress={() => {
-                  const storeId = rxOptionsStoreId;
-                  setRxOptionsStoreId(null);
-                  if (!storeId) return;
-                  // the sheet is closing: let it finish before the next screen or picker opens
-                  setTimeout(() => {
-                    if (option.key === "select") setSelectSheetStoreId(storeId);
-                    else pickPrescriptionImage(storeId, option.key === "camera" ? "camera" : "gallery");
-                  }, 250);
-                }}
-              >
-                <View style={styles.rxSheetIcon}>
-                  <option.icon size={20} color="#10B981" />
-                </View>
-                <View style={styles.rxSheetTextCol}>
-                  <Text style={styles.rxSheetTitle}>{option.title}</Text>
-                  <Text style={styles.rxSheetRowSub}>{option.sub}</Text>
-                </View>
-                <ChevronRight size={18} color={theme.textMuted} />
-              </TouchableOpacity>
-            ))}
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Prescription Selection Bottom Sheet */}
-      <SelectPrescriptionSheet
+      {/* The same prescription modal as the home screen: upload (camera / gallery) or pick one that is already saved */}
+      <PrescriptionUploadModal
         visible={!!selectSheetStoreId}
         onClose={() => setSelectSheetStoreId(null)}
-        onSelect={handleSelectExistingPrescription}
+        isLoading={!!uploadingPrescriptionFor}
+        onImageSelected={(asset) => {
+          const storeId = selectSheetStoreId;
+          if (storeId) uploadPrescriptionAsset(storeId, asset);
+        }}
+        onPrescriptionSelected={(id) => {
+          const attachment = rxAttachmentById.current[id];
+          if (attachment) handleSelectExistingPrescription(attachment);
+        }}
+        existingPrescriptions={rxChoices}
       />
 
       {/* Store Switcher Bottom Sheet - tap the "My Carts (N)" header to
@@ -1581,41 +1550,6 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: "#10B981",
-  },
-  rxSheetSub: {
-    fontSize: 13,
-    color: c.textSecondary,
-    marginTop: -6,
-    marginBottom: 14,
-  },
-  rxSheetRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: c.borderLight,
-  },
-  rxSheetIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: c.successBg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rxSheetTextCol: {
-    flex: 1,
-  },
-  rxSheetTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: c.text,
-  },
-  rxSheetRowSub: {
-    fontSize: 12,
-    color: c.textSecondary,
-    marginTop: 2,
   },
   instructionButton: {
     flexDirection: "row",

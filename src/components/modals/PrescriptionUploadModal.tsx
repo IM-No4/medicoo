@@ -25,6 +25,9 @@ interface Prescription {
   prescriptionDate: string;
   items: number;
   diagnosis?: string;
+  // an uploaded document (a photo or scan) rather than a doctor's prescription: shown by its name and date only
+  kind?: 'doctor' | 'document';
+  title?: string;
 }
 
 interface Props {
@@ -261,7 +264,9 @@ export default function PrescriptionUploadModal({
                       >
                         <View style={styles.prescriptionHeader}>
                           <View style={styles.prescriptionIdContainer}>
-                            <Text style={styles.prescriptionId}>#{prescription.id}</Text>
+                            <Text style={styles.prescriptionId}>
+                              {prescription.kind === 'document' ? 'UPLOADED' : `#${prescription.id}`}
+                            </Text>
                           </View>
                           <View
                             style={[
@@ -276,6 +281,14 @@ export default function PrescriptionUploadModal({
                         </View>
 
                         <View style={styles.prescriptionBody}>
+                          {prescription.kind === 'document' ? (
+                            <View style={styles.prescriptionRow}>
+                              <AppIcon name="file-text" size={16} color={theme.textSecondary} />
+                              <Text style={styles.prescriptionValue} numberOfLines={1}>
+                                {prescription.title || 'Prescription'}
+                              </Text>
+                            </View>
+                          ) : (
                           <View style={styles.prescriptionRow}>
                             <AppIcon name="stethoscope" size={16} color={theme.textSecondary} />
                             <Text style={styles.prescriptionLabel}>{t('doctor')}</Text>
@@ -283,6 +296,7 @@ export default function PrescriptionUploadModal({
                               {formatDoctorName(prescription.doctorName)}
                             </Text>
                           </View>
+                          )}
 
                           <View style={styles.prescriptionRow}>
                             <AppIcon name="calendar" size={16} color={theme.textSecondary} />
@@ -292,6 +306,7 @@ export default function PrescriptionUploadModal({
                             </Text>
                           </View>
 
+                          {prescription.kind !== 'document' && (
                           <View style={styles.prescriptionRow}>
                             <AppIcon name="pill" size={16} color={theme.textSecondary} />
                             <Text style={styles.prescriptionLabel}>{t('items')}</Text>
@@ -299,6 +314,7 @@ export default function PrescriptionUploadModal({
                               {prescription.items} {prescription.items === 1 ? 'medicine' : 'medicines'}
                             </Text>
                           </View>
+                          )}
 
                           {prescription.diagnosis && (
                             <View style={styles.diagnosisContainer}>

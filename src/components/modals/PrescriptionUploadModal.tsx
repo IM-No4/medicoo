@@ -412,12 +412,19 @@ export default function PrescriptionUploadModal({
               </TouchableOpacity>
             </View>
           )}
+        </Animated.View>
+      </View>
+
+      {/* The file, in a modal of its own (centred, not a bottom sheet) */}
+      <Modal visible={!!preview} transparent animationType="fade" onRequestClose={() => setPreview(null)}>
+        <View style={styles.previewBackdrop}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setPreview(null)} />
           {preview && (
-            <View style={styles.previewOverlay}>
-              <View style={[styles.previewBar, { paddingTop: 12 }]}>
+            <View style={styles.previewCard}>
+              <View style={styles.previewHeader}>
                 <Text style={styles.previewTitle} numberOfLines={1}>{preview.title}</Text>
                 <TouchableOpacity onPress={() => setPreview(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                  <AppIcon name="x" size={22} color="#FFFFFF" />
+                  <AppIcon name="x" size={20} color={theme.text} />
                 </TouchableOpacity>
               </View>
               <Image
@@ -427,8 +434,8 @@ export default function PrescriptionUploadModal({
               />
             </View>
           )}
-        </Animated.View>
-      </View>
+        </View>
+      </Modal>
     </Modal>
   );
 }
@@ -445,34 +452,40 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     fontWeight: '700',
     color: '#10B981',
   },
-  previewOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.94)',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    zIndex: 20,
+  previewBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
   },
-  previewBar: {
+  previewCard: {
+    width: '100%',
+    height: '75%',
+    backgroundColor: c.card,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  previewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderLight,
   },
   previewTitle: {
     flex: 1,
     marginRight: 12,
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: c.text,
   },
   previewImage: {
     flex: 1,
     width: '100%',
+    backgroundColor: c.cardSecondary,
   },
   backdrop: {
     flex: 1,

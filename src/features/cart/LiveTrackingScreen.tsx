@@ -694,7 +694,6 @@ export default function LiveTrackingScreen() {
               <View style={[styles.endedCard, { borderColor: "#FECACA", backgroundColor: isDark ? "rgba(248,113,113,0.12)" : "#FEF2F2" }]}>
                 <XCircle size={28} color="#DC2626" />
                 <Text style={[styles.endedTitle, { color: "#DC2626" }]}>The pharmacy could not accept this order</Text>
-                <Text style={styles.endedReasonLabel}>Reason</Text>
                 <Text style={styles.endedText}>{rejectionRemarks || "The pharmacy did not give a reason. Please contact support if you need help."}</Text>
                 <Text style={styles.endedHint}>
                   {isCod ? "Nothing has been charged. You haven't paid for this order." : "If you paid online, contact support if the refund does not reach you."}
@@ -847,22 +846,24 @@ export default function LiveTrackingScreen() {
       <View
         style={[styles.detailsDrawer, { paddingBottom: insets.bottom + 12 }]}
       >
-        {/* Pharmacy Details Row */}
-        <View style={styles.zomatoStoreInfoRow}>
-          <View style={styles.zomatoStoreDetails}>
-            <Text style={styles.zomatoStoreName}>{activeOrder.storeName}</Text>
-            <Text style={styles.zomatoStoreAddress}>
-              {store?.address || activeOrder.deliveryLocation?.address || "Partner Store"}
-            </Text>
+        {/* Pharmacy details and the call button: only while the order is still going (the header already names the pharmacy) */}
+        {!orderEnded && (
+          <View style={styles.zomatoStoreInfoRow}>
+            <View style={styles.zomatoStoreDetails}>
+              <Text style={styles.zomatoStoreName}>{activeOrder.storeName}</Text>
+              <Text style={styles.zomatoStoreAddress}>
+                {store?.address || activeOrder.deliveryLocation?.address || "Partner Store"}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.callBtn}
+              onPress={handleCallStore}
+              activeOpacity={0.8}
+            >
+              <Phone size={17} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.callBtn}
-            onPress={handleCallStore}
-            activeOpacity={0.8}
-          >
-            <Phone size={17} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
+        )}
 
         {/* Status Strip Alert */}
         {/* <View style={styles.zomatoAlertStrip}>

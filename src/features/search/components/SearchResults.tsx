@@ -322,6 +322,7 @@ export default function SearchResults({ results, activeTab, filters = NO_FILTERS
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
@@ -403,8 +404,12 @@ export default function SearchResults({ results, activeTab, filters = NO_FILTERS
 }
 
 const createStyles = (c: ThemeColors) => StyleSheet.create({
+  // white below the results (the empty space under the last pharmacy); the results themselves keep their own background
   container: {
     flex: 1,
+    backgroundColor: c.card,
+  },
+  content: {
     backgroundColor: c.background,
   },
   section: {
@@ -467,5 +472,6 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     // Tall enough to clear the floating MultiStoreCartBar (SearchScreen.tsx)
     // that now overlays the bottom of this screen once there are cart items.
     height: 140,
+    backgroundColor: c.card,
   },
 });

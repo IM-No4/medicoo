@@ -973,7 +973,8 @@ export default function LiveTrackingScreen() {
 
         {/* Collapsible Order Receipt / Details Accordion */}
         <TouchableOpacity
-          style={styles.zomatoAccordionHeader}
+          // an ended order has nothing above this row, so no line above it either
+          style={[styles.zomatoAccordionHeader, orderEnded && { borderTopWidth: 0, marginTop: 0 }]}
           onPress={() => setIsDetailExpanded(!isDetailExpanded)}
           activeOpacity={0.8}
         >

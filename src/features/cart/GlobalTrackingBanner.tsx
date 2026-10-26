@@ -48,10 +48,10 @@ const TERMINAL_STATUSES = ['delivered', 'rejected', 'cancelled'];
 // Screens where a floating "your medicine order" banner doesn't belong: the
 // patient's own Profile area, the entire doctor experience (browsing/
 // booking, in-call, in-chat), a consultation's own detail screen, the
-// entire blood donation flow, and the Search flow - all top-level siblings
+// entire blood donation flow, the Search flow and the order placing / order placed screens - all top-level siblings
 // of "Tabs" in MainStack, so none of them are reachable via the tab-root
 // check below.
-const EXCLUDED_ROUTE_NAMES = ['Profile', 'DoctorStack', 'DoctorCall', 'DoctorChat', 'ConsultationDetail', 'BloodDonationStack', 'SearchStack', 'PaymentProcessing'];
+const EXCLUDED_ROUTE_NAMES = ['Profile', 'DoctorStack', 'DoctorCall', 'DoctorChat', 'ConsultationDetail', 'BloodDonationStack', 'SearchStack', 'PaymentProcessing', 'VerifyingOrder'];
 
 // Unlike the stacks above, Calendar/Records/Health are tabs *within* "Tabs"
 // itself (Home stays visible), so they're matched by route name directly

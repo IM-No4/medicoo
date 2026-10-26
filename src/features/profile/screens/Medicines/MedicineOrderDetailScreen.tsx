@@ -215,6 +215,19 @@ export default function MedicineOrderDetailScreen() {
 
   const statusLabel = getStatusLabel(order.status);
 
+  // Cash on delivery is paid at the door: until then nothing has been paid (and for an order that never arrived, nothing is charged)
+  const isCod = (order as any).paymentMethod === "cod";
+  const isCodPending = isCod && order.status !== "Delivered" && order.status !== "Cancelled" && order.status !== "rejected";
+  const paymentModeText = isCod
+    ? order.status === "Delivered"
+      ? "Cash on delivery - paid in cash"
+      : order.status === "Cancelled" || order.status === "rejected"
+        ? "Cash on delivery - nothing was charged"
+        : "Cash on delivery - pay at the door"
+    : (order as any).paymentMethod
+      ? "Paid online"
+      : "";
+
   // An order that did not go through: who ended it and why, colour-coded (red when the pharmacy or Medicoo ended it, grey when the
   // customer did).
   const endedOrder = order.status === "Cancelled" || order.status === "rejected";
@@ -475,8 +488,14 @@ export default function MedicineOrderDetailScreen() {
 
           {/* Total Row */}
           <View style={styles.billTotalRow}>
-            <Text style={styles.billTotalLabel}>{t('bill_total')}</Text>
+            <Text style={styles.billTotalLabel}>{isCodPending ? "To pay on delivery" : t('bill_total')}</Text>
             <Text style={styles.billTotalValue}>₹{formatAmount(order.total)}</Text>
+          </View>
+
+          {/* How it is paid for, so a bill is not mistaken for a payment already made */}
+          <View style={styles.paymentModeRow}>
+            <Text style={styles.paymentModeLabel}>Payment</Text>
+            <Text style={[styles.paymentModeValue, isCodPending && { color: "#B45309" }]}>{paymentModeText}</Text>
           </View>
         </View>
 
@@ -695,6 +714,24 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     height: 1,
     backgroundColor: c.cardSecondary,
     marginVertical: 16,
+  },
+  paymentModeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 10,
+  },
+  paymentModeLabel: {
+    fontSize: 12,
+    color: c.textSecondary,
+  },
+  paymentModeValue: {
+    flex: 1,
+    textAlign: "right",
+    fontSize: 12,
+    fontWeight: "700",
+    color: c.text,
   },
   statusReasonText: {
     marginTop: 8,

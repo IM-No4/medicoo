@@ -214,6 +214,38 @@ export default function MedicineOrderDetailScreen() {
   }
 
   const statusLabel = getStatusLabel(order.status);
+
+  // An order that did not go through: who ended it and why, colour-coded (red when the pharmacy or Medicoo ended it, grey when the
+  // customer did).
+  const endedOrder = order.status === "Cancelled" || order.status === "rejected";
+  const ending = (order as any).ending as { kind: string; by: string | null; reason: string | null; at?: string } | null | undefined;
+  const endingColour = ending?.by === "you" ? "#6B7280" : "#DC2626";
+  const endingHeadline = !ending
+    ? "Order was cancelled"
+    : ending.kind === "rejected"
+      ? "Order rejected by the pharmacy"
+      : ending.by === "you"
+        ? "Order cancelled by you"
+        : ending.by === "support"
+          ? "Order cancelled by Medicoo support"
+          : ending.by === "system"
+            ? "Order cancelled automatically"
+            : "Order was cancelled";
+  const endingTime = ending?.at
+    ? new Date(ending.at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+    : null;
+  const endingDetail = !ending
+    ? null
+    : [
+        ending.reason
+          ? `Reason: ${ending.reason}`
+          : ending.by === "you"
+            ? null
+            : ending.kind === "rejected" || ending.by === "system"
+              ? "No reason was given."
+              : null,
+        endingTime ? endingTime : null,
+      ].filter(Boolean).join("  •  ") || null;
   const itemsText = `${order.items.length} ${order.items.length === 1 ? "Item" : "Items"}`;
   const totalText = `₹${formatAmount(order.total)}`;
 
@@ -305,18 +337,22 @@ export default function MedicineOrderDetailScreen() {
             {order.status === "Delivered" ? (
               <CheckCircle2 size={16} color="#16A34A" />
             ) : order.status === "Cancelled" || order.status === "rejected" ? (
-              <XCircle size={16} color="#DC2626" />
+              <XCircle size={16} color={endingColour} />
             ) : (
               <View style={styles.loaderSpinner} />
             )}
-            <Text style={styles.statusDescriptionText}>
+            <Text style={[styles.statusDescriptionText, endedOrder ? { color: endingColour, fontWeight: "700" } : null]}>
               {order.status === "Delivered"
                 ? `Order delivered on ${new Date(order.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}`
-                : order.status === "Cancelled" || order.status === "rejected"
-                  ? "Order was cancelled"
+                : endedOrder
+                  ? endingHeadline
                   : "Order in progress"}
             </Text>
           </View>
+          {/* Why it ended: the reason given, or a plain note when there is none */}
+          {endedOrder && endingDetail ? (
+            <Text style={[styles.statusReasonText, { borderLeftColor: endingColour }]}>{endingDetail}</Text>
+          ) : null}
         </View>
 
         {/* Grey Divider block */}
@@ -659,6 +695,15 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     height: 1,
     backgroundColor: c.cardSecondary,
     marginVertical: 16,
+  },
+  statusReasonText: {
+    marginTop: 8,
+    marginLeft: 4,
+    paddingLeft: 10,
+    borderLeftWidth: 3,
+    fontSize: 13,
+    lineHeight: 18,
+    color: c.textSecondary,
   },
   statusRow: {
     flexDirection: "row",

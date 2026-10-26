@@ -166,7 +166,8 @@ export default function MedicineRow({
                 medicine.prescriptionRequired ||
                 medicine.prescriptionStatus) && (
                 <View style={styles.prescriptionBadge}>
-                  <AppIcon name="file-text" size={10} color="#EF4444" />
+                  <AppIcon name="file-text" size={11} color="#EF4444" />
+                  <Text style={styles.prescriptionBadgeText}>Prescription required</Text>
                 </View>
               )}
               {medicine.isVeg && (
@@ -348,13 +349,20 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     flexDirection: "row",
     gap: 4,
   },
+  // says it in words, so the customer knows before adding it to the cart
   prescriptionBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: c.errorBg,
-    justifyContent: "center",
+    flexDirection: "row",
     alignItems: "center",
+    gap: 4,
+    height: 20,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    backgroundColor: c.errorBg,
+  },
+  prescriptionBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#EF4444",
   },
   badge: {
     width: 18,

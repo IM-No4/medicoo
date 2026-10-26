@@ -1027,8 +1027,10 @@ export default function CartScreen() {
             >
               <Text style={styles.payBtnText}>
                 {isPrescriptionMissing
-                  ? "Add Prescription to Pay"
-                  : `Pay ₹${formatPrice(total)}`}
+                  ? (savedPayment?.method === "cod" ? "Add Prescription to Order" : "Add Prescription to Pay")
+                  : savedPayment?.method === "cod"
+                    ? "Place order"
+                    : `Pay ₹${formatPrice(total)}`}
               </Text>
             </TouchableOpacity>
           </View>

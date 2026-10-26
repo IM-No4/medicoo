@@ -124,11 +124,20 @@ function ServicesSection({ title, services, layout, onAction }: Props) {
       return (
         <TouchableOpacity
           key={item.id}
-          style={[styles.card, wide ? styles.cardWide : styles.cardHalf, { width: tileWidth }, isDark && styles.cardDark, disabled && styles.disabledCard]}
+          style={[
+            styles.card,
+            wide ? styles.cardWide : styles.cardHalf,
+            { width: tileWidth },
+            // light mode: the gradient's first colour is also the card's own fill, so the card (and its text, chosen for that colour) can never
+            // end up painted on the page background if the gradient layer does not draw, e.g. right after the theme was switched
+            isDark ? styles.cardDark : { backgroundColor: item.background.start },
+            disabled && styles.disabledCard,
+          ]}
           activeOpacity={disabled ? 1 : 0.8}
           onPress={() => onPressService(item)}
         >
           <LinearGradient
+            key={isDark ? 'dark' : 'light'}
             colors={[item.background.start, item.background.end]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}

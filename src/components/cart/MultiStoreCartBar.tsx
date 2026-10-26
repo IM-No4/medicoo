@@ -21,6 +21,15 @@ import type { ThemeColors } from '../../theme/colors';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// "#RRGGBB" (or "#RGB") with an alpha, for the fade
+const withAlpha = (hex: string, alpha: number): string => {
+  let h = String(hex || '').replace('#', '');
+  if (h.length === 3) h = h.split('').map((ch) => ch + ch).join('');
+  if (h.length !== 6) return `rgba(255,255,255,${alpha})`;
+  const n = parseInt(h, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+};
 const CARD_PADDING = 18;
 const CARD_SPACING = 0;
 const CARD_WIDTH = SCREEN_WIDTH - (CARD_PADDING * 2);
@@ -37,7 +46,7 @@ type Props = {
 
 export default function MultiStoreCartBar({ bottomInset }: Props) {
   const { t } = useLanguage();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const resolvedBottomInset = bottomInset ?? insets.bottom;
@@ -88,11 +97,12 @@ export default function MultiStoreCartBar({ bottomInset }: Props) {
         },
       ]}
     >
-      {/* Soft fade above the bar so it never blends into the content scrolling behind it */}
+      {/* No box behind the bar: transparent at the top, the solid screen colour at the bottom, so the content scrolling behind fades out */}
       <LinearGradient
         pointerEvents="none"
-        colors={['rgba(0,0,0,0)', isDark ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.10)']}
-        style={styles.topFade}
+        colors={[withAlpha(theme.card, 0), withAlpha(theme.card, 0.92), theme.card]}
+        locations={[0, 0.45, 0.8]}
+        style={StyleSheet.absoluteFill}
       />
 
       <FlatList
@@ -197,15 +207,9 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: c.card,
-    paddingTop: 12,
-  },
-  topFade: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: -18,
-    height: 18,
+    backgroundColor: 'transparent',
+    // room above the card for the fade
+    paddingTop: 28,
   },
   listContent: {
     paddingHorizontal: CARD_PADDING,

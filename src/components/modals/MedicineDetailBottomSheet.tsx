@@ -241,8 +241,7 @@ export default function MedicineDetailBottomSheet({
         brand: medicine.brand || medicine.manufacturer,
         composition: medicine.composition,
         prescriptionRequired:
-          (medicine.isPrescriptionRequired || medicine.prescriptionRequired) ??
-          false,
+          !!(medicine.isPrescriptionRequired || medicine.prescriptionRequired || medicine.prescriptionStatus),
         image: images[0] || undefined,
         batchId: Array.isArray(medicine.batchNum)
           ? String(medicine.batchNum[0] ?? "")
@@ -480,7 +479,8 @@ export default function MedicineDetailBottomSheet({
               )}
 
               {(medicine.isPrescriptionRequired ||
-                medicine.prescriptionRequired) && (
+                medicine.prescriptionRequired ||
+                medicine.prescriptionStatus) && (
                 <View style={styles.prescriptionWarning}>
                   <AppIcon name="file-text" size={20} color="#EF4444" />
                   <Text style={styles.prescriptionText}>

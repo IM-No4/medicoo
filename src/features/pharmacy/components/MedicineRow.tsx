@@ -94,8 +94,7 @@ export default function MedicineRow({
         brand: medicine.brand || medicine.manufacturer,
         composition: medicine.composition,
         prescriptionRequired:
-          (medicine.isPrescriptionRequired || medicine.prescriptionRequired) ??
-          false,
+          !!(medicine.isPrescriptionRequired || medicine.prescriptionRequired || medicine.prescriptionStatus),
         image: medicineImage,
         batchId: Array.isArray(medicine.batchNum)
           ? String(medicine.batchNum[0] ?? "")
@@ -164,7 +163,8 @@ export default function MedicineRow({
           <View style={styles.badgesRow}>
             <View style={styles.badges}>
               {(medicine.isPrescriptionRequired ||
-                medicine.prescriptionRequired) && (
+                medicine.prescriptionRequired ||
+                medicine.prescriptionStatus) && (
                 <View style={styles.prescriptionBadge}>
                   <AppIcon name="file-text" size={10} color="#EF4444" />
                 </View>

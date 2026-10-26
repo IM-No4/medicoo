@@ -26,6 +26,9 @@ export interface OrderQuote {
   distanceKm: number | null;
   coupon: { code: string; discountType: string; description: string } | null;
   policy: { returnWindowHours: number; cancellation: string; returns: string };
+  /** The server's own reading of the medicine list: some items are prescription-only, so an order needs a prescription. */
+  prescriptionRequired?: boolean;
+  prescriptionItems?: string[];
 }
 
 export class QuoteRefused extends Error {

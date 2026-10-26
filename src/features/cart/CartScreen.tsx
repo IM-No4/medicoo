@@ -554,7 +554,8 @@ export default function CartScreen() {
     const receiverPhone = selectedAddress?.receiverNumber || myMobile || "";
 
     const isOffline = !!offlineStores[storeCart.storeId];
-    const needsPrescription = cartItems.some((item) => item.prescriptionRequired);
+    // the cart's own flag, or the server's reading of the medicines (carts made before the flag was right do not carry it)
+    const needsPrescription = cartItems.some((item) => item.prescriptionRequired) || !!quotes[storeCart.storeId]?.prescriptionRequired;
     const attachedPrescription = attachedPrescriptions[storeCart.storeId];
     const isUploadingForThisStore = uploadingPrescriptionFor === storeCart.storeId;
 
@@ -901,7 +902,7 @@ export default function CartScreen() {
     const isOffline = !!offlineStores[storeCart.storeId];
     const notServiceable = !isOffline && !!notServiceableStores[storeCart.storeId];
     const cartItems = Object.values(storeCart.items);
-    const needsPrescription = cartItems.some((item) => item.prescriptionRequired);
+    const needsPrescription = cartItems.some((item) => item.prescriptionRequired) || !!quotes[storeCart.storeId]?.prescriptionRequired;
     const attachedPrescription = attachedPrescriptions[storeCart.storeId];
     const isPrescriptionMissing = needsPrescription && !attachedPrescription;
     const subtotal = cartItems.reduce(

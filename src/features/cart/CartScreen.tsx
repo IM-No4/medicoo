@@ -629,9 +629,7 @@ export default function CartScreen() {
             {cartItems.map((item, index) => renderCartItem(item, storeCart.storeId, index === cartItems.length - 1))}
           </View>
 
-          </View>
-
-          {/* Prescription Requirement: one line; adding or changing it opens a sheet with the options */}
+          {/* Prescription Requirement: one line; part of the items card, under the list; adding or changing it opens the prescription modal */}
           {needsPrescription && (
             <View style={styles.rxRow}>
               {attachedPrescription ? (
@@ -658,6 +656,8 @@ export default function CartScreen() {
               </TouchableOpacity>
             </View>
           )}
+
+          </View>
 
           {/* Instructions, coupon, receiver */}
           <View style={styles.sectionCard}>
@@ -1505,19 +1505,16 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     gap: 12,
   },
   // one line: icon, what it says, and the button
+  // the last row of the items card, set off by a line
   rxRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginHorizontal: 16,
-    marginBottom: 12,
     paddingVertical: 10,
-    paddingLeft: 14,
-    paddingRight: 10,
-    backgroundColor: c.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: c.borderLight,
+    paddingLeft: 16,
+    paddingRight: 12,
+    borderTopWidth: 1,
+    borderTopColor: c.borderLight,
   },
   rxRowText: {
     flex: 1,

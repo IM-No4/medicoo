@@ -402,12 +402,15 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 8,
   },
+  // the product list of each pharmacy sits on the same background as the profile screen, with white product cards on it
   medicinesCarousel: {
+    marginTop: 8,
     marginBottom: 8,
+    backgroundColor: c.background,
   },
   medicinesList: {
     paddingHorizontal: 16,
-    paddingTop: 4,
+    paddingTop: 12,
     paddingBottom: 16,
     gap: 16,
   },

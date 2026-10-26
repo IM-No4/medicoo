@@ -23,6 +23,8 @@ export interface CodOption {
   enabled: boolean;
   busy?: boolean;
   onPlace: () => void;
+  /** Shown instead of the option when cash on delivery is not available for this order (for example above the limit). */
+  blockedReason?: string;
 }
 
 type Selection =
@@ -519,17 +521,17 @@ export default function PaymentOptionsView({ payment, amountPaise, cod, onlineBl
           <>
             <Text style={styles.sectionTitle}>Pay on delivery</Text>
             <View style={styles.card}>
-              <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => select({ kind: 'cod' })}>
+              <TouchableOpacity style={[styles.row, !!cod.blockedReason && { opacity: 0.5 }]} activeOpacity={0.7} disabled={!!cod.blockedReason} onPress={() => select({ kind: 'cod' })}>
                 <View style={styles.iconTile}>
                   <Coins size={18} color={theme.textSecondary} />
                 </View>
                 <View style={styles.rowText}>
                   <Text style={styles.rowTitle}>Cash on delivery</Text>
-                  <Text style={styles.rowSub}>Pay cash or UPI when your order arrives</Text>
+                  <Text style={styles.rowSub}>{cod.blockedReason || 'Pay cash or UPI when your order arrives'}</Text>
                 </View>
-                <Radio on={selection?.kind === 'cod'} />
+                {!cod.blockedReason && <Radio on={selection?.kind === 'cod'} />}
               </TouchableOpacity>
-              {selection?.kind === 'cod' && (
+              {selection?.kind === 'cod' && !cod.blockedReason && (
                 <View style={styles.actionWrap}>
                   <TouchableOpacity style={[styles.payBtn, (cod.busy || busy) && styles.payBtnDisabled]} onPress={cod.onPlace} disabled={cod.busy || busy} activeOpacity={0.85}>
                     {cod.busy ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.payBtnText}>PLACE ORDER</Text>}

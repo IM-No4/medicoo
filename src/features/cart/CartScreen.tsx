@@ -901,6 +901,8 @@ export default function CartScreen() {
       0,
     );
     const quote = quotes[storeCart.storeId];
+    // a saved cash on delivery choice does not hold for an order above the cash on delivery limit: it has to be paid online
+    const chosenPayment = savedPayment?.method === "cod" && quote?.codAllowed === false ? null : savedPayment;
     const deliveryFee = quote?.deliveryFee ?? 0;
     const platformFee = quote?.platformFee ?? 0;
     const otherCharges = quote?.packaging ?? 0;
@@ -915,13 +917,13 @@ export default function CartScreen() {
     // a real one first.
     // `autoPay`: Pay with the saved method (processing screen). `resumeOnly`: just check on a payment already started.
     const handleProceedToCheckout = (autoPay = false, resumeOnly = false) => {
-      if (autoPay && !resumeOnly && !savedPayment) return; // Pay is disabled until a payment method is chosen
+      if (autoPay && !resumeOnly && !chosenPayment) return; // Pay is disabled until a payment method is chosen
       if (!quote) {
         alert("We are still working out your bill. Please try again in a moment.");
         return;
       }
       // A saved card needs its details typed, so it (and "Change") opens the options list.
-      const openProcessing = resumeOnly || (autoPay && !!savedPayment && savedPayment.method !== 'card');
+      const openProcessing = resumeOnly || (autoPay && !!chosenPayment && chosenPayment.method !== 'card');
       if (!selectedAddress) {
         alert("Please select a delivery address before proceeding to pay.");
         navigation.navigate("AddressBookModal");
@@ -949,6 +951,8 @@ export default function CartScreen() {
         prescriptionDocumentId: attachedPrescription?.documentId,
         prescriptionId: attachedPrescription?.prescriptionId,
         prescriptionRequired: needsPrescription,
+        codAllowed: quote.codAllowed,
+        codMaxAmount: quote.codMaxAmount,
         ...(openProcessing ? { autoPay: true, resumeOnly } : {}),
       });
     };
@@ -997,13 +1001,13 @@ export default function CartScreen() {
             >
               <CreditCard size={18} color="#10B981" />
               <View style={styles.paymentTextCol}>
-                {savedPayment ? (
+                {chosenPayment ? (
                   <>
                     <Text style={styles.selectedPaymentText} numberOfLines={1}>
-                      {savedPayment.label}
+                      {chosenPayment.label}
                     </Text>
                     <Text style={styles.changePaymentLink} numberOfLines={1}>
-                      {savedPayment.sub ? `${savedPayment.sub} • ` : ''}Change
+                      {chosenPayment.sub ? `${chosenPayment.sub} • ` : ''}Change
                     </Text>
                   </>
                 ) : (
@@ -1019,16 +1023,16 @@ export default function CartScreen() {
             <TouchableOpacity
               style={[
                 styles.payBtnRight,
-                (isPrescriptionMissing || !savedPayment) && styles.payBtnRightDisabled,
+                (isPrescriptionMissing || !chosenPayment) && styles.payBtnRightDisabled,
               ]}
               activeOpacity={0.8}
-              disabled={(!savedPayment && !isPrescriptionMissing) || !quote}
+              disabled={(!chosenPayment && !isPrescriptionMissing) || !quote}
               onPress={() => handleProceedToCheckout(true)}
             >
               <Text style={styles.payBtnText}>
                 {isPrescriptionMissing
-                  ? (savedPayment?.method === "cod" ? "Add Prescription to Order" : "Add Prescription to Pay")
-                  : savedPayment?.method === "cod"
+                  ? (chosenPayment?.method === "cod" ? "Add Prescription to Order" : "Add Prescription to Pay")
+                  : chosenPayment?.method === "cod"
                     ? "Place order"
                     : `Pay ₹${formatPrice(total)}`}
               </Text>

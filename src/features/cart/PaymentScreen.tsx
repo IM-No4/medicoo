@@ -32,7 +32,9 @@ export default function PaymentScreen() {
   const config = usePaymentConfig();
 
   const params = route.params || { storeId: '', amount: 0 };
-  const { storeId, amount, prescriptionMode, prescriptionRequired = false } = params;
+  const { storeId, amount, prescriptionMode, prescriptionRequired = false, codAllowed, codMaxAmount } = params;
+  // cash on delivery is offered only up to a limit; above it the order is paid online
+  const codBlockedReason = codAllowed === false ? `Available for orders up to ₹${codMaxAmount}. Pay online for this order.` : undefined;
 
   const carts = useSelector((state: RootState) => state.cart);
   const selectedAddress = useSelector((state: RootState) => state.address.selectedAddress);
@@ -58,13 +60,17 @@ export default function PaymentScreen() {
       navigation.navigate('AddressBookModal');
       return;
     }
+    if (codBlockedReason) {
+      Alert.alert('Cash on delivery not available', codBlockedReason);
+      return;
+    }
     if (prescriptionRequired && !prescriptionMode) {
       Alert.alert('Prescription needed', 'One or more items need a prescription. Please add one in your cart first.');
       return;
     }
     saveLastMethod({ method: 'cod', label: 'Cash on delivery', sub: 'Pay on delivery' });
     navigation.navigate('VerifyingOrder', { ...params, paymentMethod: 'cod' });
-  }, [navigation, params, prescriptionMode, prescriptionRequired, selectedAddress]);
+  }, [navigation, params, prescriptionMode, prescriptionRequired, selectedAddress, codBlockedReason]);
 
   const source = useMemo(
     () => ({ ...config, phase: 'idle', error: null, start: onPay, dismissError: () => {} }),
@@ -80,7 +86,7 @@ export default function PaymentScreen() {
         summary={{ store: pharmacyName, addressTitle: selectedAddress?.label || 'Delivery address', addressLine: selectedAddress?.fullAddress || '' }}
         onBack={() => navigation.goBack()}
       />
-      <PaymentOptionsView payment={source} amountPaise={amountPaise} onlineBlockedReason={pausedMessage} cod={{ enabled: !isCheckoutPaused, onPlace: placeCod }} />
+      <PaymentOptionsView payment={source} amountPaise={amountPaise} onlineBlockedReason={pausedMessage} cod={{ enabled: !isCheckoutPaused, onPlace: placeCod, blockedReason: codBlockedReason }} />
     </View>
   );
 }

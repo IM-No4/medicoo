@@ -29,6 +29,9 @@ export interface OrderQuote {
   /** The server's own reading of the medicine list: some items are prescription-only, so an order needs a prescription. */
   prescriptionRequired?: boolean;
   prescriptionItems?: string[];
+  /** Cash on delivery is offered only up to a limit; above it the order must be paid online. */
+  codAllowed?: boolean;
+  codMaxAmount?: number;
 }
 
 export class QuoteRefused extends Error {

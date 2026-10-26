@@ -209,6 +209,13 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
   // We use feedLoading && feedData.length === 0 to denote "Waiting for first batch"
   const isInitialLoading = !homeBootstrapped || (feedLoading && feedData.length === 0);
 
+  // The header is held back while the first screenful loads and comes in together with the content (a header that was already
+  // there while the rest filled in a moment later looked like two separate loads).
+  const headerReveal = useRef(new Animated.Value(isInitialLoading ? 0 : 1)).current;
+  useEffect(() => {
+    Animated.timing(headerReveal, { toValue: isInitialLoading ? 0 : 1, duration: isInitialLoading ? 0 : 150, useNativeDriver: true }).start();
+  }, [isInitialLoading, headerReveal]);
+
   useFocusEffect(
     useCallback(() => {
       // HEADER_HEIGHT (the true total height), not the bare content
@@ -435,14 +442,21 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
         }}
       />
 
-      <HomeHeader
-        scrollY={scrollY}
-        maxHeight={HEADER_HEIGHT}
-        onOpenCommandPalette={onOpenCommandPalette}
-        dynamicConfig={dynamicHeaderConfig}
-      />
+      <Animated.View
+        pointerEvents={isInitialLoading ? 'none' : 'box-none'}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, opacity: headerReveal }}
+      >
+        <HomeHeader
+          scrollY={scrollY}
+          maxHeight={HEADER_HEIGHT}
+          onOpenCommandPalette={onOpenCommandPalette}
+          dynamicConfig={dynamicHeaderConfig}
+        />
+      </Animated.View>
 
       <Animated.FlatList
+        // remounted when the theme changes: with clipped subviews on, rows could come back after a theme switch drawn but invisible
+        key={isDark ? 'feed-dark' : 'feed-light'}
         data={isInitialLoading ? [] : visibleFeedData}
         extraData={carts}
         keyExtractor={(item) => item.id}

@@ -310,6 +310,15 @@ export default function MedicineDetailBottomSheet({
           >
             {/* Image Carousel */}
             <View style={styles.imageCard}>
+              {/* Prescription-only: said on the picture itself, top right */}
+              {(medicine.isPrescriptionRequired ||
+                medicine.prescriptionRequired ||
+                medicine.prescriptionStatus) && (
+                <View style={styles.rxOverlay}>
+                  <AppIcon name="file-text" size={14} color="#DC2626" />
+                  <Text style={styles.rxOverlayText}>{t('prescription_required')}</Text>
+                </View>
+              )}
               {images.length > 0 ? (
                 <FlatList
                   data={images}
@@ -475,17 +484,6 @@ export default function MedicineDetailBottomSheet({
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>{t('storage_instructions')}</Text>
                   <Text style={styles.sectionContent}>{medicine.storage}</Text>
-                </View>
-              )}
-
-              {(medicine.isPrescriptionRequired ||
-                medicine.prescriptionRequired ||
-                medicine.prescriptionStatus) && (
-                <View style={styles.prescriptionWarning}>
-                  <AppIcon name="file-text" size={20} color="#EF4444" />
-                  <Text style={styles.prescriptionText}>
-                    {t('prescription_required')}
-                  </Text>
                 </View>
               )}
             </View>
@@ -817,19 +815,26 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.textSecondary,
     lineHeight: 20,
   },
-  prescriptionWarning: {
+  // a white pill with red text: readable on any picture or on the gradient placeholder, and no red on red
+  rxOverlay: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 2,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: c.errorBg,
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#FECACA",
   },
-  prescriptionText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#EF4444",
+  rxOverlayText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#DC2626",
   },
   readMoreText: {
     color: "#16A34A",

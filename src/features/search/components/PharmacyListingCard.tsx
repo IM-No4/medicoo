@@ -402,19 +402,16 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 8,
   },
-  // only the strip behind a pharmacy's row of medicine cards: the profile screen's background, inset from the edges, white cards on it
+  // the product list of each pharmacy sits on the same background as the profile screen, with white product cards on it
   medicinesCarousel: {
     marginTop: 8,
     marginBottom: 8,
-    marginHorizontal: 12,
-    borderRadius: 14,
-    overflow: 'hidden',
     backgroundColor: c.background,
   },
   medicinesList: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 12,
+    paddingBottom: 16,
     gap: 16,
   },
   medicineCard: {

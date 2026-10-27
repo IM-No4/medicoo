@@ -1029,9 +1029,9 @@ export default function CartScreen() {
               disabled={(!chosenPayment && !isPrescriptionMissing) || !quote}
               onPress={() => handleProceedToCheckout(true)}
             >
-              <Text style={styles.payBtnText}>
+              <Text style={styles.payBtnText} numberOfLines={1} adjustsFontSizeToFit>
                 {isPrescriptionMissing
-                  ? (chosenPayment?.method === "cod" ? "Add Prescription to Order" : "Add Prescription to Pay")
+                  ? "Add prescription"
                   : chosenPayment?.method === "cod"
                     ? "Place order"
                     : `Pay ₹${formatPrice(total)}`}

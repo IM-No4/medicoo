@@ -148,6 +148,14 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ed4f8f34-4884-497a-bc6d-3951d6bef5c5",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "extra": {
       "router": {},
       "expo-navigation-bar": {

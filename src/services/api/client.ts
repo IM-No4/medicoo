@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { AppState } from 'react-native';
 import { getToken, clearToken } from '../../utils/tokenManagement';
 import { API_BASE_URL } from '../../config/env';
 
@@ -33,6 +34,18 @@ const UNREACHABLE_WINDOW_MS = 15 * 1000;
 let noResponseFailures = 0;
 let lastNoResponseAt = 0;
 
+// Right after the app comes back from the background the phone's Wi-Fi radio is still waking up and connections the app had open are
+// dead: the first requests fail with "Network Error" although the connection is fine. For a few seconds after returning, such failures
+// are not held against the server (so the no-connection screen does not flash up), and a GET that failed is tried once more.
+const RESUME_GRACE_MS = 10 * 1000;
+let resumeGraceUntil = 0;
+let lastAppState = AppState.currentState;
+AppState.addEventListener('change', (next) => {
+  if (lastAppState.match(/inactive|background/) && next === 'active') resumeGraceUntil = Date.now() + RESUME_GRACE_MS;
+  lastAppState = next;
+});
+const inResumeGrace = () => Date.now() < resumeGraceUntil;
+
 const reportServerReachable = () => {
   noResponseFailures = 0;
   try {
@@ -47,6 +60,7 @@ const reportServerReachable = () => {
 };
 
 const reportNoResponse = () => {
+  if (inResumeGrace()) return;
   const now = Date.now();
   noResponseFailures = now - lastNoResponseAt > UNREACHABLE_WINDOW_MS ? 1 : noResponseFailures + 1;
   lastNoResponseAt = now;
@@ -73,6 +87,12 @@ apiClient.interceptors.response.use(
     if (error.response) {
       reportServerReachable();
     } else if (error.code !== 'ERR_CANCELED' && !(error.config as any)?.skipReachability) {
+      const config: any = error.config;
+      if (inResumeGrace() && config && String(config.method).toLowerCase() === 'get' && !config.__retriedAfterResume) {
+        config.__retriedAfterResume = true;
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+        return apiClient(config);
+      }
       reportNoResponse();
     }
 

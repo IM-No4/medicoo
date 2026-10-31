@@ -43,6 +43,33 @@ export default function ServerUnreachableScreen({ onRetry, onUseOffline }: Props
         return () => loop.stop();
     }, [pulse]);
 
+    // Checks again on its own (every 5 seconds, and when the phone reports it is connected again). When the server answers, the screen
+    // goes away and the app refreshes its data; nobody has to tap Try Again.
+    const autoRef = useRef(false);
+    const retryRef = useRef(onRetry);
+    retryRef.current = onRetry;
+    useEffect(() => {
+        const silent = async () => {
+            if (autoRef.current) return;
+            autoRef.current = true;
+            try {
+                await retryRef.current();
+            } catch {
+                // still unreachable
+            } finally {
+                autoRef.current = false;
+            }
+        };
+        const timer = setInterval(silent, 5000);
+        const unsubscribe = NetInfo.addEventListener((state) => {
+            if (state.isConnected) silent();
+        });
+        return () => {
+            clearInterval(timer);
+            unsubscribe();
+        };
+    }, []);
+
     const handleRetry = async () => {
         if (retrying) return;
         setRetrying(true);

@@ -39,7 +39,7 @@ export function useForegroundRecheck() {
       if (now - lastCheckRef.current < MIN_RECHECK_INTERVAL_MS) return;
       lastCheckRef.current = now;
 
-      runBootSequence(dispatch, { showLoadingState: false });
+      runBootSequence(dispatch, { showLoadingState: false, isRecheck: true });
     });
     return () => subscription.remove();
   }, [dispatch, boot.status]);

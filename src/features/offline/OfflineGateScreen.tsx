@@ -1,3 +1,4 @@
+import NetInfo from '@react-native-community/netinfo';
 import { RefreshCw, WifiOff } from 'lucide-react-native';
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { ActivityIndicator, Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -70,6 +71,32 @@ export default function OfflineGateScreen({ onRetry, onUseOffline }: Props) {
     // can actually perceive, same idea as BootCoordinator's own
     // MIN_SPLASH_DURATION for the cold-boot spinner.
     const MIN_RETRY_SPINNER_MS = 700;
+
+    // Checks again on its own: every few seconds, and the moment the phone reports a connection. When the internet is back the boot
+    // sequence carries on and this screen is replaced, so nobody has to tap Try Again.
+    const checkingRef = useRef(false);
+    const silentRetry = React.useCallback(async () => {
+        if (checkingRef.current) return;
+        checkingRef.current = true;
+        try {
+            await onRetry();
+        } catch {
+            // still offline: this screen stays
+        } finally {
+            checkingRef.current = false;
+        }
+    }, [onRetry]);
+
+    useEffect(() => {
+        const timer = setInterval(silentRetry, 5000);
+        const unsubscribe = NetInfo.addEventListener((state) => {
+            if (state.isConnected) silentRetry();
+        });
+        return () => {
+            clearInterval(timer);
+            unsubscribe();
+        };
+    }, [silentRetry]);
 
     const handleRetry = async () => {
         if (retrying) return;

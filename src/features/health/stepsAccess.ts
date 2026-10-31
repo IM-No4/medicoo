@@ -15,9 +15,11 @@ const ASKED_KEY = '@medicoo_steps_access_asked';
 export type StepsAccessResult = 'enabled' | 'denied' | 'needs_install' | 'unsupported';
 
 /** Run the permission flow now, telling the person what happened. */
-export async function requestStepsAccess(): Promise<StepsAccessResult> {
+export async function requestStepsAccess(onAnswered?: () => void): Promise<StepsAccessResult> {
   if (!isHealthConnectSupported) return 'unsupported';
   const result = await enableStepsTracking();
+  // the permission question has been answered (given or refused): let the screen reload right away, before any message is shown
+  onAnswered?.();
   if (result.success) {
     Alert.alert('Step tracking is on', 'Your steps will now keep your steps goal up to date, even when the app is closed.');
     return 'enabled';
@@ -40,7 +42,7 @@ export async function requestStepsAccess(): Promise<StepsAccessResult> {
  * Called when the Health screen shows up: if step tracking is not on yet and the person has not been asked before, explain and ask.
  * Returns true if the explanation was shown.
  */
-export async function askForStepsAccessOnce(): Promise<boolean> {
+export async function askForStepsAccessOnce(onAnswered?: () => void): Promise<boolean> {
   if (!isHealthConnectSupported) return false;
   try {
     if (await isStepsTrackingEnabled()) return false;
@@ -53,7 +55,12 @@ export async function askForStepsAccessOnce(): Promise<boolean> {
   Alert.alert(
     'Track your steps?',
     'Medicoo can count your steps in the background, even when the app is closed, to keep your steps goal up to date and let you compare with friends. It needs access to your activity.',
-    [{ text: 'Not now', style: 'cancel' }, { text: 'Allow', onPress: () => { requestStepsAccess(); } }],
+    [
+      { text: 'Not now', style: 'cancel', onPress: () => onAnswered?.() },
+      { text: 'Allow', onPress: () => { requestStepsAccess(onAnswered); } },
+    ],
+    // dismissed by tapping outside / back: that is an answer too
+    { cancelable: true, onDismiss: () => onAnswered?.() },
   );
   return true;
 }

@@ -497,7 +497,7 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
         ListHeaderComponent={isInitialLoading ? LoadingSkeletons : null}
         ListFooterComponent={renderFooter}
         onEndReached={loadMore}
-        onEndReachedThreshold={1.5}
+        onEndReachedThreshold={2.5}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={15}

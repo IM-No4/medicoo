@@ -1,3 +1,4 @@
+import NetInfo from '@react-native-community/netinfo';
 import { AppState, AppStateStatus } from 'react-native';
 import { store } from '../redux/store';
 import { syncOfflineQueue, loadCalendarData } from '../redux/slices/calendarSlice';
@@ -46,6 +47,7 @@ const BACKGROUND_REFRESH_THRESHOLD_MS = 60_000;
 //     just got my signal back" moment)
 //   - re-checked every 45s as a fallback while the app stays open
 let syncing = false;
+let lastAttemptAt = 0;
 // Starts false (assume online) rather than true - if the very first check
 // finds we're already online, that's the common case and shouldn't trigger
 // a redundant "just reconnected" full refresh on top of whatever the normal
@@ -79,8 +81,10 @@ function refreshLiveData() {
 export async function attemptSync() {
     if (syncing) return;
     syncing = true;
+    lastAttemptAt = Date.now();
     try {
-        const online = await checkInternetConnectivity(3000);
+        // this also runs right after the app returns from the background, when the Wi-Fi radio may still be waking up: be patient
+        const online = await checkInternetConnectivity(3000, 2);
         // Redux-visible connectivity state - so HomeScreen (and anything
         // else) can adapt its layout while already running, not just this
         // coordinator's own write-queue-flushing logic below.
@@ -108,7 +112,14 @@ export async function attemptSync() {
 }
 
 export function startOfflineSyncCoordinator(): () => void {
-    const intervalId = setInterval(attemptSync, 45_000);
+    // every 45s while online; every 5s while offline, so the app notices the connection coming back within seconds
+    const intervalId = setInterval(() => {
+        if (wasOffline || Date.now() - lastAttemptAt >= 45_000) attemptSync();
+    }, 5_000);
+    // and immediately when the phone itself says it is connected again
+    const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
+        if (state.isConnected && wasOffline) attemptSync();
+    });
 
     const handleAppStateChange = (state: AppStateStatus) => {
         if (state === 'active') {
@@ -143,6 +154,7 @@ export function startOfflineSyncCoordinator(): () => void {
 
     return () => {
         clearInterval(intervalId);
+        unsubscribeNetInfo();
         subscription.remove();
     };
 }

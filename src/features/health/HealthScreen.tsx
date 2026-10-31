@@ -1,8 +1,9 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StatusBar } from '../../components/ThemedStatusBar';
 import { Activity, Bell, Flame, Thermometer } from 'lucide-react-native';
-import React, { useCallback, useRef, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
+  AppState,
   Platform,
   RefreshControl,
   ScrollView,
@@ -70,12 +71,16 @@ export default function HealthScreen() {
   const temperature = latestManual?.temperature !== undefined ? latestManual.temperature.toFixed(1) : '--';
 
   const stepsSubscriptionRef = useRef<{ remove: () => void } | null>(null);
+  // bumped when the step-access question is answered, and when the app returns to the foreground while this screen is open (the person
+  // may have changed the permission in Settings): it restarts the loading below so the screen shows what the new answer allows
+  const [accessVersion, setAccessVersion] = useState(0);
+  const refreshAfterAccess = useCallback(() => setAccessVersion((version) => version + 1), []);
 
   useFocusEffect(
     useCallback(() => {
       setIsFocused(true);
       // First time the Health screen shows up: explain and ask for step access (once). Not from a button in Manage Goals.
-      askForStepsAccessOnce().then((asked) => { if (!asked) dispatch(loadOnDeviceSteps()); });
+      askForStepsAccessOnce(refreshAfterAccess).then((asked) => { if (!asked) dispatch(loadOnDeviceSteps()); });
       dispatch(loadVitalRecords());
 
       let cancelled = false;
@@ -98,8 +103,18 @@ export default function HealthScreen() {
         stepsSubscriptionRef.current?.remove();
         stepsSubscriptionRef.current = null;
       };
-    }, [dispatch, connectedDevice])
+    }, [dispatch, connectedDevice, accessVersion, refreshAfterAccess])
   );
+
+  // back from Settings / the permission screen: look again
+  useEffect(() => {
+    let lastState = AppState.currentState;
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (lastState.match(/inactive|background/) && next === 'active' && isFocused) refreshAfterAccess();
+      lastState = next;
+    });
+    return () => subscription.remove();
+  }, [isFocused, refreshAfterAccess]);
 
   const onRefresh = useCallback(async () => {
     setIsManualRefreshing(true);

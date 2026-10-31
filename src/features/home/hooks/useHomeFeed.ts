@@ -4,9 +4,16 @@ import { feedApi } from '../../../services/api/feed.api';
 import { RootState } from '../../../redux/store';
 import { HomeFeedItem } from '../feed/feed.types';
 
-// User requested at least 6 sections initially
+// The feed arrives in pages (the backend cuts it by section). The first page is only what fills the first screen or two, so the home screen
+// appears quickly; the rest is fetched in the background before the person scrolls to it (see the read-ahead below and the list's
+// onEndReachedThreshold), so scrolling never waits on the network and never shows a jump.
 const BATCH_SIZE = 6;
-const INITIAL_BATCH_SIZE = 14;
+const INITIAL_BATCH_SIZE = 8;
+// A page can come back with no sections to show (their content is empty for this customer). The list would not grow, so it would never ask
+// for the next page and the feed would seem to end early: keep going to the next page instead, a few times at most.
+const MAX_EMPTY_PAGES = 3;
+// How long after the first page has been drawn before the second is fetched quietly.
+const READ_AHEAD_DELAY_MS = 900;
 
 export function useHomeFeed() {
     const [data, setData] = useState<HomeFeedItem[]>([]);
@@ -41,45 +48,100 @@ export function useHomeFeed() {
 
     // Use a ref to prevent race conditions or duplicate calls
     const loadingRef = useRef(false);
+    // the ids already on screen, readable inside a load that is still running (state would be a render behind)
+    const knownIdsRef = useRef<Set<string>>(new Set());
+    const readAheadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const loadMoreRef = useRef<() => void>(() => undefined);
 
-    const loadFeed = useCallback(async (reset = false) => {
-        if (loadingRef.current) return;
+    // What the feed depends on, read at the moment a request starts and compared while one is running. On a fresh install the address is
+    // found AFTER the first request has gone out (the person is still answering the location permission), and that request came back with
+    // the "no pharmacy here yet" feed: header and footer only. The reload for the real location arrived while that request was still
+    // running, was dropped by the "already loading" guard, and nothing ever asked again. Now a change of inputs during a load discards that
+    // load's answer and starts a fresh one with the new location as soon as it ends.
+    const inputsKey = `${latitude},${longitude},${resumeSignal}`;
+    const inputsKeyRef = useRef(inputsKey);
+    inputsKeyRef.current = inputsKey;
+    const coordsRef = useRef({ latitude, longitude });
+    coordsRef.current = { latitude, longitude };
+    const inFlightKeyRef = useRef<string | null>(null);
+    const generationRef = useRef(0);
+    const pendingResetRef = useRef(false);
+    const loadFeedRef = useRef<(reset?: boolean) => Promise<void>>(async () => undefined);
+
+    const loadFeed = useCallback(async (reset = false): Promise<void> => {
+        if (loadingRef.current) {
+            // a reset asked for while a load is running: only worth redoing if what it depends on has changed since that load began (the
+            // mount effects below all ask at once, with identical inputs, and those duplicates are meant to be dropped)
+            if (reset && inFlightKeyRef.current !== null && inFlightKeyRef.current !== inputsKeyRef.current) {
+                pendingResetRef.current = true;
+                generationRef.current += 1;
+            }
+            return;
+        }
         if (!reset && !hasMore) return;
         if (!isOnline) return;
 
         loadingRef.current = true;
+        inFlightKeyRef.current = inputsKeyRef.current;
+        const myGeneration = generationRef.current;
+        const { latitude: requestLat, longitude: requestLong } = coordsRef.current;
         setLoading(true);
 
         try {
-            const cursorToUse = reset ? undefined : nextCursor;
-            const limit = reset ? INITIAL_BATCH_SIZE : BATCH_SIZE;
-            const response = await feedApi.getHomeFeed(limit, cursorToUse, latitude, longitude);
+            let cursorToUse = reset ? undefined : nextCursor;
+            let isFirstPage = true;
+            let finalHasMore = hasMore;
 
-            if (response.status === 'success') {
+            for (let emptyPages = 0; emptyPages <= MAX_EMPTY_PAGES; emptyPages += 1) {
+                const limit = reset && isFirstPage ? INITIAL_BATCH_SIZE : BATCH_SIZE;
+                // eslint-disable-next-line no-await-in-loop
+                const response = await feedApi.getHomeFeed(limit, cursorToUse, requestLat, requestLong);
+                // the inputs changed while this was on its way: its answer is for the old location, drop it (the reload below replaces it)
+                if (myGeneration !== generationRef.current) return;
+                if (response.status !== 'success') break;
                 const { feed, meta } = response.data;
 
-                if (reset) {
+                let added: HomeFeedItem[];
+                if (reset && isFirstPage) {
+                    knownIdsRef.current = new Set(feed.map(item => item.id));
+                    added = feed;
                     setData(feed);
                 } else {
                     // Prevent duplicate items if API returns them
-                    setData(prev => {
-                        const existingIds = new Set(prev.map(item => item.id));
-                        const newUniqueItems = feed.filter(item => !existingIds.has(item.id));
-                        return [...prev, ...newUniqueItems];
-                    });
+                    added = feed.filter(item => !knownIdsRef.current.has(item.id));
+                    added.forEach(item => knownIdsRef.current.add(item.id));
+                    if (added.length > 0) setData(prev => [...prev, ...added]);
                 }
 
+                finalHasMore = meta.hasMore;
                 setHasMore(meta.hasMore);
                 setNextCursor(meta.nextCursor);
+                cursorToUse = meta.nextCursor;
+                isFirstPage = false;
+                if (added.length > 0 || !meta.hasMore) break;
+            }
+
+            // read-ahead: once the first page is on screen, quietly fetch the second so it is already there when the person scrolls down
+            if (reset && finalHasMore) {
+                if (readAheadTimerRef.current) clearTimeout(readAheadTimerRef.current);
+                readAheadTimerRef.current = setTimeout(() => loadMoreRef.current(), READ_AHEAD_DELAY_MS);
             }
         } catch (error) {
             console.error('Failed to fetch home feed:', error);
         } finally {
             loadingRef.current = false;
-            setLoading(false);
-            if (reset) setIsRefreshing(false);
+            inFlightKeyRef.current = null;
+            if (pendingResetRef.current) {
+                // start the reload straight away, without letting the loading flag drop in between (no flash of an empty feed)
+                pendingResetRef.current = false;
+                setTimeout(() => { loadFeedRef.current(true); }, 0);
+            } else {
+                setLoading(false);
+                if (reset) setIsRefreshing(false);
+            }
         }
-    }, [hasMore, nextCursor, latitude, longitude, isOnline]);
+    }, [hasMore, nextCursor, isOnline]);
+    loadFeedRef.current = loadFeed;
 
     // Initial load
     useEffect(() => {
@@ -147,6 +209,11 @@ export function useHomeFeed() {
             loadFeed(false);
         }
     }, [loadFeed, hasMore]);
+
+    loadMoreRef.current = loadMore;
+    useEffect(() => () => {
+        if (readAheadTimerRef.current) clearTimeout(readAheadTimerRef.current);
+    }, []);
 
     return {
         data,

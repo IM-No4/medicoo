@@ -71,7 +71,10 @@ export const continueOffline = async (dispatch: any) => {
 // keeps rendering (with its own local retrying-spinner state) until the
 // result is in, then moves on to bootOffline() (still down) or bootSuccess()
 // (back online) - never a blank frame in between.
-export const runBootSequence = async (dispatch: any, { showLoadingState = true }: { showLoadingState?: boolean } = {}) => {
+export const runBootSequence = async (
+  dispatch: any,
+  { showLoadingState = true, isRecheck = false }: { showLoadingState?: boolean; isRecheck?: boolean } = {},
+) => {
   // Only armed on the real cold-boot path - OfflineGateScreen's "Try Again"
   // (showLoadingState: false) already has its own local retrying-spinner
   // feedback, so there's nothing for this to add there.
@@ -90,7 +93,11 @@ export const runBootSequence = async (dispatch: any, { showLoadingState = true }
     // probe. OfflineGateScreen's "Try Again" just re-runs this whole
     // function, and "Use in Offline Mode" calls continueOffline above
     // directly, bypassing this check on purpose.
-    const online = await checkInternetConnectivity();
+    // A re-check made when the app returns from the background waits longer before deciding (the Wi-Fi radio may still be waking up) and,
+    // if it still cannot reach the internet, leaves the app exactly where it is: the offline gate replaces the whole app and belongs to
+    // the cold launch only. offlineSync keeps checking and the app recovers by itself.
+    const online = await checkInternetConnectivity(4000, isRecheck ? 3 : 1);
+    if (!online && isRecheck) return;
     dispatch(setOnlineStatus(online));
     if (!online) {
       dispatch(bootOffline());

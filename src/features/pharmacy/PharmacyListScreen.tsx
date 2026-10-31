@@ -9,6 +9,7 @@ import {
   getNearbyPharmacies,
   removeFavoritePharmacy,
 } from "@/src/services/api/pharmacy.api";
+import { formatCount } from "@/src/utils/formatCount";
 import { getToken } from "@/src/utils/tokenManagement";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -163,11 +164,17 @@ const PharmacyCard = memo(
 
         {/* Rating and delivery time */}
         <View style={styles.ratingRow}>
-          <View style={styles.ratingBadge}>
-            <AppIcon name="star" size={14} color="#ff9900" />
-          </View>
-          <Text style={styles.ratingText}>{item.storeRating.toFixed(1)}</Text>
-          <Text style={styles.reviewCount}>({item.storeReviews}K+)</Text>
+          {item.storeReviews > 0 ? (
+            <>
+              <View style={styles.ratingBadge}>
+                <AppIcon name="star" size={14} color="#ff9900" />
+              </View>
+              <Text style={styles.ratingText}>{item.storeRating.toFixed(1)}</Text>
+              <Text style={styles.reviewCount}>({formatCount(item.storeReviews)})</Text>
+            </>
+          ) : (
+            <Text style={styles.ratingText}>New</Text>
+          )}
           <Text style={styles.deliveryTimeDot}>•</Text>
           <Text style={styles.deliveryTimeText}>{item.deliveryTime}</Text>
         </View>

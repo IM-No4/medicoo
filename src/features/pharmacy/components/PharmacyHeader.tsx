@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { formatCount } from "@/src/utils/formatCount";
 import AppIcon from "@/src/components/icons/AppIcon";
 import {
   addFavoritePharmacy,
@@ -64,7 +65,7 @@ export default function PharmacyHeader({
   const insets = useSafeAreaInsets();
   const isOpen = pharmacy?.status === "online";
   const rating = Number(pharmacy?.rating) || 0;
-  const reviewCount = pharmacy?.reviewCount || 0;
+  const reviewCount = Number(pharmacy?.reviewsCount ?? pharmacy?.reviewCount) || 0;
   const deliveryTime = pharmacy?.deliveryTime || "30-35 mins";
   const distance = pharmacy?.distance || "0.0";
 
@@ -177,13 +178,17 @@ export default function PharmacyHeader({
             <View style={styles.ratingBadgeContainer}>
               <View style={styles.ratingBadge}>
                 <Text style={styles.ratingText}>
-                  {rating > 0 ? rating.toFixed(1) : "0.0"}
+                  {reviewCount > 0 && rating > 0 ? rating.toFixed(1) : "New"}
                 </Text>
-                <AppIcon name="star" size={12} color={theme.textSecondary} />
+                {reviewCount > 0 && rating > 0 ? (
+                  <AppIcon name="star" size={12} color={theme.textSecondary} />
+                ) : null}
               </View>
-              <Text style={styles.reviewCountText}>
-                {reviewCount}K+ ratings
-              </Text>
+              {reviewCount > 0 ? (
+                <Text style={styles.reviewCountText}>
+                  {formatCount(reviewCount)} {reviewCount === 1 ? "rating" : "ratings"}
+                </Text>
+              ) : null}
             </View>
           </View>
 

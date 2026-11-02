@@ -2,7 +2,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, CheckCircle, ChevronDown, ChevronLeft, X } from 'lucide-react-native';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -80,6 +80,11 @@ export default function EditProfileScreen() {
     // OTP Modal State
     const [otpModalVisible, setOtpModalVisible] = useState(false);
     const [verifying, setVerifying] = useState(false);
+    // The email the server has verified. Starts from the profile this screen was opened with and moves as soon as a code is accepted, so the
+    // Verify button turns into the verified tick right away instead of waiting for the screen to be opened again.
+    const [verifiedEmail, setVerifiedEmail] = useState<string>(profile?.email || '');
+    // The address a code was sent to: the field can be edited while the code box is open, and only the address that got the code is verified.
+    const pendingEmail = useRef('');
 
     const handleChange = (key: string, value: string) => {
         setFormData(prev => ({ ...prev, [key]: value }));
@@ -211,6 +216,7 @@ export default function EditProfileScreen() {
         setVerifying(true);
         try {
             await sendEmailOtp(formData.email);
+            pendingEmail.current = formData.email;
             setOtpModalVisible(true);
         } catch (error) {
             setStatusModal({
@@ -229,6 +235,7 @@ export default function EditProfileScreen() {
         setVerifying(true);
         try {
             await verifyEmailOtp(otp);
+            setVerifiedEmail(pendingEmail.current);
             setOtpModalVisible(false);
             setStatusModal({
                 visible: true,
@@ -313,7 +320,7 @@ export default function EditProfileScreen() {
                     <View style={styles.emailRow}>
                         <TextInput
                             placeholderTextColor={theme.textMuted}
-                            style={[styles.input, { flex: 1 }, profile?.email && profile.email === formData.email && { backgroundColor: theme.card }]}
+                            style={[styles.input, { flex: 1 }, verifiedEmail && verifiedEmail === formData.email && { backgroundColor: theme.card }]}
                             value={formData.email}
                             onChangeText={(text) => handleChange('email', text)}
                             placeholder={t('enter_your_email')}
@@ -321,7 +328,7 @@ export default function EditProfileScreen() {
                             autoCapitalize="none"
                         />
                         {/* Show verify button if email is not verified or has changed */}
-                        {(!profile?.email || profile.email !== formData.email) && formData.email.length > 5 && (
+                        {(!verifiedEmail || verifiedEmail !== formData.email) && formData.email.length > 5 && (
                             <TouchableOpacity
                                 style={styles.verifyButtonSmall}
                                 onPress={handleSendOtp}
@@ -331,7 +338,7 @@ export default function EditProfileScreen() {
                             </TouchableOpacity>
                         )}
                         {/* Show checkmark if verified and unchanged */}
-                        {profile?.email && profile.email === formData.email && (
+                        {verifiedEmail && verifiedEmail === formData.email && (
                             <View style={styles.verifiedIcon}>
                                 <CheckCircle size={20} color="#10B981" />
                             </View>

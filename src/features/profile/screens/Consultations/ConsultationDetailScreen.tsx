@@ -1,4 +1,4 @@
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import BookingBadge from '../../../doctor/components/BookingBadge';
@@ -18,6 +18,7 @@ import {
     MessageCircle,
     MoreVertical,
     Phone,
+    Star,
     Stethoscope,
     Video,
     RefreshCw,
@@ -25,7 +26,7 @@ import {
     User,
     XCircle
 } from 'lucide-react-native';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     Image,
@@ -42,7 +43,7 @@ import { executeAction } from '../../../../actions/ActionExecutor';
 import ConsultationDetailsCard from '../../../../components/consultation/ConsultationDetailsCard';
 import PaymentMethodsModal from '../../../../components/modals/PaymentMethodsModal';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
-import { getMyAppointmentRequestDetail } from '../../../../services/api';
+import { getMyAppointmentRequestDetail, getMyDoctorReview } from '../../../../services/api';
 import { API_BASE_URL, apiClient } from '../../../../services/api/client';
 import { cancelAppointmentRequest, getMyConsultationHistoryWithDoctor, PastConsultationSummary, requestNoShowRefund, requestReschedule, verifyAppointmentPayment } from '../../../../services/api/doctor.api';
 import { formatDoctorName } from '../../../../utils/formatters';
@@ -240,6 +241,21 @@ export default function ConsultationDetailScreen() {
             .then((res) => setPastConsultations(res?.requests || []))
             .catch(() => setPastConsultations([]));
     }, [consultation?.doctorId, requestId]);
+
+    // The patient's own review of this doctor (a review belongs to the doctor, not to one consultation). It is read again every time this screen
+    // comes back into view: the review screen opens on top of this one, so without that this kept offering "Write a Review" after one was saved.
+    const [myReview, setMyReview] = useState<{ rating: number; review: string } | null>(null);
+    const reviewDoctorId = consultation?.doctorId;
+    useFocusEffect(
+        useCallback(() => {
+            if (!reviewDoctorId) return undefined;
+            let alive = true;
+            getMyDoctorReview(reviewDoctorId)
+                .then((existing) => { if (alive) setMyReview(existing); })
+                .catch(() => undefined);
+            return () => { alive = false; };
+        }, [reviewDoctorId]),
+    );
 
     const isConfirmed = consultation?.status === 'approved' && consultation?.paymentStatus === 'paid';
     const isAwaitingPayment = consultation?.status === 'approved' && consultation?.paymentStatus !== 'paid';
@@ -599,8 +615,22 @@ export default function ConsultationDetailScreen() {
                 {consultation.status === 'completed' && (
                     <View style={styles.feedbackSection}>
                         <View style={styles.feedbackPrompt}>
-                            <Text style={styles.promptTitle}>{t('how_was_your_experience')}</Text>
-                            <Text style={styles.promptText}>{t('your_feedback_helps_other_patients_fin')}</Text>
+                            {myReview ? (
+                                <>
+                                    <Text style={styles.promptTitle}>Your review</Text>
+                                    <View style={styles.reviewStars}>
+                                        {[1, 2, 3, 4, 5].map((n) => (
+                                            <Star key={n} size={22} color="#F59E0B" fill={n <= myReview.rating ? '#F59E0B' : 'transparent'} />
+                                        ))}
+                                    </View>
+                                    {myReview.review ? <Text style={styles.reviewBody}>{myReview.review}</Text> : <View style={{ height: 6 }} />}
+                                </>
+                            ) : (
+                                <>
+                                    <Text style={styles.promptTitle}>{t('how_was_your_experience')}</Text>
+                                    <Text style={styles.promptText}>{t('your_feedback_helps_other_patients_fin')}</Text>
+                                </>
+                            )}
                             <TouchableOpacity
                                 style={styles.reviewButton}
                                 onPress={() => executeAction('OPEN_DOCTOR_FEEDBACK', {
@@ -612,7 +642,7 @@ export default function ConsultationDetailScreen() {
                                     doctor: { ...consultation.doctorDetails, _id: consultation.doctorId },
                                 })}
                             >
-                                <Text style={styles.reviewButtonText}>{t('write_a_review')}</Text>
+                                <Text style={styles.reviewButtonText}>{myReview ? 'Edit review' : t('write_a_review')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -1206,6 +1236,8 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         lineHeight: 18,
         marginBottom: 18,
     },
+    reviewStars: { flexDirection: 'row', gap: 4, marginBottom: 10 },
+    reviewBody: { fontSize: 13.5, color: c.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 18 },
     reviewButton: {
         backgroundColor: '#10B981',
         paddingHorizontal: 30,

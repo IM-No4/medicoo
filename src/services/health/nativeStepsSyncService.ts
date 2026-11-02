@@ -140,7 +140,16 @@ export type NativeStepsSyncResult = 'success' | 'skipped' | 'failed';
 // intentionally reads that gate straight from disk (not the redux store)
 // since a background-task execution of this file never boots the app or
 // hydrates redux.
-export async function runNativeStepsSync(): Promise<NativeStepsSyncResult> {
+export function runNativeStepsSync(): Promise<NativeStepsSyncResult> {
+    // Home, the history screen and the background task all call this. Two runs at once would read the same saved baseline and write the same
+    // steps twice, so a call that arrives while one is running waits for that run and shares its result.
+    if (!inFlightSync) inFlightSync = syncOnce().finally(() => { inFlightSync = null; });
+    return inFlightSync;
+}
+
+let inFlightSync: Promise<NativeStepsSyncResult> | null = null;
+
+async function syncOnce(): Promise<NativeStepsSyncResult> {
     if (Platform.OS !== 'android') return 'skipped';
     if (!(await isStepsTrackingEnabled())) return 'skipped';
     if (!(await isNativeStepsWriteEnabled())) return 'skipped';

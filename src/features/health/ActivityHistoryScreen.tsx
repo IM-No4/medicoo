@@ -1,8 +1,8 @@
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StatusBar } from '../../components/ThemedStatusBar';
 import { Award, CheckCircle2, ChevronLeft, ChevronRight, Footprints, TrendingUp } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
-import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { ActivityIndicator, Alert, AppState, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StepsBarChart } from './components/StepsBarChart';
 import {
@@ -16,6 +16,7 @@ import {
   StepsRangeData,
   StepsRangeType,
 } from '../../services/health/healthConnectStepsService';
+import { runNativeStepsSync } from '../../services/health/nativeStepsSyncService';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 import { useTheme } from '../../theme/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
@@ -51,6 +52,9 @@ export default function ActivityHistoryScreen() {
   const [data, setData] = useState<StepsRangeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [enabling, setEnabling] = useState(false);
+  // bumped to re-read Health Connect when the screen is opened again or the app comes back to the foreground
+  const [refreshKey, setRefreshKey] = useState(0);
+  const viewingCurrentPeriod = useRef(true);
 
   const [status, setStatus] = useState<{
     visible: boolean;
@@ -112,7 +116,28 @@ export default function ActivityHistoryScreen() {
 
   useEffect(() => {
     if (trackingEnabled) load(rangeType, anchorDate);
-  }, [trackingEnabled, rangeType, anchorDate, load]);
+  }, [trackingEnabled, rangeType, anchorDate, refreshKey, load]);
+
+  useEffect(() => {
+    viewingCurrentPeriod.current = !!data && !data.canGoNext;
+  }, [data]);
+
+  // Without this the screen kept showing what it read when it first opened: left open past midnight it still said "Today" with yesterday's
+  // figures, and steps taken since were missing. Whenever the screen comes into view (or the app returns to the foreground) the latest steps are
+  // written to Health Connect first, and if the user was looking at the current period it moves to the real current one.
+  const refresh = useCallback(() => {
+    runNativeStepsSync()
+      .catch(() => undefined)
+      .finally(() => {
+        if (viewingCurrentPeriod.current) setAnchorDate(new Date());
+        setRefreshKey((k) => k + 1);
+      });
+  }, []);
+  useFocusEffect(refresh);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => { if (state === 'active') refresh(); });
+    return () => sub.remove();
+  }, [refresh]);
 
   const handleTabPress = (type: StepsRangeType) => {
     if (type === rangeType) return;

@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { executeAction } from '../../../../actions/ActionExecutor';
 import { getMyAppointmentRequests } from '../../../../services/api';
-import { getMyDoctorReview } from '../../../../services/api/doctor.api';
+import { getMyReviewedConsultationIds } from '../../../../services/api/doctor.api';
 import { API_BASE_URL } from '../../../../services/api/client';
 import { formatDoctorName } from '../../../../utils/formatters';
 import BookingBadge, { BookingInfo } from '../../../doctor/components/BookingBadge';
@@ -68,10 +68,8 @@ export default function ConsultationsScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [consultations, setConsultations] = useState<Consultation[]>([]);
     const [statusFilter, setStatusFilter] = useState<'all' | Consultation['status']>('all');
-    // Reviews are keyed by (doctorId, customerId), not per-consultation (see
-    // saveDoctorReview on the backend) - so "already rated" is checked per
-    // doctor, not per completed appointment.
-    const [reviewedDoctorIds, setReviewedDoctorIds] = useState<Set<string>>(new Set());
+    // A review belongs to one consultation (see saveDoctorReview on the backend), so "already rated" is checked per consultation.
+    const [reviewedConsultationIds, setReviewedConsultationIds] = useState<Set<string>>(new Set());
 
     const fetchConsultations = useCallback(async () => {
         try {
@@ -79,24 +77,11 @@ export default function ConsultationsScreen() {
             const list: Consultation[] = responseData?.data?.appointmentRequests || [];
             setConsultations(list);
 
-            const completedDoctorIds = Array.from(
-                new Set(
-                    list
-                        .filter((c) => c.status === 'completed' && c.doctorId)
-                        .map((c) => c.doctorId as string)
-                )
-            );
-            const reviewChecks = await Promise.all(
-                completedDoctorIds.map(async (doctorId) => {
-                    try {
-                        const review = await getMyDoctorReview(doctorId);
-                        return review ? doctorId : null;
-                    } catch {
-                        return null;
-                    }
-                })
-            );
-            setReviewedDoctorIds(new Set(reviewChecks.filter((id): id is string => !!id)));
+            try {
+                setReviewedConsultationIds(new Set(await getMyReviewedConsultationIds()));
+            } catch {
+                // without the list the "rate the doctor" banners simply show on every completed consultation
+            }
         } catch (error) {
             console.error('Error fetching consultations:', error);
             // No fallback mocks to display only actual backend data
@@ -184,7 +169,7 @@ export default function ConsultationsScreen() {
                 </View>
             </View>
 
-            {item.status === 'completed' && item.doctorId && !reviewedDoctorIds.has(item.doctorId) && (
+            {item.status === 'completed' && item.doctorId && !reviewedConsultationIds.has(item.requestId) && (
                 <TouchableOpacity
                     style={styles.feedbackBanner}
                     onPress={() => executeAction('OPEN_DOCTOR_FEEDBACK', {

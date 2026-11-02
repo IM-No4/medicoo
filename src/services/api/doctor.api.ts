@@ -122,6 +122,12 @@ export const getMyDoctorReview = async (doctorId: string, consultationId?: strin
     return res.data?.rating ? res.data : null;
 };
 
+// The consultations (requestIds) this patient has already reviewed.
+export const getMyReviewedConsultationIds = async (): Promise<string[]> => {
+    const res = await apiClient.get('/api/user/my-reviewed-consultations');
+    return Array.isArray(res.data?.consultationIds) ? res.data.consultationIds : [];
+};
+
 export const getDoctorAppointmentRequestDetail = async (requestId: string) => {
     const res = await apiClient.get(`/api/doctor/appointment-requests/${requestId}`);
     return res.data;

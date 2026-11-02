@@ -1,4 +1,4 @@
-import { Settings } from 'lucide-react-native';
+import { CalendarDays, Settings } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,7 +37,7 @@ export default function CalendarHeader({ onOpenCalendar, onOpenManage, selectedD
           )}
           {/* Connect the onPress handler */}
           <TouchableOpacity style={styles.iconButton} onPress={onOpenCalendar}>
-            <Text style={{ fontSize: 20 }}>📅</Text>
+            <CalendarDays size={22} color={theme.primary} />
           </TouchableOpacity>
         </View>
       </View>

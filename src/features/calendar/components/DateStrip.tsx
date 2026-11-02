@@ -104,7 +104,9 @@ export default function DateStrip({ selectedDate, onSelectDate }: DateStripProps
                 </Text>
             </TouchableOpacity>
         );
-    }, [selectedDate, onSelectDate]);
+    // styles must be a dependency: it is rebuilt when the theme changes, and a render function that kept the old one left every chip in the
+    // previous theme's colours (white chips in dark mode, white text on a white chip in light mode)
+    }, [selectedDate, onSelectDate, styles]);
     /* ---------------------------------------------------- */
 
     const getItemLayout = (_: any, index: number) => ({
@@ -121,6 +123,7 @@ export default function DateStrip({ selectedDate, onSelectDate }: DateStripProps
                 ref={flatListRef}
                 data={dates}
                 renderItem={renderItem}
+                extraData={[selectedDate, styles]}
                 keyExtractor={(item) => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}

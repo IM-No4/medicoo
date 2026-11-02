@@ -1,2 +1,13 @@
-<manifest>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- re-arm the step sampling alarm after the phone restarts (alarms do not survive a reboot) -->
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+  <application>
+    <receiver android:name="expo.modules.medicoostepcounter.StepSampleReceiver" android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+        <action android:name="expo.modules.medicoostepcounter.SAMPLE" />
+      </intent-filter>
+    </receiver>
+  </application>
 </manifest>

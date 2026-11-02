@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundTask from 'expo-background-task';
+import { startStepSampling, stopStepSampling } from '@/modules/medicoo-step-counter/src';
 import { runNativeStepsSync } from './nativeStepsSyncService';
 
 export const NATIVE_STEPS_TASK_NAME = 'medicoo-native-steps-sync';
@@ -33,6 +34,8 @@ TaskManager.defineTask(NATIVE_STEPS_TASK_NAME, async () => {
 // defensively on every app boot in case registration was ever lost.
 export async function ensureNativeStepsBackgroundTaskRegistered(): Promise<void> {
     if (Platform.OS !== 'android') return;
+    // the native 15-minute sampling alarm (works with the app closed); a no-op on app builds that predate it
+    startStepSampling();
     try {
         const alreadyRegistered = await TaskManager.isTaskRegisteredAsync(NATIVE_STEPS_TASK_NAME);
         if (!alreadyRegistered) {
@@ -44,6 +47,7 @@ export async function ensureNativeStepsBackgroundTaskRegistered(): Promise<void>
 }
 
 export async function unregisterNativeStepsBackgroundTask(): Promise<void> {
+    stopStepSampling();
     try {
         const registered = await TaskManager.isTaskRegisteredAsync(NATIVE_STEPS_TASK_NAME);
         if (registered) {

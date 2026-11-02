@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { deleteRecordsByUuids, getGrantedPermissions, initialize, insertRecords, readRecords, StepsRecord } from 'react-native-health-connect';
-import { readRawStepCounter } from '@/modules/medicoo-step-counter/src';
+import { clearStepSamplesUpTo, hasStepSampler, readRawStepCounter, readStepSamples, startStepSampling, takeStepSample } from '@/modules/medicoo-step-counter/src';
 import { loadConnectedDevice } from '../storage/deviceStorage';
 import { isStepsTrackingEnabled, isNativeStepsWriteEnabled } from './stepsTrackingFlags';
 
@@ -130,6 +130,66 @@ export async function repairLongStepRecordsOnce(): Promise<void> {
     }
 }
 
+// Steps per minute no person exceeds (a fast sprint is about 200): a reading that implies more is a sensor glitch, not walking.
+const MAX_STEPS_PER_MINUTE = 250;
+// A saved baseline from the older once-per-sync method is only continued from when it is this close to the first sample; further back, the
+// steps in between cannot be placed in time and are left out instead of being smeared over the gap.
+const MAX_BASELINE_GAP_MS = 45 * 60 * 1000;
+
+// Turns the background samples (a timestamped running total every ~15 minutes, taken by the native alarm even with the app closed) into Health
+// Connect records. Each pair of neighbouring samples is an interval whose steps are known to have happened inside it, so every hour and every
+// 3-hour block of the history gets what was really walked then - a phone that slept for hours no longer spreads one lump over the night.
+async function syncFromSamples(): Promise<NativeStepsSyncResult> {
+    startStepSampling(); // arms the alarm if this is the first run, or re-arms it if the system dropped it
+    await takeStepSample(); // the newest interval ends right now
+
+    const stored = readStepSamples().sort((a, b) => a.t - b.t);
+    const samples = stored.filter((s, i) => i === 0 || s.t > stored[i - 1].t);
+    if (samples.length === 0) {
+        console.warn('[nativeStepsSyncService] failed: no step samples (no sensor, or the read timed out)');
+        return 'failed';
+    }
+
+    const prev = await getSyncState();
+    const points = [...samples];
+    if (prev) {
+        const prevTime = new Date(prev.lastWriteTime).getTime();
+        if (prevTime < points[0].t && points[0].t - prevTime <= MAX_BASELINE_GAP_MS) {
+            points.unshift({ t: prevTime, c: prev.lastRawCounter });
+        }
+    }
+
+    const records: StepsRecord[] = [];
+    for (let i = 1; i < points.length; i += 1) {
+        const a = points[i - 1];
+        const b = points[i];
+        // the sensor total restarts from 0 when the phone reboots: then the new total is everything walked since the restart
+        const raw = b.c >= a.c ? b.c - a.c : b.c;
+        const minutes = (b.t - a.t) / 60000;
+        const delta = Math.min(Math.round(raw), Math.round(minutes * MAX_STEPS_PER_MINUTE));
+        if (delta > 0) records.push(...splitAtLocalHours(new Date(a.t), new Date(b.t), delta));
+    }
+
+    const last = points[points.length - 1];
+    if (records.length > 0) {
+        try {
+            // the Health Connect client must be initialised in THIS process (a background run never went through the screens that do it)
+            if (!(await initialize())) {
+                console.warn('[nativeStepsSyncService] Health Connect is not available; steps will be written on a later run');
+                return 'failed';
+            }
+            await insertRecords(records);
+        } catch (error) {
+            console.warn('[nativeStepsSyncService] Failed to write steps to Health Connect', error);
+            return 'failed';
+        }
+    }
+    // only now that they are written: the samples are consumed, and the next run continues from the newest one
+    await setSyncState({ lastRawCounter: last.c, lastWriteTime: new Date(last.t).toISOString() });
+    clearStepSamplesUpTo(last.t);
+    return 'success';
+}
+
 export type NativeStepsSyncResult = 'success' | 'skipped' | 'failed';
 
 // Samples the raw step-counter sensor and writes any new steps since the
@@ -158,6 +218,8 @@ async function syncOnce(): Promise<NativeStepsSyncResult> {
     if (connectedDevice) return 'skipped';
 
     await repairLongStepRecordsOnce();
+
+    if (hasStepSampler) return syncFromSamples();
 
     const rawNow = await readRawStepCounter();
     if (rawNow == null) {

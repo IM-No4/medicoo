@@ -7,6 +7,12 @@ declare class MedicooStepCounterModule extends NativeModule<MedicooStepCounterMo
   // hardware sensor - null if the sensor doesn't exist on this device or
   // never delivered a reading within the native module's read timeout.
   readRawStepCounter(): Promise<number | null>;
+  // Background sampling (native alarm every 15 minutes, works with the app closed). Missing on app builds made before it was added.
+  startStepSampling?(): boolean;
+  stopStepSampling?(): void;
+  takeStepSample?(): Promise<number | null>;
+  readStepSamples?(): number[][];
+  clearStepSamplesUpTo?(timeMs: number): void;
 }
 
 // There is no iOS/web platform declared for this module (see

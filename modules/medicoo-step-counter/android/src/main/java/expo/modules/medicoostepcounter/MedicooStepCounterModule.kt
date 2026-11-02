@@ -32,6 +32,42 @@ class MedicooStepCounterModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("MedicooStepCounter")
 
+    // Background step sampling (see StepSampler.kt): turns the 15-minute alarm on, and makes sure it is armed if it was lost.
+    Function("startStepSampling") {
+      val context = appContext.reactContext ?: return@Function false
+      if (!StepSampler.isEnabled(context)) StepSampler.setEnabled(context, true)
+      else if (!StepSampler.isScheduled(context)) StepSampler.schedule(context)
+      true
+    }
+
+    Function("stopStepSampling") {
+      appContext.reactContext?.let { StepSampler.setEnabled(it, false) }
+    }
+
+    // Takes a reading right now and stores it with the other samples, so the newest interval ends at "now".
+    AsyncFunction("takeStepSample") { promise: Promise ->
+      val context = appContext.reactContext
+      if (context == null) {
+        promise.resolve(null)
+        return@AsyncFunction
+      }
+      StepSampler.readCounter(context) { value ->
+        if (value != null) StepSampler.append(context, System.currentTimeMillis(), value)
+        promise.resolve(value)
+      }
+    }
+
+    // [[time in ms, running total], ...] oldest first
+    Function("readStepSamples") {
+      val context = appContext.reactContext ?: return@Function emptyList<List<Double>>()
+      StepSampler.all(context)
+    }
+
+    // Drops samples up to and including this time, once they have been turned into Health Connect records.
+    Function("clearStepSamplesUpTo") { timeMs: Double ->
+      appContext.reactContext?.let { StepSampler.clearUpTo(it, timeMs.toLong()) }
+    }
+
     AsyncFunction("readRawStepCounter") { promise: Promise ->
       val context = appContext.reactContext
       if (context == null) {

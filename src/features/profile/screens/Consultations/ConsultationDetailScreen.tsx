@@ -242,19 +242,20 @@ export default function ConsultationDetailScreen() {
             .catch(() => setPastConsultations([]));
     }, [consultation?.doctorId, requestId]);
 
-    // The patient's own review of this doctor (a review belongs to the doctor, not to one consultation). It is read again every time this screen
-    // comes back into view: the review screen opens on top of this one, so without that this kept offering "Write a Review" after one was saved.
+    // The patient's own review of THIS consultation (a review belongs to one consultation). It is read again every time this screen comes
+    // back into view: the review screen opens on top of this one, so without that this kept offering "Write a Review" after one was saved.
     const [myReview, setMyReview] = useState<{ rating: number; review: string } | null>(null);
     const reviewDoctorId = consultation?.doctorId;
+    const reviewConsultationId: string | undefined = consultation?.requestId;
     useFocusEffect(
         useCallback(() => {
-            if (!reviewDoctorId) return undefined;
+            if (!reviewDoctorId || !reviewConsultationId) return undefined;
             let alive = true;
-            getMyDoctorReview(reviewDoctorId)
+            getMyDoctorReview(reviewDoctorId, reviewConsultationId)
                 .then((existing) => { if (alive) setMyReview(existing); })
                 .catch(() => undefined);
             return () => { alive = false; };
-        }, [reviewDoctorId]),
+        }, [reviewDoctorId, reviewConsultationId]),
     );
 
     const isConfirmed = consultation?.status === 'approved' && consultation?.paymentStatus === 'paid';

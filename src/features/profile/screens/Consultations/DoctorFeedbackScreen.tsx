@@ -34,9 +34,8 @@ export default function DoctorFeedbackScreen() {
     const [rating, setRating] = useState(0);
     const [review, setReview] = useState('');
     const [submitting, setSubmitting] = useState(false);
-    // Whether this patient already reviewed this doctor before (from any
-    // past consultation, not just this one - reviews aren't per-consultation)
-    // so this becomes an update instead of a fresh review.
+    // Whether this consultation already has a review from this patient (a review belongs to one consultation) so this becomes an update
+    // instead of a fresh review.
     const [isUpdate, setIsUpdate] = useState(false);
 
     // Status Modal State
@@ -60,7 +59,7 @@ export default function DoctorFeedbackScreen() {
 
     useEffect(() => {
         if (!doctor?._id) return;
-        getMyDoctorReview(doctor._id)
+        getMyDoctorReview(doctor._id, consultationId)
             .then((existing) => {
                 if (existing) {
                     setRating(existing.rating);
@@ -69,7 +68,7 @@ export default function DoctorFeedbackScreen() {
                 }
             })
             .catch(() => { /* No existing review to pre-fill - fine to start blank */ });
-    }, [doctor?._id]);
+    }, [doctor?._id, consultationId]);
 
     const handleSubmit = async () => {
         if (rating === 0) {

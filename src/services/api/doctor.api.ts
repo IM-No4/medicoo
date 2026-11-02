@@ -116,8 +116,9 @@ export const submitDoctorFeedback = async (data: {
 // pre-fill and update in place instead of creating a duplicate. The backend
 // returns an empty/undefined body when there's no existing review, so the
 // caller should treat anything without a numeric rating as "none yet."
-export const getMyDoctorReview = async (doctorId: string): Promise<{ rating: number; review: string } | null> => {
-    const res = await apiClient.get(`/api/user/get-doctor-review/${doctorId}`);
+// With a consultationId it is the review of THAT consultation (a review belongs to one consultation); without, the latest one for the doctor.
+export const getMyDoctorReview = async (doctorId: string, consultationId?: string): Promise<{ rating: number; review: string } | null> => {
+    const res = await apiClient.get(`/api/user/get-doctor-review/${doctorId}`, { params: consultationId ? { consultationId } : undefined });
     return res.data?.rating ? res.data : null;
 };
 

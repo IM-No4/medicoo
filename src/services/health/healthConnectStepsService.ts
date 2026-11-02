@@ -5,6 +5,7 @@ import {
   initialize,
   requestPermission,
   aggregateRecord,
+  readRecords,
   SdkAvailabilityStatus,
 } from 'react-native-health-connect';
 import {
@@ -353,4 +354,42 @@ export async function getStepsRange(
     elapsedCount: elapsed.length,
     bestBucket,
   };
+}
+
+// Read-only troubleshooting dump for "the app shows a different step count than Samsung Health / Google Fit": for the given day it lists what Health
+// Connect actually holds - the aggregate it returns, and every Steps record grouped by the app that wrote it (this app is com.medicootech.medicoo).
+export async function getStepsDiagnostics(day: Date = new Date()): Promise<string> {
+  const ready = await ensureHealthConnectReady();
+  if (!ready) return 'Health Connect is not ready (not installed, or Steps permission missing).';
+  const start = startOfDay(day);
+  const end = new Date(Math.min(start.getTime() + 24 * 3600 * 1000, Date.now()));
+  const total = await aggregateStepsInRange(start, end);
+  const lines: string[] = [`Aggregate for the day: ${total}`];
+  const byOrigin = new Map<string, { records: number; steps: number; longest: number }>();
+  const recent: string[] = [];
+  let pageToken: string | undefined;
+  do {
+    // eslint-disable-next-line no-await-in-loop
+    const page: any = await readRecords('Steps', {
+      timeRangeFilter: { operator: 'between', startTime: start.toISOString(), endTime: end.toISOString() },
+      ascendingOrder: true,
+      pageSize: 500,
+      pageToken,
+    });
+    (page.records || []).forEach((r: any) => {
+      const origin = r.metadata?.dataOrigin || 'unknown';
+      const mins = Math.round((new Date(r.endTime).getTime() - new Date(r.startTime).getTime()) / 60000);
+      const row = byOrigin.get(origin) || { records: 0, steps: 0, longest: 0 };
+      row.records += 1;
+      row.steps += Number(r.count) || 0;
+      row.longest = Math.max(row.longest, mins);
+      byOrigin.set(origin, row);
+      recent.push(`${origin.split('.').pop()} ${new Date(r.startTime).toTimeString().slice(0, 5)}+${mins}m = ${r.count}`);
+    });
+    pageToken = page.pageToken || undefined;
+  } while (pageToken);
+  byOrigin.forEach((row, origin) => lines.push(`${origin}: ${row.steps} steps in ${row.records} records (longest ${row.longest} min)`));
+  if (byOrigin.size === 0) lines.push('No Steps records for this day.');
+  lines.push('', 'Last records:', ...recent.slice(-12));
+  return lines.join('\n');
 }

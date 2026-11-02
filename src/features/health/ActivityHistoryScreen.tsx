@@ -2,11 +2,12 @@ import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from '../../components/ThemedStatusBar';
 import { Award, CheckCircle2, ChevronLeft, ChevronRight, Footprints, TrendingUp } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StepsBarChart } from './components/StepsBarChart';
 import {
   enableStepsTracking,
+  getStepsDiagnostics,
   getStepsRange,
   isHealthConnectSupported,
   isStepsTrackingEnabled,
@@ -206,7 +207,9 @@ export default function ActivityHistoryScreen() {
               <View style={styles.card}>
                 {rangeType === 'day' ? (
                   <>
-                    <Text style={styles.totalValue}>{data.total.toLocaleString()}</Text>
+                    <TouchableOpacity activeOpacity={1} onLongPress={async () => Alert.alert('Step data', await getStepsDiagnostics(anchorDate))}>
+                      <Text style={styles.totalValue}>{data.total.toLocaleString()}</Text>
+                    </TouchableOpacity>
                     <Text style={styles.totalLabel}>{t('total_steps')}</Text>
                   </>
                 ) : (

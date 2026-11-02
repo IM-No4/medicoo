@@ -300,6 +300,7 @@ export default function EditProfileScreen() {
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>{t('full_name_2')}</Text>
                     <TextInput
+                        placeholderTextColor={theme.textMuted}
                         style={styles.input}
                         value={formData.name}
                         onChangeText={(text) => handleChange('name', text)}
@@ -311,7 +312,8 @@ export default function EditProfileScreen() {
                     <Text style={styles.label}>{t('email_address')}</Text>
                     <View style={styles.emailRow}>
                         <TextInput
-                            style={[styles.input, { flex: 1, backgroundColor: profile?.email && profile.email === formData.email ? '#F3F4F6' : '#F9FAFB' }]}
+                            placeholderTextColor={theme.textMuted}
+                            style={[styles.input, { flex: 1 }, profile?.email && profile.email === formData.email && { backgroundColor: theme.card }]}
                             value={formData.email}
                             onChangeText={(text) => handleChange('email', text)}
                             placeholder={t('enter_your_email')}
@@ -384,6 +386,7 @@ export default function EditProfileScreen() {
                     <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
                         <Text style={styles.label}>{t('height_cm')}</Text>
                         <TextInput
+                            placeholderTextColor={theme.textMuted}
                             style={styles.input}
                             value={formData.tryHeight}
                             onChangeText={(text) => handleChange('tryHeight', text)}
@@ -394,6 +397,7 @@ export default function EditProfileScreen() {
                     <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
                         <Text style={styles.label}>{t('weight_kg')}</Text>
                         <TextInput
+                            placeholderTextColor={theme.textMuted}
                             style={styles.input}
                             value={formData.tryWeight}
                             onChangeText={(text) => handleChange('tryWeight', text)}
@@ -406,6 +410,7 @@ export default function EditProfileScreen() {
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>{t('address')}</Text>
                     <TextInput
+                        placeholderTextColor={theme.textMuted}
                         style={[styles.input, styles.textArea]}
                         value={formData.address}
                         onChangeText={(text) => handleChange('address', text)}

@@ -26,6 +26,7 @@ import { executeAction as runGlobalAction } from '../../actions/ActionExecutor';
 import MultiStoreCartBar from '../../components/cart/MultiStoreCartBar';
 import HomeHeader, { HOME_HEADER_ANDROID_EXTRA_TOP } from './components/HomeHeader';
 import OfflineHomeHeader from './components/OfflineHomeHeader';
+import LocationPermissionCard from './components/LocationPermissionCard';
 import OfflineHomeContent from './components/OfflineHomeContent';
 import HomeFeedRenderer from './feed/HomeFeedRenderer';
 
@@ -39,6 +40,7 @@ import { AppDispatch, RootState } from '../../redux/store';
 import { setHomeBootstrapped, setPrescriptionModalVisible } from '../../redux/slices/appSlice';
 import { loadCalendarData } from '../../redux/slices/calendarSlice';
 import { selectActiveGoals } from '../../redux/slices/goalsSlice';
+import { retryLocation } from '../../redux/slices/locationSlice';
 import { getMedicinePrescriptions, uploadPrescription } from '@/src/services/api/prescription.api';
 import StatusModal, { StatusType } from '../../components/modals/StatusModal';
 import { DynamicHeaderFeedItem } from './feed/feed.types';
@@ -230,9 +232,14 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
     }
   }, []);
 
+  // The feed is location-based. Until a location (live or a saved address) is known only the header shows - skeletons while the permission
+  // question / first fix is in progress, and the "allow location" card if access was refused or no position could be found.
+  const hasLocation = useSelector((state: RootState) => !!state.address.selectedAddress);
+  const locationStatus = useSelector((state: RootState) => state.location.status);
+
   // Combined loading state: App bootstrap OR Feed initial load (if data is empty)
   // We use feedLoading && feedData.length === 0 to denote "Waiting for first batch"
-  const isInitialLoading = !homeBootstrapped || (feedLoading && feedData.length === 0);
+  const isInitialLoading = !homeBootstrapped || (hasLocation && feedLoading && feedData.length === 0);
 
   // The header is held back while the first screenful loads and comes in together with the content (a header that was already
   // there while the rest filled in a moment later looked like two separate loads).
@@ -261,9 +268,11 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     dispatch(loadCalendarData(getLocalDateString()));
+    // with no location yet, pulling down looks for it again (the feed itself has nothing to reload until there is one)
+    if (!hasLocation) dispatch(retryLocation());
     await refreshFeed();
     setRefreshing(false);
-  }, [dispatch, refreshFeed]);
+  }, [dispatch, refreshFeed, hasLocation]);
 
   useEffect(() => {
     const id = scrollY.addListener(({ value }) => {
@@ -316,7 +325,7 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
         </View>
       );
     }
-    if (isInitialLoading) return null;
+    if (isInitialLoading || !hasLocation) return null;
     // The feed's actual last card (HomeFeedFooter.tsx) ends in a solid gray
     // (#F9FAFB) block - the FlatList's own background behind it is the
     // screen's white, so any bottom clearance reserved via
@@ -324,7 +333,7 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
     // after that gray section. Painting the clearance itself in the same
     // gray keeps it reading as one continuous block instead of a seam.
     return <View style={{ height: hasCartItems ? 100 : 24, backgroundColor: theme.cardSecondary }} />;
-  }, [feedLoading, isInitialLoading, hasCartItems, theme]);
+  }, [feedLoading, isInitialLoading, hasLocation, hasCartItems, theme]);
 
   // Manual isFocused tracking since useIsFocused is causing issues
   const [isFocused, setIsFocused] = useState(false);
@@ -488,13 +497,17 @@ export default function HomeScreen({ onOpenCommandPalette }: Props) {
       <Animated.FlatList
         // remounted when the theme changes: with clipped subviews on, rows could come back after a theme switch drawn but invisible
         key={isDark ? 'feed-dark' : 'feed-light'}
-        data={isInitialLoading ? [] : visibleFeedData}
+        data={isInitialLoading || !hasLocation ? [] : visibleFeedData}
         extraData={carts}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <HomeFeedRenderer item={item} onAction={executeAction} />
         )}
-        ListHeaderComponent={isInitialLoading ? LoadingSkeletons : null}
+        ListHeaderComponent={
+          !hasLocation
+            ? (locationStatus === 'resolving' ? LoadingSkeletons : LocationPermissionCard)
+            : isInitialLoading ? LoadingSkeletons : null
+        }
         ListFooterComponent={renderFooter}
         onEndReached={loadMore}
         onEndReachedThreshold={2.5}

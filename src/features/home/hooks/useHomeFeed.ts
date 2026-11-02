@@ -80,6 +80,10 @@ export function useHomeFeed() {
         }
         if (!reset && !hasMore) return;
         if (!isOnline) return;
+        // The feed is location-based: it is not requested until the customer's location is known (HomeScreen shows only the header, then the
+        // feed once the location is found, or the "allow location" card if it was refused). Asking without one used to return a feed built for
+        // nobody in particular. The effect below reloads as soon as coordinates arrive.
+        if (typeof coordsRef.current.latitude !== 'number' || typeof coordsRef.current.longitude !== 'number') return;
 
         loadingRef.current = true;
         inFlightKeyRef.current = inputsKeyRef.current;

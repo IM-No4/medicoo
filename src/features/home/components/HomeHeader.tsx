@@ -5,7 +5,7 @@ import AddressSelectorBottomSheet from "@/src/components/modals/AddressSelectorB
 import NotificationBell from "@/src/components/notification/NotificationBell";
 import { setSelectedAddress } from "@/src/redux/slices/addressSlice";
 import { setPrescriptionModalVisible } from "@/src/redux/slices/appSlice";
-import { setCurrentLocation } from "@/src/redux/slices/locationSlice";
+import { setCurrentLocation, setLocationStatus } from "@/src/redux/slices/locationSlice";
 import { setUnreadCount } from "@/src/redux/slices/notificationSlice";
 import { RootState } from "@/src/redux/store";
 import { getUserAddresses } from "@/src/services/api/address.api";
@@ -147,6 +147,8 @@ export default function HomeHeader({
   );
   const hasSelectedRef = React.useRef(false);
   hasSelectedRef.current = !!selectedAddress;
+  const retrySignal = useSelector((state: RootState) => state.location.retrySignal);
+  const lastRetrySignalRef = React.useRef(retrySignal);
   const carts = useSelector((state: RootState) => state.cart);
   // Distinct items across every store's cart - same count CartScreen.tsx
   // itself uses ("Medicine Order (N items)"), so the badge always agrees
@@ -182,6 +184,10 @@ export default function HomeHeader({
       hasInitializedSession = true;
 
       let selected = false;
+      // what the permission question ended in, for the status the home feed waits on (see locationSlice)
+      let permissionDenied = false;
+      let canAskAgain = true;
+      dispatch(setLocationStatus({ status: "resolving" }));
       setIsFetchingLocation(true);
       try {
         // Saved addresses are the primary source and also the fallback below.
@@ -195,7 +201,9 @@ export default function HomeHeader({
         // Where is the user right now? (null when permission is denied / no fix)
         let position: { latitude: number; longitude: number } | null = null;
         try {
-          const { status } = await Location.requestForegroundPermissionsAsync();
+          const permission = await Location.requestForegroundPermissionsAsync();
+          const status = permission.status;
+          canAskAgain = permission.canAskAgain;
           if (status === "granted") {
             // A last-known fix is instant, but only trust it while it is fresh -
             // a stale one can put the user streets away from where they are.
@@ -214,6 +222,7 @@ export default function HomeHeader({
             };
             dispatch(setCurrentLocation(position));
           } else {
+            permissionDenied = true;
             console.warn("Location permission denied");
           }
         } catch (err) {
@@ -336,15 +345,29 @@ export default function HomeHeader({
         }
       } finally {
         setIsFetchingLocation(false);
+        // The home feed waits for this: an address was found -> it loads; nothing found -> it shows the card that explains why and what to do
+        dispatch(
+          setLocationStatus(
+            selected
+              ? { status: "ready" }
+              : { status: permissionDenied ? "denied" : "unavailable", canAskAgain },
+          ),
+        );
         // Nothing resolved (e.g. network was down on launch): let the next
         // mount try again instead of staying on the generic text all session.
         if (!selected) hasInitializedSession = false;
       }
     };
 
+    // A retry (the customer allowed access from the card on the home screen, or tapped "Try again") looks for the location once more
+    if (lastRetrySignalRef.current !== retrySignal) {
+      lastRetrySignalRef.current = retrySignal;
+      hasInitializedSession = false;
+    }
+
     // Don't override an address the user (or a previous mount) already chose.
     if (!hasSelectedRef.current) void initLocation();
-  }, [dispatch]); // Run strictly on mount
+  }, [dispatch, retrySignal]); // Runs on mount, and again when a retry is asked for
 
   React.useEffect(() => {
     const loadUnreadCount = async () => {

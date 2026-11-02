@@ -513,7 +513,7 @@ export default function HealthProfileScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#E4F2EE" }}>
+    <View style={{ flex: 1, backgroundColor: theme.isDark ? theme.background : "#E4F2EE" }}>
       <View style={styles.header}>
         <LinearGradient
           colors={['#10B981', '#007C69']}
@@ -553,18 +553,18 @@ export default function HealthProfileScreen() {
             />
           </View>
           <TouchableOpacity style={styles.camera} onPress={() => setSheet("camera")}>
-            <Camera size={18} />
+            <Camera size={18} color={theme.text} />
           </TouchableOpacity>
         </View>
 
         <Text style={styles.label}>{t('full_name')}</Text>
-        <TextInput style={styles.input} value={name} onChangeText={setName} />
+        <TextInput style={styles.input} value={name} onChangeText={setName} placeholderTextColor={theme.textMuted} />
 
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
             <Text style={styles.label}>{t('relative')}</Text>
             <View style={styles.disabledBox}>
-              <Text>Me</Text>
+              <Text style={styles.valueText}>Me</Text>
             </View>
           </View>
 
@@ -573,7 +573,7 @@ export default function HealthProfileScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.label}>{t('gender')}</Text>
             <TouchableOpacity style={styles.selectBox} onPress={() => setShowGenderPicker(true)}>
-              <Text>{getGenderLabel()}</Text>
+              <Text style={styles.valueText}>{getGenderLabel()}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -581,7 +581,7 @@ export default function HealthProfileScreen() {
         <Text style={styles.label}>{t('date_of_birth')}</Text>
         <TouchableOpacity style={styles.dobBox} onPress={() => setShowDobPicker(true)}>
           <Calendar size={18} color={theme.textSecondary} />
-          <Text style={{ flex: 1 }}>{dob || "Select"}</Text>
+          <Text style={[styles.valueText, { flex: 1 }]}>{dob || "Select"}</Text>
           {dob && <Text style={styles.ageInline}>{age} yrs</Text>}
         </TouchableOpacity>
 
@@ -602,7 +602,7 @@ export default function HealthProfileScreen() {
             style={[styles.selectBox, { flex: 1 }]}
             onPress={() => setShowHeightPicker(true)}
           >
-            <Text>{`${heightFt} ft ${heightIn} in`}</Text>
+            <Text style={styles.valueText}>{`${heightFt} ft ${heightIn} in`}</Text>
           </TouchableOpacity>
 
           <View style={{ width: 12 }} />
@@ -611,13 +611,13 @@ export default function HealthProfileScreen() {
             style={[styles.selectBox, { flex: 1 }]}
             onPress={() => setShowWeightPicker(true)}
           >
-            <Text>{weight} kg</Text>
+            <Text style={styles.valueText}>{weight} kg</Text>
           </TouchableOpacity>
         </View>
 
         <Text style={styles.label}>{t('blood_group')}</Text>
         <TouchableOpacity style={styles.selectBox} onPress={() => setShowBloodPicker(true)}>
-          <Text>{blood || "Select"}</Text>
+          <Text style={styles.valueText}>{blood || "Select"}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -768,7 +768,9 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     borderColor: c.border,
     borderRadius: 12,
     padding: 12,
+    color: c.text,
   },
+  valueText: { color: c.text },
   selectBox: {
     borderWidth: 1,
     borderColor: c.border,
@@ -828,6 +830,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     textAlign: "center",
     marginBottom: 8,
     marginTop: 8,
+    color: c.text,
   },
   sheetItem: {
     padding: 16,

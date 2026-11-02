@@ -299,7 +299,7 @@ export default function DoctorListScreen() {
 
     return (
         <View style={styles.screen}>
-            <AdaptiveStatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <AdaptiveStatusBar barStyle={theme.isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.card} />
 
             {/* ---------- Header ---------- */}
             <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'android' ? 12 : 4) }]}>
@@ -373,11 +373,11 @@ export default function DoctorListScreen() {
                     )}
 
                     <TouchableOpacity style={styles.filterButton} onPress={openFilterModal}>
-                        <AppIcon name="filter" size={16} color="#1c1c1e" />
+                        <AppIcon name="filter" size={16} color={theme.text} />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.sortButton} onPress={() => setSortModalVisible(true)}>
                         <Text style={styles.sortButtonText}>{getSortLabel()}</Text>
-                        <AppIcon name="chevron-down" size={14} color="#1c1c1e" />
+                        <AppIcon name="chevron-down" size={14} color={theme.text} />
                     </TouchableOpacity>
                     <View style={styles.verticalDivider} />
 
@@ -474,7 +474,7 @@ export default function DoctorListScreen() {
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>{t('filter_by_specialty')}</Text>
                             <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
-                                <AppIcon name="x" size={24} color="#1c1c1e" />
+                                <AppIcon name="x" size={24} color={theme.text} />
                             </TouchableOpacity>
                         </View>
 
@@ -710,13 +710,13 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     emptyTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#101828',
+        color: c.text,
         textAlign: 'center',
         marginBottom: 6,
     },
     emptySubtitle: {
         fontSize: 13,
-        color: '#667085',
+        color: c.textSecondary,
         textAlign: 'center',
         lineHeight: 19,
         marginBottom: 20,
@@ -754,7 +754,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         borderColor: c.border,
     },
     clearSearchText: {
-        color: '#344054',
+        color: c.text,
         fontSize: 13,
         fontWeight: '600',
     },
@@ -770,7 +770,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
         padding: 18,
     },
 
-    modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
+    modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16, color: c.text },
 
     sortOption: {
         paddingVertical: 14,

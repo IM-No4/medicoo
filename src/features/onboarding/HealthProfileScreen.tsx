@@ -33,6 +33,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { Modal } from '../../components/ThemedModal';
+import { useImageCropper } from '../../components/modals/useImageCropper';
 import { useImageSource } from '../../components/AuthImage';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -325,6 +326,7 @@ export default function HealthProfileScreen() {
   const [weight, setWeight] = useState<number>(70);
 
   const [sheet, setSheet] = useState<null | "camera">(null);
+  const { cropImage, cropperElement } = useImageCropper();
   const [showGenderPicker, setShowGenderPicker] = useState(false);
   const [showBloodPicker, setShowBloodPicker] = useState(false);
   const [showHeightPicker, setShowHeightPicker] = useState(false);
@@ -433,12 +435,14 @@ export default function HealthProfileScreen() {
       return;
     }
     const res = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 1,
     });
-    if (!res.canceled) setAvatarUri(res.assets[0].uri);
+    // the picker sheet closes first, so two modals are never open at once; then the move-and-zoom screen (which can zoom out) crops the photo
     setSheet(null);
+    if (res.canceled) return;
+    const cropped = await cropImage(res.assets[0].uri);
+    if (cropped) setAvatarUri(cropped);
   };
 
   const openGallery = async () => {
@@ -448,12 +452,14 @@ export default function HealthProfileScreen() {
       return;
     }
     const res = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 1,
     });
-    if (!res.canceled) setAvatarUri(res.assets[0].uri);
+    // the picker sheet closes first, so two modals are never open at once; then the move-and-zoom screen (which can zoom out) crops the photo
     setSheet(null);
+    if (res.canceled) return;
+    const cropped = await cropImage(res.assets[0].uri);
+    if (cropped) setAvatarUri(cropped);
   };
 
   const submit = async () => {
@@ -674,6 +680,8 @@ export default function HealthProfileScreen() {
           setShowBloodPicker(false);
         }}
       />
+
+      {cropperElement}
 
       {sheet === "camera" && (
         <Modal transparent animationType="slide" visible>

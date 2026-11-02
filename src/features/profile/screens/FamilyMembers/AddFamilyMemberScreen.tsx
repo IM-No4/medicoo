@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MediaPickerModal from '../../../../components/modals/image-picker/MediaPickerModal';
+import { useImageCropper } from '../../../../components/modals/useImageCropper';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
 import { addFamilyMember } from '../../../../services/api';
 import { formatDateForApi, formatDateForDisplay } from '../../../../utils/formatters';
@@ -53,6 +54,7 @@ export default function AddFamilyMemberScreen() {
     const navigation = useNavigation();
     const route = useRoute<any>();
     const insets = useSafeAreaInsets();
+    const { cropImage, cropperElement } = useImageCropper();
 
     const isEditing = route.params?.isEditing || false;
     const existingMember = route.params?.member;
@@ -113,13 +115,12 @@ export default function AddFamilyMemberScreen() {
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.5,
+                allowsEditing: false,
+                quality: 1,
             });
 
             if (!result.canceled) {
-                handleImageSelected(result.assets[0]);
+                await cropAndUse(result.assets[0]);
             }
         } catch (e) {
             showStatus('error', t('error'), t('failed_to_open_gallery'));
@@ -136,17 +137,22 @@ export default function AddFamilyMemberScreen() {
             }
 
             const result = await ImagePicker.launchCameraAsync({
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.5,
+                allowsEditing: false,
+                quality: 1,
             });
 
             if (!result.canceled) {
-                handleImageSelected(result.assets[0]);
+                await cropAndUse(result.assets[0]);
             }
         } catch (e) {
             showStatus('error', t('error'), t('failed_to_open_camera'));
         }
+    };
+
+    // Crop with the move-and-zoom screen (it can zoom out, unlike the system cropper), then use the result as the picked photo
+    const cropAndUse = async (asset: ImagePicker.ImagePickerAsset) => {
+        const cropped = await cropImage(asset.uri);
+        if (cropped) handleImageSelected({ ...asset, uri: cropped, mimeType: 'image/jpeg', fileName: undefined });
     };
 
     const handleImageSelected = (asset: ImagePicker.ImagePickerAsset) => {
@@ -539,6 +545,8 @@ export default function AddFamilyMemberScreen() {
                 message={statusMessage}
                 onClose={handleStatusClose}
             />
+
+            {cropperElement}
 
             <MediaPickerModal
                 visible={mediaPickerVisible}

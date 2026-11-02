@@ -19,6 +19,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MediaPickerModal from '../../../../components/modals/image-picker/MediaPickerModal';
 import OtpModal from '../../../../components/modals/OtpModal';
+import { useImageCropper } from '../../../../components/modals/useImageCropper';
 import StatusModal, { StatusType } from '../../../../components/modals/StatusModal';
 import { sendEmailOtp, updateProfile, verifyEmailOtp } from '../../../../services/api/user.api';
 import { formatDateForApi, formatDateForDisplay, formatGenderForApi, formatGenderForDisplay } from '../../../../utils/formatters';
@@ -38,6 +39,7 @@ export default function EditProfileScreen() {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const insets = useSafeAreaInsets();
+    const { cropImage, cropperElement } = useImageCropper();
 
     const { profile } = route.params || {};
 
@@ -96,14 +98,12 @@ export default function EditProfileScreen() {
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.5,
-                base64: true,
+                allowsEditing: false,
+                quality: 1,
             });
 
             if (!result.canceled) {
-                handleImageSelected(result.assets[0]);
+                await cropAndUse(result.assets[0]);
             }
         } catch (e) {
             setStatusModal({ visible: true, status: 'error', title: t('gallery_error'), message: t('we_couldn_t_open_your_photo_gallery_pl') });
@@ -120,18 +120,22 @@ export default function EditProfileScreen() {
             }
 
             const result = await ImagePicker.launchCameraAsync({
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.5,
-                base64: true,
+                allowsEditing: false,
+                quality: 1,
             });
 
             if (!result.canceled) {
-                handleImageSelected(result.assets[0]);
+                await cropAndUse(result.assets[0]);
             }
         } catch (e) {
             setStatusModal({ visible: true, status: 'error', title: t('camera_error'), message: t('failed_to_open_camera_please_try_again') });
         }
+    };
+
+    // Crop with the move-and-zoom screen (it can zoom out, unlike the system cropper), then use the result as the picked photo
+    const cropAndUse = async (asset: ImagePicker.ImagePickerAsset) => {
+        const cropped = await cropImage(asset.uri);
+        if (cropped) handleImageSelected({ ...asset, uri: cropped, mimeType: 'image/jpeg', fileName: undefined });
     };
 
     const handleImageSelected = (asset: ImagePicker.ImagePickerAsset) => {
@@ -488,6 +492,8 @@ export default function EditProfileScreen() {
                     </TouchableWithoutFeedback>
                 </TouchableOpacity>
             </Modal>
+
+            {cropperElement}
 
             <MediaPickerModal
                 visible={mediaPickerVisible}

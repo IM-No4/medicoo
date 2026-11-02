@@ -5,7 +5,9 @@ import {
   Calendar,
   Check,
   ChevronLeft,
+  ClipboardList,
   FileText,
+  FolderOpen,
   Heart,
   Lock,
   Pill,
@@ -211,10 +213,15 @@ export default function FamilyMemberHealthScreen() {
   const latestBp = latestByMetric('systolic');
   const latestWeight = latestByMetric('weight');
 
-  const Section = ({ title, locked: isLocked, lockedText, action, children }: any) => (
+  const Section = ({ title, icon: SectionIcon, tint, locked: isLocked, lockedText, action, children }: any) => (
     <View style={styles.section}>
       <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionIcon, { backgroundColor: `${tint}1F` }]}>
+            <SectionIcon size={16} color={tint} />
+          </View>
+          <Text style={styles.sectionTitle}>{title}</Text>
+        </View>
         {action}
       </View>
       {isLocked ? (
@@ -237,8 +244,7 @@ export default function FamilyMemberHealthScreen() {
           <ChevronLeft size={22} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{name || 'Family Member'}</Text>
-          {relation ? <Text style={styles.headerSub}>{capitalise(relation)}{linked ? '' : ' · looked after by you'}</Text> : null}
+          <Text style={styles.headerTitle} numberOfLines={1}>Family Member</Text>
         </View>
         <View style={{ width: 40 }} />
       </View>
@@ -253,7 +259,22 @@ export default function FamilyMemberHealthScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} colors={['#10B981']} />}
         >
-          {/* What you can do for them */}
+          {/* Who this is, and what you can do for them */}
+          <View style={styles.profileCard}>
+            <View style={styles.profileTop}>
+              <View style={styles.profileAvatar}>
+                <Text style={styles.profileAvatarText}>{(name || '?').trim().charAt(0).toUpperCase()}</Text>
+              </View>
+              <View style={styles.cardText}>
+                <Text style={styles.profileName} numberOfLines={1}>{name || 'Family Member'}</Text>
+                <Text style={styles.profileSub} numberOfLines={1}>{capitalise(relation) || 'Family'}</Text>
+              </View>
+              <View style={[styles.statusChip, linked ? styles.statusChipLinked : styles.statusChipManaged]}>
+                <Text style={[styles.statusChipText, linked ? styles.statusChipTextLinked : styles.statusChipTextManaged]}>
+                  {linked ? 'Has an account' : 'Looked after by you'}
+                </Text>
+              </View>
+            </View>
           <View style={styles.actionsRow}>
             <TouchableOpacity
               style={[styles.actionBtn, !can('bookConsultations') && styles.actionBtnOff]}
@@ -282,8 +303,9 @@ export default function FamilyMemberHealthScreen() {
           ) : (
             <Text style={styles.hint}>"Book a doctor" starts a booking for {name}. You can change who it is for before you send it.</Text>
           )}
+          </View>
 
-          <Section title="Appointments" locked={locked.appointments} lockedText={`${name} has not shared their appointments.`}>
+          <Section title="Appointments" icon={Calendar} tint="#10B981" locked={locked.appointments} lockedText={`${name} has not shared their appointments.`}>
             {appointments.length === 0 ? (
               <Text style={styles.emptyText}>No consultations yet.</Text>
             ) : (
@@ -305,7 +327,7 @@ export default function FamilyMemberHealthScreen() {
             )}
           </Section>
 
-          <Section title="Medicines" locked={locked.medicines} lockedText={`${name} has not shared their medicines.`}>
+          <Section title="Medicines" icon={Pill} tint="#3B82F6" locked={locked.medicines} lockedText={`${name} has not shared their medicines.`}>
             {medicines.length === 0 ? (
               <Text style={styles.emptyText}>No medicines added yet.</Text>
             ) : (
@@ -354,7 +376,7 @@ export default function FamilyMemberHealthScreen() {
             )}
           </Section>
 
-          <Section title="Last 7 days" locked={locked.adherence} lockedText={`${name} has not shared what they took or skipped.`}>
+          <Section title="Last 7 days" icon={Activity} tint="#F59E0B" locked={locked.adherence} lockedText={`${name} has not shared what they took or skipped.`}>
             {adherenceSummary ? (
               <View style={styles.summaryRow}>
                 <View style={styles.summaryBox}>
@@ -383,7 +405,7 @@ export default function FamilyMemberHealthScreen() {
             {adherence.length === 0 ? <Text style={styles.emptyText}>Nothing logged yet.</Text> : null}
           </Section>
 
-          <Section title="Prescriptions" locked={locked.prescriptions} lockedText={`${name} has not shared their prescriptions.`}>
+          <Section title="Prescriptions" icon={ClipboardList} tint="#8B5CF6" locked={locked.prescriptions} lockedText={`${name} has not shared their prescriptions.`}>
             {prescriptions.length === 0 ? (
               <Text style={styles.emptyText}>No prescriptions yet.</Text>
             ) : (
@@ -403,6 +425,8 @@ export default function FamilyMemberHealthScreen() {
 
           <Section
             title="Documents"
+            icon={FolderOpen}
+            tint="#0EA5E9"
             locked={locked.documents}
             lockedText={`${name} has not shared their documents.`}
             action={
@@ -434,7 +458,7 @@ export default function FamilyMemberHealthScreen() {
           </Section>
 
           {linked ? (
-            <Section title="Vitals" locked={locked.vitals} lockedText={`${name} has not shared their vitals.`}>
+            <Section title="Vitals" icon={Heart} tint="#EF4444" locked={locked.vitals} lockedText={`${name} has not shared their vitals.`}>
               {!latestHeartRate && !latestBp && !latestWeight ? (
                 <Text style={styles.emptyText}>No vitals logged yet.</Text>
               ) : (
@@ -489,34 +513,49 @@ const createStyles = (c: ThemeColors) =>
     headerTitle: { fontSize: 18, fontWeight: '600', color: c.text },
     headerSub: { fontSize: 12.5, color: c.textSecondary, marginTop: 1 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    content: { padding: 20 },
+    content: { padding: 16 },
+
+    profileCard: { backgroundColor: c.card, borderRadius: 20, borderWidth: 1, borderColor: c.borderLight, padding: 16 },
+    profileTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
+    profileAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: c.primaryBg, alignItems: 'center', justifyContent: 'center' },
+    profileAvatarText: { fontSize: 22, fontWeight: '800', color: c.primary },
+    profileName: { fontSize: 18, fontWeight: '700', color: c.text },
+    profileSub: { fontSize: 13, color: c.textSecondary, marginTop: 2 },
+    statusChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
+    statusChipLinked: { backgroundColor: c.infoBg },
+    statusChipManaged: { backgroundColor: c.successBg },
+    statusChipText: { fontSize: 11.5, fontWeight: '700' },
+    statusChipTextLinked: { color: c.info },
+    statusChipTextManaged: { color: c.success },
 
     actionsRow: { flexDirection: 'row', gap: 10 },
-    actionBtn: { flex: 1, height: 44, borderRadius: 10, backgroundColor: '#10B981', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+    actionBtn: { flex: 1, height: 46, borderRadius: 14, backgroundColor: '#10B981', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
     actionBtnOff: { backgroundColor: c.cardSecondary },
     actionBtnText: { fontSize: 13.5, fontWeight: '800', letterSpacing: 0.4, color: '#fff' },
     actionBtnTextOff: { color: c.textMuted },
     hint: { fontSize: 12.5, color: c.textSecondary, lineHeight: 16, marginTop: 10 },
 
-    section: { marginTop: 24 },
-    sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-    sectionTitle: { fontSize: 14, fontWeight: '700', color: c.textSecondary },
+    section: { marginTop: 14, backgroundColor: c.card, borderRadius: 20, borderWidth: 1, borderColor: c.borderLight, padding: 16 },
+    sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+    sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    sectionIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    sectionTitle: { fontSize: 15, fontWeight: '700', color: c.text },
     addLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     addLinkText: { fontSize: 13.5, fontWeight: '700', color: '#10B981' },
-    emptyText: { fontSize: 13.5, color: c.textMuted },
+    emptyText: { fontSize: 13.5, color: c.textMuted, textAlign: 'center', paddingVertical: 14 },
     lockedRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, backgroundColor: c.cardSecondary },
     lockedText: { flex: 1, fontSize: 13, color: c.textSecondary, lineHeight: 17 },
 
-    card: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.card, borderRadius: 14, borderWidth: 1, borderColor: c.borderLight, padding: 12, marginBottom: 8, gap: 12 },
-    iconBox: { width: 40, height: 40, borderRadius: 10, backgroundColor: c.successBg, alignItems: 'center', justifyContent: 'center' },
+    card: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.cardSecondary, borderRadius: 14, padding: 12, marginBottom: 8, gap: 12 },
+    iconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: c.successBg, alignItems: 'center', justifyContent: 'center' },
     cardText: { flex: 1 },
     cardTitle: { fontSize: 14.5, fontWeight: '700', color: c.text },
     cardSub: { fontSize: 12.5, color: c.textSecondary, marginTop: 2 },
 
-    medCard: { backgroundColor: c.card, borderRadius: 14, borderWidth: 1, borderColor: c.borderLight, padding: 12, marginBottom: 8 },
+    medCard: { backgroundColor: c.cardSecondary, borderRadius: 14, padding: 12, marginBottom: 8 },
     medTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     doseRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
-    doseChip: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: c.cardSecondary },
+    doseChip: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: c.card },
     doseTime: { fontSize: 13, fontWeight: '600', color: c.text },
     doseState: { fontSize: 12.5, fontWeight: '700' },
     doseTaken: { color: '#10B981' },
@@ -526,7 +565,7 @@ const createStyles = (c: ThemeColors) =>
     doseSkip: { width: 24, height: 24, borderRadius: 12, backgroundColor: c.border, alignItems: 'center', justifyContent: 'center' },
 
     summaryRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
-    summaryBox: { flex: 1, backgroundColor: c.card, borderRadius: 12, borderWidth: 1, borderColor: c.borderLight, paddingVertical: 12, alignItems: 'center' },
+    summaryBox: { flex: 1, backgroundColor: c.cardSecondary, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
     summaryNum: { fontSize: 20, fontWeight: '800' },
     summaryLabel: { fontSize: 12.5, color: c.textSecondary, marginTop: 2 },
     logRow: { paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
@@ -534,7 +573,7 @@ const createStyles = (c: ThemeColors) =>
     logMeta: { fontSize: 12.5, color: c.textSecondary, marginTop: 1 },
 
     vitalsRow: { flexDirection: 'row', gap: 10 },
-    vitalCard: { flex: 1, backgroundColor: c.card, borderRadius: 14, borderWidth: 1, borderColor: c.borderLight, padding: 12 },
+    vitalCard: { flex: 1, backgroundColor: c.cardSecondary, borderRadius: 14, padding: 12 },
     vitalIconBox: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
     valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
     vitalValue: { fontSize: 16, fontWeight: '800', color: c.text },

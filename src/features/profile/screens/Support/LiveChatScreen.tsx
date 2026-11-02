@@ -60,6 +60,7 @@ export default function LiveChatScreen() {
     const topics = intro?.categories?.length ? intro.categories : CATEGORIES;
     const [inputText, setInputText] = useState("");
     const chatRef = useRef<LiveChat | null>(null);
+    const inputRef = useRef<TextInput>(null);
     chatRef.current = chat;
 
     // The category picker is always part of this same chat screen (instead
@@ -129,7 +130,10 @@ export default function LiveChatScreen() {
     // Choosing a topic only marks it - nothing is created until the customer sends a message.
     const handleSelectCategory = (cat: { value: string; label: string }) => {
         if (starting) return;
-        setSelectedCategory((prev) => (prev?.value === cat.value ? null : cat));
+        const deselecting = selectedCategory?.value === cat.value;
+        setSelectedCategory(deselecting ? null : cat);
+        // picking a topic is only the first step: take the customer straight to the message box so it is clear what comes next
+        if (!deselecting) inputRef.current?.focus();
     };
 
     const handleSend = async () => {
@@ -317,6 +321,18 @@ export default function LiveChatScreen() {
                                 })}
                             </View>
                         </View>
+                        {!pickerLocked && !!selectedCategory && (
+                            <View style={[styles.messageContentRow, { marginTop: 10 }]}>
+                                <View style={styles.botAvatar}>
+                                    <Sparkles size={12} color="#FFFFFF" />
+                                </View>
+                                <View style={[styles.bubble, styles.botBubble]}>
+                                    <Text style={[styles.messageText, styles.botText]}>
+                                        {`Got it - ${t(selectedCategory.label)}. Type your question below and send it to start the chat.`}
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
                         {!!sendError && <Text style={[styles.waitingText, { color: "#DC2626" }]}>{sendError}</Text>}
 
                         {chat?.status === "closed" && (
@@ -349,6 +365,7 @@ export default function LiveChatScreen() {
                     ]}
                 >
                     <TextInput
+                        ref={inputRef}
                         style={styles.input}
                         editable={!starting}
                         placeholder={t('type_your_message_here')}
